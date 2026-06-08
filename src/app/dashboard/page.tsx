@@ -31,7 +31,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <div className="grid gap-3 lg:grid-cols-[180px_1fr_140px] lg:items-center">
+          <div className="grid gap-3 lg:grid-cols-[180px_460px_140px] lg:items-center">
             <p className="text-sm font-semibold">Flávio Evangelista</p>
 
             <label htmlFor="quick-search" className="sr-only">
@@ -44,12 +44,13 @@ export default function DashboardPage() {
               className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
 
-            <Link
+            {/*<Link
               href="/projetos/novo"
               className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
             >
               Novo Projeto
             </Link>
+            */}
           </div>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -60,7 +61,7 @@ export default function DashboardPage() {
                 href="/projetos/novo"
                 className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
               >
-                Projetos
+                + Projeto
               </Link>
               <Link
                 href="/roteiros/1243-01"
