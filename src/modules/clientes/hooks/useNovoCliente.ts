@@ -16,24 +16,50 @@ export function useNovoCliente() {
   const [erro, setErro] = useState<string | null>(null);
 
   async function salvarCliente() {
+    console.log("SALVAR CLIENTE EXECUTADO");
     try {
       setLoading(true);
       setErro(null);
 
-      const { error } = await supabase
-        .from("clientes")
-        .insert({
-          nome,
-          empresa,
-          telefone,
-          email,
-          cidade,
-          cnpj,
-          observacoes,
-          ativo: true,
-        });
+      const { data: userData } = await supabase.auth.getUser();
 
-      if (error) {
+console.log("USUARIO LOGADO:", userData.user);
+
+if (!userData.user) {
+  throw new Error("Usuário não autenticado.");
+}
+
+const { data: usuario, error: usuarioError } = await supabase
+  .from("usuarios")
+  .select("empresa_id")
+  .eq("id", userData.user.id)
+  .single();
+
+if (usuarioError || !usuario?.empresa_id) {
+  throw new Error("Empresa do usuário não encontrada.");
+}
+
+const { data, error } = await supabase
+  .from("clientes")
+  .insert({
+    empresa_id: usuario.empresa_id,
+    created_by: userData.user.id,
+    nome,
+    empresa,
+    telefone,
+    email,
+    cidade,
+    cnpj,
+    observacoes,
+    ativo: true,
+  })
+  .select();
+
+    
+console.log("DATA:", data);
+console.log("ERROR:", error);
+
+            if (error) {
         throw error;
       }
 
