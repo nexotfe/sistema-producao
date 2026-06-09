@@ -29,10 +29,19 @@ export function ClientesHeader({
           />
         </div>
 
-        <div className="flex min-w-[220px] items-center justify-start gap-2 lg:justify-end">
-          <button className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">
-            Relatórios
-          </button>
+        <div className="flex min-w-[420px] items-center justify-start gap-2 lg:justify-end">
+          
+          <button className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+  Filtros
+</button>
+
+<button className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+  Colunas
+</button>
+
+<button className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+  Exportar
+</button>
 
           <Link
   href="/clientes/novo"

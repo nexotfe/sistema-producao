@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { EmptyState } from "./EmptyState";
 import { LoadingState } from "./LoadingState";
 import { StatusBadge } from "./StatusBadge";
@@ -82,10 +84,13 @@ export function ClientesTable({
                 >
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-slate-900">
-                        {cliente.nome || "Sem nome"}
-                      </span>
-
+                      <Link
+  href={`/clientes/${cliente.id}`}
+  className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
+>
+  {cliente.nome || "Sem nome"}
+</Link>
+                    
                       <span className="text-xs text-slate-400">
                         {cliente.cnpj || "CNPJ não informado"}
                       </span>

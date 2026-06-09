@@ -1,0 +1,58 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+type Cliente = {
+  id: string;
+  nome: string | null;
+  empresa: string | null;
+  telefone: string | null;
+  email: string | null;
+  cnpj: string | null;
+  cidade: string | null;
+  ativo: boolean | null;
+  created_at: string | null;
+};
+
+export function useCliente(id: string) {
+  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function carregarCliente() {
+      if (!id) {
+        setErro("Cliente não informado.");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setErro(null);
+
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("id,nome,empresa,telefone,email,cnpj,cidade,ativo,created_at")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        setErro("Não foi possível carregar o cliente.");
+        setCliente(null);
+      } else {
+        setCliente(data);
+      }
+
+      setLoading(false);
+    }
+
+    carregarCliente();
+  }, [id]);
+
+  return {
+    cliente,
+    loading,
+    erro,
+  };
+}
