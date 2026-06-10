@@ -1,18 +1,35 @@
 import Link from "next/link";
-
+import { useState } from "react";
 type ClientesHeaderProps = {
   usuario: string;
+
   busca: string;
   setBusca: (value: string) => void;
+
+  filtroStatus: string;
+  setFiltroStatus: (value: string) => void;
+
+  filtroCidade: string;
+  setFiltroCidade: (value: string) => void;
+
   onNovoCliente: () => void;
 };
 
 export function ClientesHeader({
   usuario,
+
   busca,
   setBusca,
-    onNovoCliente,
+
+  filtroStatus,
+  setFiltroStatus,
+
+  filtroCidade,
+  setFiltroCidade,
+
+  onNovoCliente,
 }: ClientesHeaderProps) {
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
   return (
     <>
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -31,7 +48,10 @@ export function ClientesHeader({
 
         <div className="flex min-w-[420px] items-center justify-start gap-2 lg:justify-end">
           
-          <button className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+          <button
+  onClick={() => setMostrarFiltros(!mostrarFiltros)}
+  className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+>
   Filtros
 </button>
 
@@ -53,6 +73,52 @@ export function ClientesHeader({
                     
         </div>
       </header>
+      {mostrarFiltros && (
+  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-wrap gap-8">
+  <div>
+    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+      Status
+    </p>
+
+    <div className="flex gap-4">
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="radio"
+          name="status"
+          value="todos"
+          checked={filtroStatus === "todos"}
+          onChange={(e) => setFiltroStatus(e.target.value)}
+        />
+        Todos
+      </label>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="radio"
+          name="status"
+          value="ativo"
+          checked={filtroStatus === "ativo"}
+          onChange={(e) => setFiltroStatus(e.target.value)}
+        />
+        Ativos
+      </label>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="radio"
+          name="status"
+          value="inativo"
+          checked={filtroStatus === "inativo"}
+          onChange={(e) => setFiltroStatus(e.target.value)}
+        />
+        Inativos
+      </label>
+    </div>
+  </div>
+</div>
+  </div>
+)}
 
       <section>
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">

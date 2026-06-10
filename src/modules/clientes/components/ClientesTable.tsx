@@ -68,10 +68,10 @@ export function ClientesTable({
           <table className="w-full min-w-[760px] border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/80 text-left">
-                <Th>Cliente</Th>
-                <Th>Empresa</Th>
+                <Th>Nome Fantasia</Th>
+                <Th>Razão Social</Th>
+                <Th>CNPJ</Th>
                 <Th>Cidade</Th>
-                <Th>Contato</Th>
                 <Th>Status</Th>
               </tr>
             </thead>
@@ -88,7 +88,7 @@ export function ClientesTable({
   href={`/clientes/${cliente.id}`}
   className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
 >
-  {cliente.nome || "Sem nome"}
+  {cliente.empresa || "Sem nome fantasia"}
 </Link>
                     
                       <span className="text-xs text-slate-400">
@@ -98,23 +98,15 @@ export function ClientesTable({
                   </td>
 
                   <td className="px-6 py-4 text-sm text-slate-600">
-                    {cliente.empresa || "Não informada"}
+                    {cliente.nome || "Não informada"} 
+                  </td>
+
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {cliente.cnpj || "Não informado"}
                   </td>
 
                   <td className="px-6 py-4 text-sm text-slate-600">
                     {cliente.cidade || "Não informada"}
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-sm text-slate-700">
-                        {cliente.telefone || "Telefone não informado"}
-                      </span>
-
-                      <span className="text-xs text-slate-400">
-                        {cliente.email || "E-mail não informado"}
-                      </span>
-                    </div>
                   </td>
 
                   <td className="px-6 py-4">

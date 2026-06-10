@@ -16,12 +16,19 @@ type Cliente = {
 };
 
 export function useClientes() {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [busca, setBusca] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-  const [usuario, setUsuario] = useState("Usuário");
 
+     const [clientes, setClientes] = useState<Cliente[]>([]);
+
+     const [busca, setBusca] = useState("");
+
+     const [filtroStatus, setFiltroStatus] = useState("todos");
+     const [filtroCidade, setFiltroCidade] = useState("todas");
+
+     const [loading, setLoading] = useState(true);
+     const [erro, setErro] = useState<string | null>(null);
+     const [usuario, setUsuario] = useState("Usuário");
+
+  
   useEffect(() => {
     async function carregarDados() {
       setLoading(true);
@@ -58,13 +65,13 @@ export function useClientes() {
   }, []);
 
   const clientesFiltrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
+  let resultado = [...clientes];
 
-    if (!termo) {
-      return clientes;
-    }
+  // Busca
+  const termo = busca.trim().toLowerCase();
 
-    return clientes.filter((cliente) =>
+  if (termo) {
+    resultado = resultado.filter((cliente) =>
       [
         cliente.nome,
         cliente.empresa,
@@ -78,14 +85,39 @@ export function useClientes() {
         .toLowerCase()
         .includes(termo),
     );
-  }, [busca, clientes]);
+  }
+
+  // Status
+  if (filtroStatus === "ativo") {
+    resultado = resultado.filter(
+      (cliente) => cliente.ativo === true,
+    );
+  }
+
+  if (filtroStatus === "inativo") {
+    resultado = resultado.filter(
+      (cliente) => cliente.ativo === false,
+    );
+  }
+
+  return resultado;
+}, [busca, clientes, filtroStatus]);
 
   return {
-    clientes: clientesFiltrados,
-    busca,
-    setBusca,
-    loading,
-    erro,
-    usuario,
-  };
+  clientes: clientesFiltrados,
+
+  busca,
+  setBusca,
+
+  filtroStatus,
+  setFiltroStatus,
+
+  filtroCidade,
+  setFiltroCidade,
+
+  loading,
+  erro,
+  usuario,
+};
+
 }
