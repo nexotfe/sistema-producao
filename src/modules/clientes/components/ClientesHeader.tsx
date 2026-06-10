@@ -12,6 +12,8 @@ type ClientesHeaderProps = {
   filtroCidade: string;
   setFiltroCidade: (value: string) => void;
 
+  cidades: string[];
+
   onNovoCliente: () => void;
 };
 
@@ -26,6 +28,8 @@ export function ClientesHeader({
 
   filtroCidade,
   setFiltroCidade,
+
+  cidades,
 
   onNovoCliente,
 }: ClientesHeaderProps) {
@@ -74,12 +78,27 @@ export function ClientesHeader({
         </div>
       </header>
       {mostrarFiltros && (
-  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
     <div className="flex flex-wrap gap-8">
   <div>
     <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
       Status
     </p>
+
+    <div>
+  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+    Cidade
+  </p>
+
+  {cidades.map((cidade) => (
+  <option
+    key={cidade}
+    value={cidade}
+  >
+    {cidade === "todas" ? "Todas" : cidade}
+  </option>
+))}
+</div>
 
     <div className="flex gap-4">
       <label className="flex items-center gap-2 text-sm">

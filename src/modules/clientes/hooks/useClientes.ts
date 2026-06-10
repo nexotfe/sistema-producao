@@ -99,11 +99,26 @@ export function useClientes() {
       (cliente) => cliente.ativo === false,
     );
   }
+  // Cidade
+if (filtroCidade !== "todas") {
+  resultado = resultado.filter(
+    (cliente) => cliente.cidade === filtroCidade,
+  );
+}
 
   return resultado;
-}, [busca, clientes, filtroStatus]);
+}, [busca, clientes, filtroStatus, filtroCidade]);
 
-  return {
+const cidades = [
+  "todas",
+  ...new Set(
+    clientes
+      .map((cliente) => cliente.cidade)
+      .filter(Boolean),
+  ),
+];
+
+ return {
   clientes: clientesFiltrados,
 
   busca,
@@ -114,6 +129,8 @@ export function useClientes() {
 
   filtroCidade,
   setFiltroCidade,
+
+  cidades,
 
   loading,
   erro,
