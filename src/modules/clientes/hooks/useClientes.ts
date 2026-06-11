@@ -22,7 +22,8 @@ export function useClientes() {
      const [busca, setBusca] = useState("");
 
      const [filtroStatus, setFiltroStatus] = useState("todos");
-     const [filtroCidade, setFiltroCidade] = useState("todas");
+     const [filtroCidade, setFiltroCidade] = useState("");
+
 
      const [loading, setLoading] = useState(true);
      const [erro, setErro] = useState<string | null>(null);
@@ -99,10 +100,12 @@ export function useClientes() {
       (cliente) => cliente.ativo === false,
     );
   }
-  // Cidade
-if (filtroCidade !== "todas") {
+  if (filtroCidade.trim()) {
   resultado = resultado.filter(
-    (cliente) => cliente.cidade === filtroCidade,
+    (cliente) =>
+      cliente.cidade
+        ?.toLowerCase()
+        .includes(filtroCidade.toLowerCase()),
   );
 }
 
@@ -110,7 +113,6 @@ if (filtroCidade !== "todas") {
 }, [busca, clientes, filtroStatus, filtroCidade]);
 
 const cidades = [
-  "todas",
   ...new Set(
     clientes
       .map((cliente) => cliente.cidade)
