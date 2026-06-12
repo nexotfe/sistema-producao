@@ -20,6 +20,14 @@ type ClientesTableProps = {
   loading: boolean;
   erro: string | null;
   busca: string;
+
+  colunasVisiveis: {
+    nomeFantasia: boolean;
+    razaoSocial: boolean;
+    cnpj: boolean;
+    cidade: boolean;
+    status: boolean;
+  };
 };
 
 export function ClientesTable({
@@ -27,6 +35,7 @@ export function ClientesTable({
   loading,
   erro,
   busca,
+  colunasVisiveis,
 }: ClientesTableProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -67,14 +76,28 @@ export function ClientesTable({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-left">
-                <Th>Nome Fantasia</Th>
-                <Th>Razão Social</Th>
-                <Th>CNPJ</Th>
-                <Th>Cidade</Th>
-                <Th>Status</Th>
-              </tr>
-            </thead>
+  <tr className="border-b border-slate-100 bg-slate-50/80 text-left">
+    {colunasVisiveis.nomeFantasia && (
+      <Th>Nome Fantasia</Th>
+    )}
+
+    {colunasVisiveis.razaoSocial && (
+      <Th>Razão Social</Th>
+    )}
+
+    {colunasVisiveis.cnpj && (
+      <Th>CNPJ</Th>
+    )}
+
+    {colunasVisiveis.cidade && (
+      <Th>Cidade</Th>
+    )}
+
+    {colunasVisiveis.status && (
+      <Th>Status</Th>
+    )}
+  </tr>
+</thead>
 
             <tbody>
               {clientes.map((cliente) => (
@@ -82,36 +105,43 @@ export function ClientesTable({
                   key={cliente.id}
                   className="border-b border-slate-100 transition last:border-0 hover:bg-slate-50/70"
                 >
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <Link
-  href={`/clientes/${cliente.id}`}
-  className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
->
-  {cliente.empresa || "Sem nome fantasia"}
-</Link>
-                    
-                      <span className="text-xs text-slate-400">
-                        {cliente.cnpj || "CNPJ não informado"}
-                      </span>
-                    </div>
-                  </td>
+                  
+                  {colunasVisiveis.nomeFantasia && (
+  <td className="px-6 py-4">
+    <div className="flex flex-col">
+      <Link
+        href={`/clientes/${cliente.id}`}
+        className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
+      >
+        {cliente.empresa || "Sem nome fantasia"}
+      </Link>
+    </div>
+  </td>
+)}
 
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {cliente.nome || "Não informada"} 
-                  </td>
+{colunasVisiveis.razaoSocial && (
+  <td className="px-6 py-4 text-sm text-slate-600">
+    {cliente.nome || "Não informada"}
+  </td>
+)}
 
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {cliente.cnpj || "Não informado"}
-                  </td>
+{colunasVisiveis.cnpj && (
+  <td className="px-6 py-4 text-sm text-slate-600">
+    {cliente.cnpj || "Não informado"}
+  </td>
+)}
 
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {cliente.cidade || "Não informada"}
-                  </td>
+{colunasVisiveis.cidade && (
+  <td className="px-6 py-4 text-sm text-slate-600">
+    {cliente.cidade || "Não informada"}
+  </td>
+)}
 
-                  <td className="px-6 py-4">
-                    <StatusBadge ativo={Boolean(cliente.ativo)} />
-                  </td>
+{colunasVisiveis.status && (
+  <td className="px-6 py-4">
+    <StatusBadge ativo={Boolean(cliente.ativo)} />
+  </td>
+)}
                 </tr>
               ))}
             </tbody>

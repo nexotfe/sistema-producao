@@ -17,7 +17,25 @@ type ClientesHeaderProps = {
 
   cidades: string[];
 
-  onNovoCliente: () => void;
+colunasVisiveis: {
+  nomeFantasia: boolean;
+  razaoSocial: boolean;
+  cnpj: boolean;
+  cidade: boolean;
+  status: boolean;
+};
+
+setColunasVisiveis: React.Dispatch<
+  React.SetStateAction<{
+    nomeFantasia: boolean;
+    razaoSocial: boolean;
+    cnpj: boolean;
+    cidade: boolean;
+    status: boolean;
+  }>
+>;
+
+onNovoCliente: () => void;
 };
 
 export function ClientesHeader({
@@ -30,12 +48,14 @@ export function ClientesHeader({
   setFiltroStatus,
 
   filtroCidade,
-  setFiltroCidade,
+setFiltroCidade,
 
-  cidades,
-  
-  onNovoCliente
+cidades,
 
+colunasVisiveis,
+setColunasVisiveis,
+
+onNovoCliente,
 }: ClientesHeaderProps) {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [mostrarColunas, setMostrarColunas] = useState(false);
@@ -56,145 +76,196 @@ export function ClientesHeader({
           />
         </div>
 
-        <div className="flex min-w-[420px] items-center justify-start gap-2 lg:justify-end">
-          <button
-            onClick={() => setMostrarFiltros(!mostrarFiltros)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          >
-            Filtros
-          </button>
-
-          <div className="relative">
-  {!mostrarColunas && (
-    <button
-      onClick={() => setMostrarColunas(true)}
-      className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-    >
-      Colunas
-    </button>
-  )}
-
-  {mostrarColunas && (
-    <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
-      <div className="mb-2 flex justify-start">
-  <button
-    type="button"
-    onClick={() => setMostrarColunas(false)}
-    className="text-xs font-semibold text-slate-500 hover:text-slate-900"
-  >
-    Fechar
-  </button>
-</div>
-
-<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-  Colunas Visíveis
-</p>
-
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" defaultChecked />
-          Cliente
-        </label>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" defaultChecked />
-          Empresa
-        </label>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" defaultChecked />
-          Cidade
-        </label>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" defaultChecked />
-          Contato
-        </label>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" defaultChecked />
-          Status
-        </label>
-      </div>
-    </div>
-  )}
-
-</div>
-
-          <button className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-            Exportar
-          </button>
-
-          <Link
-            href="/clientes/novo"
-            className="inline-flex h-11 items-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-          >
-            + Cliente
-          </Link>
-        </div>
-      </header>
+        <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:w-auto lg:justify-end">
+  <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setMostrarFiltros(!mostrarFiltros)}
+        className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+      >
+        Filtros
+        <span className="text-xs text-slate-400">{"\u25BE"}</span>
+      </button>
 
       {mostrarFiltros && (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <div className="flex flex-col gap-4">
+        <div className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Filtros
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setMostrarFiltros(false)}
+              className="text-xs font-semibold text-slate-500 transition hover:text-slate-900"
+            >
+              Fechar
+            </button>
+          </div>
+
+          <div className="grid gap-4">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="mb-1.5 text-xs font-medium text-slate-500">
                 Status
               </p>
 
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="todos"
-                    checked={filtroStatus === "todos"}
-                    onChange={(e) => setFiltroStatus(e.target.value)}
-                  />
-                  Todos
-                </label>
-
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="ativo"
-                    checked={filtroStatus === "ativo"}
-                    onChange={(e) => setFiltroStatus(e.target.value)}
-                  />
-                  Ativos
-                </label>
-
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="inativo"
-                    checked={filtroStatus === "inativo"}
-                    onChange={(e) => setFiltroStatus(e.target.value)}
-                  />
-                  Inativos
-                </label>
-              </div>
+              <select
+                value={filtroStatus}
+                onChange={(e) => setFiltroStatus(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none focus:border-slate-400"
+              >
+                <option value="todos">Todos</option>
+                <option value="ativo">Ativos</option>
+                <option value="inativo">Inativos</option>
+              </select>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="mb-1.5 text-xs font-medium text-slate-500">
                 Cidade
               </p>
 
-              <input
-                type="text"
-                autoComplete="off"
+              <select
                 value={filtroCidade}
                 onChange={(e) => setFiltroCidade(e.target.value)}
-                placeholder="Digite uma cidade..."
-                className="h-10 w-64 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
-              />
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none focus:border-slate-400"
+              >
+                <option value="">Todas as cidades</option>
+
+                {cidades.map((cidade) => (
+                  <option key={cidade} value={cidade}>
+                    {cidade}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
       )}
+    </div>
+
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setMostrarColunas(!mostrarColunas)}
+        className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+      >
+        Exibir
+        <span className="text-xs text-slate-400">{"\u25BE"}</span>
+      </button>
+
+      {mostrarColunas && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Exibir Campos
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setMostrarColunas(false)}
+              className="text-xs font-semibold text-slate-500 transition hover:text-slate-900"
+            >
+              Fechar
+            </button>
+          </div>
+
+          <div className="space-y-1.5">
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+    <input
+      type="checkbox"
+      checked={colunasVisiveis.nomeFantasia}
+      onChange={() =>
+        setColunasVisiveis((prev) => ({
+          ...prev,
+          nomeFantasia: !prev.nomeFantasia,
+        }))
+      }
+      className="h-4 w-4 accent-slate-900"
+    />
+    Nome Fantasia
+  </label>
+
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+    <input
+      type="checkbox"
+      checked={colunasVisiveis.razaoSocial}
+      onChange={() =>
+        setColunasVisiveis((prev) => ({
+          ...prev,
+          razaoSocial: !prev.razaoSocial,
+        }))
+      }
+      className="h-4 w-4 accent-slate-900"
+    />
+    Razão Social
+  </label>
+
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+    <input
+      type="checkbox"
+      checked={colunasVisiveis.cnpj}
+      onChange={() =>
+        setColunasVisiveis((prev) => ({
+          ...prev,
+          cnpj: !prev.cnpj,
+        }))
+      }
+      className="h-4 w-4 accent-slate-900"
+    />
+    CNPJ
+  </label>
+
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+    <input
+      type="checkbox"
+      checked={colunasVisiveis.cidade}
+      onChange={() =>
+        setColunasVisiveis((prev) => ({
+          ...prev,
+          cidade: !prev.cidade,
+        }))
+      }
+      className="h-4 w-4 accent-slate-900"
+    />
+    Cidade
+  </label>
+
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+    <input
+      type="checkbox"
+      checked={colunasVisiveis.status}
+      onChange={() =>
+        setColunasVisiveis((prev) => ({
+          ...prev,
+          status: !prev.status,
+        }))
+      }
+      className="h-4 w-4 accent-slate-900"
+    />
+    Status
+  </label>
+</div>
+        </div>
+      )}
+    </div>
+
+    <button className="h-9 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+      Exportar
+    </button>
+  </div>
+
+  <Link
+    href="/clientes/novo"
+    className="inline-flex h-11 items-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+  >
+    + Cliente
+  </Link>
+</div>
+      </header>
+
+      
 
             <section>
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">

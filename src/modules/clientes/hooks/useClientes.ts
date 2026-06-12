@@ -89,11 +89,19 @@ export function useClientes() {
   }
 
   // Status
-  if (filtroStatus === "ativo") {
-    resultado = resultado.filter(
-      (cliente) => cliente.ativo === true,
-    );
-  }
+  if (termo) {
+  resultado = resultado.filter((cliente) =>
+    [
+      cliente.empresa,
+      cliente.nome,
+      cliente.cnpj,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(termo),
+  );
+}
 
   if (filtroStatus === "inativo") {
     resultado = resultado.filter(
