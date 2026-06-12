@@ -76,20 +76,20 @@ onNovoCliente,
           />
         </div>
 
-        <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:w-auto lg:justify-end">
+        <div className="flex w-full flex-wrap items-center justify-start gap-4 lg:w-auto lg:justify-end">
   <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
     <div className="relative">
       <button
         type="button"
         onClick={() => setMostrarFiltros(!mostrarFiltros)}
-        className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        className="inline-flex h-9 min-w-24 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
         Filtros
         <span className="text-xs text-slate-400">{"\u25BE"}</span>
       </button>
 
       {mostrarFiltros && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+        <div className="absolute left-0 top-full z-50 mt-5 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
           <div className="mb-5 flex items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Filtros
@@ -149,14 +149,14 @@ onNovoCliente,
       <button
         type="button"
         onClick={() => setMostrarColunas(!mostrarColunas)}
-        className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        className="inline-flex h-9 min-w-24 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
         Exibir
         <span className="text-xs text-slate-400">{"\u25BE"}</span>
       </button>
 
       {mostrarColunas && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+        <div className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
           <div className="mb-5 flex items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Exibir Campos
@@ -187,7 +187,7 @@ onNovoCliente,
     Nome Fantasia
   </label>
 
-  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
     <input
       type="checkbox"
       checked={colunasVisiveis.razaoSocial}
@@ -202,7 +202,7 @@ onNovoCliente,
     Razão Social
   </label>
 
-  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
     <input
       type="checkbox"
       checked={colunasVisiveis.cnpj}
@@ -217,7 +217,7 @@ onNovoCliente,
     CNPJ
   </label>
 
-  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
     <input
       type="checkbox"
       checked={colunasVisiveis.cidade}
@@ -232,7 +232,7 @@ onNovoCliente,
     Cidade
   </label>
 
-  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+  <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
     <input
       type="checkbox"
       checked={colunasVisiveis.status}
@@ -251,17 +251,17 @@ onNovoCliente,
       )}
     </div>
 
-    <button className="h-9 rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-      Exportar
-    </button>
+    <button className="inline-flex h-9 min-w-24 items-center justify-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+  Exportar
+</button>
   </div>
 
   <Link
-    href="/clientes/novo"
-    className="inline-flex h-11 items-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-  >
-    + Cliente
-  </Link>
+  href="/clientes/novo"
+  className="inline-flex h-11 min-w-28 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+>
+  + Cliente
+</Link>
 </div>
       </header>
 
