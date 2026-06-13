@@ -11,6 +11,18 @@ export function useNovoCliente() {
   const [cidade, setCidade] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [inscricaoEstadual, setInscricaoEstadual] = useState("");
+  const [inscricaoMunicipal, setInscricaoMunicipal] = useState("");
+  const [segmento, setSegmento] = useState("");
+  const [telefoneFiscal, setTelefoneFiscal] = useState("");
+  const [emailFiscal, setEmailFiscal] = useState("");
+  const [site, setSite] = useState("");
+  const [cep, setCep] = useState("");
+  const [estado, setEstado] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -51,6 +63,18 @@ const { data, error } = await supabase
     cidade,
     cnpj,
     observacoes,
+    inscricao_estadual: inscricaoEstadual,
+inscricao_municipal: inscricaoMunicipal,
+segmento,
+telefone_fiscal: telefoneFiscal,
+email_fiscal: emailFiscal,
+site,
+cep,
+estado,
+bairro,
+endereco,
+numero,
+complemento,
     ativo: true,
   })
   .select();
@@ -96,6 +120,42 @@ console.log("ERROR:", error);
 
     observacoes,
     setObservacoes,
+
+    inscricaoEstadual,
+setInscricaoEstadual,
+
+inscricaoMunicipal,
+setInscricaoMunicipal,
+
+segmento,
+setSegmento,
+
+telefoneFiscal,
+setTelefoneFiscal,
+
+emailFiscal,
+setEmailFiscal,
+
+site,
+setSite,
+
+cep,
+setCep,
+
+estado,
+setEstado,
+
+bairro,
+setBairro,
+
+endereco,
+setEndereco,
+
+numero,
+setNumero,
+
+complemento,
+setComplemento,
 
     loading,
     erro,
