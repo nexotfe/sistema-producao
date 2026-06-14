@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 
-import { ClientesHeader } from "@/modules/clientes/components/ClientesHeader";
-import { ClientesTable } from "@/modules/clientes/components/ClientesTable";
-import { useClientes } from "@/modules/clientes/hooks/useClientes";
+import { FornecedoresHeader } from "@/modules/fornecedores/components/FornecedoresHeader";
+import { FornecedoresTable } from "@/modules/fornecedores/components/FornecedoresTable";
+import { useFornecedores } from "@/modules/fornecedores/hooks/useFornecedores";
 
-export default function ClientesPage() {
+export default function FornecedoresPage() {
   const [colunasVisiveis, setColunasVisiveis] = useState({
     nomeFantasia: true,
     razaoSocial: true,
@@ -16,7 +16,7 @@ export default function ClientesPage() {
   });
 
   const {
-    clientes,
+    fornecedores,
     busca,
     setBusca,
     situacao,
@@ -25,9 +25,9 @@ export default function ClientesPage() {
     loading,
     erro,
     usuario,
-  } = useClientes();
+  } = useFornecedores();
 
-  function exportarClientes() {
+  function exportarFornecedores() {
     const cabecalho = [
       "Nome fantasia",
       "Razao social",
@@ -35,17 +35,21 @@ export default function ClientesPage() {
       "Cidade",
       "Telefone",
       "Email",
+      "Telefone comercial",
+      "Email comercial",
       "Status",
     ];
 
-    const linhas = clientes.map((cliente) => [
-      cliente.empresa ?? "",
-      cliente.nome ?? "",
-      cliente.cnpj ?? "",
-      cliente.cidade ?? "",
-      cliente.telefone ?? "",
-      cliente.email ?? "",
-      cliente.ativo ? "Ativo" : "Inativo",
+    const linhas = fornecedores.map((fornecedor) => [
+      fornecedor.empresa ?? "",
+      fornecedor.nome ?? "",
+      fornecedor.cnpj ?? "",
+      fornecedor.cidade ?? "",
+      fornecedor.telefone ?? "",
+      fornecedor.email ?? "",
+      fornecedor.telefone_comercial ?? "",
+      fornecedor.email_comercial ?? "",
+      fornecedor.ativo ? "Ativo" : "Inativo",
     ]);
 
     const conteudo = [cabecalho, ...linhas]
@@ -63,7 +67,7 @@ export default function ClientesPage() {
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "clientes.csv";
+    link.download = "fornecedores.csv";
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -71,7 +75,7 @@ export default function ClientesPage() {
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <ClientesHeader
+        <FornecedoresHeader
           usuario={usuario}
           busca={busca}
           setBusca={setBusca}
@@ -80,11 +84,11 @@ export default function ClientesPage() {
           totais={totais}
           colunasVisiveis={colunasVisiveis}
           setColunasVisiveis={setColunasVisiveis}
-          onExportar={exportarClientes}
+          onExportar={exportarFornecedores}
         />
 
-        <ClientesTable
-          clientes={clientes}
+        <FornecedoresTable
+          fornecedores={fornecedores}
           loading={loading}
           erro={erro}
           busca={busca}

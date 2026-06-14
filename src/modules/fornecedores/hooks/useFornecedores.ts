@@ -3,24 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-type SituacaoCliente = "todos" | "ativos" | "inativos";
+type SituacaoFornecedor = "todos" | "ativos" | "inativos";
 
-type Cliente = {
+type Fornecedor = {
   id: string;
   nome: string | null;
   empresa: string | null;
   telefone: string | null;
   email: string | null;
+  telefone_comercial: string | null;
+  email_comercial: string | null;
   cnpj: string | null;
   cidade: string | null;
   ativo: boolean | null;
   created_at: string | null;
 };
 
-export function useClientes() {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+export function useFornecedores() {
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [busca, setBusca] = useState("");
-  const [situacao, setSituacao] = useState<SituacaoCliente>("todos");
+  const [situacao, setSituacao] = useState<SituacaoFornecedor>("todos");
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -40,17 +42,19 @@ export function useClientes() {
       }
 
       const { data, error } = await supabase
-        .from("clientes")
-        .select("id,nome,empresa,telefone,email,cnpj,cidade,ativo,created_at")
+        .from("fornecedores")
+        .select(
+          "id,nome,empresa,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,ativo,created_at",
+        )
         .order("created_at", {
           ascending: false,
         });
 
       if (error) {
-        setErro("Nao foi possivel carregar os clientes.");
-        setClientes([]);
+        setErro("Nao foi possivel carregar os fornecedores.");
+        setFornecedores([]);
       } else {
-        setClientes(data ?? []);
+        setFornecedores(data ?? []);
       }
 
       setLoading(false);
@@ -61,35 +65,39 @@ export function useClientes() {
 
   const totais = useMemo(
     () => ({
-      todos: clientes.length,
-      ativos: clientes.filter((cliente) => cliente.ativo === true).length,
-      inativos: clientes.filter((cliente) => cliente.ativo === false).length,
+      todos: fornecedores.length,
+      ativos: fornecedores.filter((fornecedor) => fornecedor.ativo === true)
+        .length,
+      inativos: fornecedores.filter((fornecedor) => fornecedor.ativo === false)
+        .length,
     }),
-    [clientes],
+    [fornecedores],
   );
 
-  const clientesFiltrados = useMemo(() => {
-    let resultado = [...clientes];
+  const fornecedoresFiltrados = useMemo(() => {
+    let resultado = [...fornecedores];
 
     if (situacao === "ativos") {
-      resultado = resultado.filter((cliente) => cliente.ativo === true);
+      resultado = resultado.filter((fornecedor) => fornecedor.ativo === true);
     }
 
     if (situacao === "inativos") {
-      resultado = resultado.filter((cliente) => cliente.ativo === false);
+      resultado = resultado.filter((fornecedor) => fornecedor.ativo === false);
     }
 
     const termo = busca.trim().toLowerCase();
 
     if (termo) {
-      resultado = resultado.filter((cliente) =>
+      resultado = resultado.filter((fornecedor) =>
         [
-          cliente.nome,
-          cliente.empresa,
-          cliente.cnpj,
-          cliente.cidade,
-          cliente.telefone,
-          cliente.email,
+          fornecedor.nome,
+          fornecedor.empresa,
+          fornecedor.cnpj,
+          fornecedor.cidade,
+          fornecedor.telefone,
+          fornecedor.email,
+          fornecedor.telefone_comercial,
+          fornecedor.email_comercial,
         ]
           .filter(Boolean)
           .join(" ")
@@ -99,10 +107,10 @@ export function useClientes() {
     }
 
     return resultado;
-  }, [busca, clientes, situacao]);
+  }, [busca, fornecedores, situacao]);
 
   return {
-    clientes: clientesFiltrados,
+    fornecedores: fornecedoresFiltrados,
 
     busca,
     setBusca,

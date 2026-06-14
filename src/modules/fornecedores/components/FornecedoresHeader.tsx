@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type SituacaoCliente = "todos" | "ativos" | "inativos";
+type SituacaoFornecedor = "todos" | "ativos" | "inativos";
 
 type ColunasVisiveis = {
   nomeFantasia: boolean;
@@ -12,12 +12,12 @@ type ColunasVisiveis = {
   status: boolean;
 };
 
-type ClientesHeaderProps = {
+type FornecedoresHeaderProps = {
   usuario: string;
   busca: string;
   setBusca: (value: string) => void;
-  situacao: SituacaoCliente;
-  setSituacao: (value: SituacaoCliente) => void;
+  situacao: SituacaoFornecedor;
+  setSituacao: (value: SituacaoFornecedor) => void;
   totais: {
     todos: number;
     ativos: number;
@@ -28,7 +28,7 @@ type ClientesHeaderProps = {
   onExportar: () => void;
 };
 
-export function ClientesHeader({
+export function FornecedoresHeader({
   usuario,
   busca,
   setBusca,
@@ -38,7 +38,7 @@ export function ClientesHeader({
   colunasVisiveis,
   setColunasVisiveis,
   onExportar,
-}: ClientesHeaderProps) {
+}: FornecedoresHeaderProps) {
   const [mostrarColunas, setMostrarColunas] = useState(false);
 
   return (
@@ -46,11 +46,11 @@ export function ClientesHeader({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Comercial
+            Compras
           </p>
 
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-            Clientes
+            Fornecedores
           </h1>
         </div>
 
@@ -67,7 +67,7 @@ export function ClientesHeader({
           spellCheck={false}
           value={busca}
           onChange={(event) => setBusca(event.target.value)}
-          placeholder="Buscar por cliente, CNPJ, cidade ou contato"
+          placeholder="Buscar por fornecedor, CNPJ, cidade ou contato"
           className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
         />
 
@@ -190,7 +190,6 @@ export function ClientesHeader({
               Exportar
             </button>
           </div>
-
         </div>
       </div>
     </header>

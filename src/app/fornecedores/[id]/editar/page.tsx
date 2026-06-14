@@ -1,40 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useNovoCliente } from "@/modules/clientes/hooks/useNovoCliente";
+import { use } from "react";
+import { useRouter } from "next/navigation";
+import { useEditarFornecedor } from "@/modules/fornecedores/hooks/useEditarFornecedor";
 
-export default function NovoClientePage() {
+type Props = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export default function EditarFornecedorPage({ params }: Props) {
+  const { id } = use(params);
+  const router = useRouter();
+
   const {
     nome,
     setNome,
     empresa,
     setEmpresa,
-    telefone,
-    setTelefone,
-    email,
-    setEmail,
-    cidade,
-    setCidade,
     cnpj,
     setCnpj,
-    observacoes,
-    setObservacoes,
     inscricaoEstadual,
     setInscricaoEstadual,
     inscricaoMunicipal,
     setInscricaoMunicipal,
     segmento,
     setSegmento,
-    telefoneFiscal,
-    setTelefoneFiscal,
-    emailFiscal,
-    setEmailFiscal,
+    telefone,
+    setTelefone,
+    email,
+    setEmail,
+    telefoneComercial,
+    setTelefoneComercial,
+    emailComercial,
+    setEmailComercial,
     site,
     setSite,
     cep,
     setCep,
     estado,
     setEstado,
+    cidade,
+    setCidade,
     bairro,
     setBairro,
     endereco,
@@ -43,17 +52,38 @@ export default function NovoClientePage() {
     setNumero,
     complemento,
     setComplemento,
+    observacoes,
+    setObservacoes,
     loading,
+    salvando,
     erro,
-    salvarCliente,
-  } = useNovoCliente();
+    salvarFornecedor,
+  } = useEditarFornecedor(id);
+
+  async function handleSalvar() {
+    const sucesso = await salvarFornecedor();
+
+    if (sucesso) {
+      router.push(`/fornecedores/${id}`);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+          <p className="text-sm text-slate-500">Carregando fornecedor...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-col gap-3">
           <Link
-            href="/clientes"
+            href="/fornecedores"
             className="inline-flex w-fit items-center gap-1 rounded-sm text-slate-400 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
           >
             <span
@@ -63,17 +93,17 @@ export default function NovoClientePage() {
               {"\u2039"}
             </span>
             <span className="text-xs font-semibold uppercase tracking-[0.18em]">
-              Clientes
+              Fornecedores
             </span>
           </Link>
 
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Cliente
+              Editar fornecedor
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              Cadastro de cliente.
+              Atualizacao dos dados cadastrais do fornecedor.
             </p>
           </div>
         </header>
@@ -94,8 +124,8 @@ export default function NovoClientePage() {
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
               <Field label="Telefone" value={telefone} onChange={setTelefone} />
               <Field label="E-mail" value={email} onChange={setEmail} />
-              <Field label="Telefone fiscal" value={telefoneFiscal} onChange={setTelefoneFiscal} />
-              <Field label="E-mail fiscal" value={emailFiscal} onChange={setEmailFiscal} />
+              <Field label="Telefone comercial" value={telefoneComercial} onChange={setTelefoneComercial} />
+              <Field label="E-mail comercial" value={emailComercial} onChange={setEmailComercial} />
               <Field label="Site" value={site} onChange={setSite} />
             </div>
           </Card>
@@ -129,14 +159,22 @@ export default function NovoClientePage() {
             </p>
           )}
 
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={salvarCliente}
-              disabled={loading}
+              onClick={() => router.push(`/fornecedores/${id}`)}
+              className="rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSalvar}
+              disabled={salvando}
               className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Salvando..." : "Salvar"}
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </section>

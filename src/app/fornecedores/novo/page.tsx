@@ -1,40 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useNovoCliente } from "@/modules/clientes/hooks/useNovoCliente";
+import { useRouter } from "next/navigation";
+import { useNovoFornecedor } from "@/modules/fornecedores/hooks/useNovoFornecedor";
 
-export default function NovoClientePage() {
+export default function NovoFornecedorPage() {
+  const router = useRouter();
+
   const {
     nome,
     setNome,
     empresa,
     setEmpresa,
-    telefone,
-    setTelefone,
-    email,
-    setEmail,
-    cidade,
-    setCidade,
     cnpj,
     setCnpj,
-    observacoes,
-    setObservacoes,
     inscricaoEstadual,
     setInscricaoEstadual,
     inscricaoMunicipal,
     setInscricaoMunicipal,
     segmento,
     setSegmento,
-    telefoneFiscal,
-    setTelefoneFiscal,
-    emailFiscal,
-    setEmailFiscal,
+    telefone,
+    setTelefone,
+    email,
+    setEmail,
+    telefoneComercial,
+    setTelefoneComercial,
+    emailComercial,
+    setEmailComercial,
     site,
     setSite,
     cep,
     setCep,
     estado,
     setEstado,
+    cidade,
+    setCidade,
     bairro,
     setBairro,
     endereco,
@@ -43,17 +44,27 @@ export default function NovoClientePage() {
     setNumero,
     complemento,
     setComplemento,
+    observacoes,
+    setObservacoes,
     loading,
     erro,
-    salvarCliente,
-  } = useNovoCliente();
+    salvarFornecedor,
+  } = useNovoFornecedor();
+
+  async function handleSalvar() {
+    const sucesso = await salvarFornecedor();
+
+    if (sucesso) {
+      router.push("/fornecedores");
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-col gap-3">
           <Link
-            href="/clientes"
+            href="/fornecedores"
             className="inline-flex w-fit items-center gap-1 rounded-sm text-slate-400 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
           >
             <span
@@ -63,17 +74,17 @@ export default function NovoClientePage() {
               {"\u2039"}
             </span>
             <span className="text-xs font-semibold uppercase tracking-[0.18em]">
-              Clientes
+              Fornecedores
             </span>
           </Link>
 
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Cliente
+              Fornecedor
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              Cadastro de cliente.
+              Cadastro base de fornecedor.
             </p>
           </div>
         </header>
@@ -94,8 +105,8 @@ export default function NovoClientePage() {
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
               <Field label="Telefone" value={telefone} onChange={setTelefone} />
               <Field label="E-mail" value={email} onChange={setEmail} />
-              <Field label="Telefone fiscal" value={telefoneFiscal} onChange={setTelefoneFiscal} />
-              <Field label="E-mail fiscal" value={emailFiscal} onChange={setEmailFiscal} />
+              <Field label="Telefone comercial" value={telefoneComercial} onChange={setTelefoneComercial} />
+              <Field label="E-mail comercial" value={emailComercial} onChange={setEmailComercial} />
               <Field label="Site" value={site} onChange={setSite} />
             </div>
           </Card>
@@ -132,7 +143,7 @@ export default function NovoClientePage() {
           <div className="flex items-center justify-end">
             <button
               type="button"
-              onClick={salvarCliente}
+              onClick={handleSalvar}
               disabled={loading}
               className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
