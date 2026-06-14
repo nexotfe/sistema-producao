@@ -11,6 +11,19 @@ type Cliente = {
   email: string | null;
   cnpj: string | null;
   cidade: string | null;
+  observacoes: string | null;
+  inscricao_estadual: string | null;
+  inscricao_municipal: string | null;
+  segmento: string | null;
+  telefone_fiscal: string | null;
+  email_fiscal: string | null;
+  site: string | null;
+  cep: string | null;
+  estado: string | null;
+  bairro: string | null;
+  endereco: string | null;
+  numero: string | null;
+  complemento: string | null;
   ativo: boolean | null;
   created_at: string | null;
 };
@@ -33,7 +46,9 @@ export function useCliente(id: string) {
 
       const { data, error } = await supabase
         .from("clientes")
-        .select("id,nome,empresa,telefone,email,cnpj,cidade,ativo,created_at")
+        .select(
+          "id,nome,empresa,telefone,email,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,telefone_fiscal,email_fiscal,site,cep,estado,bairro,endereco,numero,complemento,ativo,created_at",
+        )
         .eq("id", id)
         .single();
 

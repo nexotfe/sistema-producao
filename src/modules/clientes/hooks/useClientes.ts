@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+type SituacaoCliente = "todos" | "ativos" | "inativos";
+
 type Cliente = {
   id: string;
   nome: string | null;
@@ -16,20 +18,14 @@ type Cliente = {
 };
 
 export function useClientes() {
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [busca, setBusca] = useState("");
+  const [situacao, setSituacao] = useState<SituacaoCliente>("todos");
 
-     const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [usuario, setUsuario] = useState("Usuário");
 
-     const [busca, setBusca] = useState("");
-
-     const [filtroStatus, setFiltroStatus] = useState("todos");
-     const [filtroCidade, setFiltroCidade] = useState("");
-
-
-     const [loading, setLoading] = useState(true);
-     const [erro, setErro] = useState<string | null>(null);
-     const [usuario, setUsuario] = useState("Usuário");
-
-  
   useEffect(() => {
     async function carregarDados() {
       setLoading(true);
@@ -45,9 +41,7 @@ export function useClientes() {
 
       const { data, error } = await supabase
         .from("clientes")
-        .select(
-          "id,nome,empresa,telefone,email,cnpj,cidade,ativo,created_at",
-        )
+        .select("id,nome,empresa,telefone,email,cnpj,cidade,ativo,created_at")
         .order("created_at", {
           ascending: false,
         });
@@ -65,86 +59,60 @@ export function useClientes() {
     carregarDados();
   }, []);
 
+  const totais = useMemo(
+    () => ({
+      todos: clientes.length,
+      ativos: clientes.filter((cliente) => cliente.ativo === true).length,
+      inativos: clientes.filter((cliente) => cliente.ativo === false).length,
+    }),
+    [clientes],
+  );
+
   const clientesFiltrados = useMemo(() => {
-  let resultado = [...clientes];
+    let resultado = [...clientes];
 
-  // Busca
-  const termo = busca.trim().toLowerCase();
+    if (situacao === "ativos") {
+      resultado = resultado.filter((cliente) => cliente.ativo === true);
+    }
 
-  if (termo) {
-    resultado = resultado.filter((cliente) =>
-      [
-        cliente.nome,
-        cliente.empresa,
-        cliente.telefone,
-        cliente.email,
-        cliente.cnpj,
-        cliente.cidade,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(termo),
-    );
-  }
+    if (situacao === "inativos") {
+      resultado = resultado.filter((cliente) => cliente.ativo === false);
+    }
 
-  // Status
-  if (termo) {
-  resultado = resultado.filter((cliente) =>
-    [
-      cliente.empresa,
-      cliente.nome,
-      cliente.cnpj,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase()
-      .includes(termo),
-  );
-}
+    const termo = busca.trim().toLowerCase();
 
-  if (filtroStatus === "inativo") {
-    resultado = resultado.filter(
-      (cliente) => cliente.ativo === false,
-    );
-  }
-  if (filtroCidade.trim()) {
-  resultado = resultado.filter(
-    (cliente) =>
-      cliente.cidade
-        ?.toLowerCase()
-        .includes(filtroCidade.toLowerCase()),
-  );
-}
+    if (termo) {
+      resultado = resultado.filter((cliente) =>
+        [
+          cliente.nome,
+          cliente.empresa,
+          cliente.cnpj,
+          cliente.cidade,
+          cliente.telefone,
+          cliente.email,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(termo),
+      );
+    }
 
-  return resultado;
-}, [busca, clientes, filtroStatus, filtroCidade]);
+    return resultado;
+  }, [busca, clientes, situacao]);
 
-const cidades = [
-  ...new Set(
-    clientes
-      .map((cliente) => cliente.cidade)
-      .filter(Boolean),
-  ),
-];
+  return {
+    clientes: clientesFiltrados,
 
- return {
-  clientes: clientesFiltrados,
+    busca,
+    setBusca,
 
-  busca,
-  setBusca,
+    situacao,
+    setSituacao,
+    totais,
 
-  filtroStatus,
-  setFiltroStatus,
-
-  filtroCidade,
-  setFiltroCidade,
-
-  cidades,
-
-  loading,
-  erro,
-  usuario,
-};
-
+    loading,
+    erro,
+    usuario,
+  };
 }

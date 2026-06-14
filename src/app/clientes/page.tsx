@@ -11,65 +11,48 @@ export default function ClientesPage() {
   const [modalOpen, setModalOpen] = useState(false);
 
   const [colunasVisiveis, setColunasVisiveis] = useState({
-  nomeFantasia: true,
-  razaoSocial: true,
-  cnpj: true,
-  cidade: true,
-  status: true,
-});
+    nomeFantasia: true,
+    razaoSocial: true,
+    cnpj: true,
+    cidade: true,
+    status: true,
+  });
 
-    const {
+ const {
   clientes,
-
   busca,
   setBusca,
-
-  filtroStatus,
-  setFiltroStatus,
-
-  filtroCidade,
-  setFiltroCidade,
-
-   cidades,
-
+  situacao,
+  setSituacao,
+  totais,
   loading,
   erro,
   usuario,
 } = useClientes();
 
-console.log("PAGE filtroStatus =", filtroStatus);
-console.log("PAGE setFiltroStatus =", setFiltroStatus);
-
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-<ClientesHeader
+        <ClientesHeader
   usuario={usuario}
   busca={busca}
   setBusca={setBusca}
-
-  filtroStatus={filtroStatus}
-  setFiltroStatus={setFiltroStatus}
-
-  filtroCidade={filtroCidade}
-  setFiltroCidade={setFiltroCidade}
-
-  cidades={cidades}
-
+  situacao={situacao}
+  setSituacao={setSituacao}
+  totais={totais}
   colunasVisiveis={colunasVisiveis}
   setColunasVisiveis={setColunasVisiveis}
-
   onNovoCliente={() => setModalOpen(true)}
 />
 
+        <ClientesTable
+          clientes={clientes}
+          loading={loading}
+          erro={erro}
+          busca={busca}
+          colunasVisiveis={colunasVisiveis}
+        />
 
-<ClientesTable
-  clientes={clientes}
-  loading={loading}
-  erro={erro}
-  busca={busca}
-  colunasVisiveis={colunasVisiveis}
-/>
         <NovoClienteModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
@@ -78,6 +61,3 @@ console.log("PAGE setFiltroStatus =", setFiltroStatus);
     </main>
   );
 }
-
-
-

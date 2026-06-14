@@ -1,8 +1,19 @@
 "use client";
 
-import { useNovoCliente } from "@/modules/clientes/hooks/useNovoCliente";
+import { use } from "react";
+import { useRouter } from "next/navigation";
+import { useEditarCliente } from "@/modules/clientes/hooks/useEditarCliente";
 
-export default function NovoClientePage() {
+type Props = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export default function EditarClientePage({ params }: Props) {
+  const { id } = use(params);
+  const router = useRouter();
+
   const {
     nome,
     setNome,
@@ -43,9 +54,28 @@ export default function NovoClientePage() {
     complemento,
     setComplemento,
     loading,
+    salvando,
     erro,
     salvarCliente,
-  } = useNovoCliente();
+  } = useEditarCliente(id);
+
+  async function handleSalvar() {
+    const sucesso = await salvarCliente();
+
+    if (sucesso) {
+      router.push(`/clientes/${id}`);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+          <p className="text-sm text-slate-500">Carregando cliente...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
@@ -60,11 +90,11 @@ export default function NovoClientePage() {
 
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Cliente
+              Editar Cliente
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              Cadastro de cliente.
+              Atualização dos dados cadastrais do cliente.
             </p>
           </div>
         </header>
@@ -120,14 +150,22 @@ export default function NovoClientePage() {
             </p>
           )}
 
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={salvarCliente}
-              disabled={loading}
+              onClick={() => router.push(`/clientes/${id}`)}
+              className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+            >
+              Voltar
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSalvar}
+              disabled={salvando}
               className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Salvando..." : "Salvar"}
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </section>
