@@ -108,7 +108,31 @@ export default function PurchasesPage() {
 
             <nav aria-label="Atalhos de compras" className="flex flex-wrap gap-2">
               <Link
-                href="/dashboard"
+                href="/compras"
+                className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+              >
+                Compras
+              </Link>
+              <Link
+                href="/fornecedores"
+                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Fornecedores
+              </Link>
+              <Link
+                href="/compras/planejamento"
+                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Planejamento
+              </Link>
+              <Link
+                href="/compras/decisao-material"
+                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Decisao material
+              </Link>
+              <Link
+                href="/projetos"
                 className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Comercial

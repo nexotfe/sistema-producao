@@ -35,8 +35,8 @@ const STATUS_COLORS: Record<ProjectStatus, StatusColor> = {
 };
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
-  em_analise: "Em análise",
-  em_elaboracao: "Em elaboração",
+  em_analise: "Em analise",
+  em_elaboracao: "Em elaboracao",
   aprovado: "Aprovado",
   perdido: "Perdido",
   cancelado: "Cancelado",

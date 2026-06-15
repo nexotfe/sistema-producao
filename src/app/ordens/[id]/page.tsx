@@ -151,7 +151,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
       <section className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link href="/dashboard" className="text-sm font-medium text-slate-700 hover:text-slate-900">
+            <Link href="/central" className="text-sm font-medium text-slate-700 hover:text-slate-900">
               ← Voltar ao dashboard
             </Link>
             <h1 className="mt-4 text-3xl font-bold text-slate-950">OF {ofData?.numero_of ?? id}</h1>

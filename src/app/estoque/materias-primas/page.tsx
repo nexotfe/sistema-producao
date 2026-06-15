@@ -5,45 +5,53 @@ const materials = [
     code: "MP-001",
     description: "SAE 1045 redondo",
     unit: "metro",
-    available: "18.000",
+    stock: "18.000",
+    origin: "Compra",
+    address: "ALM01-R5-E3/P6/4",
     reserved: "10.000",
     free: "8.000",
-    status: "Compra necessaria",
-    need: "2.000",
+    purchase: "2.000",
     demand: "3 OFs / 2 projetos",
+    status: "Compra necessaria",
   },
   {
     code: "MP-002",
     description: "Chapa aco carbono 12mm",
     unit: "chapa",
-    available: "12",
+    stock: "12",
+    origin: "Cliente",
+    address: "ALM01-R2-E1/P1/2",
     reserved: "4",
     free: "8",
-    status: "Disponivel",
-    need: "-",
+    purchase: "-",
     demand: "1 OF / 1 projeto",
+    status: "Disponivel",
   },
   {
     code: "MP-003",
     description: "Aluminio 7075 bloco",
     unit: "peca",
-    available: "6",
+    stock: "6",
+    origin: "Industrializacao",
+    address: "ALM02-R1-E4/P2/1",
     reserved: "6",
     free: "0",
-    status: "Compra necessaria",
-    need: "3",
+    purchase: "3",
     demand: "10 OFs / 3 projetos",
+    status: "Compra necessaria",
   },
   {
     code: "MP-004",
     description: "Barra inox 304",
     unit: "barra",
-    available: "9",
+    stock: "9",
+    origin: "Ajuste",
+    address: "ALM01-R4-E2/P5/3",
     reserved: "2",
     free: "7",
-    status: "Disponivel",
-    need: "-",
+    purchase: "-",
     demand: "Sem demanda",
+    status: "Disponivel",
   },
 ];
 
@@ -54,108 +62,126 @@ const statusStyles = {
 
 export default function RawMaterialsPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <div className="grid gap-3 lg:grid-cols-[180px_1fr_160px] lg:items-center">
-            <p className="text-sm font-semibold">Flavio Evangelista</p>
+    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <header className="flex flex-col gap-5">
+          <div>
+            <Link
+              href="/central"
+              className="inline-flex items-center text-sm font-semibold text-slate-500 outline-none transition hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+            >
+              <span aria-hidden="true" className="mr-2 text-base leading-none">
+                {"\u2039"}
+              </span>
+              ESTOQUE
+            </Link>
 
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+              Materias-primas
+            </h1>
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Consulta operacional de saldo, origem, endereco e demanda de
+              materiais.
+            </p>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
             <label htmlFor="material-search" className="sr-only">
               Buscar materia-prima
             </label>
             <input
               id="material-search"
               type="search"
-              placeholder="Buscar materia-prima, codigo ou projeto"
-              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              placeholder="Buscar por codigo, descricao, origem, endereco ou projeto"
+              className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             />
-
-            <button className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800">
-              Nova materia-prima
-            </button>
-          </div>
-
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-blue-700">Estoque</p>
-              <h1 className="mt-1 text-2xl font-bold">Materias-primas</h1>
-            </div>
 
             <nav aria-label="Atalhos de estoque" className="flex flex-wrap gap-2">
               <Link
-                href="/dashboard"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                href="/compras/decisao-material"
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                Comercial
+                Decisao material
               </Link>
               <Link
-                href="/roteiros/1243-01"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                href="/compras"
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                Roteiro Fabricacao
+                Compras
+              </Link>
+              <Link
+                href="/projetos"
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Projetos
               </Link>
             </nav>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <section className="rounded-md border border-slate-200 bg-white">
-          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-bold">Saldo por materia-prima</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Visao simples para decidir se a OF pode entrar na fila real.
-              </p>
-            </div>
-
-            <Link
-              href="/compras/decisao-material"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Decisao material
-            </Link>
+        <section className="rounded-lg border border-slate-200 bg-white">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h2 className="text-base font-semibold text-slate-950">
+              Estoque de Materias-primas
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Estoque representa a quantidade fisica; Livre representa o saldo
+              apos reservas.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] table-fixed text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+            <table className="w-full min-w-[1240px] table-fixed text-left text-sm">
+              <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                 <tr>
-                  <th className="w-[10%] px-4 py-2 font-semibold">Codigo</th>
-                  <th className="w-[24%] px-4 py-2 font-semibold">Descricao</th>
-                  <th className="w-[9%] px-4 py-2 font-semibold">Unidade</th>
-                  <th className="w-[11%] px-4 py-2 font-semibold">Disponivel</th>
-                  <th className="w-[10%] px-4 py-2 font-semibold">Reservado</th>
-                  <th className="w-[9%] px-4 py-2 font-semibold">Livre</th>
-                  <th className="w-[13%] px-4 py-2 font-semibold">Status</th>
-                  <th className="w-[8%] px-4 py-2 font-semibold">Comprar</th>
-                  <th className="w-[16%] px-4 py-2 font-semibold">Demandas</th>
+                  <th className="w-[8%] px-4 py-3">Codigo</th>
+                  <th className="w-[20%] px-4 py-3">Descricao</th>
+                  <th className="w-[8%] px-4 py-3">Unidade</th>
+                  <th className="w-[8%] px-4 py-3">Estoque</th>
+                  <th className="w-[11%] px-4 py-3">Origem</th>
+                  <th className="w-[14%] px-4 py-3">Endereco</th>
+                  <th className="w-[8%] px-4 py-3">Reserva</th>
+                  <th className="w-[7%] px-4 py-3">Livre</th>
+                  <th className="w-[8%] px-4 py-3">Compra</th>
+                  <th className="w-[13%] px-4 py-3">Demanda</th>
+                  <th className="w-[13%] px-4 py-3">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {materials.map((material) => (
-                  <tr key={material.code} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-bold text-slate-950">
+                  <tr key={material.code} className="transition hover:bg-slate-50">
+                    <td className="px-4 py-4 font-semibold text-slate-950">
                       {material.code}
                     </td>
-                    <td className="truncate px-4 py-3 text-slate-700">
+                    <td className="truncate px-4 py-4 text-slate-700">
                       {material.description}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {material.unit}
+                    <td className="px-4 py-4 text-slate-700">{material.unit}</td>
+                    <td className="px-4 py-4 font-medium text-slate-950">
+                      {material.stock}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {material.available}
+                    <td className="px-4 py-4 text-slate-700">
+                      {material.origin}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="truncate px-4 py-4 font-medium text-slate-700">
+                      {material.address}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
                       {material.reserved}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-950">
+                    <td className="px-4 py-4 font-semibold text-slate-950">
                       {material.free}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-4 text-slate-700">
+                      {material.purchase}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {material.demand}
+                    </td>
+                    <td className="px-4 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ring-1 ${
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
                           statusStyles[
                             material.status as keyof typeof statusStyles
                           ]
@@ -164,45 +190,13 @@ export default function RawMaterialsPage() {
                         {material.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {material.need}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button className="text-xs font-semibold text-blue-700 hover:underline">
-                        {material.demand}
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </section>
-
-        <section className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <h2 className="text-sm font-bold">Regra operacional</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Sem materia-prima disponivel, a OF permanece fora da fila real de
-              producao.
-            </p>
-          </div>
-
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <h2 className="text-sm font-bold">Saldo livre</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Saldo livre = saldo disponivel menos saldo reservado.
-            </p>
-          </div>
-
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <h2 className="text-sm font-bold">Compra</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Quando faltar material, o sistema prepara a necessidade de compra.
-            </p>
-          </div>
-        </section>
-      </section>
+      </div>
     </main>
   );
 }

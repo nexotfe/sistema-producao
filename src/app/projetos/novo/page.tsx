@@ -50,10 +50,10 @@ export default function NewProjectPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <Link
-            href="/dashboard"
+            href="/projetos"
             className="text-sm font-semibold text-blue-700 hover:underline"
           >
-            Voltar para Comercial
+            Voltar para Projetos
           </Link>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
