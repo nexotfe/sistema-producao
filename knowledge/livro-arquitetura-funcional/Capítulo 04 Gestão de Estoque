@@ -1,0 +1,124 @@
+# Capítulo 04
+
+# Gestão de Estoque
+
+## Objetivo
+
+O módulo de Gestão de Estoque tem como objetivo garantir a disponibilidade de materiais necessários para execução das atividades da empresa, mantendo o equilíbrio entre abastecimento, rastreabilidade e utilização eficiente dos recursos.
+
+Seu foco não é apenas controlar quantidades armazenadas.
+
+Sua principal responsabilidade é assegurar que os materiais corretos estejam disponíveis no momento em que forem necessários para a produção.
+
+---
+
+## Filosofia
+
+O estoque representa um recurso estratégico da empresa.
+
+Sua função é atender às necessidades da Produção, reduzir riscos de interrupção das atividades e apoiar o planejamento industrial.
+
+Toda movimentação deverá possuir origem e destino conhecidos, garantindo rastreabilidade completa dos materiais.
+
+---
+
+## Informações Fundamentais
+
+Para cada material o sistema deverá apresentar, no mínimo:
+
+* Saldo Total;
+* Quantidade Reservada;
+* Quantidade Livre;
+* Unidade;
+* Endereço de Armazenagem;
+* Último Custo;
+* Última Compra;
+* Situação.
+
+Essas informações deverão estar disponíveis para todos os módulos que dependem de materiais.
+
+---
+
+## Reserva de Materiais
+
+Quando o PCP optar por Consumo Interno (CI), o sistema reservará automaticamente os materiais necessários para atendimento da Ordem de Fabricação.
+
+Os materiais reservados permanecerão indisponíveis para outras Ordens até sua utilização ou cancelamento da reserva.
+
+Essa funcionalidade garante segurança ao planejamento e reduz conflitos entre projetos simultâneos.
+
+---
+
+## Movimentações
+
+Toda movimentação de estoque deverá possuir uma origem claramente identificada.
+
+Exemplos:
+
+* Recebimento de Compra;
+* Consumo Interno;
+* Produção;
+* Devolução;
+* Ajuste de Inventário;
+* Transferência;
+* Expedição.
+
+Nenhuma movimentação deverá ocorrer sem rastreabilidade.
+
+---
+
+## Localização
+
+O sistema permitirá que cada empresa defina livremente sua estrutura de armazenagem.
+
+Exemplo:
+
+Almoxarifado
+
+↓
+
+Rua
+
+↓
+
+Prateleira
+
+↓
+
+Nível
+
+↓
+
+Posição
+
+Essa estrutura será totalmente configurável, respeitando a realidade operacional de cada organização.
+
+---
+
+## Integração
+
+A Gestão de Estoque estará integrada com:
+
+* Projetos;
+* Ordens de Fabricação;
+* Planejamento;
+* PCP;
+* Compras;
+* Recebimento;
+* Expedição.
+
+Toda alteração de saldo será imediatamente refletida nos demais módulos.
+
+---
+
+## Princípios Fundamentais
+
+O estoque existe para atender a Produção.
+
+Materiais livres podem ser utilizados.
+
+Materiais reservados pertencem ao planejamento.
+
+Toda movimentação deve possuir origem e destino conhecidos.
+
+O sistema deverá fornecer informações confiáveis para apoiar decisões, preservando simplicidade, rastreabilidade e aderência à realidade operacional da empresa.

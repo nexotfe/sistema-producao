@@ -1,0 +1,111 @@
+# Capítulo 03
+
+# Recebimento
+
+## Objetivo
+
+O processo de Recebimento tem como objetivo garantir que os materiais e serviços entregues pelos fornecedores estejam em conformidade com o Pedido de Compra e possam ser disponibilizados com segurança para utilização pela empresa.
+
+O Recebimento representa a transição entre o fornecedor e o estoque, preservando a rastreabilidade, a qualidade e a confiabilidade das informações.
+
+---
+
+# Filosofia
+
+Receber um material não significa apenas registrar sua entrada no estoque.
+
+Antes de sua disponibilização, o sistema deverá permitir a realização das conferências necessárias para garantir que o material entregue corresponda ao que foi adquirido.
+
+Dependendo da política da empresa, essas conferências poderão ocorrer em etapas distintas.
+
+---
+
+# Etapa 01 – Conferência Física
+
+A Conferência Física tem como objetivo validar o material recebido.
+
+Nessa etapa poderão ser conferidos:
+
+* material recebido;
+* quantidade;
+* unidade de medida;
+* dimensões;
+* estado de conservação;
+* embalagem;
+* identificação;
+* certificados;
+* especificações técnicas.
+
+O foco dessa etapa é confirmar que o material entregue corresponde fisicamente ao esperado.
+
+---
+
+# Etapa 02 – Conferência Documental
+
+A Conferência Documental tem como objetivo validar as informações da Nota Fiscal em relação ao Pedido de Compra.
+
+Serão comparados, entre outros:
+
+* fornecedor;
+* Pedido de Compra;
+* materiais;
+* quantidades;
+* preços;
+* impostos;
+* condições comerciais.
+
+O foco dessa etapa é garantir que a documentação esteja de acordo com a negociação realizada.
+
+---
+
+# Etapa 03 – Qualidade (Opcional)
+
+Dependendo do tipo de material ou da política da empresa, poderá existir uma etapa adicional de inspeção da qualidade antes da entrada definitiva no estoque.
+
+Exemplos:
+
+* análise dimensional;
+* composição química;
+* dureza;
+* certificados de qualidade;
+* ensaios;
+* inspeções específicas.
+
+Essa etapa será totalmente configurável.
+
+---
+
+# Entrada em Estoque
+
+Após a conclusão das conferências necessárias, o sistema realizará a entrada do material no estoque.
+
+Quando aplicável, as reservas existentes para Ordens de Fabricação serão atendidas automaticamente, disponibilizando o material para continuidade do planejamento.
+
+---
+
+# Tratamento de Divergências
+
+Sempre que forem identificadas divergências durante qualquer etapa do recebimento, o sistema registrará uma Pendência Operacional.
+
+Exemplos:
+
+* quantidade divergente;
+* material incorreto;
+* Nota Fiscal divergente;
+* certificado ausente;
+* avarias;
+* não conformidades.
+
+O objetivo é garantir que nenhuma inconsistência seja ignorada antes da utilização do material.
+
+---
+
+# Princípios Fundamentais
+
+Receber um material significa validar sua conformidade física, documental e, quando necessário, técnica.
+
+O sistema deverá apoiar esse processo, registrando todas as etapas e preservando a rastreabilidade.
+
+As conferências poderão variar conforme a política da empresa.
+
+O sistema adapta-se ao processo definido por cada organização, mantendo a simplicidade e a segurança operacional.

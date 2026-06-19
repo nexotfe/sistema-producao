@@ -1,0 +1,114 @@
+# Capítulo 03
+
+# Grupos de Tecnologias
+
+## Objetivo
+
+Os Grupos de Tecnologias têm como objetivo organizar os processos produtivos da empresa em conjuntos de competências semelhantes, facilitando o planejamento, a análise da capacidade produtiva e a visualização das operações.
+
+Os grupos possuem finalidade exclusivamente organizacional.
+
+Eles não representam departamentos, setores ou estrutura hierárquica da empresa.
+
+Cada organização poderá definir livremente sua própria estrutura.
+
+---
+
+## Filosofia
+
+O sistema disponibilizará uma estrutura aberta para criação dos Grupos de Tecnologias.
+
+Não existirão grupos obrigatórios.
+
+Durante a implantação poderão ser sugeridos grupos normalmente encontrados na indústria.
+
+Entretanto, a definição da estrutura final será sempre da empresa.
+
+Essa abordagem garante flexibilidade e permite que o sistema seja utilizado por empresas de diferentes segmentos industriais.
+
+---
+
+## Exemplos
+
+Uma empresa poderá utilizar:
+
+* Usinagem;
+* Caldeiraria;
+* Montagem;
+* Engenharia;
+* Qualidade;
+* Manutenção.
+
+Outra empresa poderá utilizar:
+
+* Ferramentaria;
+* Corte Laser;
+* Impressão 3D;
+* Pintura;
+* Laboratório;
+* Assistência Técnica.
+
+Ambas utilizarão exatamente a mesma arquitetura.
+
+---
+
+## Utilização
+
+Os Grupos de Tecnologias serão utilizados para:
+
+* organizar o Cadastro de Tecnologias;
+* facilitar pesquisas e consultas;
+* consolidar carga de trabalho;
+* analisar capacidade produtiva;
+* apresentar informações gerenciais na Central de Operações;
+* apoiar o planejamento industrial.
+
+Eles não interferem diretamente na execução das Operações.
+
+Sua principal função é organizar e consolidar informações.
+
+---
+
+## Integração com o Sistema
+
+Cada Tecnologia deverá pertencer a um único Grupo de Tecnologias.
+
+Entretanto, um Grupo poderá possuir qualquer quantidade de Tecnologias.
+
+Essa estrutura permitirá visualizar informações em diferentes níveis de detalhamento.
+
+Exemplo:
+
+Grupo de Tecnologia
+
+↓
+
+Tecnologias
+
+↓
+
+Operações
+
+↓
+
+Ordens de Fabricação
+
+↓
+
+Projetos
+
+---
+
+## Princípios Fundamentais
+
+Os Grupos de Tecnologias representam uma forma de organização.
+
+Eles não definem departamentos.
+
+Eles não definem equipes.
+
+Eles não definem responsáveis.
+
+Sua função é organizar as Tecnologias utilizadas pela empresa e facilitar a análise da capacidade produtiva.
+
+A estrutura dos grupos será sempre configurável, respeitando a realidade operacional de cada organização.

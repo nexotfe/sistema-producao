@@ -1,0 +1,398 @@
+# ESTADOS OFICIAIS DO NEXOTFE
+
+## Versão 1.0
+
+## Objetivo
+
+Este documento define os estados oficiais utilizados pelo NEXOTFE.
+
+Seu objetivo é garantir que Livro Mestre, banco de dados, APIs, TypeScript e interface utilizem exatamente a mesma nomenclatura e o mesmo significado.
+
+Nenhum módulo poderá criar estados próprios sem aprovação da Arquitetura.
+
+---
+
+# Princípios
+
+Um estado representa a situação atual de uma entidade.
+
+Os estados devem ser simples, objetivos e mutuamente exclusivos.
+
+Cada entidade possui seu próprio ciclo de vida.
+
+Mudanças de estado deverão ser registradas no histórico do sistema.
+
+---
+
+# Projeto
+
+## Ciclo de Vida
+
+Rascunho
+
+↓
+
+Em Orçamento
+
+↓
+
+Em Desenvolvimento
+
+↓
+
+Aguardando Aprovação
+
+↓
+
+Aprovado
+
+↓
+
+Em Planejamento
+
+↓
+
+Em Produção
+
+↓
+
+Concluído
+
+↓
+
+Cancelado
+
+### Definições
+
+**Rascunho**
+Projeto em elaboração.
+
+**Em Orçamento**
+Em estudo comercial ou técnico.
+
+**Em Desenvolvimento**
+Engenharia desenvolvendo a solução.
+
+**Aguardando Aprovação**
+Aguardando decisão do cliente.
+
+**Aprovado**
+Autorizado para execução.
+
+**Em Planejamento**
+PCP preparando a fabricação.
+
+**Em Produção**
+Existe ao menos uma OF em execução.
+
+**Concluído**
+Projeto totalmente finalizado.
+
+**Cancelado**
+Projeto encerrado sem continuidade.
+
+---
+
+# Ordem de Fabricação (OF)
+
+## Ciclo de Vida
+
+Simulação
+
+↓
+
+Aguardando Material
+
+↓
+
+Pronta para Programação
+
+↓
+
+Programada
+
+↓
+
+Em Produção
+
+↓
+
+Parada
+
+↓
+
+Finalizada
+
+↓
+
+Cancelada
+
+### Definições
+
+**Simulação**
+OF ainda não liberada.
+
+**Aguardando Material**
+Existe necessidade pendente.
+
+**Pronta para Programação**
+Todos os materiais estão disponíveis.
+
+**Programada**
+Inserida na programação do PCP.
+
+**Em Produção**
+Há operações em execução.
+
+**Parada**
+Execução interrompida temporariamente.
+
+**Finalizada**
+Todas as operações concluídas.
+
+**Cancelada**
+OF encerrada sem conclusão.
+
+---
+
+# Necessidade de Material
+
+## Ciclo de Vida
+
+Definir
+
+↓
+
+Decisão Registrada
+
+↓
+
+Atendimento Parcial
+
+↓
+
+Atendida
+
+↓
+
+Cancelada
+
+### Definições
+
+**Definir**
+Aguardando decisão do PCP.
+
+**Decisão Registrada**
+PCP definiu como atender.
+
+**Atendimento Parcial**
+Parte reservada e parte em compra.
+
+**Atendida**
+Necessidade totalmente atendida.
+
+**Cancelada**
+Necessidade desconsiderada.
+
+---
+
+# Decisão do PCP
+
+## Tipos
+
+Estoque
+
+Compra
+
+Estoque + Compra
+
+Esses valores representam a decisão tomada pelo PCP e não um estado operacional.
+
+---
+
+# Reserva de Estoque
+
+## Ciclo de Vida
+
+Ativa
+
+↓
+
+Consumida
+
+↓
+
+Liberada
+
+↓
+
+Cancelada
+
+### Definições
+
+**Ativa**
+Material reservado.
+
+**Consumida**
+Material utilizado pela Produção.
+
+**Liberada**
+Reserva desfeita.
+
+**Cancelada**
+Reserva anulada.
+
+---
+
+# Requisição de Compra
+
+## Ciclo de Vida
+
+Aberta
+
+↓
+
+Em Cotação
+
+↓
+
+Aprovada
+
+↓
+
+Convertida em Pedido
+
+↓
+
+Cancelada
+
+---
+
+# Pedido de Compra
+
+## Ciclo de Vida
+
+Emitido
+
+↓
+
+Parcialmente Recebido
+
+↓
+
+Recebido
+
+↓
+
+Encerrado
+
+↓
+
+Cancelado
+
+---
+
+# Recebimento
+
+## Ciclo de Vida
+
+Aguardando Recebimento
+
+↓
+
+Recebimento Físico
+
+↓
+
+Conferência Fiscal
+
+↓
+
+Inspeção
+
+↓
+
+Liberado para Estoque
+
+↓
+
+Rejeitado
+
+---
+
+# Operação (OP)
+
+## Ciclo de Vida
+
+Aguardando
+
+↓
+
+Preparação
+
+↓
+
+Em Execução
+
+↓
+
+Pausada
+
+↓
+
+Inspeção
+
+↓
+
+Concluída
+
+↓
+
+Cancelada
+
+---
+
+# Produto Acabado
+
+## Ciclo de Vida
+
+Em Produção
+
+↓
+
+Aguardando Expedição
+
+↓
+
+Expedido
+
+↓
+
+Entregue
+
+---
+
+# Regras Gerais
+
+Todos os módulos deverão utilizar exclusivamente os estados definidos neste documento.
+
+Os estados deverão possuir o mesmo significado em:
+
+* Banco de Dados;
+* TypeScript;
+* APIs;
+* Interface;
+* Relatórios;
+* Integrações.
+
+Mudanças de nomenclatura somente poderão ocorrer mediante revisão da Arquitetura do NEXOTFE.
+
+---
+
+# Filosofia
+
+Os estados representam o ciclo de vida das entidades da empresa.
+
+Eles não representam telas, botões ou permissões.
+
+Seu objetivo é refletir fielmente a evolução dos processos industriais e garantir que todas as áreas da empresa compartilhem a mesma linguagem operacional.

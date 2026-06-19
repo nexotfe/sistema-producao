@@ -1,0 +1,108 @@
+# Capítulo 04
+
+# Cadastro de Recursos Produtivos
+
+## Objetivo
+
+O Cadastro de Recursos Produtivos tem como objetivo representar a capacidade produtiva instalada da empresa, permitindo ao Comercial, PCP e Planejamento identificar quais recursos estão disponíveis para execução das Tecnologias cadastradas.
+
+O foco deste cadastro não é controlar o patrimônio da empresa, mas fornecer informações que apoiem o planejamento industrial.
+
+---
+
+## Filosofia
+
+Um Recurso Produtivo representa um conjunto de equipamentos ou recursos equivalentes capazes de executar determinada Tecnologia.
+
+Sempre que possível, recursos semelhantes poderão ser agrupados em um único cadastro, simplificando o planejamento e reduzindo a complexidade operacional.
+
+A empresa poderá optar pelo nível de detalhamento mais adequado à sua realidade.
+
+---
+
+## Informações Gerais
+
+Cada Recurso Produtivo deverá possuir, no mínimo:
+
+* Código;
+* Descrição;
+* Grupo de Tecnologias;
+* Tecnologia Principal;
+* Quantidade de Recursos;
+* Situação (Ativo/Inativo);
+* Observações.
+
+---
+
+## Características Técnicas
+
+Cada Recurso poderá possuir características técnicas utilizadas pelo planejamento.
+
+Exemplos:
+
+### Centro de Usinagem CNC até 1.000 mm
+
+* Quantidade: 6
+* Curso X: 1.000 mm
+* Curso Y: 600 mm
+* Curso Z: 600 mm
+
+### Centro de Usinagem CNC até 3.000 mm
+
+* Quantidade: 2
+* Curso X: 3.000 mm
+* Curso Y: 1.200 mm
+* Curso Z: 1.000 mm
+
+### Torno CNC até Ø300 x 500 mm
+
+* Quantidade: 4
+* Diâmetro Máximo: Ø300 mm
+* Comprimento Máximo: 500 mm
+
+As características técnicas serão livres e deverão representar apenas informações relevantes para o planejamento industrial.
+
+---
+
+## Utilização
+
+O Cadastro de Recursos Produtivos será utilizado para:
+
+* planejamento da capacidade;
+* distribuição das operações;
+* cálculo da disponibilidade;
+* análise de gargalos;
+* Central de Operações;
+* apoio ao Comercial durante a elaboração de cenários;
+* apoio ao PCP durante o planejamento da produção.
+
+---
+
+## O que não pertence ao Cadastro
+
+Este cadastro não tem como objetivo controlar:
+
+* patrimônio;
+* manutenção;
+* número de série;
+* fabricante;
+* ano de fabricação;
+* lubrificação;
+* documentação técnica;
+* histórico de manutenção.
+
+Essas informações pertencem aos sistemas especializados de manutenção e gestão patrimonial.
+
+---
+
+## Princípios Fundamentais
+
+O Recurso Produtivo representa capacidade instalada.
+
+A Tecnologia representa competência produtiva.
+
+O Colaborador representa capacidade humana.
+
+O Planejamento Industrial utilizará esses três elementos para distribuir a carga de trabalho e calcular a capacidade disponível da empresa.
+
+O sistema deverá representar a realidade operacional da fábrica da forma mais simples possível, preservando flexibilidade e evitando cadastros desnecessários.

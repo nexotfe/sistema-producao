@@ -1,0 +1,322 @@
+# CAPÍTULO 01 — CICLO DE VIDA DO PROJETO INDUSTRIAL
+
+## Da Necessidade do Cliente à Liberação do Projeto Industrial
+
+**Versão:** 1.0
+**Status:** Aprovado para evolução contínua
+
+---
+
+# Objetivo
+
+Este capítulo descreve o ciclo de vida de um projeto industrial desde o primeiro contato do cliente até sua transformação em um Projeto Industrial oficialmente liberado.
+
+O objetivo é organizar o processo de análise, orçamento, tomada de decisão e aprovação técnica, estabelecendo uma sequência lógica que permita reduzir retrabalhos, preservar conhecimento e aumentar a segurança das decisões.
+
+Este procedimento pode ser aplicado em empresas de fabricação sob encomenda, desenvolvimento de produtos, industrialização e prestação de serviços industriais.
+
+---
+
+# 1. A Necessidade
+
+Todo projeto nasce quando um cliente apresenta uma necessidade.
+
+Essa necessidade pode chegar de diversas formas, como por exemplo:
+
+* desenhos técnicos;
+* modelos tridimensionais (STEP, IGES e similares);
+* peças físicas;
+* conjuntos mecânicos;
+* memoriais descritivos;
+* escopos técnicos;
+* necessidades de automação;
+* ideias;
+* problemas de fabricação;
+* problemas operacionais.
+
+Neste momento ainda não existe orçamento nem projeto.
+
+Existe apenas uma necessidade que deverá ser compreendida.
+
+---
+
+# 2. Compreensão da Necessidade
+
+Antes de iniciar qualquer orçamento, a empresa deverá compreender completamente o desafio apresentado.
+
+Sempre que necessário deverão ser realizados:
+
+* reuniões técnicas;
+* visitas ao cliente;
+* levantamentos complementares;
+* inspeções de peças;
+* análises de documentos;
+* esclarecimentos técnicos.
+
+O princípio é simples:
+
+**Nenhum orçamento deverá ser elaborado enquanto a equipe técnica não compreender claramente o problema apresentado pelo cliente.**
+
+Caso a empresa conclua que não possui conhecimento, tecnologia ou capacidade para executar o projeto, o desafio deverá ser recusado de forma profissional.
+
+Aceitar um projeto sem compreendê-lo representa um risco técnico, financeiro e operacional.
+
+---
+
+# 3. Cadastro do Cliente
+
+As primeiras conversas poderão ocorrer sem qualquer cadastro.
+
+Entretanto, no momento em que a empresa decidir iniciar a elaboração do orçamento, o primeiro cadastro obrigatório será o Cliente.
+
+A partir desse momento toda a documentação, arquivos, comunicações e decisões passarão a compor o histórico desse cliente.
+
+O cadastro do Cliente representa o início oficial do processo.
+
+---
+
+# 4. Criação do Orçamento
+
+Após a decisão de elaborar uma proposta, deverá ser criado um número sequencial que identificará aquele orçamento durante todo o seu ciclo de vida.
+
+Exemplo:
+
+260001
+
+260002
+
+260003
+
+A numeração será composta pelo ano corrente seguido de uma sequência crescente.
+
+Caso o orçamento seja aprovado, esse mesmo número será mantido durante toda a execução do projeto.
+
+Caso não seja aprovado, permanecerá registrado apenas como histórico comercial.
+
+---
+
+# 5. Classificação do Tipo de Venda
+
+Antes do desenvolvimento do orçamento deverá ser definido o tipo de venda.
+
+Inicialmente são considerados:
+
+* Fabricação;
+* Serviço;
+* Industrialização;
+* Desenvolvimento.
+
+Essa classificação determina o fluxo que será seguido pelo projeto e influencia diretamente as etapas posteriores de Engenharia, Compras, PCP e Produção.
+
+---
+
+# 6. Engenharia Comercial
+
+O orçamento representa o primeiro estudo técnico do projeto.
+
+Sua elaboração deverá ser conduzida por um profissional com conhecimento suficiente para transformar a necessidade apresentada pelo cliente em uma solução industrial viável.
+
+Dependendo da complexidade do projeto, o orçamento poderá ser desenvolvido por dois ou mais profissionais, utilizando o conhecimento coletivo da empresa.
+
+Nesta etapa começam a ser definidos:
+
+* tecnologias necessárias;
+* matérias-primas;
+* processos produtivos;
+* recursos especiais;
+* processos terceirizados;
+* dificuldades previstas;
+* estimativas de execução.
+
+O objetivo não é apenas calcular um preço.
+
+O objetivo é compreender tecnicamente aquilo que está sendo proposto ao cliente.
+
+---
+
+# 7. Formação do Roteiro Preliminar
+
+É durante a elaboração do roteiro preliminar que nasce a primeira representação técnica do projeto.
+
+Nessa etapa são estimadas:
+
+* matérias-primas;
+* operações;
+* tecnologias;
+* horas previstas;
+* recursos necessários;
+* processos externos.
+
+Essas estimativas representam a base para formação do custo e para construção dos cenários industriais.
+
+O roteiro preliminar depende principalmente do conhecimento do orçamentista, podendo contar com a participação de toda a equipe técnica da empresa sempre que necessário.
+
+Nos projetos classificados como Fabricação, Industrialização e Serviço, as Ordens de Fabricação preliminares seguem uma lógica semelhante, baseada na experiência do orçamentista e nas informações técnicas disponíveis.
+
+Nos projetos classificados como Desenvolvimento poderão ser criadas OFs Macro.
+
+As OFs Macro representam estimativas de recursos, materiais, tecnologias e horas necessárias para desenvolvimento da solução.
+
+Essas OFs não representam produção.
+
+Representam conhecimento técnico utilizado para análise de viabilidade e formação do orçamento.
+
+Posteriormente serão refinadas durante a evolução do projeto.
+
+---
+
+# 8. Formação do Custo
+
+O custo do orçamento será formado pela consolidação das informações obtidas durante a elaboração do roteiro preliminar.
+
+Entre seus principais componentes estão:
+
+* horas estimadas;
+* matéria-prima;
+* serviços terceirizados;
+* equipamentos especiais;
+* transportes;
+* impostos;
+* margem de contribuição.
+
+Sempre que possível deverão ser utilizados custos já cadastrados, reduzindo consultas repetitivas e aumentando a padronização das estimativas.
+
+---
+
+# 9. Construção do Cenário Industrial
+
+Após a definição do roteiro preliminar e da formação do custo, deverá ser construída uma análise de viabilidade industrial.
+
+A principal referência será a data em que o cliente espera receber o projeto.
+
+A partir dessa data deverão ser avaliados:
+
+* prazo de desenvolvimento;
+* prazo de fabricação;
+* prazo de compras;
+* equipamentos de longo prazo;
+* terceirizações;
+* capacidade produtiva;
+* disponibilidade de recursos;
+* riscos técnicos.
+
+As simulações poderão considerar diferentes alternativas, como:
+
+* antecipação de compras;
+* utilização de horas extras;
+* alteração da sequência de fabricação;
+* diferentes datas de entrega.
+
+Como referência inicial para planejamento poderão ser utilizados os seguintes índices médios de produtividade:
+
+* Desenvolvimento: 75%;
+* Fabricação: 85%;
+* Montagem: 75%.
+
+Esses índices representam valores médios para simulações e poderão ser ajustados conforme as características específicas de cada projeto.
+
+O objetivo da simulação não é tomar decisões automaticamente.
+
+Seu objetivo é fornecer informações confiáveis para apoiar a tomada de decisão.
+
+---
+
+# 10. Aprovação Técnica
+
+Antes do envio do orçamento deverá existir confiança técnica na solução proposta.
+
+O responsável pelo orçamento deverá compreender completamente aquilo que está sendo oferecendo ao cliente.
+
+Caso existam dúvidas relevantes, o projeto deverá ser discutido internamente.
+
+Outro profissional poderá assumir sua responsabilidade técnica.
+
+Caso a equipe conclua que a empresa não possui condições de executar o projeto com qualidade, segurança e responsabilidade, a proposta não deverá ser enviada.
+
+Recusar um projeto também faz parte de uma gestão industrial responsável.
+
+---
+
+# 11. Envio da Proposta
+
+Dependendo da complexidade do projeto, a documentação enviada ao cliente poderá conter:
+
+* proposta comercial;
+* memorial descritivo;
+* escopo técnico;
+* cronograma preliminar;
+* premissas adotadas;
+* condições comerciais.
+
+O orçamento representa um compromisso técnico assumido pela empresa.
+
+---
+
+# 12. Aprovação do Cliente
+
+Quando o cliente aprovar a proposta, o orçamento passará para uma nova fase do seu ciclo de vida.
+
+O número originalmente criado será preservado.
+
+Exemplo:
+
+Orçamento 260001
+
+↓
+
+Projeto Industrial 260001
+
+Nesse momento o registro deixa de representar apenas uma proposta comercial e passa a representar um projeto oficialmente contratado.
+
+
+# 13. Aprovação do Cliente e Transferência do Projeto
+
+Quando o cliente aprovar a proposta comercial e emitir o respectivo Pedido de Compra, encerra-se a fase comercial do projeto.
+
+O primeiro responsável por receber essa confirmação será o Comercial, representado pelo orçamentista responsável pelo projeto.
+
+Após a conferência do Pedido de Compra, o Comercial oficializará internamente o início do Projeto Industrial.
+
+Essa comunicação representa o marco de transição entre a fase comercial e a fase de execução.
+
+A partir desse momento, todas as áreas envolvidas deverão ser comunicadas para iniciarem seus preparativos.
+
+Os principais departamentos envolvidos são:
+
+**PCP**
+
+Assume a coordenação inicial do projeto, define a estratégia de execução, organiza o fluxo de trabalho e programa a reunião de início do projeto.
+
+**Engenharia / Projetos**
+
+Inicia o planejamento técnico do projeto e prepara a execução das atividades de engenharia.
+
+Nos projetos de Desenvolvimento, o PCP liberará a primeira Ordem de Fabricação destinada exclusivamente à Engenharia, dando início ao desenvolvimento técnico do projeto.
+
+Após as etapas de PDR, CDR e FDR e a liberação oficial dos desenhos, serão liberadas as Ordens de Fabricação destinadas à Produção.
+
+**Compras**
+
+Analisa as necessidades previstas nas OFs, verifica a disponibilidade da verba planejada para o projeto, identifica materiais críticos e inicia consultas ou cotações quando necessário.
+
+**Financeiro**
+
+Prepara o planejamento financeiro do projeto, acompanha os desembolsos previstos, controla investimentos, pagamentos e futuras receitas relacionadas ao Pedido de Compra recebido.
+
+A comunicação deverá ser padronizada e representar o início oficial do Projeto Industrial dentro da empresa.
+
+Exemplo:
+
+> **Pedido de Compra Recebido**
+>
+> Cliente: XXXXX
+>
+> Orçamento: 260001
+>
+> Situação: Aprovado
+>
+> Projeto Industrial iniciado.
+>
+> Favor iniciar os preparativos conforme responsabilidades de cada departamento.
+
+A partir dessa comunicação encerra-se oficialmente a fase comercial e inicia-se a fase de implantação do Projeto Industrial.

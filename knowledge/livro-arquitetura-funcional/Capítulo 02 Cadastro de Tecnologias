@@ -1,0 +1,157 @@
+# Capítulo 02
+
+# Cadastro de Tecnologias
+
+## Objetivo
+
+O Cadastro de Tecnologias tem como objetivo representar todos os processos produtivos e técnicos disponíveis na empresa.
+
+Cada Tecnologia representa uma competência necessária para execução de uma Operação (OP), sendo utilizada pelo Comercial, Engenharia, PCP, Produção, Planejamento e Central de Operações.
+
+A Tecnologia não representa uma máquina, um colaborador ou um setor.
+
+Ela representa a forma como determinado trabalho será executado.
+
+---
+
+## Filosofia
+
+Toda Operação deverá possuir obrigatoriamente uma Tecnologia associada.
+
+A Tecnologia identifica qual competência será necessária para executar aquela atividade e permitirá ao sistema calcular capacidade, carga de trabalho, disponibilidade, planejamento e produtividade.
+
+Ela constitui um dos principais elementos da arquitetura do sistema.
+
+---
+
+## Informações Gerais
+
+Cada Tecnologia deverá possuir, no mínimo:
+
+* Código;
+* Descrição;
+* Grupo de Tecnologias;
+* Situação (Ativa/Inativa);
+* Fator de Planejamento;
+* Unidade de Planejamento (minutos ou horas);
+* Observações.
+
+Essas informações serão utilizadas por diversos módulos do sistema.
+
+---
+
+## Grupo de Tecnologias
+
+Cada Tecnologia deverá pertencer a um Grupo de Tecnologias.
+
+Exemplos:
+
+**Usinagem**
+
+* Torno CNC
+* Centro de Usinagem
+* Fresadora Convencional
+* Retífica
+
+**Montagem**
+
+* Ajustagem
+* Montagem Mecânica
+* Testes
+
+**Engenharia**
+
+* Projeto Mecânico
+* Projeto Elétrico
+* Programação CNC
+
+O Grupo de Tecnologias tem como objetivo organizar os processos produtivos, facilitar consultas e apoiar o planejamento da capacidade.
+
+---
+
+## Fator de Planejamento
+
+Cada Tecnologia poderá possuir um Fator de Planejamento configurável.
+
+Esse fator representa a capacidade normalmente considerada durante o planejamento.
+
+Exemplos:
+
+* Torno CNC → 85%
+* Centro de Usinagem → 80%
+* Montagem → 75%
+
+O fator não representa desempenho do colaborador.
+
+Representa um parâmetro utilizado pelo sistema para produzir cronogramas mais próximos da realidade operacional.
+
+Cada empresa poderá definir seus próprios valores.
+
+---
+
+## Integração com o Sistema
+
+O Cadastro de Tecnologias será utilizado por:
+
+* Comercial;
+* Engenharia;
+* Ordens de Fabricação;
+* Operações (OP);
+* Planejamento;
+* PCP;
+* Central de Operações;
+* Cálculo de Capacidade;
+* Planejamento Inteligente de Compras.
+
+Uma alteração nesse cadastro refletirá automaticamente em todos os módulos que utilizam Tecnologias.
+
+---
+
+## O que não pertence à Tecnologia
+
+A Tecnologia não define:
+
+* qual máquina executará o trabalho;
+* qual colaborador realizará a operação;
+* qual equipe participará da atividade;
+* a ordem de execução da produção.
+
+Essas decisões pertencem ao planejamento operacional e serão definidas durante a execução do projeto.
+
+---
+
+## Princípios Fundamentais
+
+A Tecnologia representa uma competência produtiva.
+
+A Operação representa um trabalho.
+
+O colaborador representa capacidade humana.
+
+O recurso produtivo representa o equipamento disponível.
+
+O sistema utiliza esses elementos para planejar a melhor forma de executar cada projeto, preservando flexibilidade e aderência à realidade da empresa.
+
+## Regra Fundamental da Operação
+
+Toda Operação (OP) deverá possuir, obrigatoriamente:
+
+* uma Tecnologia definida;
+* um Tempo planejado.
+
+Essas duas informações representam os requisitos mínimos para que o sistema possa realizar qualquer atividade de planejamento.
+
+A partir delas será possível:
+
+* calcular custos;
+* calcular capacidade produtiva;
+* distribuir carga entre tecnologias;
+* estimar prazos;
+* calcular a Data de Necessidade;
+* apoiar o Planejamento Inteligente de Compras;
+* alimentar a Central de Operações;
+* acompanhar a execução da produção.
+
+Operações sem Tecnologia ou sem Tempo não poderão ser consideradas pelo planejamento industrial e, portanto, não deverão ser liberadas para execução.
+
+Tecnologia e Tempo constituem os dois pilares fundamentais de toda Operação dentro da arquitetura do sistema.

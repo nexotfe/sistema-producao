@@ -1,0 +1,269 @@
+# ESTUDO 006 – Arquitetura de Navegação e Tomada de Decisão
+
+## Objetivo
+
+Definir a filosofia de navegação do NEXOTFE.
+
+O sistema não deverá ser organizado apenas por módulos ou departamentos.
+
+Sua principal função será conduzir o usuário até a informação necessária para tomar uma decisão, utilizando uma navegação progressiva e contextualizada.
+
+---
+
+# 1. Filosofia
+
+O NEXOTFE não foi concebido para mostrar grandes volumes de informações.
+
+Foi concebido para responder perguntas.
+
+Cada tela deverá existir porque responde uma necessidade real da empresa.
+
+O usuário não deverá procurar informações.
+
+O sistema deverá conduzi-lo naturalmente até elas.
+
+---
+
+# 2. Perspectivas
+
+Todas as informações existirão apenas uma única vez no banco de dados.
+
+O que muda é a perspectiva de quem consulta.
+
+Exemplos:
+
+• Comercial → acompanha oportunidades e orçamentos.
+
+• Engenharia → acompanha projetos, desenhos, programação CNC e documentação técnica.
+
+• PCP → acompanha Ordens de Fabricação, capacidade produtiva e liberação da produção.
+
+• Compras → acompanha necessidades de materiais e fornecedores.
+
+• Produção → acompanha Operações em execução.
+
+• Financeiro → acompanha custos, investimentos e recebimentos.
+
+Os dados são únicos.
+
+A forma de visualização muda conforme a responsabilidade de cada área.
+
+---
+
+# 3. Navegação Progressiva
+
+O sistema apresentará inicialmente apenas as informações necessárias para a decisão daquele momento.
+
+Sempre que necessário, o usuário poderá aprofundar a consulta.
+
+Exemplo:
+
+Dashboard PCP
+
+↓
+
+Material pendente (12)
+
+↓
+
+Lista das OF
+
+↓
+
+Projeto
+
+↓
+
+Necessidade de Material
+
+↓
+
+Pedido de Compra
+
+↓
+
+Fornecedor
+
+↓
+
+Previsão de Entrega
+
+Cada clique deverá responder uma nova pergunta.
+
+---
+
+# 4. Macro e Micro
+
+A Diretoria normalmente enxerga:
+
+Empresa
+
+↓
+
+50 Projetos
+
+Entretanto, a realidade operacional pode representar:
+
+• 50 Projetos
+
+• 4.230 Ordens de Fabricação
+
+• 25.388 Operações
+
+• centenas de materiais
+
+• dezenas de tecnologias
+
+• milhares de horas distribuídas entre máquinas e colaboradores.
+
+A quantidade de Projetos não representa a carga real da fábrica.
+
+A carga industrial encontra-se principalmente nas Operações.
+
+O sistema deverá permitir navegar naturalmente da visão macro até a visão operacional.
+
+---
+
+# 5. Não existem becos sem saída
+
+Toda informação importante deverá possuir continuidade.
+
+Exemplo:
+
+Material pendente
+
+↓
+
+Qual OF?
+
+↓
+
+Qual Projeto?
+
+↓
+
+Qual Cliente?
+
+↓
+
+Existe Pedido de Compra?
+
+↓
+
+Quem é o fornecedor?
+
+↓
+
+Quando será entregue?
+
+O usuário nunca deverá ficar sem conseguir aprofundar a investigação.
+
+---
+
+# 6. Arquitetura orientada à decisão
+
+O objetivo do sistema não é apresentar dados.
+
+O objetivo é permitir decisões rápidas e seguras.
+
+Cada painel deverá responder perguntas como:
+
+PCP
+
+• Quais OFs posso liberar hoje?
+
+Compras
+
+• Quais materiais impedem a produção?
+
+Engenharia
+
+• Quais desenhos ainda precisam ser liberados?
+
+Diretoria
+
+• Onde está o gargalo da empresa?
+
+---
+
+# 7. Autonomia Controlada
+
+O sistema deverá sugerir.
+
+As pessoas decidirão.
+
+Exemplo:
+
+Fila sugerida da Tornearia
+
+1 - OF260001
+
+2 - OF260002
+
+3 - OF260003
+
+O líder poderá alterar essa sequência conforme as condições reais da fábrica.
+
+Motivos comuns:
+
+• ferramenta já montada;
+
+• redução de setup;
+
+• operador especializado disponível;
+
+• prioridade operacional;
+
+• oportunidade identificada no chão de fábrica.
+
+A alteração deverá ocorrer imediatamente, sem necessidade de autorização prévia do PCP.
+
+O sistema registrará:
+
+• responsável;
+
+• data;
+
+• horário;
+
+• motivo da alteração (opcional ou obrigatório, conforme configuração).
+
+O PCP será comunicado automaticamente da alteração para acompanhamento posterior.
+
+O objetivo não é impedir decisões.
+
+O objetivo é preservar a rastreabilidade.
+
+---
+
+# 8. Inteligência Humana
+
+O conhecimento do operador, do líder, do orçamentista e do PCP representa um patrimônio da empresa.
+
+O sistema deverá apoiar essas decisões e aprender com elas.
+
+Jamais deverá engessar a operação.
+
+Sempre que possível, o sistema sugerirá ações.
+
+A decisão final continuará sendo humana.
+
+---
+
+# Princípios Fundamentais
+
+• O sistema sugere. A equipe decide.
+
+• Toda decisão importante deverá possuir rastreabilidade.
+
+• Nenhuma tela deverá representar um fim.
+
+• Toda informação deverá permitir aprofundamento.
+
+• A navegação deverá seguir o fluxo natural da indústria.
+
+• O conhecimento das pessoas deverá ser preservado e valorizado pelo sistema.
+
+O NEXOTFE não pretende substituir a experiência dos profissionais.
+
+Seu objetivo é potencializar essa experiência através de informações organizadas e disponíveis no momento certo para a tomada de decisão.

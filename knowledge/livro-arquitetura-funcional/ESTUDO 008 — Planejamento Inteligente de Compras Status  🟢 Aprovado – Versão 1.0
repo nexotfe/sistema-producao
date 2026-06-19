@@ -1,0 +1,192 @@
+ESTUDO 008 — Planejamento Inteligente de Compras
+Status
+
+🟢 Aprovado – Versão 1.0
+
+
+## Objetivo
+
+O Planejamento Inteligente de Compras tem como objetivo transformar as necessidades de materiais geradas pelas Ordens de Fabricação em um plano de aquisição racional, priorizando a disponibilidade dos recursos no momento correto, a consolidação de demandas semelhantes e a otimização dos processos de compra.
+
+Sua finalidade não é apenas indicar o que deve ser comprado, mas determinar quando o material deverá estar disponível para que a execução do projeto ocorra conforme o planejamento industrial.
+
+---
+
+# Filosofia
+
+Uma Ordem de Fabricação não gera automaticamente uma compra.
+
+Ela pode gerar necessidades de materiais.
+
+Essas necessidades serão consolidadas em uma Lista de Necessidades do Projeto.
+
+Cada necessidade permanecerá inicialmente com a situação **Definir**, aguardando análise do PCP.
+
+Após essa análise, o PCP decidirá como a necessidade será atendida:
+
+* **Estoque** – quando o material existente puder ser reservado para a Ordem de Fabricação.
+* **Compra** – quando houver necessidade de aquisição.
+
+Somente os itens classificados como **Compra** participarão do Planejamento Inteligente de Compras.
+
+---
+
+# Lista de Necessidades do Projeto
+
+Sempre que uma Ordem de Fabricação possuir materiais necessários à sua execução, esses itens serão automaticamente incluídos na Lista de Necessidades do Projeto.
+
+Cada item deverá apresentar, no mínimo, as seguintes informações:
+
+* Ordem de Fabricação;
+* Descrição do material;
+* Quantidade;
+* Unidade;
+* Valor estimado unitário;
+* Valor estimado total;
+* Data de Necessidade;
+* Situação (Definir, Estoque ou Compra).
+
+Essa lista permitirá ao PCP visualizar todas as necessidades do projeto antes de autorizar compras ou reservas de estoque.
+
+---
+
+# Data de Necessidade
+
+A Data de Necessidade representa a última data em que determinado material deverá estar disponível para que o cronograma do projeto não seja comprometido.
+
+Essa data não será informada manualmente.
+
+Ela será calculada automaticamente pelo sistema a partir do planejamento industrial do projeto.
+
+Para esse cálculo serão considerados:
+
+* sequência das Ordens de Fabricação;
+* dependências entre conjuntos e subconjuntos;
+* operações previstas;
+* tempos planejados de fabricação;
+* tempos de montagem;
+* fatores de planejamento configurados pela empresa;
+* prazo final do projeto.
+
+A Data de Necessidade constitui uma das principais referências utilizadas pelo Planejamento Inteligente de Compras.
+
+---
+
+# Fatores de Planejamento
+
+Toda tecnologia cadastrada poderá possuir um Fator de Planejamento configurável.
+
+Esse fator representa a capacidade real considerada durante o planejamento, permitindo que o sistema produza cronogramas mais próximos da realidade operacional.
+
+Exemplos:
+
+* Torno CNC: 85%
+* Centro de Usinagem: 80%
+* Montagem: 75%
+* Ajustagem: 70%
+
+Esses valores não representam indicadores de desempenho dos colaboradores.
+
+Representam parâmetros de planejamento utilizados para estimar a capacidade disponível de cada tecnologia.
+
+Cada empresa poderá definir seus próprios fatores conforme sua realidade operacional.
+
+---
+
+# Complemento — Estratégias de Compra
+
+Após a consolidação das necessidades, caberá ao Comprador definir a melhor estratégia de aquisição.
+
+O Planejamento Inteligente de Compras fornecerá informações para apoiar essa decisão, porém a responsabilidade final permanecerá com o comprador.
+
+Entre as estratégias normalmente utilizadas destacam-se:
+
+### Compra da quantidade necessária
+
+O comprador poderá optar pela aquisição da quantidade exata necessária para atender determinada necessidade.
+
+Essa decisão deverá considerar fatores como custo do material, valor do frete, disponibilidade do fornecedor e política de estoque da empresa.
+
+---
+
+## 6. Consolidação Inteligente
+
+Após a validação realizada pelo PCP, todas as necessidades classificadas como **Compra** serão encaminhadas ao Planejamento Inteligente de Compras.
+
+Como primeira etapa, o sistema realizará automaticamente a consolidação das necessidades semelhantes.
+
+Na primeira versão desta arquitetura, o agrupamento considerará os seguintes critérios:
+
+* Família;
+* Tipo (Grade);
+* Bitola.
+
+O objetivo dessa consolidação é organizar as necessidades de compra, identificar oportunidades de aquisição conjunta e fornecer ao comprador uma visão consolidada dos materiais necessários ao projeto.
+
+Essa consolidação representa uma sugestão técnica produzida pelo sistema.
+
+Ela não determina a forma de aquisição.
+
+A decisão final sobre como atender cada necessidade permanecerá sob responsabilidade do comprador.
+
+Novos critérios de consolidação poderão ser incorporados futuramente, preservando a arquitetura principal do sistema.
+
+---
+
+## 7. Estratégias de Compra
+
+Após a consolidação das necessidades, caberá ao comprador definir a estratégia mais adequada para cada aquisição.
+
+O sistema organizará informações, calculará necessidades e apresentará recomendações.
+
+Entretanto, a decisão final continuará sendo humana.
+
+Entre as principais estratégias de compra destacam-se:
+
+### Compra da necessidade
+
+Aquisição da quantidade estritamente necessária para atender determinada Ordem de Fabricação ou Projeto.
+
+A decisão deverá considerar custos, transporte, disponibilidade do fornecedor e política de estoque da empresa.
+
+---
+
+### Atendimento por Estoque
+
+Sempre que existir material disponível e não reservado para outra Ordem de Fabricação, essa deverá ser considerada a primeira alternativa.
+
+A confirmação do atendimento por estoque continuará sendo responsabilidade do PCP.
+
+---
+
+### Aproveitamento de formatos comerciais
+
+Sempre que possível, o sistema recomendará a utilização de barras, chapas, tubos ou perfis comerciais, buscando reduzir desperdícios e aumentar o aproveitamento dos materiais.
+
+A decisão final permanecerá sob responsabilidade do comprador.
+
+---
+
+### Compras antecipadas
+
+Materiais com elevado prazo de fornecimento ou cuja aquisição antecipada tenha sido identificada durante a fase comercial ou acordada com o cliente deverão ser sinalizados ao Planejamento Inteligente de Compras.
+
+---
+
+### Lotes mínimos
+
+Quando houver exigência do fornecedor ou quando a aquisição em maior quantidade representar vantagem técnica ou econômica, o comprador poderá optar pela compra acima da necessidade imediata.
+
+Toda decisão deverá permanecer registrada para fins de rastreabilidade.
+
+---
+
+## Considerações Finais
+
+O Planejamento Inteligente de Compras não substitui a experiência do comprador.
+
+Seu objetivo é transformar informações dispersas em conhecimento organizado, permitindo decisões mais rápidas, seguras e fundamentadas.
+
+O sistema identifica necessidades, calcula datas, consolida materiais e apresenta oportunidades.
+
+A decisão final sobre a estratégia de aquisição continuará sendo responsabilidade das pessoas.

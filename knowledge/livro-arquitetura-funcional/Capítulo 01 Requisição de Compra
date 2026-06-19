@@ -1,0 +1,263 @@
+# Capítulo 01
+
+# Requisição de Compra
+
+## Objetivo
+
+A Requisição de Compra representa a formalização da necessidade de aquisição de materiais previamente analisada pelo Planejamento Inteligente de Compras e validada pelo PCP.
+
+Seu principal objetivo é iniciar o processo de aquisição com antecedência suficiente para que os materiais estejam disponíveis na empresa antes da Data de Necessidade calculada pelo planejamento industrial.
+
+A Requisição de Compra não identifica necessidades.
+
+Ela formaliza necessidades que já foram identificadas, analisadas e aprovadas para aquisição.
+
+---
+
+## Filosofia
+
+Toda necessidade de material nasce em uma Ordem de Fabricação.
+
+Essas necessidades são organizadas automaticamente na Lista de Necessidades do Projeto.
+
+Após análise do PCP, cada necessidade seguirá um dos seguintes caminhos:
+
+* **Consumo Interno (CI)**, quando houver material disponível em estoque;
+* **Compra**, quando houver necessidade de aquisição.
+
+Somente as necessidades classificadas como **Compra** gerarão uma Requisição de Compra.
+
+A Requisição representa o início formal do processo de compras.
+
+---
+
+## Origem
+
+Uma Requisição de Compra poderá possuir duas origens.
+
+### Industrial
+
+Gerada automaticamente pelo Planejamento Inteligente de Compras após validação do PCP.
+
+Sua origem será sempre rastreável até:
+
+Projeto
+
+↓
+
+Ordem de Fabricação
+
+↓
+
+Necessidade
+
+↓
+
+Requisição
+
+---
+
+### Administrativa
+
+Gerada manualmente pelos setores da empresa para aquisição de materiais ou serviços não relacionados diretamente à produção.
+
+Exemplos:
+
+* materiais de escritório;
+* limpeza;
+* informática;
+* manutenção predial;
+* consumo administrativo.
+
+---
+
+## Informações Básicas
+
+Cada Requisição deverá possuir, no mínimo:
+
+* Número da Requisição;
+* Origem;
+* Projeto (quando aplicável);
+* Ordem de Fabricação (quando aplicável);
+* Solicitante;
+* Data da Solicitação;
+* Lista de Itens;
+* Prioridade;
+* Observações.
+
+---
+
+## Fluxo
+
+Projeto
+
+↓
+
+Ordens de Fabricação
+
+↓
+
+Lista de Necessidades
+
+↓
+
+Análise do PCP
+
+↓
+
+Consumo Interno ou Compra
+
+↓
+
+Planejamento Inteligente de Compras
+
+↓
+
+Requisição de Compra
+
+↓
+
+Compras
+
+---
+
+## Responsabilidades
+
+### Sistema
+
+* identificar necessidades;
+* organizar informações;
+* calcular a Data de Necessidade;
+* consolidar materiais semelhantes;
+* gerar automaticamente as Requisições de Compra.
+
+### PCP
+
+* validar as necessidades;
+* decidir entre Consumo Interno ou Compra;
+* acompanhar materiais críticos.
+
+### Comprador
+
+* definir a estratégia de aquisição;
+* negociar fornecedores;
+* emitir o Pedido de Compra;
+* acompanhar os prazos de entrega.
+
+---
+
+## Materiais Críticos
+
+Quando o prazo estimado de aquisição ultrapassar a Data de Necessidade calculada pelo sistema, a Requisição deverá ser identificada como crítica.
+
+Essa informação deverá ser apresentada ao Comprador, PCP e Central de Operações, permitindo atuação antecipada para evitar impactos no cronograma do projeto.
+
+---
+
+## Rastreabilidade
+
+Toda Requisição Industrial deverá permitir identificar, de forma imediata:
+
+Projeto
+
+↓
+
+Ordem de Fabricação
+
+↓
+
+Item solicitado
+
+↓
+
+Pedido de Compra
+
+↓
+
+Recebimento
+
+↓
+
+Reserva de Estoque
+
+↓
+
+Execução da Ordem de Fabricação
+
+Essa rastreabilidade deverá permanecer disponível durante todo o ciclo de vida do projeto.
+
+---
+
+## Princípios Fundamentais
+
+A necessidade nasce na Ordem de Fabricação.
+
+O PCP decide como a necessidade será atendida.
+
+O Planejamento organiza as aquisições.
+
+A Requisição formaliza a compra.
+
+O Comprador define a estratégia de aquisição.
+
+O sistema calcula, organiza e informa.
+
+As decisões permanecem sob responsabilidade das pessoas.
+
+O objetivo da Requisição de Compra não é apenas solicitar materiais.
+
+Seu objetivo é garantir que os recursos necessários estejam disponíveis no momento correto, preservando o cronograma da produção e o compromisso assumido com o cliente.
+
+## Ações Pendentes
+
+A Requisição de Compra poderá ser gerada automaticamente pelo sistema sempre que uma Operação concluir uma etapa que exija contratação de serviços externos.
+
+Essa funcionalidade tem como objetivo eliminar atividades repetitivas e reduzir riscos de esquecimento durante a execução dos projetos.
+
+Exemplo:
+
+Projeto
+
+↓
+
+OF
+
+↓
+
+OP 10 – Torneamento
+
+↓
+
+OP concluída
+
+↓
+
+Próxima Operação:
+
+Tratamento Térmico
+
+Fornecedor Preferencial: Tratamentos Térmicos ABC
+
+Serviço: Temperar e Revenar
+
+Especificação: 45/48 HRC
+
+Quantidade: 5 peças
+
+Data de Necessidade: 15/08/2026
+
+Ao concluir a operação anterior, o sistema criará automaticamente uma Ação Pendente para o PCP.
+
+Essa ação será apresentada na Central de Operações.
+
+Com um único comando, o PCP poderá gerar a Requisição de Compra já contendo todas as informações necessárias para envio ao fornecedor.
+
+Nenhuma informação precisará ser redigitada.
+
+O objetivo dessa funcionalidade é eliminar tarefas repetitivas, reduzir erros de digitação e evitar atrasos provocados pelo esquecimento de serviços terceirizados.
+
+A geração automática da Requisição continuará dependendo da confirmação do PCP.
+
+O sistema prepara a informação.
+
+A decisão permanece sob responsabilidade das pessoas.
