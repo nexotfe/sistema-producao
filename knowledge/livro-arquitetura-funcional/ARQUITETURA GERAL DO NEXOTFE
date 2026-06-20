@@ -1,0 +1,234 @@
+# ARQUITETURA GERAL DO NEXOTFE
+
+## Versão 1.0
+
+## Objetivo
+
+Este documento apresenta a arquitetura funcional do NEXOTFE em seu mais alto nível.
+
+Seu objetivo é demonstrar como os principais módulos da empresa se relacionam, independentemente de linguagem de programação, banco de dados ou interface.
+
+A arquitetura representa o funcionamento da empresa e servirá como referência para o Livro Mestre, Contratos Técnicos, Supabase e desenvolvimento do sistema.
+
+---
+
+# Filosofia
+
+O NEXOTFE não é organizado por telas.
+
+O NEXOTFE é organizado por processos.
+
+Cada módulo possui responsabilidades bem definidas e troca informações com os demais por meio de fluxos rastreáveis.
+
+O objetivo é manter o fluxo contínuo da empresa, desde a oportunidade comercial até a entrega ao cliente.
+
+---
+
+# Arquitetura Geral
+
+```text
+EMPRESA
+│
+├── Configurações
+│     ├── Empresas
+│     ├── Usuários
+│     ├── Numerações
+│     ├── Produção
+│     ├── Tecnologias
+│     ├── Recursos
+│     └── Colaboradores
+│
+├── Comercial
+│     ├── Clientes
+│     ├── Contatos
+│     ├── Oportunidades
+│     ├── Projetos Comerciais
+│     ├── Orçamentos
+│     └── Aprovação Comercial
+│
+├── Engenharia
+│     ├── Projetos
+│     ├── Itens
+│     ├── PN
+│     ├── BOM
+│     ├── Roteiros
+│     ├── Materiais
+│     ├── Operações
+│     └── Documentos
+│
+├── PCP
+│     ├── Ordens de Fabricação
+│     ├── Necessidades
+│     ├── Decisões PCP
+│     ├── Reservas
+│     ├── Programação
+│     └── Dependências
+│
+├── Suprimentos
+│     ├── Estoque
+│     ├── Requisições
+│     ├── Planejamento
+│     ├── Pedidos
+│     ├── Recebimento
+│     └── Fornecedores
+│
+├── Produção
+│     ├── Operações
+│     ├── Apontamentos
+│     ├── Tecnologias
+│     ├── Recursos
+│     ├── Terceiros
+│     └── Histórico
+│
+├── Qualidade
+│     ├── Inspeções
+│     ├── Não Conformidades
+│     ├── Certificados
+│     └── Liberações
+│
+└── Expedição
+      ├── Produto Acabado
+      ├── Separação
+      ├── Expedição
+      └── Entrega
+```
+
+---
+
+# Fluxo Principal
+
+O fluxo operacional do NEXOTFE será composto pelas seguintes etapas:
+
+Cliente
+
+↓
+
+Projeto Comercial
+
+↓
+
+Orçamento
+
+↓
+
+Aprovação
+
+↓
+
+Projeto Industrial
+
+↓
+
+PN
+
+↓
+
+Roteiro de Fabricação
+
+↓
+
+Ordem de Fabricação
+
+↓
+
+Necessidades de Materiais
+
+↓
+
+Decisão do PCP
+
+↓
+
+Reserva de Estoque
+ou
+Requisição de Compra
+
+↓
+
+Planejamento de Compras
+
+↓
+
+Pedido de Compra
+
+↓
+
+Recebimento
+
+↓
+
+Estoque Liberado
+
+↓
+
+Operações de Produção
+
+↓
+
+Produto Acabado
+
+↓
+
+Expedição
+
+↓
+
+Entrega
+
+---
+
+# Princípios da Arquitetura
+
+Toda informação possui uma única origem.
+
+Cada módulo possui responsabilidades bem definidas.
+
+As decisões permanecem sob responsabilidade das pessoas.
+
+O sistema organiza informações, calcula necessidades e preserva a rastreabilidade.
+
+Nenhum módulo deverá duplicar responsabilidades de outro módulo.
+
+Toda informação deverá poder ser rastreada desde o cliente até a entrega final.
+
+---
+
+# Camadas do Projeto
+
+A arquitetura do NEXOTFE será composta por cinco camadas independentes.
+
+Livro Mestre
+
+↓
+
+Contratos Técnicos
+
+↓
+
+Supabase
+
+↓
+
+Backend / APIs
+
+↓
+
+Frontend
+
+Cada camada possui responsabilidades específicas e somente poderá evoluir preservando as definições da camada imediatamente superior.
+
+---
+
+# Regra Fundamental
+
+Antes da implementação de qualquer funcionalidade deverão existir:
+
+• definição funcional no Livro Mestre;
+
+• contrato técnico aprovado;
+
+• arquitetura de dados validada;
+
+• somente então implementação do banco, APIs e interface.
+
+Essa metodologia garante consistência, reduz retrabalho e preserva a evolução contínua do sistema.

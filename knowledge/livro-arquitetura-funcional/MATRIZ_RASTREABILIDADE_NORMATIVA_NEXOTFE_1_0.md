@@ -1,47 +1,44 @@
 # MATRIZ DE RASTREABILIDADE NORMATIVA — NEXOTFE 1.0
 
 **Sprint:** 01 — Prontidão Normativa  
-**Estado:** Inicial
+**Estado:** Completa para o baseline normativo
 
-## Matriz por domínio
+## Matriz central
 
-| Domínio/tema | Fonte principal | Fontes complementares | Consumidores previstos | Prontidão física |
-|---|---|---|---|---|
-| Filosofia e método | Manifesto; Método Nexus | Introdução e Filosofia | Todos | Pronto |
-| Arquitetura de módulos | Arquitetura Geral | Livro Mestre | Todos | Bloqueado: fonte vazia |
-| Modelo conceitual e lógico | Arquitetura de Dados | Contratos Técnicos | Banco, backend, integrações | Bloqueado: fonte vazia |
-| Linguagem industrial | Dicionário Industrial | Livro Mestre | Banco, APIs, interface, relatórios | Bloqueado: fonte vazia |
-| Classificações | Padrão Oficial de Classificações | Capítulos funcionais | Banco, validações, interface | Bloqueado: fonte vazia |
-| Estados e ciclos de vida | Estados Oficiais | Capítulos e contratos | Banco, RPCs, APIs, interface | Pronto para referência; transições devem ser confirmadas pela fonte congelada |
-| Comercial e Projeto | Capítulo 01 — Orçamento | Fundação Industrial | Comercial, Engenharia, PCP | Pronto |
-| Colaboradores | Cadastro de Colaboradores | Recursos Produtivos | Produção, PCP, auditoria | Bloqueado: fonte vazia |
-| Tecnologias | Cadastro de Tecnologias | Grupos; Recursos | Engenharia, PCP, Produção | Pronto |
-| Recursos produtivos | Cadastro de Recursos | Tecnologias | PCP, Produção | Pronto |
-| Materiais | Estudo 007 | Estoque; Estudo Técnico 001 | Engenharia, Estoque, Compras | Bloqueado: fonte principal vazia |
-| Estoque | Gestão de Estoque | Fundação Industrial; Estudo Técnico 001 | PCP, Compras, Produção | Parcial: regra geral disponível |
-| OF e OP | Estudo 002 | Estados Oficiais; Estudo Técnico 001 | PCP, Produção, Qualidade | Bloqueado: fonte principal vazia |
-| Capacidade | Capítulo 05 | Tecnologias; Recursos | Comercial, PCP | Bloqueado: fonte vazia |
-| Necessidades e decisão PCP | Estudo Técnico 001 | Estudo 008; Estados Oficiais | PCP, Estoque, Compras | Pronto no escopo do contrato |
-| Requisição e planejamento | Requisição de Compra; Estudo 008 | Fundação de Compras | PCP, Compras | Pronto |
-| Recebimento | Capítulo 03 — Recebimento | Fundação de Compras | Compras, Estoque, Qualidade | Pronto em nível funcional |
-| Produção | Parte VI | Estados; OF/OP | Produção, Qualidade, PCP | Bloqueado: fonte vazia |
-| Navegação decisória | Estudo 006 | ADRs | Centrais e módulos | Pronto |
-| Central de Operações | Estudo 016; Parte VII | Estudo 006 | Gestão operacional | Bloqueado: fontes vazias |
-| Sequência de implementação | Plano Diretor | Plano Executivo | Equipe de desenvolvimento | Pronto |
-
-## Matriz do eixo do Estudo Técnico 001
-
-| Etapa | Entidade central | Regra normativa | Estado da referência |
+| Tema | Fonte canônica | Consumidores | Prontidão |
 |---|---|---|---|
-| Definição técnica | Roteiro | Consumo unitário e operações | Contrato disponível; fontes gerais parcialmente vazias |
-| Demanda real | OF | Quantidade e snapshot técnico | Contrato disponível; Estudo 002 vazio |
-| Cálculo | Necessidade de Material | Quantidade unitária × quantidade da OF | Disponível |
-| Decisão | Decisão PCP | Estoque, Compra ou Estoque + Compra | Disponível |
-| Atendimento interno | Reserva | Reserva não é consumo | Disponível |
-| Atendimento externo | Requisição | Formaliza compra aprovada | Disponível |
-| Uso físico | Consumo | Baixa física vinculada à reserva | Disponível |
+| Filosofia e hierarquia | 00 — Introdução; 99 — Princípios | Todos | Pronto |
+| Módulos e responsabilidades | 01 — Arquitetura Geral | Todos | Pronto |
+| Entidades e relacionamentos conceituais | 02 — Arquitetura de Dados | Banco, backend, integrações | Pronto |
+| Estados e ciclos de vida | 03 — Estados Oficiais | Banco, RPCs, APIs, interface | Pronto |
+| Estado, tipo, categoria, origem, situação e prioridade | 04 — Padrão Oficial de Classificações | Banco, validações, APIs, interface | Pronto |
+| Terminologia industrial | 05 — Dicionário Industrial | Todos | Pronto |
+| Sequência de implementação | Plano Diretor | Equipe | Pronto |
+| Governança de execução | 07 — Plano Executivo | Equipe | Pronto |
+| Princípios permanentes | 99 — Princípios Arquiteturais | Todos | Pronto |
 
-## Regra de uso
+## Eixo do Estudo Técnico 001
 
-Uma entrega somente pode começar quando a linha correspondente possuir fonte principal materializada. Fontes complementares não podem substituir uma fonte principal vazia.
+| Etapa | Entidade | Fonte normativa | Prontidão |
+|---|---|---|---|
+| Definição técnica | Roteiro | Arquitetura Geral; Dados; Dicionário; Estudo Técnico 001 | Pronto |
+| Demanda | OF | Arquitetura Geral; Dados; Estados; Dicionário; Estudo Técnico 001 | Pronto |
+| Cálculo | Necessidade de Material | Dados; Estados; Dicionário; Estudo Técnico 001 | Pronto |
+| Decisão | Decisão PCP | Dados; Estados; Dicionário; Estudo Técnico 001 | Pronto |
+| Atendimento interno | Reserva | Dados; Estados; Dicionário; Estudo Técnico 001 | Pronto |
+| Atendimento externo | Requisição | Dados; Estados; Dicionário; Estudo Técnico 001 | Pronto |
+| Uso físico | Consumo | Dados; Dicionário; Estudo Técnico 001 | Pronto |
+| Valores classificatórios | Tipos, categorias, origens e prioridades | Padrão Oficial de Classificações | Pronto |
 
+## Verificações executadas
+
+- termos centrais do Estudo Técnico 001 encontrados no Dicionário;
+- entidades centrais com ciclos localizados nos Estados Oficiais;
+- responsabilidades dos módulos localizadas na Arquitetura Geral;
+- entidades principais localizadas na Arquitetura de Dados;
+- Plano Diretor disponível na raiz;
+- Estado, Tipo, Categoria, Origem, Prioridade e Situação localizados no documento 04.
+
+## Regra de liberação
+
+A coleção normativa está fisicamente completa. A liberação da Sprint 02 depende apenas do registro do baseline em controle de versão e da autorização formal no Registro de Prontidão.

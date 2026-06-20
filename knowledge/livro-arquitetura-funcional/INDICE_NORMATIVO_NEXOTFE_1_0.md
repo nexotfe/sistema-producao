@@ -1,76 +1,51 @@
 # ÍNDICE NORMATIVO — NEXOTFE 1.0
 
-**Data do inventário:** 19/06/2026  
-**Finalidade:** localizar as fontes oficiais utilizadas pela implementação.
+**Data da revisão:** 20/06/2026  
+**Estado:** Coleção canônica 00–07 materializada
 
-## Fundamentos
+## Coleção canônica congelada
 
-| Documento | Caminho | Estado físico |
-|---|---|---|
-| Manifesto NEXOTFE | `knowledge/01-MANIFESTO-NEXOTFE.md` | Disponível |
-| Método Nexus | `knowledge/02-METODO NEXUS.MD` | Disponível |
-| Introdução e Filosofia | `knowledge/livro-arquitetura-funcional/00-INTRODUCAO-E-FILOSOFIA.MD` | Disponível |
+| Ordem | Documento | Caminho oficial no workspace | Estado físico |
+|---|---|---|---|
+| 00 | Introdução | `knowledge/livro-arquitetura-funcional/00 - INTRODUÇÃO.md` | Disponível — v1.0 congelada |
+| 01 | Arquitetura Geral | `knowledge/livro-arquitetura-funcional/01 - ARQUITETURA GERAL.md` | Disponível — v1.0 congelada |
+| 02 | Arquitetura de Dados | `knowledge/livro-arquitetura-funcional/02 - ARQUITETURA DE DADOS .md` | Disponível — v1.0 congelada |
+| 03 | Estados Oficiais | `knowledge/livro-arquitetura-funcional/03 - ESTADOS OFICIAIS Estados.md` | Disponível — v1.0 congelada |
+| 04 | Padrão Oficial de Classificações | `knowledge/livro-arquitetura-funcional/04 - PADRÃO OFICIAL.md` | Disponível — v1.0 congelada |
+| 05 | Dicionário Industrial | `knowledge/livro-arquitetura-funcional/05 - DICIONÁRIO INDUSTRIAL.md` | Disponível — v1.0 congelada |
+| 06 | Plano Diretor | `knowledge/livro-arquitetura-funcional/06 - PLANO DIRETOR.md` | Disponível — v1.0 congelada |
+| 07 | Plano Executivo | `knowledge/livro-arquitetura-funcional/07 - PLANO EXECUTIVO.md` | Disponível — v1.0 congelada |
+| 99 | Princípios Arquiteturais | `knowledge/livro-arquitetura-funcional/99 - PRINCÍPIOS ARQUITETURAIS.md` | Disponível — documento permanente |
 
-## Arquitetura central
+## Contratos técnicos e planos complementares
 
-| Documento | Caminho | Estado físico |
-|---|---|---|
-| Arquitetura Geral | `knowledge/livro-arquitetura-funcional/ARQUITETURA GERAL DO NEXOTFE` | Pendente de materialização — arquivo vazio |
-| Arquitetura de Dados | `knowledge/livro-arquitetura-funcional/ARQUITETURA DE DADOS DO NEXOTFE` | Pendente de materialização — arquivo vazio |
-| Estados Oficiais | `knowledge/livro-arquitetura-funcional/ESTADOS OFICIAIS DO NEXOTFE` | Disponível |
-| Padrão Oficial de Classificações | `knowledge/livro-arquitetura-funcional/PADRÃO OFICIAL DE CLASSIFICAÇÕES DO NEXOTFE` | Pendente de materialização — arquivo vazio |
-| Dicionário Industrial | `knowledge/livro-arquitetura-funcional/DICIONÁRIO INDUSTRIAL DO NEXOTFE` | Pendente de materialização — arquivo vazio |
-| Fluxo | `knowledge/livro-arquitetura-funcional/Fluxo` | Pendente de materialização — arquivo vazio |
-
-## Comercial e Engenharia
-
-| Documento | Caminho | Estado físico |
-|---|---|---|
-| Ciclo de Vida do Projeto/Orçamento | `knowledge/livro-arquitetura-funcional/01-ORCAMENTO` | Disponível |
-| Cadastro de Tecnologias | `knowledge/livro-arquitetura-funcional/Capítulo 02 Cadastro de Tecnologias` | Disponível |
-| Grupos de Tecnologias | `knowledge/livro-arquitetura-funcional/Capítulo 03 Grupos de Tecnologias` | Disponível |
-| Recursos Produtivos | `knowledge/livro-arquitetura-funcional/Capítulo 04 Cadastro de Recursos Produtivos` | Disponível |
-| Cadastro de Colaboradores | `knowledge/livro-arquitetura-funcional/Capítulo 01 Cadastro de Colaboradores` | Pendente de materialização — arquivo vazio |
-| Estudo 002 — OF e Operações | `knowledge/livro-arquitetura-funcional/ESTUDO 002 Arquitetura Funcional das Ordens de Fabricação e Operações` | Pendente de materialização — arquivo vazio |
-| Estudo 007 — Materiais | `knowledge/livro-arquitetura-funcional/ESTUDO 007 Cadastro Inteligente de Materiais` | Pendente de materialização — arquivo vazio |
-| Capacidade Operacional | `knowledge/livro-arquitetura-funcional/Capítulo 05 Capacidade Operacional` | Pendente de materialização — arquivo vazio |
-
-## Estoque, Suprimentos e Recebimento
-
-| Documento | Caminho | Estado físico |
-|---|---|---|
-| Gestão de Estoque | `knowledge/livro-arquitetura-funcional/Capítulo 04 Gestão de Estoque` | Disponível |
-| Requisição de Compra | `knowledge/livro-arquitetura-funcional/Capítulo 01 Requisição de Compra` | Disponível |
-| Planejamento Inteligente de Compras | `knowledge/livro-arquitetura-funcional/ESTUDO 008 — Planejamento Inteligente de Compras Status  🟢 Aprovado – Versão 1.0` | Disponível |
-| Recebimento | `knowledge/livro-arquitetura-funcional/Capítulo 03 Recebimento` | Disponível |
-| Parte III — Suprimentos | `knowledge/livro-arquitetura-funcional/PARTE III — SUPRIMENTOS Capítulo 03` | Pendente de materialização — arquivo vazio |
-| Parte V — Suprimentos | `knowledge/livro-arquitetura-funcional/PARTE V SUPRIMENTOS` | Pendente de materialização — arquivo vazio |
-
-## Produção e Centrais
-
-| Documento | Caminho | Estado físico |
-|---|---|---|
-| Parte VI — Produção | `knowledge/livro-arquitetura-funcional/PARTE VI PRODUÇÃO` | Pendente de materialização — arquivo vazio |
-| Parte VI — Produção parte 1 | `knowledge/livro-arquitetura-funcional/PARTE VI PRODUÇÃO parte1` | Pendente de materialização — arquivo vazio |
-| Estudo 016 — Central de Operações | `knowledge/livro-arquitetura-funcional/ESTUDO 016 Central de Operações` | Pendente de materialização — arquivo vazio |
-| Parte VII — Arquitetura das Centrais | `knowledge/livro-arquitetura-funcional/PARTE VII ARQUITETURA DAS CENTRAIS` | Pendente de materialização — arquivo vazio |
-| Navegação e Tomada de Decisão | `knowledge/livro-arquitetura-funcional/ESTUDO 006 – Arquitetura de Navegação e Tomada de Decisão` | Disponível |
-
-## Contratos e execução
-
-| Documento | Caminho | Estado físico |
+| Documento | Caminho | Estado |
 |---|---|---|
 | Estudo Técnico 001 | `ESTUDO_TECNICO_001.md` | Disponível |
-| Plano Diretor | `PLANO_DIRETOR_IMPLEMENTACAO_NEXOTFE_1_0.md` | Disponível |
-| Plano Executivo | `PLANO_EXECUTIVO_IMPLEMENTACAO_NEXOTFE_1_0.md` | Disponível |
+| Plano Diretor detalhado | `PLANO_DIRETOR_IMPLEMENTACAO_NEXOTFE_1_0.md` | Disponível |
+| Plano Executivo detalhado | `PLANO_EXECUTIVO_IMPLEMENTACAO_NEXOTFE_1_0.md` | Disponível |
+| Milestone 1 | `knowledge/livro-arquitetura-funcional/MILESTONE_01_ARQUITETURA_NEXOTFE_1_0_CONGELADA.md` | Registrado |
+| Manifesto do baseline | `knowledge/livro-arquitetura-funcional/MANIFESTO_BASELINE_NORMATIVO_NEXOTFE_1_0.md` | Atualizado |
+| Matriz de rastreabilidade | `knowledge/livro-arquitetura-funcional/MATRIZ_RASTREABILIDADE_NORMATIVA_NEXOTFE_1_0.md` | Atualizada |
+| Registro de prontidão | `knowledge/REGISTRO_PRONTIDAO_SPRINT_01.md` | Em andamento |
 
-## Decisões registradas
+## Livro Mestre e estudos funcionais disponíveis
 
-- `knowledge/decisoes/ADR-004-integracao-001.md`;
-- `knowledge/decisoes/ADR-005-central-nexus.md`;
-- `knowledge/decisoes/ADR-006-projetos-rota-listagem.md`.
+- `00-INTRODUCAO-E-FILOSOFIA.MD`;
+- `01-ORCAMENTO`;
+- `Capítulo 01 Requisição de Compra`;
+- `Capítulo 02 Cadastro de Tecnologias`;
+- `Capítulo 03 Grupos de Tecnologias`;
+- `Capítulo 03 Recebimento`;
+- `Capítulo 04 Cadastro de Recursos Produtivos`;
+- `Capítulo 04 Gestão de Estoque`;
+- `ESTUDO 006 – Arquitetura de Navegação e Tomada de Decisão`;
+- `ESTUDO 008 — Planejamento Inteligente de Compras`.
+
+## Placeholders legados
+
+Arquivos antigos vazios permanecem no workspace, mas não substituem a coleção canônica 00–07. Eles não serão usados como fonte de implementação até eventual classificação documental autorizada.
 
 ## Regra de consulta
 
-O índice aponta a localização, não substitui os documentos. Em caso de ausência de conteúdo, a implementação fica impedida de inferir a regra correspondente.
-
+A implementação deve consultar primeiro a coleção canônica, depois os Contratos Técnicos e, por fim, os capítulos funcionais relacionados.

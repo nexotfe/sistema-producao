@@ -35,7 +35,7 @@ Registrar formalmente que a Arquitetura NEXOTFE 1.0 constitui a base normativa d
 - [Índice Normativo](./INDICE_NORMATIVO_NEXOTFE_1_0.md)
 - [Manifesto do Baseline](./MANIFESTO_BASELINE_NORMATIVO_NEXOTFE_1_0.md)
 - [Matriz de Rastreabilidade](./MATRIZ_RASTREABILIDADE_NORMATIVA_NEXOTFE_1_0.md)
-- [Registro de Prontidão](./REGISTRO_PRONTIDAO_SPRINT_01.md)
+- [Registro de Prontidão](../REGISTRO_PRONTIDAO_SPRINT_01.md)
 
 ## Estado físico do baseline
 
@@ -53,4 +53,3 @@ Qualquer mudança posterior deve informar:
 - impacto em dados, estados, APIs e integrações;
 - estratégia de compatibilidade;
 - nova versão do baseline.
-

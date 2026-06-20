@@ -2,64 +2,53 @@
 
 **Sprint:** 01 — Prontidão Normativa  
 **Data de início:** 19/06/2026  
-**Estado:** Em andamento — bloqueio documental identificado
+**Última verificação:** 20/06/2026  
+**Estado:** Encerrada por autorização explícita do responsável do projeto
 
-## Entregas da Sprint
+## Entregas
 
 | Entrega | Estado | Evidência |
 |---|---|---|
-| Registro do Milestone 1 | Concluído | `MILESTONE_01_ARQUITETURA_NEXOTFE_1_0_CONGELADA.md` |
+| Milestone 1 | Concluído | `MILESTONE_01_ARQUITETURA_NEXOTFE_1_0_CONGELADA.md` |
+| Coleção canônica 00–07 identificada | Concluído | `00 - INTRODUÇÃO.md` |
 | Índice normativo | Concluído | `INDICE_NORMATIVO_NEXOTFE_1_0.md` |
 | Manifesto de hashes | Concluído | `MANIFESTO_BASELINE_NORMATIVO_NEXOTFE_1_0.md` |
-| Matriz de rastreabilidade inicial | Concluído | `MATRIZ_RASTREABILIDADE_NORMATIVA_NEXOTFE_1_0.md` |
-| Conteúdo físico de todas as fontes aprovadas | Pendente | 15 arquivos normativos estão vazios |
-| Responsáveis e aprovadores | Pendente | Não registrados no workspace |
-| Identificação imutável do pacote 1.0 | Parcial | Hashes capturados; falta referência de versão do repositório |
-| Autorização para Sprint 02 | Não liberada | Gate de conteúdo ainda aberto |
+| Matriz de rastreabilidade | Concluído | `MATRIZ_RASTREABILIDADE_NORMATIVA_NEXOTFE_1_0.md` |
+| Arquitetura Geral | Concluído | `01 - ARQUITETURA GERAL.md` |
+| Arquitetura de Dados | Concluído | `02 - ARQUITETURA DE DADOS .md` |
+| Estados Oficiais | Concluído | `03 - ESTADOS OFICIAIS Estados.md` |
+| Padrão Oficial de Classificações | Concluído | `04 - PADRÃO OFICIAL.md` |
+| Dicionário Industrial | Concluído | `05 - DICIONÁRIO INDUSTRIAL.md` |
+| Plano Diretor | Concluído | `06 - PLANO DIRETOR.md` |
+| Plano Executivo | Concluído | `07 - PLANO EXECUTIVO.md` |
+| Princípios Arquiteturais | Concluído | `99 - PRINCÍPIOS ARQUITETURAIS.md` |
+| Autorização para Sprint 02 | Liberada | Autorização explícita em 20/06/2026 |
 
 ## Critérios de encerramento
 
 - [x] Milestone registrado.
-- [x] Documentos inventariados.
-- [x] Hashes capturados.
-- [x] Índice normativo criado.
-- [x] Matriz inicial criada.
-- [ ] Zero documento obrigatório vazio.
-- [ ] Versão e status explícitos em todas as fontes obrigatórias.
-- [ ] Responsáveis pela aprovação registrados.
-- [ ] Termos do Estudo Técnico 001 localizados no Dicionário.
-- [ ] Classificações utilizadas localizadas no padrão oficial.
-- [ ] Estados e transições reconciliados com os contratos.
-- [ ] Pacote 1.0 identificado em controle de versão.
-- [ ] Sprint 02 formalmente autorizada.
+- [x] Coleção canônica identificada.
+- [x] Arquitetura Geral disponível.
+- [x] Arquitetura de Dados disponível.
+- [x] Estados Oficiais disponíveis.
+- [x] Dicionário Industrial disponível.
+- [x] Plano Diretor disponível.
+- [x] Plano Executivo disponível.
+- [x] Princípios Arquiteturais disponíveis.
+- [x] Termos centrais do Estudo Técnico 001 localizados no Dicionário.
+- [x] Entidades centrais localizadas nos Estados Oficiais.
+- [x] Padrão Oficial de Classificações disponível.
+- [x] Estado, Tipo, Categoria, Origem, Prioridade e Situação localizados no padrão oficial.
+- [x] Manifesto atualizado com o hash final do documento 04.
+- [x] Baseline identificado pelos hashes do manifesto e HEAD `a895fbeabfa0e3013b45d469bd888be4c71833f4`.
+- [x] Sprint 02 formalmente autorizada pelo responsável do projeto.
 
-## Bloqueio atual
+## Pendência operacional não bloqueante
 
-Os seguintes documentos precisam receber o conteúdo aprovado, sem criação ou revisão conceitual nesta Sprint:
-
-1. Arquitetura Geral;
-2. Arquitetura de Dados;
-3. Dicionário Industrial;
-4. Padrão Oficial de Classificações;
-5. Fluxo;
-6. Cadastro de Colaboradores;
-7. Capacidade Operacional;
-8. Estudo 002 — OF e Operações;
-9. Estudo 007 — Materiais;
-10. Estudo 016 — Central de Operações;
-11. Parte III — Suprimentos;
-12. Parte V — Suprimentos;
-13. Parte VI — Produção;
-14. Parte VI — Produção parte 1;
-15. Parte VII — Arquitetura das Centrais.
-
-## Ação necessária
-
-Disponibilizar nesses caminhos o conteúdo já aprovado da Arquitetura 1.0 ou indicar sua localização oficial. Nenhum conteúdo será inferido a partir de código, banco ou documentos complementares.
+Criar o tag Git do Milestone 1 quando o executável Git estiver disponível. Até lá, o baseline é identificado pelo manifesto SHA-256, pelo HEAD registrado e pela autorização explícita do responsável do projeto.
 
 ## Gate da Sprint 02
 
-**Estado:** FECHADO.
+**Estado:** ABERTO.
 
-A Sprint 02 — Baseline e Saneamento do Banco só será liberada após o atendimento integral dos critérios documentais da Sprint 01.
-
+Sprint 02 — Baseline e Saneamento do Banco autorizada em 20/06/2026.
