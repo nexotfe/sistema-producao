@@ -55,7 +55,7 @@ Tornar o banco atual inventariado, recuperável e reproduzível antes da primeir
 - [x] comparação de existência local versus Supabase remoto;
 - [ ] inspeção integral do catálogo remoto, RLS, grants, constraints e assinaturas;
 - [ ] classificação e validação dos dados existentes;
-- [ ] backup e restauração comprovados;
+- [x] backup e restauração comprovados;
 - [ ] baseline reproduzível aprovado;
 - [ ] replay aprovado em banco vazio e cópia representativa.
 
@@ -65,3 +65,20 @@ Evidências:
 - `SPRINT_02_BLOQUEIOS_E_RECOMENDACOES.md`.
 
 **Decisão:** a Sprint 02 pode prosseguir em modo de diagnóstico. Alterações de banco permanecem bloqueadas.
+
+## Atualização em 21/06/2026
+
+- [x] backup lógico do schema `public` gerado e validado por hash;
+- [x] restauração local concluída em PostgreSQL isolado;
+- [x] estrutura, dados e pós-processamento restaurados sem erro;
+- [x] constraints e índices validados;
+- [x] catálogo completo do banco restaurado gerado;
+- [x] auditoria das migrations iniciada;
+- [ ] grants e ledger remoto de migrations extraídos;
+- [ ] baseline reproduzível definido e aprovado;
+- [ ] replay integral das migrations aprovado.
+
+Evidências adicionais:
+
+- `CATALOGO_BANCO_RESTAURADO/README.md`;
+- `SPRINT_02_AUDITORIA_MIGRATIONS_INICIAL.md`.

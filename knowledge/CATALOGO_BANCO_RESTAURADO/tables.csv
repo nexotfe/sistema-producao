@@ -1,0 +1,30 @@
+schema_name,table_name,rls_enabled,rls_forced,comment,total_bytes
+public,bom_itens,f,f,Itens de BOM que representam materias-primas ou subconjuntos usados na fabricacao.,40960
+public,boms,f,f,Estrutura BOM principal que agrupa componentes para um produto industrial.,24576
+public,clientes,t,f,,294912
+public,consumos_internos,t,f,Consumo Interno registra material atendido pelo estoque para projeto e OF.,57344
+public,credenciais,t,f,,24576
+public,empresas,t,f,,98304
+public,estoque_movimentacoes,t,f,"Historico simples de entradas, saidas, reservas e ajustes de estoque.",49152
+public,estoque_saldos,t,f,Saldo atual de materia-prima por local de estoque.,32768
+public,fornecedores,t,f,Cadastro base de fornecedores usado pelo modulo de compras e rotinas operacionais.,81920
+public,funcionarios,t,f,,262144
+public,grupos_recursos,t,f,,262144
+public,itens_industriais,t,f,"Cadastro de itens industriais (PNs) usados por projetos, BOMs e roteiros.",212992
+public,materias_primas,t,f,Cadastro de materias-primas usadas em roteiros de fabricacao e estoque.,49152
+public,movimentacoes_estoque,t,f,,131072
+public,numeracao_configuracoes,t,f,Configuracoes de numeracao por empresa. Ex: projeto 26xxxx.,40960
+public,ordens_fabricacao,t,f,"Ordem de Fabricacao (OF) vinculada a projeto, BOM e itens industriais.",57344
+public,pedido_compra_itens,t,f,,32768
+public,pedidos_compra,t,f,"Pedido de compra leve, gerado a partir do planejamento.",40960
+public,planejamento_compra_origens,t,f,Origens de OF/projeto que compoem um planejamento de compras.,65536
+public,planejamentos_compra,t,f,Planejamento de Compras agrupa requisicoes compativeis antes do pedido.,49152
+public,producao_configuracoes,t,f,Configuracoes simples de producao para planejamento inicial e protecao de prazo.,32768
+public,profiles,t,f,,81920
+public,projeto_itens,t,f,Itens do projeto representam linhas do orcamento. Cada item referencia um PN existente.,57344
+public,projetos,t,f,Projeto representa o orcamento comercial e a demanda industrial futura.,73728
+public,recursos_produtivos,t,f,,311296
+public,requisicao_compra_itens,t,f,Itens de materia-prima necessarios para atender projeto e OF.,32768
+public,requisicoes_compra,t,f,Cabecalho da necessidade de compra gerada pela falta de materia-prima.,57344
+public,tecnologias_aplicadas,t,f,,196608
+public,usuarios,t,f,,81920

@@ -1,0 +1,10 @@
+entidade,estados_oficiais,estados_no_banco,classificacao,observacao
+Projeto,"rascunho; em_orcamento; em_desenvolvimento; aguardando_aprovacao; aprovado; em_planejamento; em_producao; concluido; cancelado","orcamento; aprovado; producao; finalizado; cancelado",INCOMPATIVEL,"Somente aprovado e cancelado coincidem; demais transições foram comprimidas ou renomeadas"
+Ordem de Fabricação,"simulacao; aguardando_material; pronta_programacao; programada; em_producao; parada; finalizada; cancelada","planejada; em_producao; concluida; suspensa; cancelada",INCOMPATIVEL,"Não distingue simulação, prontidão de material e programação"
+Necessidade de Material,"definir; decisao_registrada; atendimento_parcial; atendida; cancelada",,AUSENTE,"Entidade e estado não persistidos"
+Reserva de Estoque,"ativa; consumida; liberada; cancelada",,AUSENTE,"Reserva não é entidade; é confundida com movimento/consumo"
+Requisição de Compra,"aberta; em_cotacao; aprovada; convertida_pedido; cancelada","aberta; em_compra; atendida; cancelada",INCOMPATIVEL,"Aprovação, cotação e conversão não são representadas"
+Pedido de Compra,"emitido; parcialmente_recebido; recebido; encerrado; cancelado","rascunho; enviado; confirmado; cancelado",INCOMPATIVEL,"Não representa recebimento parcial/total e encerramento"
+Recebimento,"aguardando_recebimento; recebimento_fisico; conferencia_documental; inspecao; liberado; rejeitado",,AUSENTE,"Entidade ausente"
+Operação (OP),"aguardando; preparacao; em_execucao; pausada; inspecao; concluida; cancelada",,AUSENTE,"Entidade ausente"
+Produto Acabado,"em_producao; aguardando_expedicao; expedido; entregue",,AUSENTE,"Entidade ausente"

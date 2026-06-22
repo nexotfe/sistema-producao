@@ -1,0 +1,797 @@
+schema_name,function_name,identity_arguments,result_type,language,volatility,security_definer,configuration,definition
+public,atualizar_planejamento_compra_decisao,"p_planejamento_compra_id uuid, p_modo_planejamento text, p_comprar_descricao text, p_quantidade_planejada_compra numeric, p_unidade_compra text, p_sobra_prevista numeric",uuid,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.atualizar_planejamento_compra_decisao(p_planejamento_compra_id uuid, p_modo_planejamento text, p_comprar_descricao text, p_quantidade_planejada_compra numeric DEFAULT NULL::numeric, p_unidade_compra text DEFAULT NULL::text, p_sobra_prevista numeric DEFAULT NULL::numeric)
+ RETURNS uuid
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+begin
+  if p_modo_planejamento not in ('manual', 'somar_todas', 'por_of', 'agrupamento_parcial') then
+    raise exception 'Modo de planejamento invalido.';
+  end if;
+
+  update public.planejamentos_compra
+  set modo_planejamento = p_modo_planejamento,
+      comprar_descricao = p_comprar_descricao,
+      quantidade_planejada_compra = p_quantidade_planejada_compra,
+      unidade_compra = p_unidade_compra,
+      sobra_prevista = p_sobra_prevista
+  where id = p_planejamento_compra_id
+    and empresa_id = v_empresa_id
+    and ativo = true
+    and deleted_at is null;
+
+  if not found then
+    raise exception 'Planejamento de compras nao encontrado.';
+  end if;
+
+  return p_planejamento_compra_id;
+end;
+$function$
+"
+public,criar_ordem_fabricacao_operacional,"p_projeto_id uuid, p_projeto_item_id uuid, p_produto_id uuid, p_bom_id uuid, p_quantidade_planejada numeric, p_unidade text, p_data_inicio_planejada date, p_data_conclusao_planejada date, p_tipo text, p_observacoes text",uuid,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.criar_ordem_fabricacao_operacional(p_projeto_id uuid DEFAULT NULL::uuid, p_projeto_item_id uuid DEFAULT NULL::uuid, p_produto_id uuid DEFAULT NULL::uuid, p_bom_id uuid DEFAULT NULL::uuid, p_quantidade_planejada numeric DEFAULT 0, p_unidade text DEFAULT 'peca'::text, p_data_inicio_planejada date DEFAULT NULL::date, p_data_conclusao_planejada date DEFAULT NULL::date, p_tipo text DEFAULT 'normal'::text, p_observacoes text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+  v_of_id uuid;
+  v_numero_of text;
+  v_bom record;
+  v_projeto_item record;
+  v_demanda numeric;
+  v_saldo_livre numeric;
+  v_data_necessidade date := coalesce(p_data_conclusao_planejada, current_date + 7);
+  v_consumo_id uuid;
+  v_requisicao_id uuid;
+  v_unidade_text text;
+  v_bom_item record;
+begin
+  if v_empresa_id is null then
+    raise exception 'Empresa atual nao encontrada.';
+  end if;
+
+  if p_quantidade_planejada <= 0 then
+    raise exception 'Quantidade planejada da OF deve ser maior que zero.';
+  end if;
+
+  if p_unidade not in ('kg', 'metro', 'barra', 'chapa', 'peca') then
+    raise exception 'Unidade invalida para a OF.';
+  end if;
+
+  if p_produto_id is null then
+    if p_projeto_item_id is null then
+      raise exception 'Produto ou item de projeto deve ser informado.';
+    end if;
+
+    select produto_id, unidade
+      into v_projeto_item
+      from public.projeto_itens
+     where id = p_projeto_item_id
+       and empresa_id = v_empresa_id
+       and ativo = true
+       and deleted_at is null;
+
+    if not found then
+      raise exception 'Item de projeto nao encontrado.';
+    end if;
+
+    p_produto_id := v_projeto_item.produto_id;
+    if p_unidade is null then
+      p_unidade := v_projeto_item.unidade;
+    end if;
+  end if;
+
+  select * into v_bom
+    from public.boms
+   where id = p_bom_id
+     and empresa_id = v_empresa_id
+     and ativo = true
+     and deleted_at is null;
+
+  if not found then
+    raise exception 'BOM nao encontrada ou inativa.';
+  end if;
+
+  insert into public.ordens_fabricacao (
+    empresa_id, projeto_id, projeto_item_id, produto_id, bom_id,
+    tipo, status, quantidade_planejada, quantidade_produzida,
+    unidade, data_inicio_planejada, data_conclusao_planejada,
+    observacoes, created_by
+  )
+  values (
+    v_empresa_id, p_projeto_id, p_projeto_item_id, p_produto_id, p_bom_id,
+    p_tipo, 'planejada', p_quantidade_planejada, 0,
+    p_unidade, p_data_inicio_planejada, p_data_conclusao_planejada,
+    p_observacoes, auth.uid()
+  )
+  returning id, numero_of into v_of_id, v_numero_of;
+
+  for v_bom_item in
+    select * from public.bom_itens
+    where bom_id = v_bom.id
+      and ativo = true
+      and deleted_at is null
+    order by nivel, ordem
+  loop
+    v_demanda := p_quantidade_planejada * v_bom_item.quantidade;
+    v_unidade_text := coalesce(v_bom_item.unidade, p_unidade);
+
+    if v_bom_item.componente_tipo = 'materia_prima' then
+      select coalesce(saldo_livre, 0) into v_saldo_livre
+      from public.estoque_saldos
+      where empresa_id = v_empresa_id
+        and materia_prima_id = v_bom_item.materia_prima_id
+        and local_estoque = 'principal'
+      for update;
+
+      if v_saldo_livre > 0 then
+        if v_saldo_livre >= v_demanda then
+          perform public.registrar_consumo_interno(
+            p_projeto_id,
+            v_numero_of,
+            v_bom_item.materia_prima_id,
+            v_demanda,
+            v_unidade_text,
+            0,
+            'principal',
+            current_date,
+            'Consumo interno gerado automaticamente na criacao da OF',
+            v_of_id
+          );
+        else
+          perform public.registrar_consumo_interno(
+            p_projeto_id,
+            v_numero_of,
+            v_bom_item.materia_prima_id,
+            v_saldo_livre,
+            v_unidade_text,
+            0,
+            'principal',
+            current_date,
+            'Consumo interno parcial gerado automaticamente na criacao da OF',
+            v_of_id
+          );
+          perform public.registrar_requisicao_compra_material(
+            p_projeto_id,
+            v_numero_of,
+            v_bom_item.materia_prima_id,
+            v_demanda - v_saldo_livre,
+            v_unidade_text,
+            v_data_necessidade,
+            'Requisicao gerada por falta de estoque na criacao da OF',
+            v_of_id
+          );
+        end if;
+      else
+        perform public.registrar_requisicao_compra_material(
+          p_projeto_id,
+          v_numero_of,
+          v_bom_item.materia_prima_id,
+          v_demanda,
+          v_unidade_text,
+          v_data_necessidade,
+          'Requisicao gerada por falta de estoque na criacao da OF',
+          v_of_id
+        );
+      end if;
+    end if;
+  end loop;
+
+  return v_of_id;
+end;
+$function$
+"
+public,definir_planejamento_compra_origem,"p_origem_id uuid, p_incluir_no_planejamento boolean, p_ordem_agrupamento integer",uuid,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.definir_planejamento_compra_origem(p_origem_id uuid, p_incluir_no_planejamento boolean, p_ordem_agrupamento integer DEFAULT NULL::integer)
+ RETURNS uuid
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+begin
+  update public.planejamento_compra_origens
+  set incluir_no_planejamento = p_incluir_no_planejamento,
+      ordem_agrupamento = p_ordem_agrupamento
+  where id = p_origem_id
+    and empresa_id = v_empresa_id;
+
+  if not found then
+    raise exception 'Origem do planejamento nao encontrada.';
+  end if;
+
+  return p_origem_id;
+end;
+$function$
+"
+public,empresa_atual_id,,uuid,sql,s,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.empresa_atual_id()
+ RETURNS uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select coalesce(
+    (
+      select profiles.empresa_id
+      from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.ativo = true
+    ),
+    (
+      select usuarios.empresa_id
+      from public.usuarios
+      where usuarios.id = auth.uid()
+    )
+  )
+$function$
+"
+public,gerar_numero_entidade,p_entidade text,text,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.gerar_numero_entidade(p_entidade text)
+ RETURNS text
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+  v_config record;
+  v_seq text;
+begin
+  if v_empresa_id is null then
+    raise exception 'Empresa atual nao encontrada.';
+  end if;
+
+  select * into v_config
+    from public.numeracao_configuracoes
+   where empresa_id = v_empresa_id
+     and entidade = p_entidade
+     and ativo = true
+   limit 1;
+
+  if not found then
+    raise exception 'Configuracao de numeracao nao encontrada para entidade %', p_entidade;
+  end if;
+
+  update public.numeracao_configuracoes
+     set sequencia_atual = sequencia_atual + 1, updated_at = now()
+   where id = v_config.id
+   returning sequencia_atual into v_config.sequencia_atual;
+
+  v_seq := lpad(v_config.sequencia_atual::text, v_config.tamanho_sequencia, '0');
+  return concat_ws('', coalesce(v_config.prefixo, ''), coalesce(v_config.ano, ''), v_seq);
+end;
+$function$
+"
+public,gerar_pedido_compra_rascunho,"p_planejamento_compra_id uuid, p_fornecedor_nome text",uuid,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.gerar_pedido_compra_rascunho(p_planejamento_compra_id uuid, p_fornecedor_nome text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+  v_planejamento record;
+  v_pedido_id uuid;
+begin
+  select * into v_planejamento
+  from public.planejamentos_compra
+  where id = p_planejamento_compra_id
+    and empresa_id = v_empresa_id
+    and ativo = true
+    and deleted_at is null;
+
+  if not found then
+    raise exception 'Planejamento de compras nao encontrado.';
+  end if;
+
+  insert into public.pedidos_compra (
+    empresa_id, planejamento_compra_id, fornecedor_nome, status, created_by
+  )
+  values (v_empresa_id, p_planejamento_compra_id, p_fornecedor_nome, 'rascunho', auth.uid())
+  returning id into v_pedido_id;
+
+  insert into public.pedido_compra_itens (
+    empresa_id, pedido_compra_id, planejamento_compra_id, materia_prima_id,
+    descricao_compra, quantidade, unidade, comprar_descricao, created_by
+  )
+  values (
+    v_empresa_id, v_pedido_id, p_planejamento_compra_id,
+    v_planejamento.materia_prima_id, v_planejamento.descricao_compra,
+    v_planejamento.quantidade_planejada_compra, v_planejamento.unidade_compra,
+    v_planejamento.comprar_descricao, auth.uid()
+  );
+
+  return v_pedido_id;
+end;
+$function$
+"
+public,gerar_slug_empresa_unico,"slug_base text, empresa_id_atual uuid, codigo_empresa integer",text,plpgsql,s,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.gerar_slug_empresa_unico(slug_base text, empresa_id_atual uuid, codigo_empresa integer)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  slug_normalizado text;
+  slug_candidato text;
+  incremento integer := 2;
+begin
+  slug_normalizado := public.normalizar_slug_empresa(slug_base);
+  slug_candidato := slug_normalizado;
+
+  if exists (
+    select 1
+    from public.empresas
+    where slug = slug_candidato
+      and (empresa_id_atual is null or id <> empresa_id_atual)
+  ) then
+    slug_candidato := slug_normalizado || '-' || codigo_empresa::text;
+  end if;
+
+  while exists (
+    select 1
+    from public.empresas
+    where slug = slug_candidato
+      and (empresa_id_atual is null or id <> empresa_id_atual)
+  ) loop
+    slug_candidato := slug_normalizado || '-' || incremento::text;
+    incremento := incremento + 1;
+  end loop;
+
+  return slug_candidato;
+end;
+$function$
+"
+public,handle_new_auth_user,,trigger,plpgsql,v,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  empresa_padrao_id uuid;
+  nome_usuario text;
+begin
+  select id
+  into empresa_padrao_id
+  from public.empresas
+  where slug = coalesce(new.raw_user_meta_data->>'empresa_slug', 'nexotfe-demo')
+  limit 1;
+
+  if empresa_padrao_id is null then
+    select id
+    into empresa_padrao_id
+    from public.empresas
+    where slug = 'nexotfe-demo'
+    limit 1;
+  end if;
+
+  nome_usuario := coalesce(new.raw_user_meta_data->>'nome', split_part(new.email, '@', 1));
+
+  insert into public.usuarios (id, empresa_id, nome, email)
+  values (
+    new.id,
+    empresa_padrao_id,
+    nome_usuario,
+    new.email
+  )
+  on conflict (id) do nothing;
+
+  insert into public.profiles (id, empresa_id, nome)
+  values (
+    new.id,
+    empresa_padrao_id,
+    nome_usuario
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$function$
+"
+public,normalizar_slug_empresa,valor text,text,sql,i,f,,"CREATE OR REPLACE FUNCTION public.normalizar_slug_empresa(valor text)
+ RETURNS text
+ LANGUAGE sql
+ IMMUTABLE
+AS $function$
+  select coalesce(
+    nullif(
+      trim(both '-' from lower(regexp_replace(valor, '[^a-zA-Z0-9]+', '-', 'g'))),
+      ''
+    ),
+    'empresa'
+  )
+$function$
+"
+public,preparar_empresa_saas,,trigger,plpgsql,v,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.preparar_empresa_saas()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if new.codigo is null then
+    new.codigo := public.proximo_codigo_empresa();
+  end if;
+
+  new.slug := public.gerar_slug_empresa_unico(
+    coalesce(nullif(btrim(new.slug), ''), new.nome),
+    new.id,
+    new.codigo
+  );
+
+  if new.plano is null or btrim(new.plano) = '' then
+    new.plano := 'starter';
+  end if;
+
+  return new;
+end;
+$function$
+"
+public,processar_necessidade_material,"p_projeto_id uuid, p_of_numero text, p_materia_prima_id uuid, p_quantidade_necessaria numeric, p_unidade text, p_custo_unitario_material numeric, p_local_estoque text, p_data_necessidade_material date, p_observacoes text",jsonb,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.processar_necessidade_material(p_projeto_id uuid, p_of_numero text, p_materia_prima_id uuid, p_quantidade_necessaria numeric, p_unidade text, p_custo_unitario_material numeric DEFAULT 0, p_local_estoque text DEFAULT 'principal'::text, p_data_necessidade_material date DEFAULT CURRENT_DATE, p_observacoes text DEFAULT NULL::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+  v_saldo_livre numeric := 0;
+  v_quantidade_ci numeric := 0;
+  v_quantidade_compra numeric := 0;
+  v_consumo_id uuid;
+  v_requisicao_id uuid;
+  v_status text;
+begin
+  if v_empresa_id is null then
+    raise exception 'Empresa atual nao encontrada.';
+  end if;
+
+  if p_quantidade_necessaria <= 0 then
+    raise exception 'Quantidade necessaria deve ser maior que zero.';
+  end if;
+
+  select saldo_livre into v_saldo_livre
+  from public.estoque_saldos
+  where empresa_id = v_empresa_id
+    and materia_prima_id = p_materia_prima_id
+    and local_estoque = p_local_estoque
+  for update;
+
+  v_saldo_livre := coalesce(v_saldo_livre, 0);
+  v_quantidade_ci := least(v_saldo_livre, p_quantidade_necessaria);
+  v_quantidade_compra := p_quantidade_necessaria - v_quantidade_ci;
+
+  if v_quantidade_ci > 0 then
+    v_consumo_id := public.registrar_consumo_interno(
+      p_projeto_id, p_of_numero, p_materia_prima_id, v_quantidade_ci,
+      p_unidade, p_custo_unitario_material, p_local_estoque,
+      p_data_necessidade_material, p_observacoes
+    );
+  end if;
+
+  if v_quantidade_compra > 0 then
+    v_requisicao_id := public.registrar_requisicao_compra_material(
+      p_projeto_id, p_of_numero, p_materia_prima_id, v_quantidade_compra,
+      p_unidade, p_data_necessidade_material, p_observacoes
+    );
+  end if;
+
+  v_status := case
+    when v_quantidade_ci > 0 and v_quantidade_compra > 0
+      then 'ci_parcial_compra_parcial'
+    when v_quantidade_ci > 0 then 'ci_total'
+    else 'compra_total'
+  end;
+
+  return jsonb_build_object(
+    'status', v_status,
+    'consumo_interno_id', v_consumo_id,
+    'requisicao_compra_id', v_requisicao_id,
+    'quantidade_consumo_interno', v_quantidade_ci,
+    'quantidade_compra_externa', v_quantidade_compra,
+    'saldo_livre_consultado', v_saldo_livre
+  );
+end;
+$function$
+"
+public,proximo_codigo_empresa,,integer,sql,v,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.proximo_codigo_empresa()
+ RETURNS integer
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select nextval('public.empresas_codigo_seq')::integer
+$function$
+"
+public,registrar_consumo_interno,"p_projeto_id uuid, p_of_numero text, p_materia_prima_id uuid, p_quantidade numeric, p_unidade text, p_custo_unitario_material numeric, p_local_estoque text, p_data_movimentacao date, p_observacoes text, p_of_id uuid",uuid,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.registrar_consumo_interno(p_projeto_id uuid, p_of_numero text, p_materia_prima_id uuid, p_quantidade numeric, p_unidade text, p_custo_unitario_material numeric DEFAULT 0, p_local_estoque text DEFAULT 'principal'::text, p_data_movimentacao date DEFAULT CURRENT_DATE, p_observacoes text DEFAULT NULL::text, p_of_id uuid DEFAULT NULL::uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+  v_saldo_livre numeric;
+  v_movimentacao_id uuid;
+  v_consumo_id uuid;
+begin
+  if v_empresa_id is null then
+    raise exception 'Empresa atual nao encontrada.';
+  end if;
+
+  if p_quantidade <= 0 then
+    raise exception 'Quantidade do consumo interno deve ser maior que zero.';
+  end if;
+
+  if p_custo_unitario_material < 0 then
+    raise exception 'Custo unitario do material nao pode ser negativo.';
+  end if;
+
+  if p_unidade not in ('kg', 'metro', 'barra', 'chapa', 'peca') then
+    raise exception 'Unidade invalida para consumo interno.';
+  end if;
+
+  select saldo_livre into v_saldo_livre
+  from public.estoque_saldos
+  where empresa_id = v_empresa_id
+    and materia_prima_id = p_materia_prima_id
+    and local_estoque = p_local_estoque
+  for update;
+
+  if v_saldo_livre is null then
+    raise exception 'Saldo de estoque nao encontrado para a materia-prima.';
+  end if;
+
+  if v_saldo_livre < p_quantidade then
+    raise exception 'Saldo livre insuficiente para gerar consumo interno.';
+  end if;
+
+  update public.estoque_saldos
+  set saldo_reservado = saldo_reservado + p_quantidade
+  where empresa_id = v_empresa_id
+    and materia_prima_id = p_materia_prima_id
+    and local_estoque = p_local_estoque;
+
+  insert into public.estoque_movimentacoes (
+    empresa_id, materia_prima_id, local_estoque, tipo_movimento, quantidade,
+    projeto_id, of_numero, of_id, observacoes, created_by
+  )
+  values (
+    v_empresa_id, p_materia_prima_id, p_local_estoque, 'reserva', p_quantidade,
+    p_projeto_id, p_of_numero, p_of_id,
+    coalesce(p_observacoes, 'Reserva gerada por Consumo Interno'), auth.uid()
+  )
+  returning id into v_movimentacao_id;
+
+  insert into public.consumos_internos (
+    empresa_id, projeto_id, of_numero, of_id, materia_prima_id,
+    estoque_movimentacao_id, local_estoque, quantidade, unidade,
+    saldo_consumido, custo_unitario_material, data_movimentacao,
+    observacoes, created_by
+  )
+  values (
+    v_empresa_id, p_projeto_id, p_of_numero, p_of_id, p_materia_prima_id,
+    v_movimentacao_id, p_local_estoque, p_quantidade, p_unidade,
+    p_quantidade, p_custo_unitario_material, p_data_movimentacao,
+    p_observacoes, auth.uid()
+  )
+  returning id into v_consumo_id;
+
+  return v_consumo_id;
+end;
+$function$
+"
+public,registrar_requisicao_compra_material,"p_projeto_id uuid, p_of_numero text, p_materia_prima_id uuid, p_quantidade numeric, p_unidade text, p_data_necessidade_material date, p_observacoes text, p_of_id uuid",uuid,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.registrar_requisicao_compra_material(p_projeto_id uuid, p_of_numero text, p_materia_prima_id uuid, p_quantidade numeric, p_unidade text, p_data_necessidade_material date, p_observacoes text DEFAULT NULL::text, p_of_id uuid DEFAULT NULL::uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+  v_requisicao_id uuid;
+begin
+  if v_empresa_id is null then
+    raise exception 'Empresa atual nao encontrada.';
+  end if;
+
+  if p_quantidade <= 0 then
+    raise exception 'Quantidade da requisicao deve ser maior que zero.';
+  end if;
+
+  if p_unidade not in ('kg', 'metro', 'barra', 'chapa', 'peca') then
+    raise exception 'Unidade invalida para requisicao de compra.';
+  end if;
+
+  insert into public.requisicoes_compra (
+    empresa_id,
+    projeto_id,
+    of_numero,
+    of_id,
+    data_necessidade_material,
+    status,
+    observacoes,
+    created_by
+  )
+  values (
+    v_empresa_id,
+    p_projeto_id,
+    p_of_numero,
+    p_of_id,
+    p_data_necessidade_material,
+    'aberta',
+    coalesce(p_observacoes, 'Compra externa gerada por falta de saldo livre'),
+    auth.uid()
+  )
+  returning id into v_requisicao_id;
+
+  insert into public.requisicao_compra_itens (
+    empresa_id,
+    requisicao_compra_id,
+    materia_prima_id,
+    quantidade_necessaria,
+    unidade,
+    observacoes,
+    created_by
+  )
+  values (
+    v_empresa_id,
+    v_requisicao_id,
+    p_materia_prima_id,
+    p_quantidade,
+    p_unidade,
+    p_observacoes,
+    auth.uid()
+  );
+
+  return v_requisicao_id;
+end;
+$function$
+"
+public,restore_operacional,"target_table regclass, target_id uuid",boolean,plpgsql,v,f,{search_path=public},"CREATE OR REPLACE FUNCTION public.restore_operacional(target_table regclass, target_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+declare
+  rows_affected integer;
+begin
+  execute format(
+    'update %s
+       set deleted_at = null,
+           deleted_by = null,
+           ativo = true,
+           updated_at = now()
+     where id = $1
+       and empresa_id = public.empresa_atual_id()
+       and deleted_at is not null',
+    target_table
+  )
+  using target_id;
+
+  get diagnostics rows_affected = row_count;
+  return rows_affected > 0;
+end;
+$function$
+"
+public,set_atualizado_em,,trigger,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.set_atualizado_em()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  new.atualizado_em = now();
+  return new;
+end;
+$function$
+"
+public,set_empresa_id_from_usuario,,trigger,plpgsql,v,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.set_empresa_id_from_usuario()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if new.empresa_id is null then
+    new.empresa_id := public.empresa_atual_id();
+  end if;
+
+  return new;
+end;
+$function$
+"
+public,set_ordem_fabricacao_numero,,trigger,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.set_ordem_fabricacao_numero()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  if new.numero_of is null or trim(new.numero_of) = '' then
+    new.numero_of := public.gerar_numero_entidade('of');
+  end if;
+  return new;
+end;
+$function$
+"
+public,set_updated_at,,trigger,plpgsql,v,f,,"CREATE OR REPLACE FUNCTION public.set_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$
+"
+public,soft_delete_operacional,"target_table regclass, target_id uuid",boolean,plpgsql,v,f,{search_path=public},"CREATE OR REPLACE FUNCTION public.soft_delete_operacional(target_table regclass, target_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+declare
+  rows_affected integer;
+begin
+  execute format(
+    'update %s
+       set deleted_at = now(),
+           deleted_by = auth.uid(),
+           ativo = false,
+           updated_at = now()
+     where id = $1
+       and empresa_id = public.empresa_atual_id()
+       and deleted_at is null',
+    target_table
+  )
+  using target_id;
+
+  get diagnostics rows_affected = row_count;
+  return rows_affected > 0;
+end;
+$function$
+"
+public,usuario_e_admin,,boolean,sql,s,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.usuario_e_admin()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and empresa_id = public.empresa_atual_id()
+      and nivel_acesso = 'admin'
+      and ativo = true
+  )
+$function$
+"
+public,usuario_empresa_atual,,"TABLE(usuario_id uuid, empresa_id uuid, empresa_codigo integer, empresa_nome text, empresa_slug text, plano text, nivel_acesso nivel_acesso)",sql,s,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.usuario_empresa_atual()
+ RETURNS TABLE(usuario_id uuid, empresa_id uuid, empresa_codigo integer, empresa_nome text, empresa_slug text, plano text, nivel_acesso nivel_acesso)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select
+    profiles.id as usuario_id,
+    empresas.id as empresa_id,
+    empresas.codigo as empresa_codigo,
+    empresas.nome as empresa_nome,
+    empresas.slug as empresa_slug,
+    empresas.plano,
+    profiles.nivel_acesso
+  from public.profiles
+  join public.empresas
+    on empresas.id = profiles.empresa_id
+  where profiles.id = auth.uid()
+    and profiles.ativo = true
+    and empresas.ativo = true
+$function$
+"
+public,validar_movimentacao_estoque,,trigger,plpgsql,v,t,{search_path=public},"CREATE OR REPLACE FUNCTION public.validar_movimentacao_estoque()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if not exists (
+    select 1
+    from public.itens_industriais item
+    where item.id = new.item_id
+      and item.empresa_id = new.empresa_id
+      and item.deleted_at is null
+  ) then
+    raise exception 'Item industrial nao encontrado para a empresa atual.';
+  end if;
+
+  return new;
+end;
+$function$
+"

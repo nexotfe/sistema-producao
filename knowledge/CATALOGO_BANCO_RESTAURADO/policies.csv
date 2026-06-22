@@ -1,0 +1,111 @@
+schemaname,tablename,policyname,permissive,roles,cmd,qual,with_check
+public,clientes,admins podem editar clientes,PERMISSIVE,{authenticated},UPDATE,usuario_e_admin(),usuario_e_admin()
+public,clientes,admins podem excluir clientes,PERMISSIVE,{authenticated},DELETE,usuario_e_admin(),
+public,clientes,usuarios autenticados podem criar clientes,PERMISSIVE,{authenticated},INSERT,,(created_by = auth.uid())
+public,clientes,usuarios autenticados podem visualizar clientes,PERMISSIVE,{authenticated},SELECT,true,
+public,consumos_internos,consumos_internos_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,consumos_internos,consumos_internos_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,consumos_internos,consumos_internos_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,consumos_internos,consumos_internos_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,credenciais,Usuarios atualizam suas credenciais,PERMISSIVE,{authenticated},UPDATE,((usuario_responsavel = auth.uid()) OR usuario_e_admin()),((usuario_responsavel = auth.uid()) OR usuario_e_admin())
+public,credenciais,Usuarios criam credenciais para si,PERMISSIVE,{authenticated},INSERT,,((usuario_responsavel = auth.uid()) OR usuario_e_admin())
+public,credenciais,Usuarios removem suas credenciais,PERMISSIVE,{authenticated},DELETE,((usuario_responsavel = auth.uid()) OR usuario_e_admin()),
+public,credenciais,Usuarios veem credenciais sob responsabilidade,PERMISSIVE,{authenticated},SELECT,((usuario_responsavel = auth.uid()) OR usuario_e_admin()),
+public,empresas,nexotfe empresas select propria empresa,PERMISSIVE,{authenticated},SELECT,(id = empresa_atual_id()),
+public,empresas,nexotfe empresas update admin propria empresa,PERMISSIVE,{authenticated},UPDATE,((id = empresa_atual_id()) AND usuario_e_admin()),((id = empresa_atual_id()) AND usuario_e_admin())
+public,estoque_movimentacoes,estoque_movimentacoes_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,estoque_movimentacoes,estoque_movimentacoes_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,estoque_movimentacoes,estoque_movimentacoes_select_tenant,PERMISSIVE,{public},SELECT,(empresa_id = empresa_atual_id()),
+public,estoque_movimentacoes,estoque_movimentacoes_update_blocked,PERMISSIVE,{public},UPDATE,false,
+public,estoque_saldos,estoque_saldos_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,estoque_saldos,estoque_saldos_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,estoque_saldos,estoque_saldos_select_tenant,PERMISSIVE,{public},SELECT,(empresa_id = empresa_atual_id()),
+public,estoque_saldos,estoque_saldos_update_tenant,PERMISSIVE,{public},UPDATE,(empresa_id = empresa_atual_id()),(empresa_id = empresa_atual_id())
+public,fornecedores,fornecedores_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,fornecedores,fornecedores_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,fornecedores,fornecedores_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,fornecedores,fornecedores_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,funcionarios,nexotfe funcionarios delete admin mesma empresa,PERMISSIVE,{authenticated},DELETE,((empresa_id = empresa_atual_id()) AND usuario_e_admin()),
+public,funcionarios,nexotfe funcionarios insert mesma empresa,PERMISSIVE,{authenticated},INSERT,,((empresa_id = empresa_atual_id()) AND (created_by = auth.uid()))
+public,funcionarios,nexotfe funcionarios select mesma empresa,PERMISSIVE,{authenticated},SELECT,(empresa_id = empresa_atual_id()),
+public,funcionarios,nexotfe funcionarios update mesma empresa,PERMISSIVE,{authenticated},UPDATE,((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin())),((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin()))
+public,grupos_recursos,Authenticated users can view grupos,PERMISSIVE,{authenticated},SELECT,true,
+public,grupos_recursos,admins excluem grupos recursos,PERMISSIVE,{authenticated},DELETE,usuario_e_admin(),
+public,grupos_recursos,nexotfe grupos recursos select autenticado,PERMISSIVE,{authenticated},SELECT,true,
+public,grupos_recursos,nexotfe grupos recursos update criador ou admin,PERMISSIVE,{authenticated},UPDATE,((created_by = auth.uid()) OR usuario_e_admin()),((created_by = auth.uid()) OR usuario_e_admin())
+public,grupos_recursos,usuarios autenticados criam grupos recursos,PERMISSIVE,{authenticated},INSERT,,(created_by = auth.uid())
+public,grupos_recursos,usuarios autenticados visualizam grupos recursos,PERMISSIVE,{authenticated},SELECT,true,
+public,itens_industriais,nexotfe itens delete admin mesma empresa,PERMISSIVE,{authenticated},DELETE,((empresa_id = empresa_atual_id()) AND usuario_e_admin()),
+public,itens_industriais,nexotfe itens insert mesma empresa,PERMISSIVE,{authenticated},INSERT,,((empresa_id = empresa_atual_id()) AND (created_by = auth.uid()))
+public,itens_industriais,nexotfe itens select mesma empresa,PERMISSIVE,{authenticated},SELECT,(empresa_id = empresa_atual_id()),
+public,itens_industriais,nexotfe itens update mesma empresa,PERMISSIVE,{authenticated},UPDATE,((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin())),((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin()))
+public,materias_primas,materias_primas_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,materias_primas,materias_primas_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,materias_primas,materias_primas_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,materias_primas,materias_primas_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,movimentacoes_estoque,nexotfe estoque delete admin mesma empresa,PERMISSIVE,{authenticated},DELETE,((empresa_id = empresa_atual_id()) AND usuario_e_admin()),
+public,movimentacoes_estoque,nexotfe estoque insert mesma empresa,PERMISSIVE,{authenticated},INSERT,,((empresa_id = empresa_atual_id()) AND (created_by = auth.uid()))
+public,movimentacoes_estoque,nexotfe estoque select mesma empresa,PERMISSIVE,{authenticated},SELECT,(empresa_id = empresa_atual_id()),
+public,movimentacoes_estoque,nexotfe estoque update mesma empresa,PERMISSIVE,{authenticated},UPDATE,((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin())),((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin()))
+public,numeracao_configuracoes,numeracao_configuracoes_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,numeracao_configuracoes,numeracao_configuracoes_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,numeracao_configuracoes,numeracao_configuracoes_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,numeracao_configuracoes,numeracao_configuracoes_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,ordens_fabricacao,ordens_fabricacao_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,ordens_fabricacao,ordens_fabricacao_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,ordens_fabricacao,ordens_fabricacao_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,ordens_fabricacao,ordens_fabricacao_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,pedido_compra_itens,pedido_compra_itens_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,pedido_compra_itens,pedido_compra_itens_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,pedido_compra_itens,pedido_compra_itens_select_tenant,PERMISSIVE,{public},SELECT,(empresa_id = empresa_atual_id()),
+public,pedido_compra_itens,pedido_compra_itens_update_blocked,PERMISSIVE,{public},UPDATE,false,
+public,pedidos_compra,pedidos_compra_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,pedidos_compra,pedidos_compra_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,pedidos_compra,pedidos_compra_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,pedidos_compra,pedidos_compra_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,planejamento_compra_origens,planejamento_compra_origens_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,planejamento_compra_origens,planejamento_compra_origens_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,planejamento_compra_origens,planejamento_compra_origens_select_tenant,PERMISSIVE,{public},SELECT,(empresa_id = empresa_atual_id()),
+public,planejamento_compra_origens,planejamento_compra_origens_update_tenant,PERMISSIVE,{public},UPDATE,(empresa_id = empresa_atual_id()),(empresa_id = empresa_atual_id())
+public,planejamentos_compra,planejamentos_compra_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,planejamentos_compra,planejamentos_compra_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,planejamentos_compra,planejamentos_compra_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,planejamentos_compra,planejamentos_compra_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,producao_configuracoes,producao_configuracoes_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,producao_configuracoes,producao_configuracoes_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,producao_configuracoes,producao_configuracoes_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,producao_configuracoes,producao_configuracoes_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,profiles,nexotfe profiles admin gerencia mesma empresa,PERMISSIVE,{authenticated},ALL,((empresa_id = empresa_atual_id()) AND usuario_e_admin()),((empresa_id = empresa_atual_id()) AND usuario_e_admin())
+public,profiles,nexotfe profiles select mesma empresa,PERMISSIVE,{authenticated},SELECT,((id = auth.uid()) OR ((empresa_id = empresa_atual_id()) AND usuario_e_admin())),
+public,profiles,nexotfe profiles update proprio perfil,PERMISSIVE,{authenticated},UPDATE,((id = auth.uid()) AND (empresa_id = empresa_atual_id())),"((id = auth.uid()) AND (empresa_id = empresa_atual_id()) AND (nivel_acesso = ( SELECT profile_atual.nivel_acesso
+   FROM profiles profile_atual
+  WHERE (profile_atual.id = auth.uid()))))"
+public,projeto_itens,projeto_itens_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,projeto_itens,projeto_itens_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,projeto_itens,projeto_itens_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,projeto_itens,projeto_itens_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,projetos,projetos_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,projetos,projetos_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,projetos,projetos_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,projetos,projetos_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,recursos_produtivos,Authenticated users can insert recursos,PERMISSIVE,{authenticated},INSERT,,(auth.uid() = created_by)
+public,recursos_produtivos,nexotfe recursos produtivos select autenticado,PERMISSIVE,{authenticated},SELECT,true,
+public,recursos_produtivos,nexotfe recursos produtivos update criador ou admin,PERMISSIVE,{authenticated},UPDATE,((created_by = auth.uid()) OR usuario_e_admin()),((created_by = auth.uid()) OR usuario_e_admin())
+public,recursos_produtivos,usuarios autenticados criam recursos produtivos,PERMISSIVE,{authenticated},INSERT,,(created_by = auth.uid())
+public,requisicao_compra_itens,requisicao_compra_itens_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,requisicao_compra_itens,requisicao_compra_itens_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,requisicao_compra_itens,requisicao_compra_itens_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,requisicao_compra_itens,requisicao_compra_itens_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,requisicoes_compra,requisicoes_compra_delete_blocked,PERMISSIVE,{public},DELETE,false,
+public,requisicoes_compra,requisicoes_compra_insert_tenant,PERMISSIVE,{public},INSERT,,(empresa_id = empresa_atual_id())
+public,requisicoes_compra,requisicoes_compra_select_tenant,PERMISSIVE,{public},SELECT,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),
+public,requisicoes_compra,requisicoes_compra_update_tenant,PERMISSIVE,{public},UPDATE,((empresa_id = empresa_atual_id()) AND (ativo = true) AND (deleted_at IS NULL)),(empresa_id = empresa_atual_id())
+public,tecnologias_aplicadas,nexotfe tecnologias delete admin mesma empresa,PERMISSIVE,{authenticated},DELETE,((empresa_id = empresa_atual_id()) AND usuario_e_admin()),
+public,tecnologias_aplicadas,nexotfe tecnologias insert mesma empresa,PERMISSIVE,{authenticated},INSERT,,((empresa_id = empresa_atual_id()) AND (created_by = auth.uid()))
+public,tecnologias_aplicadas,nexotfe tecnologias select mesma empresa,PERMISSIVE,{authenticated},SELECT,(empresa_id = empresa_atual_id()),
+public,tecnologias_aplicadas,nexotfe tecnologias update mesma empresa,PERMISSIVE,{authenticated},UPDATE,((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin())),((empresa_id = empresa_atual_id()) AND ((created_by = auth.uid()) OR usuario_e_admin()))
+public,usuarios,Admins gerenciam usuarios,PERMISSIVE,{authenticated},ALL,usuario_e_admin(),usuario_e_admin()
+public,usuarios,Usuarios podem atualizar dados basicos do proprio perfil,PERMISSIVE,{authenticated},UPDATE,(id = auth.uid()),"((id = auth.uid()) AND (nivel_acesso = ( SELECT u.nivel_acesso
+   FROM usuarios u
+  WHERE (u.id = auth.uid()))))"
+public,usuarios,Usuarios podem ver o proprio perfil,PERMISSIVE,{authenticated},SELECT,((id = auth.uid()) OR usuario_e_admin()),

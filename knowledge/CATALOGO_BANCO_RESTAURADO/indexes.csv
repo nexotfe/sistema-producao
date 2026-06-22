@@ -1,0 +1,203 @@
+schema_name,table_name,index_name,is_unique,is_primary,is_valid,definition
+public,bom_itens,bom_itens_bom_id_idx,f,f,t,CREATE INDEX bom_itens_bom_id_idx ON public.bom_itens USING btree (bom_id)
+public,bom_itens,bom_itens_componente_produto_id_idx,f,f,t,CREATE INDEX bom_itens_componente_produto_id_idx ON public.bom_itens USING btree (componente_produto_id)
+public,bom_itens,bom_itens_materia_prima_id_idx,f,f,t,CREATE INDEX bom_itens_materia_prima_id_idx ON public.bom_itens USING btree (materia_prima_id)
+public,bom_itens,bom_itens_pkey,t,t,t,CREATE UNIQUE INDEX bom_itens_pkey ON public.bom_itens USING btree (id)
+public,boms,boms_pkey,t,t,t,CREATE UNIQUE INDEX boms_pkey ON public.boms USING btree (id)
+public,boms,boms_produto_versao_uniq,t,f,t,"CREATE UNIQUE INDEX boms_produto_versao_uniq ON public.boms USING btree (empresa_id, produto_id, versao)"
+public,clientes,clientes_ativo_idx,f,f,t,CREATE INDEX clientes_ativo_idx ON public.clientes USING btree (ativo)
+public,clientes,clientes_cidade_idx,f,f,t,CREATE INDEX clientes_cidade_idx ON public.clientes USING btree (cidade)
+public,clientes,clientes_cnpj_idx,f,f,t,CREATE INDEX clientes_cnpj_idx ON public.clientes USING btree (cnpj)
+public,clientes,clientes_created_at_idx,f,f,t,CREATE INDEX clientes_created_at_idx ON public.clientes USING btree (created_at DESC)
+public,clientes,clientes_created_by_idx,f,f,t,CREATE INDEX clientes_created_by_idx ON public.clientes USING btree (created_by)
+public,clientes,clientes_deleted_at_idx,f,f,t,CREATE INDEX clientes_deleted_at_idx ON public.clientes USING btree (deleted_at)
+public,clientes,clientes_deleted_by_idx,f,f,t,CREATE INDEX clientes_deleted_by_idx ON public.clientes USING btree (deleted_by)
+public,clientes,clientes_email_idx,f,f,t,CREATE INDEX clientes_email_idx ON public.clientes USING btree (email)
+public,clientes,clientes_empresa_ativo_deleted_at_idx,f,f,t,"CREATE INDEX clientes_empresa_ativo_deleted_at_idx ON public.clientes USING btree (empresa_id, ativo, deleted_at)"
+public,clientes,clientes_empresa_codigo_idx,f,f,t,"CREATE INDEX clientes_empresa_codigo_idx ON public.clientes USING btree (empresa_id, nome)"
+public,clientes,clientes_empresa_deleted_at_idx,f,f,t,"CREATE INDEX clientes_empresa_deleted_at_idx ON public.clientes USING btree (empresa_id, deleted_at)"
+public,clientes,clientes_empresa_id_ativo_idx,f,f,t,"CREATE INDEX clientes_empresa_id_ativo_idx ON public.clientes USING btree (empresa_id, ativo)"
+public,clientes,clientes_empresa_idx,f,f,t,CREATE INDEX clientes_empresa_idx ON public.clientes USING btree (empresa)
+public,clientes,clientes_empresa_updated_at_idx,f,f,t,"CREATE INDEX clientes_empresa_updated_at_idx ON public.clientes USING btree (empresa_id, updated_at DESC)"
+public,clientes,clientes_nome_idx,f,f,t,CREATE INDEX clientes_nome_idx ON public.clientes USING btree (nome)
+public,clientes,clientes_pkey,t,t,t,CREATE UNIQUE INDEX clientes_pkey ON public.clientes USING btree (id)
+public,clientes,clientes_updated_at_idx,f,f,t,CREATE INDEX clientes_updated_at_idx ON public.clientes USING btree (updated_at DESC)
+public,consumos_internos,consumos_internos_empresa_data_idx,f,f,t,"CREATE INDEX consumos_internos_empresa_data_idx ON public.consumos_internos USING btree (empresa_id, data_movimentacao)"
+public,consumos_internos,consumos_internos_material_idx,f,f,t,CREATE INDEX consumos_internos_material_idx ON public.consumos_internos USING btree (materia_prima_id)
+public,consumos_internos,consumos_internos_of_id_idx,f,f,t,CREATE INDEX consumos_internos_of_id_idx ON public.consumos_internos USING btree (of_id)
+public,consumos_internos,consumos_internos_of_numero_idx,f,f,t,CREATE INDEX consumos_internos_of_numero_idx ON public.consumos_internos USING btree (of_numero)
+public,consumos_internos,consumos_internos_pkey,t,t,t,CREATE UNIQUE INDEX consumos_internos_pkey ON public.consumos_internos USING btree (id)
+public,consumos_internos,consumos_internos_projeto_idx,f,f,t,CREATE INDEX consumos_internos_projeto_idx ON public.consumos_internos USING btree (projeto_id)
+public,credenciais,credenciais_pkey,t,t,t,CREATE UNIQUE INDEX credenciais_pkey ON public.credenciais USING btree (id)
+public,credenciais,credenciais_usuario_responsavel_idx,f,f,t,CREATE INDEX credenciais_usuario_responsavel_idx ON public.credenciais USING btree (usuario_responsavel)
+public,empresas,empresas_ativo_idx,f,f,t,CREATE INDEX empresas_ativo_idx ON public.empresas USING btree (ativo)
+public,empresas,empresas_codigo_key,t,f,t,CREATE UNIQUE INDEX empresas_codigo_key ON public.empresas USING btree (codigo)
+public,empresas,empresas_created_by_idx,f,f,t,CREATE INDEX empresas_created_by_idx ON public.empresas USING btree (created_by)
+public,empresas,empresas_pkey,t,t,t,CREATE UNIQUE INDEX empresas_pkey ON public.empresas USING btree (id)
+public,empresas,empresas_slug_key,t,f,t,CREATE UNIQUE INDEX empresas_slug_key ON public.empresas USING btree (slug)
+public,estoque_movimentacoes,estoque_movimentacoes_empresa_material_idx,f,f,t,"CREATE INDEX estoque_movimentacoes_empresa_material_idx ON public.estoque_movimentacoes USING btree (empresa_id, materia_prima_id)"
+public,estoque_movimentacoes,estoque_movimentacoes_of_id_idx,f,f,t,CREATE INDEX estoque_movimentacoes_of_id_idx ON public.estoque_movimentacoes USING btree (of_id)
+public,estoque_movimentacoes,estoque_movimentacoes_of_numero_idx,f,f,t,CREATE INDEX estoque_movimentacoes_of_numero_idx ON public.estoque_movimentacoes USING btree (of_numero)
+public,estoque_movimentacoes,estoque_movimentacoes_pkey,t,t,t,CREATE UNIQUE INDEX estoque_movimentacoes_pkey ON public.estoque_movimentacoes USING btree (id)
+public,estoque_movimentacoes,estoque_movimentacoes_projeto_idx,f,f,t,CREATE INDEX estoque_movimentacoes_projeto_idx ON public.estoque_movimentacoes USING btree (projeto_id)
+public,estoque_saldos,estoque_saldos_empresa_material_idx,f,f,t,"CREATE INDEX estoque_saldos_empresa_material_idx ON public.estoque_saldos USING btree (empresa_id, materia_prima_id)"
+public,estoque_saldos,estoque_saldos_material_local_uniq,t,f,t,"CREATE UNIQUE INDEX estoque_saldos_material_local_uniq ON public.estoque_saldos USING btree (empresa_id, materia_prima_id, local_estoque)"
+public,estoque_saldos,estoque_saldos_pkey,t,t,t,CREATE UNIQUE INDEX estoque_saldos_pkey ON public.estoque_saldos USING btree (id)
+public,fornecedores,fornecedores_empresa_cnpj_idx,f,f,t,"CREATE INDEX fornecedores_empresa_cnpj_idx ON public.fornecedores USING btree (empresa_id, cnpj)"
+public,fornecedores,fornecedores_empresa_idx,f,f,t,CREATE INDEX fornecedores_empresa_idx ON public.fornecedores USING btree (empresa_id)
+public,fornecedores,fornecedores_empresa_nome_idx,f,f,t,"CREATE INDEX fornecedores_empresa_nome_idx ON public.fornecedores USING btree (empresa_id, nome)"
+public,fornecedores,fornecedores_pkey,t,t,t,CREATE UNIQUE INDEX fornecedores_pkey ON public.fornecedores USING btree (id)
+public,funcionarios,funcionarios_ativo_idx,f,f,t,CREATE INDEX funcionarios_ativo_idx ON public.funcionarios USING btree (ativo)
+public,funcionarios,funcionarios_codigo_idx,f,f,t,CREATE INDEX funcionarios_codigo_idx ON public.funcionarios USING btree (codigo)
+public,funcionarios,funcionarios_created_by_idx,f,f,t,CREATE INDEX funcionarios_created_by_idx ON public.funcionarios USING btree (created_by)
+public,funcionarios,funcionarios_deleted_at_idx,f,f,t,CREATE INDEX funcionarios_deleted_at_idx ON public.funcionarios USING btree (deleted_at)
+public,funcionarios,funcionarios_deleted_by_idx,f,f,t,CREATE INDEX funcionarios_deleted_by_idx ON public.funcionarios USING btree (deleted_by)
+public,funcionarios,funcionarios_empresa_ativo_deleted_at_idx,f,f,t,"CREATE INDEX funcionarios_empresa_ativo_deleted_at_idx ON public.funcionarios USING btree (empresa_id, ativo, deleted_at)"
+public,funcionarios,funcionarios_empresa_codigo_idx,f,f,t,"CREATE INDEX funcionarios_empresa_codigo_idx ON public.funcionarios USING btree (empresa_id, codigo)"
+public,funcionarios,funcionarios_empresa_codigo_unique_idx,t,f,t,"CREATE UNIQUE INDEX funcionarios_empresa_codigo_unique_idx ON public.funcionarios USING btree (empresa_id, codigo)"
+public,funcionarios,funcionarios_empresa_id_idx,f,f,t,CREATE INDEX funcionarios_empresa_id_idx ON public.funcionarios USING btree (empresa_id)
+public,funcionarios,funcionarios_empresa_setor_idx,f,f,t,"CREATE INDEX funcionarios_empresa_setor_idx ON public.funcionarios USING btree (empresa_id, setor)"
+public,funcionarios,funcionarios_empresa_updated_at_idx,f,f,t,"CREATE INDEX funcionarios_empresa_updated_at_idx ON public.funcionarios USING btree (empresa_id, updated_at DESC)"
+public,funcionarios,funcionarios_pkey,t,t,t,CREATE UNIQUE INDEX funcionarios_pkey ON public.funcionarios USING btree (id)
+public,funcionarios,funcionarios_setor_idx,f,f,t,CREATE INDEX funcionarios_setor_idx ON public.funcionarios USING btree (setor)
+public,funcionarios,funcionarios_tecnologia_aplicada_id_idx,f,f,t,CREATE INDEX funcionarios_tecnologia_aplicada_id_idx ON public.funcionarios USING btree (tecnologia_aplicada_id)
+public,funcionarios,funcionarios_updated_at_idx,f,f,t,CREATE INDEX funcionarios_updated_at_idx ON public.funcionarios USING btree (updated_at DESC)
+public,grupos_recursos,grupos_recursos_ativo_idx,f,f,t,CREATE INDEX grupos_recursos_ativo_idx ON public.grupos_recursos USING btree (ativo)
+public,grupos_recursos,grupos_recursos_capacidade_total_idx,f,f,t,CREATE INDEX grupos_recursos_capacidade_total_idx ON public.grupos_recursos USING btree (capacidade_total)
+public,grupos_recursos,grupos_recursos_codigo_key,t,f,t,CREATE UNIQUE INDEX grupos_recursos_codigo_key ON public.grupos_recursos USING btree (codigo)
+public,grupos_recursos,grupos_recursos_created_by_idx,f,f,t,CREATE INDEX grupos_recursos_created_by_idx ON public.grupos_recursos USING btree (created_by)
+public,grupos_recursos,grupos_recursos_deleted_at_idx,f,f,t,CREATE INDEX grupos_recursos_deleted_at_idx ON public.grupos_recursos USING btree (deleted_at)
+public,grupos_recursos,grupos_recursos_deleted_by_idx,f,f,t,CREATE INDEX grupos_recursos_deleted_by_idx ON public.grupos_recursos USING btree (deleted_by)
+public,grupos_recursos,grupos_recursos_disponibilidade_atual_idx,f,f,t,CREATE INDEX grupos_recursos_disponibilidade_atual_idx ON public.grupos_recursos USING btree (disponibilidade_atual)
+public,grupos_recursos,grupos_recursos_empresa_ativo_deleted_at_idx,f,f,t,"CREATE INDEX grupos_recursos_empresa_ativo_deleted_at_idx ON public.grupos_recursos USING btree (empresa_id, ativo, deleted_at)"
+public,grupos_recursos,grupos_recursos_empresa_codigo_idx,f,f,t,"CREATE INDEX grupos_recursos_empresa_codigo_idx ON public.grupos_recursos USING btree (empresa_id, codigo)"
+public,grupos_recursos,grupos_recursos_empresa_deleted_at_idx,f,f,t,"CREATE INDEX grupos_recursos_empresa_deleted_at_idx ON public.grupos_recursos USING btree (empresa_id, deleted_at)"
+public,grupos_recursos,grupos_recursos_empresa_updated_at_idx,f,f,t,"CREATE INDEX grupos_recursos_empresa_updated_at_idx ON public.grupos_recursos USING btree (empresa_id, updated_at DESC)"
+public,grupos_recursos,grupos_recursos_nome_idx,f,f,t,CREATE INDEX grupos_recursos_nome_idx ON public.grupos_recursos USING btree (nome)
+public,grupos_recursos,grupos_recursos_pkey,t,t,t,CREATE UNIQUE INDEX grupos_recursos_pkey ON public.grupos_recursos USING btree (id)
+public,grupos_recursos,grupos_recursos_setor_idx,f,f,t,CREATE INDEX grupos_recursos_setor_idx ON public.grupos_recursos USING btree (setor)
+public,grupos_recursos,grupos_recursos_updated_at_idx,f,f,t,CREATE INDEX grupos_recursos_updated_at_idx ON public.grupos_recursos USING btree (updated_at DESC)
+public,itens_industriais,itens_industriais_ativo_idx,f,f,t,CREATE INDEX itens_industriais_ativo_idx ON public.itens_industriais USING btree (ativo)
+public,itens_industriais,itens_industriais_codigo_idx,f,f,t,CREATE INDEX itens_industriais_codigo_idx ON public.itens_industriais USING btree (codigo)
+public,itens_industriais,itens_industriais_deleted_at_idx,f,f,t,CREATE INDEX itens_industriais_deleted_at_idx ON public.itens_industriais USING btree (deleted_at)
+public,itens_industriais,itens_industriais_empresa_ativo_deleted_idx,f,f,t,"CREATE INDEX itens_industriais_empresa_ativo_deleted_idx ON public.itens_industriais USING btree (empresa_id, ativo, deleted_at)"
+public,itens_industriais,itens_industriais_empresa_codigo_idx,f,f,t,"CREATE INDEX itens_industriais_empresa_codigo_idx ON public.itens_industriais USING btree (empresa_id, codigo)"
+public,itens_industriais,itens_industriais_empresa_codigo_unique_idx,t,f,t,"CREATE UNIQUE INDEX itens_industriais_empresa_codigo_unique_idx ON public.itens_industriais USING btree (empresa_id, codigo)"
+public,itens_industriais,itens_industriais_empresa_id_idx,f,f,t,CREATE INDEX itens_industriais_empresa_id_idx ON public.itens_industriais USING btree (empresa_id)
+public,itens_industriais,itens_industriais_empresa_tipo_item_idx,f,f,t,"CREATE INDEX itens_industriais_empresa_tipo_item_idx ON public.itens_industriais USING btree (empresa_id, tipo_item)"
+public,itens_industriais,itens_industriais_pkey,t,t,t,CREATE UNIQUE INDEX itens_industriais_pkey ON public.itens_industriais USING btree (id)
+public,itens_industriais,itens_industriais_tipo_item_idx,f,f,t,CREATE INDEX itens_industriais_tipo_item_idx ON public.itens_industriais USING btree (tipo_item)
+public,itens_industriais,itens_industriais_unidade_idx,f,f,t,CREATE INDEX itens_industriais_unidade_idx ON public.itens_industriais USING btree (unidade)
+public,itens_industriais,itens_industriais_updated_at_idx,f,f,t,CREATE INDEX itens_industriais_updated_at_idx ON public.itens_industriais USING btree (updated_at DESC)
+public,materias_primas,materias_primas_codigo_empresa_uniq,t,f,t,"CREATE UNIQUE INDEX materias_primas_codigo_empresa_uniq ON public.materias_primas USING btree (empresa_id, codigo)"
+public,materias_primas,materias_primas_codigo_idx,f,f,t,CREATE INDEX materias_primas_codigo_idx ON public.materias_primas USING btree (codigo)
+public,materias_primas,materias_primas_descricao_idx,f,f,t,CREATE INDEX materias_primas_descricao_idx ON public.materias_primas USING btree (descricao)
+public,materias_primas,materias_primas_empresa_id_idx,f,f,t,CREATE INDEX materias_primas_empresa_id_idx ON public.materias_primas USING btree (empresa_id)
+public,materias_primas,materias_primas_pkey,t,t,t,CREATE UNIQUE INDEX materias_primas_pkey ON public.materias_primas USING btree (id)
+public,movimentacoes_estoque,movimentacoes_estoque_ativo_idx,f,f,t,CREATE INDEX movimentacoes_estoque_ativo_idx ON public.movimentacoes_estoque USING btree (ativo)
+public,movimentacoes_estoque,movimentacoes_estoque_created_at_idx,f,f,t,CREATE INDEX movimentacoes_estoque_created_at_idx ON public.movimentacoes_estoque USING btree (created_at DESC)
+public,movimentacoes_estoque,movimentacoes_estoque_deleted_at_idx,f,f,t,CREATE INDEX movimentacoes_estoque_deleted_at_idx ON public.movimentacoes_estoque USING btree (deleted_at)
+public,movimentacoes_estoque,movimentacoes_estoque_documento_idx,f,f,t,CREATE INDEX movimentacoes_estoque_documento_idx ON public.movimentacoes_estoque USING btree (documento_referencia)
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_ativo_deleted_idx,f,f,t,"CREATE INDEX movimentacoes_estoque_empresa_ativo_deleted_idx ON public.movimentacoes_estoque USING btree (empresa_id, ativo, deleted_at)"
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_created_idx,f,f,t,"CREATE INDEX movimentacoes_estoque_empresa_created_idx ON public.movimentacoes_estoque USING btree (empresa_id, created_at DESC)"
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_id_idx,f,f,t,CREATE INDEX movimentacoes_estoque_empresa_id_idx ON public.movimentacoes_estoque USING btree (empresa_id)
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_item_idx,f,f,t,"CREATE INDEX movimentacoes_estoque_empresa_item_idx ON public.movimentacoes_estoque USING btree (empresa_id, item_id)"
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_tipo_idx,f,f,t,"CREATE INDEX movimentacoes_estoque_empresa_tipo_idx ON public.movimentacoes_estoque USING btree (empresa_id, tipo_movimento)"
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_valor_total_idx,f,f,t,"CREATE INDEX movimentacoes_estoque_empresa_valor_total_idx ON public.movimentacoes_estoque USING btree (empresa_id, valor_total)"
+public,movimentacoes_estoque,movimentacoes_estoque_item_id_idx,f,f,t,CREATE INDEX movimentacoes_estoque_item_id_idx ON public.movimentacoes_estoque USING btree (item_id)
+public,movimentacoes_estoque,movimentacoes_estoque_pkey,t,t,t,CREATE UNIQUE INDEX movimentacoes_estoque_pkey ON public.movimentacoes_estoque USING btree (id)
+public,movimentacoes_estoque,movimentacoes_estoque_tipo_movimento_idx,f,f,t,CREATE INDEX movimentacoes_estoque_tipo_movimento_idx ON public.movimentacoes_estoque USING btree (tipo_movimento)
+public,movimentacoes_estoque,movimentacoes_estoque_updated_at_idx,f,f,t,CREATE INDEX movimentacoes_estoque_updated_at_idx ON public.movimentacoes_estoque USING btree (updated_at DESC)
+public,movimentacoes_estoque,movimentacoes_estoque_valor_total_idx,f,f,t,CREATE INDEX movimentacoes_estoque_valor_total_idx ON public.movimentacoes_estoque USING btree (valor_total)
+public,numeracao_configuracoes,numeracao_configuracoes_empresa_entidade_unique,t,f,t,"CREATE UNIQUE INDEX numeracao_configuracoes_empresa_entidade_unique ON public.numeracao_configuracoes USING btree (empresa_id, entidade)"
+public,numeracao_configuracoes,numeracao_configuracoes_empresa_id_idx,f,f,t,CREATE INDEX numeracao_configuracoes_empresa_id_idx ON public.numeracao_configuracoes USING btree (empresa_id)
+public,numeracao_configuracoes,numeracao_configuracoes_entidade_idx,f,f,t,CREATE INDEX numeracao_configuracoes_entidade_idx ON public.numeracao_configuracoes USING btree (entidade)
+public,numeracao_configuracoes,numeracao_configuracoes_pkey,t,t,t,CREATE UNIQUE INDEX numeracao_configuracoes_pkey ON public.numeracao_configuracoes USING btree (id)
+public,ordens_fabricacao,ordens_fabricacao_bom_idx,f,f,t,CREATE INDEX ordens_fabricacao_bom_idx ON public.ordens_fabricacao USING btree (bom_id)
+public,ordens_fabricacao,ordens_fabricacao_empresa_numero_idx,t,f,t,"CREATE UNIQUE INDEX ordens_fabricacao_empresa_numero_idx ON public.ordens_fabricacao USING btree (empresa_id, numero_of)"
+public,ordens_fabricacao,ordens_fabricacao_pkey,t,t,t,CREATE UNIQUE INDEX ordens_fabricacao_pkey ON public.ordens_fabricacao USING btree (id)
+public,ordens_fabricacao,ordens_fabricacao_produto_idx,f,f,t,CREATE INDEX ordens_fabricacao_produto_idx ON public.ordens_fabricacao USING btree (produto_id)
+public,ordens_fabricacao,ordens_fabricacao_projeto_idx,f,f,t,CREATE INDEX ordens_fabricacao_projeto_idx ON public.ordens_fabricacao USING btree (projeto_id)
+public,ordens_fabricacao,ordens_fabricacao_projeto_item_idx,f,f,t,CREATE INDEX ordens_fabricacao_projeto_item_idx ON public.ordens_fabricacao USING btree (projeto_item_id)
+public,pedido_compra_itens,pedido_compra_itens_of_id_idx,f,f,t,CREATE INDEX pedido_compra_itens_of_id_idx ON public.pedido_compra_itens USING btree (of_id)
+public,pedido_compra_itens,pedido_compra_itens_pedido_idx,f,f,t,CREATE INDEX pedido_compra_itens_pedido_idx ON public.pedido_compra_itens USING btree (pedido_compra_id)
+public,pedido_compra_itens,pedido_compra_itens_pkey,t,t,t,CREATE UNIQUE INDEX pedido_compra_itens_pkey ON public.pedido_compra_itens USING btree (id)
+public,pedidos_compra,pedidos_compra_empresa_status_idx,f,f,t,"CREATE INDEX pedidos_compra_empresa_status_idx ON public.pedidos_compra USING btree (empresa_id, status)"
+public,pedidos_compra,pedidos_compra_of_id_idx,f,f,t,CREATE INDEX pedidos_compra_of_id_idx ON public.pedidos_compra USING btree (of_id)
+public,pedidos_compra,pedidos_compra_pkey,t,t,t,CREATE UNIQUE INDEX pedidos_compra_pkey ON public.pedidos_compra USING btree (id)
+public,pedidos_compra,pedidos_compra_planejamento_idx,f,f,t,CREATE INDEX pedidos_compra_planejamento_idx ON public.pedidos_compra USING btree (planejamento_compra_id)
+public,planejamento_compra_origens,planejamento_compra_origem_uniq,t,f,t,"CREATE UNIQUE INDEX planejamento_compra_origem_uniq ON public.planejamento_compra_origens USING btree (empresa_id, planejamento_compra_id, requisicao_compra_item_id)"
+public,planejamento_compra_origens,planejamento_compra_origens_incluir_idx,f,f,t,"CREATE INDEX planejamento_compra_origens_incluir_idx ON public.planejamento_compra_origens USING btree (planejamento_compra_id, incluir_no_planejamento)"
+public,planejamento_compra_origens,planejamento_compra_origens_of_id_idx,f,f,t,CREATE INDEX planejamento_compra_origens_of_id_idx ON public.planejamento_compra_origens USING btree (of_id)
+public,planejamento_compra_origens,planejamento_compra_origens_of_idx,f,f,t,CREATE INDEX planejamento_compra_origens_of_idx ON public.planejamento_compra_origens USING btree (of_numero)
+public,planejamento_compra_origens,planejamento_compra_origens_pkey,t,t,t,CREATE UNIQUE INDEX planejamento_compra_origens_pkey ON public.planejamento_compra_origens USING btree (id)
+public,planejamento_compra_origens,planejamento_compra_origens_planejamento_idx,f,f,t,CREATE INDEX planejamento_compra_origens_planejamento_idx ON public.planejamento_compra_origens USING btree (planejamento_compra_id)
+public,planejamento_compra_origens,planejamento_compra_origens_requisicao_idx,f,f,t,CREATE INDEX planejamento_compra_origens_requisicao_idx ON public.planejamento_compra_origens USING btree (requisicao_compra_id)
+public,planejamentos_compra,planejamentos_compra_chave_industrial_idx,f,f,t,"CREATE INDEX planejamentos_compra_chave_industrial_idx ON public.planejamentos_compra USING btree (empresa_id, chave_industrial_compra)"
+public,planejamentos_compra,planejamentos_compra_empresa_status_idx,f,f,t,"CREATE INDEX planejamentos_compra_empresa_status_idx ON public.planejamentos_compra USING btree (empresa_id, status)"
+public,planejamentos_compra,planejamentos_compra_material_idx,f,f,t,CREATE INDEX planejamentos_compra_material_idx ON public.planejamentos_compra USING btree (materia_prima_id)
+public,planejamentos_compra,planejamentos_compra_modo_idx,f,f,t,"CREATE INDEX planejamentos_compra_modo_idx ON public.planejamentos_compra USING btree (empresa_id, modo_planejamento)"
+public,planejamentos_compra,planejamentos_compra_pkey,t,t,t,CREATE UNIQUE INDEX planejamentos_compra_pkey ON public.planejamentos_compra USING btree (id)
+public,producao_configuracoes,producao_configuracoes_empresa_id_idx,f,f,t,CREATE INDEX producao_configuracoes_empresa_id_idx ON public.producao_configuracoes USING btree (empresa_id)
+public,producao_configuracoes,producao_configuracoes_empresa_unique,t,f,t,CREATE UNIQUE INDEX producao_configuracoes_empresa_unique ON public.producao_configuracoes USING btree (empresa_id)
+public,producao_configuracoes,producao_configuracoes_pkey,t,t,t,CREATE UNIQUE INDEX producao_configuracoes_pkey ON public.producao_configuracoes USING btree (id)
+public,profiles,profiles_ativo_idx,f,f,t,CREATE INDEX profiles_ativo_idx ON public.profiles USING btree (ativo)
+public,profiles,profiles_empresa_id_idx,f,f,t,CREATE INDEX profiles_empresa_id_idx ON public.profiles USING btree (empresa_id)
+public,profiles,profiles_nivel_acesso_idx,f,f,t,CREATE INDEX profiles_nivel_acesso_idx ON public.profiles USING btree (nivel_acesso)
+public,profiles,profiles_pkey,t,t,t,CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)
+public,projeto_itens,projeto_itens_bom_idx,f,f,t,CREATE INDEX projeto_itens_bom_idx ON public.projeto_itens USING btree (bom_id)
+public,projeto_itens,projeto_itens_empresa_id_idx,f,f,t,CREATE INDEX projeto_itens_empresa_id_idx ON public.projeto_itens USING btree (empresa_id)
+public,projeto_itens,projeto_itens_pkey,t,t,t,CREATE UNIQUE INDEX projeto_itens_pkey ON public.projeto_itens USING btree (id)
+public,projeto_itens,projeto_itens_pn_idx,f,f,t,CREATE INDEX projeto_itens_pn_idx ON public.projeto_itens USING btree (pn)
+public,projeto_itens,projeto_itens_produto_id_idx,f,f,t,CREATE INDEX projeto_itens_produto_id_idx ON public.projeto_itens USING btree (produto_id)
+public,projeto_itens,projeto_itens_projeto_id_idx,f,f,t,CREATE INDEX projeto_itens_projeto_id_idx ON public.projeto_itens USING btree (projeto_id)
+public,projetos,projetos_cliente_id_idx,f,f,t,CREATE INDEX projetos_cliente_id_idx ON public.projetos USING btree (cliente_id)
+public,projetos,projetos_data_objetivo_idx,f,f,t,CREATE INDEX projetos_data_objetivo_idx ON public.projetos USING btree (data_objetivo)
+public,projetos,projetos_empresa_id_idx,f,f,t,CREATE INDEX projetos_empresa_id_idx ON public.projetos USING btree (empresa_id)
+public,projetos,projetos_numero_projeto_idx,f,f,t,CREATE INDEX projetos_numero_projeto_idx ON public.projetos USING btree (numero_projeto)
+public,projetos,projetos_numero_projeto_key,t,f,t,CREATE UNIQUE INDEX projetos_numero_projeto_key ON public.projetos USING btree (numero_projeto)
+public,projetos,projetos_pkey,t,t,t,CREATE UNIQUE INDEX projetos_pkey ON public.projetos USING btree (id)
+public,projetos,projetos_prioridade_idx,f,f,t,CREATE INDEX projetos_prioridade_idx ON public.projetos USING btree (prioridade)
+public,projetos,projetos_status_idx,f,f,t,CREATE INDEX projetos_status_idx ON public.projetos USING btree (status)
+public,recursos_produtivos,recursos_produtivos_ativo_idx,f,f,t,CREATE INDEX recursos_produtivos_ativo_idx ON public.recursos_produtivos USING btree (ativo)
+public,recursos_produtivos,recursos_produtivos_codigo_key,t,f,t,CREATE UNIQUE INDEX recursos_produtivos_codigo_key ON public.recursos_produtivos USING btree (codigo)
+public,recursos_produtivos,recursos_produtivos_created_by_idx,f,f,t,CREATE INDEX recursos_produtivos_created_by_idx ON public.recursos_produtivos USING btree (created_by)
+public,recursos_produtivos,recursos_produtivos_deleted_at_idx,f,f,t,CREATE INDEX recursos_produtivos_deleted_at_idx ON public.recursos_produtivos USING btree (deleted_at)
+public,recursos_produtivos,recursos_produtivos_deleted_by_idx,f,f,t,CREATE INDEX recursos_produtivos_deleted_by_idx ON public.recursos_produtivos USING btree (deleted_by)
+public,recursos_produtivos,recursos_produtivos_empresa_ativo_deleted_at_idx,f,f,t,"CREATE INDEX recursos_produtivos_empresa_ativo_deleted_at_idx ON public.recursos_produtivos USING btree (empresa_id, ativo, deleted_at)"
+public,recursos_produtivos,recursos_produtivos_empresa_codigo_idx,f,f,t,"CREATE INDEX recursos_produtivos_empresa_codigo_idx ON public.recursos_produtivos USING btree (empresa_id, codigo)"
+public,recursos_produtivos,recursos_produtivos_empresa_deleted_at_idx,f,f,t,"CREATE INDEX recursos_produtivos_empresa_deleted_at_idx ON public.recursos_produtivos USING btree (empresa_id, deleted_at)"
+public,recursos_produtivos,recursos_produtivos_empresa_grupo_idx,f,f,t,"CREATE INDEX recursos_produtivos_empresa_grupo_idx ON public.recursos_produtivos USING btree (empresa_id, grupo_id, ativo, deleted_at)"
+public,recursos_produtivos,recursos_produtivos_empresa_setor_idx,f,f,t,"CREATE INDEX recursos_produtivos_empresa_setor_idx ON public.recursos_produtivos USING btree (empresa_id, setor, ativo, deleted_at)"
+public,recursos_produtivos,recursos_produtivos_empresa_updated_at_idx,f,f,t,"CREATE INDEX recursos_produtivos_empresa_updated_at_idx ON public.recursos_produtivos USING btree (empresa_id, updated_at DESC)"
+public,recursos_produtivos,recursos_produtivos_grupo_id_idx,f,f,t,CREATE INDEX recursos_produtivos_grupo_id_idx ON public.recursos_produtivos USING btree (grupo_id)
+public,recursos_produtivos,recursos_produtivos_nome_idx,f,f,t,CREATE INDEX recursos_produtivos_nome_idx ON public.recursos_produtivos USING btree (nome)
+public,recursos_produtivos,recursos_produtivos_pkey,t,t,t,CREATE UNIQUE INDEX recursos_produtivos_pkey ON public.recursos_produtivos USING btree (id)
+public,recursos_produtivos,recursos_produtivos_setor_idx,f,f,t,CREATE INDEX recursos_produtivos_setor_idx ON public.recursos_produtivos USING btree (setor)
+public,recursos_produtivos,recursos_produtivos_status_idx,f,f,t,CREATE INDEX recursos_produtivos_status_idx ON public.recursos_produtivos USING btree (status)
+public,recursos_produtivos,recursos_produtivos_tecnologia_aplicada_id_idx,f,f,t,CREATE INDEX recursos_produtivos_tecnologia_aplicada_id_idx ON public.recursos_produtivos USING btree (tecnologia_aplicada_id)
+public,recursos_produtivos,recursos_produtivos_updated_at_idx,f,f,t,CREATE INDEX recursos_produtivos_updated_at_idx ON public.recursos_produtivos USING btree (updated_at DESC)
+public,requisicao_compra_itens,requisicao_compra_itens_material_idx,f,f,t,CREATE INDEX requisicao_compra_itens_material_idx ON public.requisicao_compra_itens USING btree (materia_prima_id)
+public,requisicao_compra_itens,requisicao_compra_itens_pkey,t,t,t,CREATE UNIQUE INDEX requisicao_compra_itens_pkey ON public.requisicao_compra_itens USING btree (id)
+public,requisicao_compra_itens,requisicao_compra_itens_requisicao_idx,f,f,t,CREATE INDEX requisicao_compra_itens_requisicao_idx ON public.requisicao_compra_itens USING btree (requisicao_compra_id)
+public,requisicoes_compra,requisicoes_compra_empresa_status_idx,f,f,t,"CREATE INDEX requisicoes_compra_empresa_status_idx ON public.requisicoes_compra USING btree (empresa_id, status)"
+public,requisicoes_compra,requisicoes_compra_numero_empresa_uniq,t,f,t,"CREATE UNIQUE INDEX requisicoes_compra_numero_empresa_uniq ON public.requisicoes_compra USING btree (empresa_id, numero_requisicao)"
+public,requisicoes_compra,requisicoes_compra_of_id_idx,f,f,t,CREATE INDEX requisicoes_compra_of_id_idx ON public.requisicoes_compra USING btree (of_id)
+public,requisicoes_compra,requisicoes_compra_of_numero_idx,f,f,t,CREATE INDEX requisicoes_compra_of_numero_idx ON public.requisicoes_compra USING btree (of_numero)
+public,requisicoes_compra,requisicoes_compra_pkey,t,t,t,CREATE UNIQUE INDEX requisicoes_compra_pkey ON public.requisicoes_compra USING btree (id)
+public,requisicoes_compra,requisicoes_compra_projeto_idx,f,f,t,CREATE INDEX requisicoes_compra_projeto_idx ON public.requisicoes_compra USING btree (projeto_id)
+public,tecnologias_aplicadas,tecnologias_aplicadas_ativo_idx,f,f,t,CREATE INDEX tecnologias_aplicadas_ativo_idx ON public.tecnologias_aplicadas USING btree (ativo)
+public,tecnologias_aplicadas,tecnologias_aplicadas_codigo_idx,f,f,t,CREATE INDEX tecnologias_aplicadas_codigo_idx ON public.tecnologias_aplicadas USING btree (codigo)
+public,tecnologias_aplicadas,tecnologias_aplicadas_deleted_at_idx,f,f,t,CREATE INDEX tecnologias_aplicadas_deleted_at_idx ON public.tecnologias_aplicadas USING btree (deleted_at)
+public,tecnologias_aplicadas,tecnologias_aplicadas_empresa_ativo_deleted_idx,f,f,t,"CREATE INDEX tecnologias_aplicadas_empresa_ativo_deleted_idx ON public.tecnologias_aplicadas USING btree (empresa_id, ativo, deleted_at)"
+public,tecnologias_aplicadas,tecnologias_aplicadas_empresa_codigo_idx,f,f,t,"CREATE INDEX tecnologias_aplicadas_empresa_codigo_idx ON public.tecnologias_aplicadas USING btree (empresa_id, codigo)"
+public,tecnologias_aplicadas,tecnologias_aplicadas_empresa_codigo_unique_idx,t,f,t,"CREATE UNIQUE INDEX tecnologias_aplicadas_empresa_codigo_unique_idx ON public.tecnologias_aplicadas USING btree (empresa_id, codigo)"
+public,tecnologias_aplicadas,tecnologias_aplicadas_empresa_id_idx,f,f,t,CREATE INDEX tecnologias_aplicadas_empresa_id_idx ON public.tecnologias_aplicadas USING btree (empresa_id)
+public,tecnologias_aplicadas,tecnologias_aplicadas_empresa_tipo_idx,f,f,t,"CREATE INDEX tecnologias_aplicadas_empresa_tipo_idx ON public.tecnologias_aplicadas USING btree (empresa_id, tipo)"
+public,tecnologias_aplicadas,tecnologias_aplicadas_pkey,t,t,t,CREATE UNIQUE INDEX tecnologias_aplicadas_pkey ON public.tecnologias_aplicadas USING btree (id)
+public,tecnologias_aplicadas,tecnologias_aplicadas_tipo_idx,f,f,t,CREATE INDEX tecnologias_aplicadas_tipo_idx ON public.tecnologias_aplicadas USING btree (tipo)
+public,tecnologias_aplicadas,tecnologias_aplicadas_updated_at_idx,f,f,t,CREATE INDEX tecnologias_aplicadas_updated_at_idx ON public.tecnologias_aplicadas USING btree (updated_at DESC)
+public,usuarios,usuarios_email_idx,f,f,t,CREATE INDEX usuarios_email_idx ON public.usuarios USING btree (email)
+public,usuarios,usuarios_email_key,t,f,t,CREATE UNIQUE INDEX usuarios_email_key ON public.usuarios USING btree (email)
+public,usuarios,usuarios_nivel_acesso_idx,f,f,t,CREATE INDEX usuarios_nivel_acesso_idx ON public.usuarios USING btree (nivel_acesso)
+public,usuarios,usuarios_pkey,t,t,t,CREATE UNIQUE INDEX usuarios_pkey ON public.usuarios USING btree (id)

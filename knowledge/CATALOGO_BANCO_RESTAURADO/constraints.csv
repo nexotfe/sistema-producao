@@ -1,0 +1,470 @@
+schema_name,table_name,constraint_name,constraint_type,validated,definition
+public,bom_itens,bom_itens_ativo_not_null,n,t,NOT NULL ativo
+public,bom_itens,bom_itens_bom_id_fkey,f,t,FOREIGN KEY (bom_id) REFERENCES boms(id) ON DELETE CASCADE
+public,bom_itens,bom_itens_bom_id_not_null,n,t,NOT NULL bom_id
+public,bom_itens,bom_itens_componente_produto_id_fkey,f,t,FOREIGN KEY (componente_produto_id) REFERENCES itens_industriais(id)
+public,bom_itens,bom_itens_componente_tipo_not_null,n,t,NOT NULL componente_tipo
+public,bom_itens,bom_itens_created_at_not_null,n,t,NOT NULL created_at
+public,bom_itens,bom_itens_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,bom_itens,bom_itens_created_by_not_null,n,t,NOT NULL created_by
+public,bom_itens,bom_itens_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,bom_itens,bom_itens_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,bom_itens,bom_itens_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,bom_itens,bom_itens_id_not_null,n,t,NOT NULL id
+public,bom_itens,bom_itens_materia_prima_id_fkey,f,t,FOREIGN KEY (materia_prima_id) REFERENCES materias_primas(id)
+public,bom_itens,bom_itens_nivel_not_null,n,t,NOT NULL nivel
+public,bom_itens,bom_itens_ordem_not_null,n,t,NOT NULL ordem
+public,bom_itens,bom_itens_pkey,p,t,PRIMARY KEY (id)
+public,bom_itens,bom_itens_quantidade_chk,c,t,CHECK (quantidade > 0::numeric)
+public,bom_itens,bom_itens_quantidade_not_null,n,t,NOT NULL quantidade
+public,bom_itens,bom_itens_referencia_chk,c,t,CHECK (componente_tipo = 'materia_prima'::text AND materia_prima_id IS NOT NULL AND componente_produto_id IS NULL OR componente_tipo = 'subconjunto'::text AND componente_produto_id IS NOT NULL AND materia_prima_id IS NULL)
+public,bom_itens,bom_itens_tipo_chk,c,t,"CHECK (componente_tipo = ANY (ARRAY['materia_prima'::text, 'subconjunto'::text]))"
+public,bom_itens,bom_itens_unidade_chk,c,t,"CHECK (unidade = ANY (ARRAY['kg'::text, 'metro'::text, 'barra'::text, 'chapa'::text, 'peca'::text]))"
+public,bom_itens,bom_itens_unidade_not_null,n,t,NOT NULL unidade
+public,bom_itens,bom_itens_updated_at_not_null,n,t,NOT NULL updated_at
+public,boms,boms_ativo_not_null,n,t,NOT NULL ativo
+public,boms,boms_created_at_not_null,n,t,NOT NULL created_at
+public,boms,boms_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,boms,boms_created_by_not_null,n,t,NOT NULL created_by
+public,boms,boms_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,boms,boms_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,boms,boms_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,boms,boms_id_not_null,n,t,NOT NULL id
+public,boms,boms_pkey,p,t,PRIMARY KEY (id)
+public,boms,boms_produto_id_fkey,f,t,FOREIGN KEY (produto_id) REFERENCES itens_industriais(id)
+public,boms,boms_produto_id_not_null,n,t,NOT NULL produto_id
+public,boms,boms_produto_versao_uniq,u,t,"UNIQUE (empresa_id, produto_id, versao)"
+public,boms,boms_status_chk,c,t,"CHECK (status = ANY (ARRAY['ativo'::text, 'inativo'::text, 'rascunho'::text]))"
+public,boms,boms_status_not_null,n,t,NOT NULL status
+public,boms,boms_updated_at_not_null,n,t,NOT NULL updated_at
+public,boms,boms_versao_not_null,n,t,NOT NULL versao
+public,clientes,clientes_ativo_not_null,n,t,NOT NULL ativo
+public,clientes,clientes_created_at_not_null,n,t,NOT NULL created_at
+public,clientes,clientes_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE RESTRICT
+public,clientes,clientes_created_by_not_null,n,t,NOT NULL created_by
+public,clientes,clientes_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id) ON DELETE SET NULL
+public,clientes,clientes_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,clientes,clientes_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,clientes,clientes_id_not_null,n,t,NOT NULL id
+public,clientes,clientes_nome_not_null,n,t,NOT NULL nome
+public,clientes,clientes_pkey,p,t,PRIMARY KEY (id)
+public,clientes,clientes_updated_at_not_null,n,t,NOT NULL updated_at
+public,consumos_internos,consumos_internos_ativo_not_null,n,t,NOT NULL ativo
+public,consumos_internos,consumos_internos_created_at_not_null,n,t,NOT NULL created_at
+public,consumos_internos,consumos_internos_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,consumos_internos,consumos_internos_created_by_not_null,n,t,NOT NULL created_by
+public,consumos_internos,consumos_internos_custo_chk,c,t,CHECK (custo_unitario_material >= 0::numeric)
+public,consumos_internos,consumos_internos_custo_unitario_material_not_null,n,t,NOT NULL custo_unitario_material
+public,consumos_internos,consumos_internos_data_movimentacao_not_null,n,t,NOT NULL data_movimentacao
+public,consumos_internos,consumos_internos_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,consumos_internos,consumos_internos_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,consumos_internos,consumos_internos_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,consumos_internos,consumos_internos_estoque_movimentacao_id_fkey,f,t,FOREIGN KEY (estoque_movimentacao_id) REFERENCES estoque_movimentacoes(id)
+public,consumos_internos,consumos_internos_id_not_null,n,t,NOT NULL id
+public,consumos_internos,consumos_internos_local_estoque_not_null,n,t,NOT NULL local_estoque
+public,consumos_internos,consumos_internos_materia_prima_id_fkey,f,t,FOREIGN KEY (materia_prima_id) REFERENCES materias_primas(id)
+public,consumos_internos,consumos_internos_materia_prima_id_not_null,n,t,NOT NULL materia_prima_id
+public,consumos_internos,consumos_internos_of_id_fkey,f,t,FOREIGN KEY (of_id) REFERENCES ordens_fabricacao(id)
+public,consumos_internos,consumos_internos_of_numero_not_null,n,t,NOT NULL of_numero
+public,consumos_internos,consumos_internos_pkey,p,t,PRIMARY KEY (id)
+public,consumos_internos,consumos_internos_projeto_id_fkey,f,t,FOREIGN KEY (projeto_id) REFERENCES projetos(id)
+public,consumos_internos,consumos_internos_projeto_id_not_null,n,t,NOT NULL projeto_id
+public,consumos_internos,consumos_internos_quantidade_not_null,n,t,NOT NULL quantidade
+public,consumos_internos,consumos_internos_quantidades_chk,c,t,CHECK (quantidade > 0::numeric AND saldo_consumido > 0::numeric AND saldo_consumido <= quantidade)
+public,consumos_internos,consumos_internos_saldo_consumido_not_null,n,t,NOT NULL saldo_consumido
+public,consumos_internos,consumos_internos_unidade_chk,c,t,"CHECK (unidade = ANY (ARRAY['kg'::text, 'metro'::text, 'barra'::text, 'chapa'::text, 'peca'::text]))"
+public,consumos_internos,consumos_internos_unidade_not_null,n,t,NOT NULL unidade
+public,consumos_internos,consumos_internos_updated_at_not_null,n,t,NOT NULL updated_at
+public,credenciais,credenciais_atualizado_em_not_null,n,t,NOT NULL atualizado_em
+public,credenciais,credenciais_data_criacao_not_null,n,t,NOT NULL data_criacao
+public,credenciais,credenciais_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,credenciais,credenciais_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,credenciais,credenciais_id_not_null,n,t,NOT NULL id
+public,credenciais,credenciais_login_not_null,n,t,NOT NULL login
+public,credenciais,credenciais_nome_plataforma_not_null,n,t,NOT NULL nome_plataforma
+public,credenciais,credenciais_pkey,p,t,PRIMARY KEY (id)
+public,credenciais,credenciais_usuario_responsavel_fkey,f,t,FOREIGN KEY (usuario_responsavel) REFERENCES usuarios(id) ON DELETE RESTRICT
+public,credenciais,credenciais_usuario_responsavel_not_null,n,t,NOT NULL usuario_responsavel
+public,empresas,empresas_ativo_not_null,n,t,NOT NULL ativo
+public,empresas,empresas_codigo_not_null,n,t,NOT NULL codigo
+public,empresas,empresas_created_at_not_null,n,t,NOT NULL created_at
+public,empresas,empresas_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL
+public,empresas,empresas_id_not_null,n,t,NOT NULL id
+public,empresas,empresas_nome_not_null,n,t,NOT NULL nome
+public,empresas,empresas_pkey,p,t,PRIMARY KEY (id)
+public,empresas,empresas_plano_not_null,n,t,NOT NULL plano
+public,empresas,empresas_slug_key,u,t,UNIQUE (slug)
+public,empresas,empresas_slug_not_null,n,t,NOT NULL slug
+public,estoque_movimentacoes,estoque_movimentacoes_created_at_not_null,n,t,NOT NULL created_at
+public,estoque_movimentacoes,estoque_movimentacoes_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,estoque_movimentacoes,estoque_movimentacoes_created_by_not_null,n,t,NOT NULL created_by
+public,estoque_movimentacoes,estoque_movimentacoes_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,estoque_movimentacoes,estoque_movimentacoes_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,estoque_movimentacoes,estoque_movimentacoes_id_not_null,n,t,NOT NULL id
+public,estoque_movimentacoes,estoque_movimentacoes_local_estoque_not_null,n,t,NOT NULL local_estoque
+public,estoque_movimentacoes,estoque_movimentacoes_materia_prima_id_fkey,f,t,FOREIGN KEY (materia_prima_id) REFERENCES materias_primas(id)
+public,estoque_movimentacoes,estoque_movimentacoes_materia_prima_id_not_null,n,t,NOT NULL materia_prima_id
+public,estoque_movimentacoes,estoque_movimentacoes_of_id_fkey,f,t,FOREIGN KEY (of_id) REFERENCES ordens_fabricacao(id)
+public,estoque_movimentacoes,estoque_movimentacoes_pkey,p,t,PRIMARY KEY (id)
+public,estoque_movimentacoes,estoque_movimentacoes_projeto_id_fkey,f,t,FOREIGN KEY (projeto_id) REFERENCES projetos(id)
+public,estoque_movimentacoes,estoque_movimentacoes_quantidade_chk,c,t,CHECK (quantidade > 0::numeric)
+public,estoque_movimentacoes,estoque_movimentacoes_quantidade_not_null,n,t,NOT NULL quantidade
+public,estoque_movimentacoes,estoque_movimentacoes_tipo_chk,c,t,"CHECK (tipo_movimento = ANY (ARRAY['entrada'::text, 'saida'::text, 'reserva'::text, 'liberacao_reserva'::text, 'ajuste'::text]))"
+public,estoque_movimentacoes,estoque_movimentacoes_tipo_movimento_not_null,n,t,NOT NULL tipo_movimento
+public,estoque_saldos,estoque_saldos_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,estoque_saldos,estoque_saldos_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,estoque_saldos,estoque_saldos_id_not_null,n,t,NOT NULL id
+public,estoque_saldos,estoque_saldos_local_estoque_not_null,n,t,NOT NULL local_estoque
+public,estoque_saldos,estoque_saldos_materia_prima_id_fkey,f,t,FOREIGN KEY (materia_prima_id) REFERENCES materias_primas(id)
+public,estoque_saldos,estoque_saldos_materia_prima_id_not_null,n,t,NOT NULL materia_prima_id
+public,estoque_saldos,estoque_saldos_material_local_uniq,u,t,"UNIQUE (empresa_id, materia_prima_id, local_estoque)"
+public,estoque_saldos,estoque_saldos_pkey,p,t,PRIMARY KEY (id)
+public,estoque_saldos,estoque_saldos_quantidades_chk,c,t,CHECK (saldo_disponivel >= 0::numeric AND saldo_reservado >= 0::numeric AND saldo_reservado <= saldo_disponivel)
+public,estoque_saldos,estoque_saldos_saldo_disponivel_not_null,n,t,NOT NULL saldo_disponivel
+public,estoque_saldos,estoque_saldos_saldo_reservado_not_null,n,t,NOT NULL saldo_reservado
+public,estoque_saldos,estoque_saldos_updated_at_not_null,n,t,NOT NULL updated_at
+public,fornecedores,fornecedores_ativo_not_null,n,t,NOT NULL ativo
+public,fornecedores,fornecedores_created_at_not_null,n,t,NOT NULL created_at
+public,fornecedores,fornecedores_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,fornecedores,fornecedores_created_by_not_null,n,t,NOT NULL created_by
+public,fornecedores,fornecedores_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,fornecedores,fornecedores_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,fornecedores,fornecedores_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,fornecedores,fornecedores_id_not_null,n,t,NOT NULL id
+public,fornecedores,fornecedores_pkey,p,t,PRIMARY KEY (id)
+public,fornecedores,fornecedores_updated_at_not_null,n,t,NOT NULL updated_at
+public,funcionarios,funcionarios_ativo_not_null,n,t,NOT NULL ativo
+public,funcionarios,funcionarios_codigo_not_null,n,t,NOT NULL codigo
+public,funcionarios,funcionarios_created_at_not_null,n,t,NOT NULL created_at
+public,funcionarios,funcionarios_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,funcionarios,funcionarios_created_by_not_null,n,t,NOT NULL created_by
+public,funcionarios,funcionarios_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,funcionarios,funcionarios_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,funcionarios,funcionarios_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,funcionarios,funcionarios_id_not_null,n,t,NOT NULL id
+public,funcionarios,funcionarios_nome_not_null,n,t,NOT NULL nome
+public,funcionarios,funcionarios_pkey,p,t,PRIMARY KEY (id)
+public,funcionarios,funcionarios_tecnologia_aplicada_id_fkey,f,t,FOREIGN KEY (tecnologia_aplicada_id) REFERENCES tecnologias_aplicadas(id) ON DELETE SET NULL
+public,funcionarios,funcionarios_updated_at_not_null,n,t,NOT NULL updated_at
+public,grupos_recursos,grupos_recursos_ativo_not_null,n,t,NOT NULL ativo
+public,grupos_recursos,grupos_recursos_capacidade_total_not_null,n,t,NOT NULL capacidade_total
+public,grupos_recursos,grupos_recursos_codigo_not_null,n,t,NOT NULL codigo
+public,grupos_recursos,grupos_recursos_created_at_not_null,n,t,NOT NULL created_at
+public,grupos_recursos,grupos_recursos_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE RESTRICT
+public,grupos_recursos,grupos_recursos_created_by_not_null,n,t,NOT NULL created_by
+public,grupos_recursos,grupos_recursos_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id) ON DELETE SET NULL
+public,grupos_recursos,grupos_recursos_disponibilidade_atual_not_null,n,t,NOT NULL disponibilidade_atual
+public,grupos_recursos,grupos_recursos_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,grupos_recursos,grupos_recursos_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,grupos_recursos,grupos_recursos_id_not_null,n,t,NOT NULL id
+public,grupos_recursos,grupos_recursos_nome_not_null,n,t,NOT NULL nome
+public,grupos_recursos,grupos_recursos_pkey,p,t,PRIMARY KEY (id)
+public,grupos_recursos,grupos_recursos_unidade_capacidade_not_null,n,t,NOT NULL unidade_capacidade
+public,grupos_recursos,grupos_recursos_updated_at_not_null,n,t,NOT NULL updated_at
+public,itens_industriais,itens_industriais_ativo_not_null,n,t,NOT NULL ativo
+public,itens_industriais,itens_industriais_codigo_not_null,n,t,NOT NULL codigo
+public,itens_industriais,itens_industriais_created_at_not_null,n,t,NOT NULL created_at
+public,itens_industriais,itens_industriais_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,itens_industriais,itens_industriais_created_by_not_null,n,t,NOT NULL created_by
+public,itens_industriais,itens_industriais_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,itens_industriais,itens_industriais_descricao_not_null,n,t,NOT NULL descricao
+public,itens_industriais,itens_industriais_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,itens_industriais,itens_industriais_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,itens_industriais,itens_industriais_id_not_null,n,t,NOT NULL id
+public,itens_industriais,itens_industriais_pkey,p,t,PRIMARY KEY (id)
+public,itens_industriais,itens_industriais_tipo_item_check,c,t,"CHECK (tipo_item = ANY (ARRAY['produto acabado'::text, 'semiacabado'::text, 'materia-prima'::text, 'material consumo'::text, 'ferramenta'::text, 'servico'::text]))"
+public,itens_industriais,itens_industriais_tipo_item_not_null,n,t,NOT NULL tipo_item
+public,itens_industriais,itens_industriais_unidade_check,c,t,"CHECK (unidade = ANY (ARRAY['peca'::text, 'conjunto'::text, 'kg'::text, 'metro'::text, 'unidade'::text, 'litro'::text, 'pacote'::text]))"
+public,itens_industriais,itens_industriais_unidade_not_null,n,t,NOT NULL unidade
+public,itens_industriais,itens_industriais_updated_at_not_null,n,t,NOT NULL updated_at
+public,materias_primas,materias_primas_ativo_not_null,n,t,NOT NULL ativo
+public,materias_primas,materias_primas_codigo_empresa_uniq,u,t,"UNIQUE (empresa_id, codigo)"
+public,materias_primas,materias_primas_created_at_not_null,n,t,NOT NULL created_at
+public,materias_primas,materias_primas_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,materias_primas,materias_primas_created_by_not_null,n,t,NOT NULL created_by
+public,materias_primas,materias_primas_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,materias_primas,materias_primas_descricao_not_null,n,t,NOT NULL descricao
+public,materias_primas,materias_primas_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,materias_primas,materias_primas_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,materias_primas,materias_primas_id_not_null,n,t,NOT NULL id
+public,materias_primas,materias_primas_pkey,p,t,PRIMARY KEY (id)
+public,materias_primas,materias_primas_unidade_chk,c,t,"CHECK (unidade = ANY (ARRAY['kg'::text, 'metro'::text, 'barra'::text, 'chapa'::text, 'peca'::text]))"
+public,materias_primas,materias_primas_unidade_not_null,n,t,NOT NULL unidade
+public,materias_primas,materias_primas_updated_at_not_null,n,t,NOT NULL updated_at
+public,movimentacoes_estoque,movimentacoes_estoque_ajuste_motivo_check,c,t,"CHECK (tipo_movimento <> 'ajuste'::text OR NULLIF(btrim(COALESCE(motivo, ''::text)), ''::text) IS NOT NULL)"
+public,movimentacoes_estoque,movimentacoes_estoque_ativo_not_null,n,t,NOT NULL ativo
+public,movimentacoes_estoque,movimentacoes_estoque_created_at_not_null,n,t,NOT NULL created_at
+public,movimentacoes_estoque,movimentacoes_estoque_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,movimentacoes_estoque,movimentacoes_estoque_created_by_not_null,n,t,NOT NULL created_by
+public,movimentacoes_estoque,movimentacoes_estoque_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,movimentacoes_estoque,movimentacoes_estoque_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,movimentacoes_estoque,movimentacoes_estoque_id_not_null,n,t,NOT NULL id
+public,movimentacoes_estoque,movimentacoes_estoque_item_id_fkey,f,t,FOREIGN KEY (item_id) REFERENCES itens_industriais(id) ON DELETE RESTRICT
+public,movimentacoes_estoque,movimentacoes_estoque_item_id_not_null,n,t,NOT NULL item_id
+public,movimentacoes_estoque,movimentacoes_estoque_pkey,p,t,PRIMARY KEY (id)
+public,movimentacoes_estoque,movimentacoes_estoque_quantidade_check,c,t,CHECK (quantidade <> 0::numeric)
+public,movimentacoes_estoque,movimentacoes_estoque_quantidade_not_null,n,t,NOT NULL quantidade
+public,movimentacoes_estoque,movimentacoes_estoque_tipo_check,c,t,"CHECK (tipo_movimento = ANY (ARRAY['compra'::text, 'producao'::text, 'consumo'::text, 'venda'::text, 'devolucao'::text, 'transferencia'::text, 'ajuste'::text, 'inventario'::text]))"
+public,movimentacoes_estoque,movimentacoes_estoque_tipo_movimento_not_null,n,t,NOT NULL tipo_movimento
+public,movimentacoes_estoque,movimentacoes_estoque_unidade_not_null,n,t,NOT NULL unidade
+public,movimentacoes_estoque,movimentacoes_estoque_updated_at_not_null,n,t,NOT NULL updated_at
+public,numeracao_configuracoes,numeracao_configuracoes_ativo_not_null,n,t,NOT NULL ativo
+public,numeracao_configuracoes,numeracao_configuracoes_created_at_not_null,n,t,NOT NULL created_at
+public,numeracao_configuracoes,numeracao_configuracoes_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,numeracao_configuracoes,numeracao_configuracoes_created_by_not_null,n,t,NOT NULL created_by
+public,numeracao_configuracoes,numeracao_configuracoes_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,numeracao_configuracoes,numeracao_configuracoes_empresa_entidade_unique,u,t,"UNIQUE (empresa_id, entidade)"
+public,numeracao_configuracoes,numeracao_configuracoes_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,numeracao_configuracoes,numeracao_configuracoes_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,numeracao_configuracoes,numeracao_configuracoes_entidade_chk,c,t,"CHECK (entidade = ANY (ARRAY['projeto'::text, 'of'::text]))"
+public,numeracao_configuracoes,numeracao_configuracoes_entidade_not_null,n,t,NOT NULL entidade
+public,numeracao_configuracoes,numeracao_configuracoes_id_not_null,n,t,NOT NULL id
+public,numeracao_configuracoes,numeracao_configuracoes_mascara_not_null,n,t,NOT NULL mascara
+public,numeracao_configuracoes,numeracao_configuracoes_pkey,p,t,PRIMARY KEY (id)
+public,numeracao_configuracoes,numeracao_configuracoes_sequencia_atual_not_null,n,t,NOT NULL sequencia_atual
+public,numeracao_configuracoes,numeracao_configuracoes_sequencia_chk,c,t,CHECK (sequencia_atual >= 0 AND tamanho_sequencia > 0)
+public,numeracao_configuracoes,numeracao_configuracoes_tamanho_sequencia_not_null,n,t,NOT NULL tamanho_sequencia
+public,numeracao_configuracoes,numeracao_configuracoes_updated_at_not_null,n,t,NOT NULL updated_at
+public,ordens_fabricacao,ordens_fabricacao_ativo_not_null,n,t,NOT NULL ativo
+public,ordens_fabricacao,ordens_fabricacao_bom_id_fkey,f,t,FOREIGN KEY (bom_id) REFERENCES boms(id)
+public,ordens_fabricacao,ordens_fabricacao_created_at_not_null,n,t,NOT NULL created_at
+public,ordens_fabricacao,ordens_fabricacao_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,ordens_fabricacao,ordens_fabricacao_created_by_not_null,n,t,NOT NULL created_by
+public,ordens_fabricacao,ordens_fabricacao_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,ordens_fabricacao,ordens_fabricacao_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,ordens_fabricacao,ordens_fabricacao_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,ordens_fabricacao,ordens_fabricacao_id_not_null,n,t,NOT NULL id
+public,ordens_fabricacao,ordens_fabricacao_numero_of_not_null,n,t,NOT NULL numero_of
+public,ordens_fabricacao,ordens_fabricacao_pkey,p,t,PRIMARY KEY (id)
+public,ordens_fabricacao,ordens_fabricacao_produto_id_fkey,f,t,FOREIGN KEY (produto_id) REFERENCES itens_industriais(id)
+public,ordens_fabricacao,ordens_fabricacao_produto_id_not_null,n,t,NOT NULL produto_id
+public,ordens_fabricacao,ordens_fabricacao_projeto_id_fkey,f,t,FOREIGN KEY (projeto_id) REFERENCES projetos(id)
+public,ordens_fabricacao,ordens_fabricacao_projeto_id_not_null,n,t,NOT NULL projeto_id
+public,ordens_fabricacao,ordens_fabricacao_projeto_item_id_fkey,f,t,FOREIGN KEY (projeto_item_id) REFERENCES projeto_itens(id)
+public,ordens_fabricacao,ordens_fabricacao_quantidade_chk,c,t,CHECK (quantidade_planejada >= 0::numeric AND quantidade_produzida >= 0::numeric)
+public,ordens_fabricacao,ordens_fabricacao_quantidade_planejada_not_null,n,t,NOT NULL quantidade_planejada
+public,ordens_fabricacao,ordens_fabricacao_quantidade_produzida_not_null,n,t,NOT NULL quantidade_produzida
+public,ordens_fabricacao,ordens_fabricacao_status_chk,c,t,"CHECK (status = ANY (ARRAY['planejada'::text, 'em_producao'::text, 'concluida'::text, 'suspensa'::text, 'cancelada'::text]))"
+public,ordens_fabricacao,ordens_fabricacao_status_not_null,n,t,NOT NULL status
+public,ordens_fabricacao,ordens_fabricacao_tipo_chk,c,t,"CHECK (tipo = ANY (ARRAY['normal'::text, 'reparo'::text, 'servico'::text]))"
+public,ordens_fabricacao,ordens_fabricacao_tipo_not_null,n,t,NOT NULL tipo
+public,ordens_fabricacao,ordens_fabricacao_unidade_chk,c,t,"CHECK (unidade = ANY (ARRAY['kg'::text, 'metro'::text, 'barra'::text, 'chapa'::text, 'peca'::text]))"
+public,ordens_fabricacao,ordens_fabricacao_unidade_not_null,n,t,NOT NULL unidade
+public,ordens_fabricacao,ordens_fabricacao_updated_at_not_null,n,t,NOT NULL updated_at
+public,pedido_compra_itens,pedido_compra_itens_created_at_not_null,n,t,NOT NULL created_at
+public,pedido_compra_itens,pedido_compra_itens_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,pedido_compra_itens,pedido_compra_itens_created_by_not_null,n,t,NOT NULL created_by
+public,pedido_compra_itens,pedido_compra_itens_descricao_compra_not_null,n,t,NOT NULL descricao_compra
+public,pedido_compra_itens,pedido_compra_itens_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,pedido_compra_itens,pedido_compra_itens_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,pedido_compra_itens,pedido_compra_itens_id_not_null,n,t,NOT NULL id
+public,pedido_compra_itens,pedido_compra_itens_materia_prima_id_fkey,f,t,FOREIGN KEY (materia_prima_id) REFERENCES materias_primas(id)
+public,pedido_compra_itens,pedido_compra_itens_materia_prima_id_not_null,n,t,NOT NULL materia_prima_id
+public,pedido_compra_itens,pedido_compra_itens_of_id_fkey,f,t,FOREIGN KEY (of_id) REFERENCES ordens_fabricacao(id)
+public,pedido_compra_itens,pedido_compra_itens_pedido_compra_id_fkey,f,t,FOREIGN KEY (pedido_compra_id) REFERENCES pedidos_compra(id)
+public,pedido_compra_itens,pedido_compra_itens_pedido_compra_id_not_null,n,t,NOT NULL pedido_compra_id
+public,pedido_compra_itens,pedido_compra_itens_pkey,p,t,PRIMARY KEY (id)
+public,pedido_compra_itens,pedido_compra_itens_planejamento_compra_id_fkey,f,t,FOREIGN KEY (planejamento_compra_id) REFERENCES planejamentos_compra(id)
+public,pedidos_compra,pedidos_compra_ativo_not_null,n,t,NOT NULL ativo
+public,pedidos_compra,pedidos_compra_created_at_not_null,n,t,NOT NULL created_at
+public,pedidos_compra,pedidos_compra_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,pedidos_compra,pedidos_compra_created_by_not_null,n,t,NOT NULL created_by
+public,pedidos_compra,pedidos_compra_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,pedidos_compra,pedidos_compra_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,pedidos_compra,pedidos_compra_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,pedidos_compra,pedidos_compra_id_not_null,n,t,NOT NULL id
+public,pedidos_compra,pedidos_compra_of_id_fkey,f,t,FOREIGN KEY (of_id) REFERENCES ordens_fabricacao(id)
+public,pedidos_compra,pedidos_compra_pkey,p,t,PRIMARY KEY (id)
+public,pedidos_compra,pedidos_compra_planejamento_compra_id_fkey,f,t,FOREIGN KEY (planejamento_compra_id) REFERENCES planejamentos_compra(id)
+public,pedidos_compra,pedidos_compra_status_chk,c,t,"CHECK (status = ANY (ARRAY['rascunho'::text, 'enviado'::text, 'confirmado'::text, 'cancelado'::text]))"
+public,pedidos_compra,pedidos_compra_status_not_null,n,t,NOT NULL status
+public,pedidos_compra,pedidos_compra_updated_at_not_null,n,t,NOT NULL updated_at
+public,planejamento_compra_origens,planejamento_compra_origem_uniq,u,t,"UNIQUE (empresa_id, planejamento_compra_id, requisicao_compra_item_id)"
+public,planejamento_compra_origens,planejamento_compra_origens_created_at_not_null,n,t,NOT NULL created_at
+public,planejamento_compra_origens,planejamento_compra_origens_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,planejamento_compra_origens,planejamento_compra_origens_created_by_not_null,n,t,NOT NULL created_by
+public,planejamento_compra_origens,planejamento_compra_origens_dimensoes_chk,c,t,CHECK ((quantidade_pecas IS NULL OR quantidade_pecas > 0::numeric) AND (comprimento_necessario IS NULL OR comprimento_necessario > 0::numeric) AND (largura_necessaria IS NULL OR largura_necessaria > 0::numeric))
+public,planejamento_compra_origens,planejamento_compra_origens_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,planejamento_compra_origens,planejamento_compra_origens_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,planejamento_compra_origens,planejamento_compra_origens_id_not_null,n,t,NOT NULL id
+public,planejamento_compra_origens,planejamento_compra_origens_incluir_no_planejamento_not_null,n,t,NOT NULL incluir_no_planejamento
+public,planejamento_compra_origens,planejamento_compra_origens_of_id_fkey,f,t,FOREIGN KEY (of_id) REFERENCES ordens_fabricacao(id)
+public,planejamento_compra_origens,planejamento_compra_origens_pkey,p,t,PRIMARY KEY (id)
+public,planejamento_compra_origens,planejamento_compra_origens_planejamento_compra_id_fkey,f,t,FOREIGN KEY (planejamento_compra_id) REFERENCES planejamentos_compra(id)
+public,planejamento_compra_origens,planejamento_compra_origens_planejamento_compra_id_not_null,n,t,NOT NULL planejamento_compra_id
+public,planejamento_compra_origens,planejamento_compra_origens_projeto_id_fkey,f,t,FOREIGN KEY (projeto_id) REFERENCES projetos(id)
+public,planejamento_compra_origens,planejamento_compra_origens_qtd_chk,c,t,CHECK (quantidade_necessaria > 0::numeric)
+public,planejamento_compra_origens,planejamento_compra_origens_quantidade_necessaria_not_null,n,t,NOT NULL quantidade_necessaria
+public,planejamento_compra_origens,planejamento_compra_origens_requisicao_compra_id_fkey,f,t,FOREIGN KEY (requisicao_compra_id) REFERENCES requisicoes_compra(id)
+public,planejamento_compra_origens,planejamento_compra_origens_requisicao_compra_id_not_null,n,t,NOT NULL requisicao_compra_id
+public,planejamento_compra_origens,planejamento_compra_origens_requisicao_compra_item_id_fkey,f,t,FOREIGN KEY (requisicao_compra_item_id) REFERENCES requisicao_compra_itens(id)
+public,planejamento_compra_origens,planejamento_compra_origens_requisicao_compra_item_id_not_null,n,t,NOT NULL requisicao_compra_item_id
+public,planejamento_compra_origens,planejamento_compra_origens_unidade_chk,c,t,"CHECK (unidade = ANY (ARRAY['kg'::text, 'metro'::text, 'barra'::text, 'chapa'::text, 'peca'::text]))"
+public,planejamento_compra_origens,planejamento_compra_origens_unidade_not_null,n,t,NOT NULL unidade
+public,planejamentos_compra,planejamentos_compra_ativo_not_null,n,t,NOT NULL ativo
+public,planejamentos_compra,planejamentos_compra_created_at_not_null,n,t,NOT NULL created_at
+public,planejamentos_compra,planejamentos_compra_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,planejamentos_compra,planejamentos_compra_created_by_not_null,n,t,NOT NULL created_by
+public,planejamentos_compra,planejamentos_compra_criterio_calculo_not_null,n,t,NOT NULL criterio_calculo
+public,planejamentos_compra,planejamentos_compra_criterio_chk,c,t,"CHECK (criterio_calculo = ANY (ARRAY['manual'::text, 'comprimento'::text, 'area'::text, 'volume'::text, 'peca'::text]))"
+public,planejamentos_compra,planejamentos_compra_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,planejamentos_compra,planejamentos_compra_descricao_compra_not_null,n,t,NOT NULL descricao_compra
+public,planejamentos_compra,planejamentos_compra_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,planejamentos_compra,planejamentos_compra_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,planejamentos_compra,planejamentos_compra_forma_material_chk,c,t,"CHECK (forma_material IS NULL OR (forma_material = ANY (ARRAY['barra'::text, 'chapa'::text, 'bloco'::text, 'tubo'::text, 'perfil'::text, 'peca'::text])))"
+public,planejamentos_compra,planejamentos_compra_id_not_null,n,t,NOT NULL id
+public,planejamentos_compra,planejamentos_compra_materia_prima_id_fkey,f,t,FOREIGN KEY (materia_prima_id) REFERENCES materias_primas(id)
+public,planejamentos_compra,planejamentos_compra_materia_prima_id_not_null,n,t,NOT NULL materia_prima_id
+public,planejamentos_compra,planejamentos_compra_modo_chk,c,t,"CHECK (modo_planejamento = ANY (ARRAY['manual'::text, 'somar_todas'::text, 'por_of'::text, 'agrupamento_parcial'::text]))"
+public,planejamentos_compra,planejamentos_compra_modo_planejamento_not_null,n,t,NOT NULL modo_planejamento
+public,planejamentos_compra,planejamentos_compra_pkey,p,t,PRIMARY KEY (id)
+public,planejamentos_compra,planejamentos_compra_qtd_chk,c,t,CHECK (quantidade_necessaria_total >= 0::numeric AND (quantidade_planejada_compra IS NULL OR quantidade_planejada_compra > 0::numeric) AND (sobra_prevista IS NULL OR sobra_prevista >= 0::numeric))
+public,planejamentos_compra,planejamentos_compra_quantidade_necessaria_total_not_null,n,t,NOT NULL quantidade_necessaria_total
+public,planejamentos_compra,planejamentos_compra_status_chk,c,t,"CHECK (status = ANY (ARRAY['em_planejamento'::text, 'pronto_pedido'::text, 'convertido_pedido'::text, 'cancelado'::text]))"
+public,planejamentos_compra,planejamentos_compra_status_not_null,n,t,NOT NULL status
+public,planejamentos_compra,planejamentos_compra_unidade_chk,c,t,"CHECK (unidade_necessidade = ANY (ARRAY['kg'::text, 'metro'::text, 'barra'::text, 'chapa'::text, 'peca'::text]))"
+public,planejamentos_compra,planejamentos_compra_unidade_necessidade_not_null,n,t,NOT NULL unidade_necessidade
+public,planejamentos_compra,planejamentos_compra_updated_at_not_null,n,t,NOT NULL updated_at
+public,producao_configuracoes,producao_configuracoes_ativo_not_null,n,t,NOT NULL ativo
+public,producao_configuracoes,producao_configuracoes_buffer_chk,c,t,CHECK (dias_buffer_entrega >= 0)
+public,producao_configuracoes,producao_configuracoes_considerar_sabado_not_null,n,t,NOT NULL considerar_sabado
+public,producao_configuracoes,producao_configuracoes_created_at_not_null,n,t,NOT NULL created_at
+public,producao_configuracoes,producao_configuracoes_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,producao_configuracoes,producao_configuracoes_created_by_not_null,n,t,NOT NULL created_by
+public,producao_configuracoes,producao_configuracoes_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,producao_configuracoes,producao_configuracoes_dias_buffer_entrega_not_null,n,t,NOT NULL dias_buffer_entrega
+public,producao_configuracoes,producao_configuracoes_eficiencia_engenharia_chk,c,t,CHECK (eficiencia_engenharia > 0::numeric AND eficiencia_engenharia <= 1::numeric)
+public,producao_configuracoes,producao_configuracoes_eficiencia_engenharia_not_null,n,t,NOT NULL eficiencia_engenharia
+public,producao_configuracoes,producao_configuracoes_eficiencia_montagem_chk,c,t,CHECK (eficiencia_montagem > 0::numeric AND eficiencia_montagem <= 1::numeric)
+public,producao_configuracoes,producao_configuracoes_eficiencia_montagem_not_null,n,t,NOT NULL eficiencia_montagem
+public,producao_configuracoes,producao_configuracoes_eficiencia_producao_chk,c,t,CHECK (eficiencia_producao > 0::numeric AND eficiencia_producao <= 1::numeric)
+public,producao_configuracoes,producao_configuracoes_eficiencia_producao_not_null,n,t,NOT NULL eficiencia_producao
+public,producao_configuracoes,producao_configuracoes_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,producao_configuracoes,producao_configuracoes_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,producao_configuracoes,producao_configuracoes_empresa_unique,u,t,UNIQUE (empresa_id)
+public,producao_configuracoes,producao_configuracoes_id_not_null,n,t,NOT NULL id
+public,producao_configuracoes,producao_configuracoes_pkey,p,t,PRIMARY KEY (id)
+public,producao_configuracoes,producao_configuracoes_prazo_cliente_chk,c,t,CHECK (prazo_resposta_cliente_dias_uteis >= 0)
+public,producao_configuracoes,producao_configuracoes_prazo_resposta_cliente_dias_ute_not_null,n,t,NOT NULL prazo_resposta_cliente_dias_uteis
+public,producao_configuracoes,producao_configuracoes_updated_at_not_null,n,t,NOT NULL updated_at
+public,profiles,profiles_ativo_not_null,n,t,NOT NULL ativo
+public,profiles,profiles_created_at_not_null,n,t,NOT NULL created_at
+public,profiles,profiles_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,profiles,profiles_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,profiles,profiles_id_fkey,f,t,FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+public,profiles,profiles_id_not_null,n,t,NOT NULL id
+public,profiles,profiles_nivel_acesso_not_null,n,t,NOT NULL nivel_acesso
+public,profiles,profiles_nome_not_null,n,t,NOT NULL nome
+public,profiles,profiles_pkey,p,t,PRIMARY KEY (id)
+public,projeto_itens,projeto_itens_ativo_not_null,n,t,NOT NULL ativo
+public,projeto_itens,projeto_itens_bom_id_fkey,f,t,FOREIGN KEY (bom_id) REFERENCES boms(id)
+public,projeto_itens,projeto_itens_created_at_not_null,n,t,NOT NULL created_at
+public,projeto_itens,projeto_itens_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,projeto_itens,projeto_itens_created_by_not_null,n,t,NOT NULL created_by
+public,projeto_itens,projeto_itens_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,projeto_itens,projeto_itens_descricao_not_null,n,t,NOT NULL descricao
+public,projeto_itens,projeto_itens_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,projeto_itens,projeto_itens_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,projeto_itens,projeto_itens_id_not_null,n,t,NOT NULL id
+public,projeto_itens,projeto_itens_pkey,p,t,PRIMARY KEY (id)
+public,projeto_itens,projeto_itens_pn_not_null,n,t,NOT NULL pn
+public,projeto_itens,projeto_itens_produto_id_fkey,f,t,FOREIGN KEY (produto_id) REFERENCES itens_industriais(id)
+public,projeto_itens,projeto_itens_produto_id_not_null,n,t,NOT NULL produto_id
+public,projeto_itens,projeto_itens_projeto_id_fkey,f,t,FOREIGN KEY (projeto_id) REFERENCES projetos(id)
+public,projeto_itens,projeto_itens_projeto_id_not_null,n,t,NOT NULL projeto_id
+public,projeto_itens,projeto_itens_quantidade_chk,c,t,CHECK (quantidade > 0::numeric)
+public,projeto_itens,projeto_itens_quantidade_not_null,n,t,NOT NULL quantidade
+public,projeto_itens,projeto_itens_updated_at_not_null,n,t,NOT NULL updated_at
+public,projetos,projetos_ativo_not_null,n,t,NOT NULL ativo
+public,projetos,projetos_cliente_id_fkey,f,t,FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+public,projetos,projetos_created_at_not_null,n,t,NOT NULL created_at
+public,projetos,projetos_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,projetos,projetos_created_by_not_null,n,t,NOT NULL created_by
+public,projetos,projetos_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,projetos,projetos_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,projetos,projetos_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,projetos,projetos_id_not_null,n,t,NOT NULL id
+public,projetos,projetos_numero_formato_chk,c,t,CHECK (numero_projeto ~ '^[0-9]{6}$'::text)
+public,projetos,projetos_numero_projeto_key,u,t,UNIQUE (numero_projeto)
+public,projetos,projetos_numero_projeto_not_null,n,t,NOT NULL numero_projeto
+public,projetos,projetos_pkey,p,t,PRIMARY KEY (id)
+public,projetos,projetos_status_chk,c,t,"CHECK (status = ANY (ARRAY['orcamento'::text, 'aprovado'::text, 'producao'::text, 'finalizado'::text, 'cancelado'::text]))"
+public,projetos,projetos_status_not_null,n,t,NOT NULL status
+public,projetos,projetos_tipo_chk,c,t,"CHECK (tipo_projeto = ANY (ARRAY['fabricacao'::text, 'desenvolvimento'::text]))"
+public,projetos,projetos_tipo_projeto_not_null,n,t,NOT NULL tipo_projeto
+public,projetos,projetos_updated_at_not_null,n,t,NOT NULL updated_at
+public,recursos_produtivos,recursos_produtivos_ativo_not_null,n,t,NOT NULL ativo
+public,recursos_produtivos,recursos_produtivos_codigo_not_null,n,t,NOT NULL codigo
+public,recursos_produtivos,recursos_produtivos_created_at_not_null,n,t,NOT NULL created_at
+public,recursos_produtivos,recursos_produtivos_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE RESTRICT
+public,recursos_produtivos,recursos_produtivos_created_by_not_null,n,t,NOT NULL created_by
+public,recursos_produtivos,recursos_produtivos_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id) ON DELETE SET NULL
+public,recursos_produtivos,recursos_produtivos_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,recursos_produtivos,recursos_produtivos_grupo_id_fkey,f,t,FOREIGN KEY (grupo_id) REFERENCES grupos_recursos(id) ON DELETE RESTRICT
+public,recursos_produtivos,recursos_produtivos_grupo_id_not_null,n,t,NOT NULL grupo_id
+public,recursos_produtivos,recursos_produtivos_id_not_null,n,t,NOT NULL id
+public,recursos_produtivos,recursos_produtivos_nome_not_null,n,t,NOT NULL nome
+public,recursos_produtivos,recursos_produtivos_pkey,p,t,PRIMARY KEY (id)
+public,recursos_produtivos,recursos_produtivos_status_not_null,n,t,NOT NULL status
+public,recursos_produtivos,recursos_produtivos_tecnologia_aplicada_id_fkey,f,t,FOREIGN KEY (tecnologia_aplicada_id) REFERENCES tecnologias_aplicadas(id) ON DELETE SET NULL
+public,recursos_produtivos,recursos_produtivos_updated_at_not_null,n,t,NOT NULL updated_at
+public,requisicao_compra_itens,requisicao_compra_itens_ativo_not_null,n,t,NOT NULL ativo
+public,requisicao_compra_itens,requisicao_compra_itens_created_at_not_null,n,t,NOT NULL created_at
+public,requisicao_compra_itens,requisicao_compra_itens_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,requisicao_compra_itens,requisicao_compra_itens_created_by_not_null,n,t,NOT NULL created_by
+public,requisicao_compra_itens,requisicao_compra_itens_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,requisicao_compra_itens,requisicao_compra_itens_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,requisicao_compra_itens,requisicao_compra_itens_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,requisicao_compra_itens,requisicao_compra_itens_id_not_null,n,t,NOT NULL id
+public,requisicao_compra_itens,requisicao_compra_itens_materia_prima_id_fkey,f,t,FOREIGN KEY (materia_prima_id) REFERENCES materias_primas(id)
+public,requisicao_compra_itens,requisicao_compra_itens_materia_prima_id_not_null,n,t,NOT NULL materia_prima_id
+public,requisicao_compra_itens,requisicao_compra_itens_pkey,p,t,PRIMARY KEY (id)
+public,requisicao_compra_itens,requisicao_compra_itens_quantidade_chk,c,t,CHECK (quantidade_necessaria > 0::numeric)
+public,requisicao_compra_itens,requisicao_compra_itens_quantidade_necessaria_not_null,n,t,NOT NULL quantidade_necessaria
+public,requisicao_compra_itens,requisicao_compra_itens_requisicao_compra_id_fkey,f,t,FOREIGN KEY (requisicao_compra_id) REFERENCES requisicoes_compra(id)
+public,requisicao_compra_itens,requisicao_compra_itens_requisicao_compra_id_not_null,n,t,NOT NULL requisicao_compra_id
+public,requisicao_compra_itens,requisicao_compra_itens_unidade_chk,c,t,"CHECK (unidade = ANY (ARRAY['kg'::text, 'metro'::text, 'barra'::text, 'chapa'::text, 'peca'::text]))"
+public,requisicao_compra_itens,requisicao_compra_itens_unidade_not_null,n,t,NOT NULL unidade
+public,requisicao_compra_itens,requisicao_compra_itens_updated_at_not_null,n,t,NOT NULL updated_at
+public,requisicoes_compra,requisicoes_compra_ativo_not_null,n,t,NOT NULL ativo
+public,requisicoes_compra,requisicoes_compra_created_at_not_null,n,t,NOT NULL created_at
+public,requisicoes_compra,requisicoes_compra_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,requisicoes_compra,requisicoes_compra_created_by_not_null,n,t,NOT NULL created_by
+public,requisicoes_compra,requisicoes_compra_data_necessidade_material_not_null,n,t,NOT NULL data_necessidade_material
+public,requisicoes_compra,requisicoes_compra_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,requisicoes_compra,requisicoes_compra_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+public,requisicoes_compra,requisicoes_compra_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,requisicoes_compra,requisicoes_compra_id_not_null,n,t,NOT NULL id
+public,requisicoes_compra,requisicoes_compra_numero_empresa_uniq,u,t,"UNIQUE (empresa_id, numero_requisicao)"
+public,requisicoes_compra,requisicoes_compra_of_id_fkey,f,t,FOREIGN KEY (of_id) REFERENCES ordens_fabricacao(id)
+public,requisicoes_compra,requisicoes_compra_pkey,p,t,PRIMARY KEY (id)
+public,requisicoes_compra,requisicoes_compra_projeto_id_fkey,f,t,FOREIGN KEY (projeto_id) REFERENCES projetos(id)
+public,requisicoes_compra,requisicoes_compra_status_chk,c,t,"CHECK (status = ANY (ARRAY['aberta'::text, 'em_compra'::text, 'atendida'::text, 'cancelada'::text]))"
+public,requisicoes_compra,requisicoes_compra_status_not_null,n,t,NOT NULL status
+public,requisicoes_compra,requisicoes_compra_updated_at_not_null,n,t,NOT NULL updated_at
+public,tecnologias_aplicadas,tecnologias_aplicadas_ativo_not_null,n,t,NOT NULL ativo
+public,tecnologias_aplicadas,tecnologias_aplicadas_codigo_not_null,n,t,NOT NULL codigo
+public,tecnologias_aplicadas,tecnologias_aplicadas_created_at_not_null,n,t,NOT NULL created_at
+public,tecnologias_aplicadas,tecnologias_aplicadas_created_by_fkey,f,t,FOREIGN KEY (created_by) REFERENCES auth.users(id)
+public,tecnologias_aplicadas,tecnologias_aplicadas_created_by_not_null,n,t,NOT NULL created_by
+public,tecnologias_aplicadas,tecnologias_aplicadas_deleted_by_fkey,f,t,FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+public,tecnologias_aplicadas,tecnologias_aplicadas_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,tecnologias_aplicadas,tecnologias_aplicadas_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,tecnologias_aplicadas,tecnologias_aplicadas_id_not_null,n,t,NOT NULL id
+public,tecnologias_aplicadas,tecnologias_aplicadas_nome_not_null,n,t,NOT NULL nome
+public,tecnologias_aplicadas,tecnologias_aplicadas_pkey,p,t,PRIMARY KEY (id)
+public,tecnologias_aplicadas,tecnologias_aplicadas_tipo_not_null,n,t,NOT NULL tipo
+public,tecnologias_aplicadas,tecnologias_aplicadas_updated_at_not_null,n,t,NOT NULL updated_at
+public,tecnologias_aplicadas,tecnologias_aplicadas_valor_hora_not_null,n,t,NOT NULL valor_hora
+public,usuarios,usuarios_atualizado_em_not_null,n,t,NOT NULL atualizado_em
+public,usuarios,usuarios_data_criacao_not_null,n,t,NOT NULL data_criacao
+public,usuarios,usuarios_email_key,u,t,UNIQUE (email)
+public,usuarios,usuarios_email_not_null,n,t,NOT NULL email
+public,usuarios,usuarios_empresa_id_fkey,f,t,FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT
+public,usuarios,usuarios_empresa_id_not_null,n,t,NOT NULL empresa_id
+public,usuarios,usuarios_id_fkey,f,t,FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+public,usuarios,usuarios_id_not_null,n,t,NOT NULL id
+public,usuarios,usuarios_nivel_acesso_not_null,n,t,NOT NULL nivel_acesso
+public,usuarios,usuarios_nome_not_null,n,t,NOT NULL nome
+public,usuarios,usuarios_pkey,p,t,PRIMARY KEY (id)

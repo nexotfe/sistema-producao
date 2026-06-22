@@ -1,0 +1,10 @@
+funcao;severidade;uso;risco_principal;decisao
+empresa_atual_id;CRITICA;67 policies e 12 funcoes;Perfil inativo pode cair para usuarios e manter tenant ativo alem de existirem duas fontes divergentes de empresa;CORRIGIR_ANTES_DAS_MIGRATIONS_DEFINITIVAS
+handle_new_auth_user;CRITICA;Trigger esperado em auth.users nao presente no backup public;empresa_slug vem de raw_user_meta_data controlavel pelo usuario permitindo ingresso indevido em tenant;CORRIGIR_ANTES_DE_NOVOS_CADASTROS
+usuario_e_admin;ALTA;22 policies;Autorizacao depende do resolvedor fragil e nao valida empresa ativa;CORRIGIR_COM_O_RESOLVEDOR_DE_TENANT
+set_empresa_id_from_usuario;ALTA;4 triggers;Somente preenche empresa_id quando nulo e aceita valor nao nulo informado pelo chamador;ALTERAR_PARA_IMPOR_O_TENANT_DA_SESSAO
+preparar_empresa_saas;ALTA;Trigger de empresas;Permite manter plano e codigo fornecidos e depende de funcoes globais privilegiadas;RESTRINGIR_CAMPOS_E_CHAMADORES
+gerar_slug_empresa_unico;MEDIA;Chamada por preparar_empresa_saas;Pode expor existencia global de slugs se EXECUTE estiver publico e possui corrida resolvida apenas pela unique;RESTRINGIR_EXECUTE_E_TESTAR_CONCORRENCIA
+proximo_codigo_empresa;MEDIA;Chamada por preparar_empresa_saas;Se executavel publicamente permite consumir sequencia global sem criar empresa;RESTRINGIR_EXECUTE
+validar_movimentacao_estoque;MEDIA;Trigger de movimentacoes_estoque;Valida item contra new.empresa_id mas nao contra tenant da sessao e depende integralmente da RLS externa;VALIDAR_TENANT_EXPLICITAMENTE
+usuario_empresa_atual;BAIXA;RPC de contexto do usuario;Filtro por auth.uid e entidades ativas e coerente mas ACL e owner nao foram comprovados;MANTER_COM_HARDENING_E_TESTES

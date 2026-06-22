@@ -1,0 +1,458 @@
+schema_name,view_name,kind,definition,comment
+public,clientes_ativos,v," SELECT id,
+    empresa_id,
+    nome,
+    empresa,
+    telefone,
+    email,
+    cnpj,
+    cidade,
+    observacoes,
+    ativo,
+    created_at,
+    updated_at,
+    deleted_at,
+    deleted_by,
+    created_by
+   FROM clientes
+  WHERE empresa_id = empresa_atual_id() AND ativo = true AND deleted_at IS NULL;",
+public,funcionarios_ativos,v," SELECT id,
+    empresa_id,
+    codigo,
+    nome,
+    apelido,
+    setor,
+    funcao,
+    tecnologia_aplicada_id,
+    habilidades,
+    carga_horaria,
+    disponibilidade_atual,
+    telefone,
+    email,
+    data_admissao,
+    observacoes,
+    ativo,
+    created_at,
+    updated_at,
+    deleted_at,
+    deleted_by,
+    created_by
+   FROM funcionarios
+  WHERE empresa_id = empresa_atual_id() AND ativo = true AND deleted_at IS NULL;",
+public,grupos_recursos_ativos,v," SELECT id,
+    empresa_id,
+    codigo,
+    nome,
+    descricao,
+    setor,
+    capacidade_total,
+    disponibilidade_atual,
+    unidade_capacidade,
+    ativo,
+    created_at,
+    updated_at,
+    deleted_at,
+    deleted_by,
+    created_by
+   FROM grupos_recursos
+  WHERE empresa_id = empresa_atual_id() AND ativo = true AND deleted_at IS NULL;",
+public,itens_industriais_ativos,v," SELECT id,
+    empresa_id,
+    codigo,
+    descricao,
+    unidade,
+    tipo_item,
+    codigo_ean_gtin,
+    codigo_ncm,
+    familia,
+    classificacao,
+    valor_referencia,
+    recomendacao_fiscal,
+    observacoes,
+    pdf_tecnico_path,
+    pdf_tecnico_nome,
+    referencia_arquivo_externo,
+    caminho_engenharia,
+    revisao_desenho,
+    ativo,
+    created_at,
+    updated_at,
+    deleted_at,
+    deleted_by,
+    created_by
+   FROM itens_industriais
+  WHERE empresa_id = empresa_atual_id() AND ativo = true AND deleted_at IS NULL;",
+public,movimentacoes_estoque_ativas,v," SELECT mov.id,
+    mov.empresa_id,
+    mov.item_id,
+    item.codigo AS item_codigo,
+    item.descricao AS item_descricao,
+    mov.tipo_movimento,
+    mov.quantidade,
+    mov.valor_unitario,
+    mov.valor_total,
+    mov.unidade,
+    mov.documento_referencia,
+    mov.motivo,
+    mov.observacoes,
+    mov.endereco_estoque,
+    mov.ativo,
+    mov.created_at,
+    mov.updated_at,
+    mov.deleted_at,
+    mov.deleted_by,
+    mov.created_by
+   FROM movimentacoes_estoque mov
+     JOIN itens_industriais item ON item.id = mov.item_id
+  WHERE mov.empresa_id = empresa_atual_id() AND mov.ativo = true AND mov.deleted_at IS NULL;",
+public,recursos_produtivos_ativos,v," SELECT id,
+    empresa_id,
+    codigo,
+    grupo_id,
+    tecnologia_aplicada_id,
+    nome,
+    fabricante,
+    modelo,
+    setor,
+    capacidade,
+    status,
+    observacoes,
+    ativo,
+    created_at,
+    updated_at,
+    deleted_at,
+    deleted_by,
+    created_by
+   FROM recursos_produtivos
+  WHERE empresa_id = empresa_atual_id() AND ativo = true AND deleted_at IS NULL;",
+public,saldo_estoque_atual,v," SELECT item.id AS item_id,
+    item.empresa_id,
+    item.codigo AS item_codigo,
+    item.descricao AS item_descricao,
+    item.tipo_item,
+    item.unidade,
+    item.familia,
+    COALESCE(sum(mov.quantidade) FILTER (WHERE mov.ativo = true AND mov.deleted_at IS NULL), 0::numeric) AS saldo_atual,
+    COALESCE(sum(mov.valor_total) FILTER (WHERE mov.ativo = true AND mov.deleted_at IS NULL), 0::numeric) AS valor_total_estoque,
+    ultima.created_at AS ultima_movimentacao,
+    ultima.tipo_movimento AS ultima_tipo_movimento
+   FROM itens_industriais item
+     LEFT JOIN movimentacoes_estoque mov ON mov.item_id = item.id AND mov.empresa_id = item.empresa_id
+     LEFT JOIN LATERAL ( SELECT mov_ultima.created_at,
+            mov_ultima.tipo_movimento
+           FROM movimentacoes_estoque mov_ultima
+          WHERE mov_ultima.item_id = item.id AND mov_ultima.empresa_id = item.empresa_id AND mov_ultima.ativo = true AND mov_ultima.deleted_at IS NULL
+          ORDER BY mov_ultima.created_at DESC
+         LIMIT 1) ultima ON true
+  WHERE item.empresa_id = empresa_atual_id() AND item.ativo = true AND item.deleted_at IS NULL
+  GROUP BY item.id, item.empresa_id, item.codigo, item.descricao, item.tipo_item, item.unidade, item.familia, ultima.created_at, ultima.tipo_movimento;",
+public,tecnologias_aplicadas_ativas,v," SELECT id,
+    empresa_id,
+    codigo,
+    nome,
+    tipo,
+    valor_hora,
+    descricao,
+    ativo,
+    created_at,
+    updated_at,
+    deleted_at,
+    deleted_by,
+    created_by
+   FROM tecnologias_aplicadas
+  WHERE empresa_id = empresa_atual_id() AND ativo = true AND deleted_at IS NULL;",
+public,vw_decisao_material_of,v," WITH ci AS (
+         SELECT consumos_internos.empresa_id,
+            consumos_internos.projeto_id,
+            consumos_internos.of_numero,
+            consumos_internos.materia_prima_id,
+            consumos_internos.unidade,
+            sum(consumos_internos.quantidade) AS quantidade_consumo_interno,
+            sum(consumos_internos.custo_total_material) AS custo_total_material,
+            max(consumos_internos.data_movimentacao) AS ultima_data_ci
+           FROM consumos_internos
+          WHERE consumos_internos.ativo = true AND consumos_internos.deleted_at IS NULL
+          GROUP BY consumos_internos.empresa_id, consumos_internos.projeto_id, consumos_internos.of_numero, consumos_internos.materia_prima_id, consumos_internos.unidade
+        ), rc AS (
+         SELECT r.empresa_id,
+            r.projeto_id,
+            r.of_numero,
+            i.materia_prima_id,
+            i.unidade,
+            sum(i.quantidade_necessaria) AS quantidade_compra_externa,
+            max(r.data_necessidade_material) AS data_necessidade_material,
+            max(r.status) AS status_requisicao
+           FROM requisicoes_compra r
+             JOIN requisicao_compra_itens i ON i.requisicao_compra_id = r.id
+          WHERE r.ativo = true AND r.deleted_at IS NULL AND i.ativo = true AND i.deleted_at IS NULL
+          GROUP BY r.empresa_id, r.projeto_id, r.of_numero, i.materia_prima_id, i.unidade
+        )
+ SELECT COALESCE(ci.empresa_id, rc.empresa_id) AS empresa_id,
+    COALESCE(ci.projeto_id, rc.projeto_id) AS projeto_id,
+    COALESCE(ci.of_numero, rc.of_numero) AS of_numero,
+    COALESCE(ci.materia_prima_id, rc.materia_prima_id) AS materia_prima_id,
+    mp.codigo AS materia_prima_codigo,
+    mp.descricao AS materia_prima_descricao,
+    COALESCE(ci.unidade, rc.unidade) AS unidade,
+    COALESCE(ci.quantidade_consumo_interno, 0::numeric) AS quantidade_consumo_interno,
+    COALESCE(rc.quantidade_compra_externa, 0::numeric) AS quantidade_compra_externa,
+    COALESCE(ci.quantidade_consumo_interno, 0::numeric) + COALESCE(rc.quantidade_compra_externa, 0::numeric) AS quantidade_total,
+    COALESCE(ci.custo_total_material, 0::numeric) AS custo_total_material,
+    rc.data_necessidade_material,
+    ci.ultima_data_ci,
+    rc.status_requisicao,
+        CASE
+            WHEN COALESCE(ci.quantidade_consumo_interno, 0::numeric) > 0::numeric AND COALESCE(rc.quantidade_compra_externa, 0::numeric) > 0::numeric THEN 'ci_parcial_compra_parcial'::text
+            WHEN COALESCE(ci.quantidade_consumo_interno, 0::numeric) > 0::numeric THEN 'ci_total'::text
+            ELSE 'compra_total'::text
+        END AS status_decisao
+   FROM ci
+     FULL JOIN rc ON rc.empresa_id = ci.empresa_id AND rc.projeto_id = ci.projeto_id AND rc.of_numero = ci.of_numero AND rc.materia_prima_id = ci.materia_prima_id
+     LEFT JOIN materias_primas mp ON mp.id = COALESCE(ci.materia_prima_id, rc.materia_prima_id);","Resumo por projeto, OF e materia-prima do que foi atendido por CI e por compra externa."
+public,vw_demanda_bom_of,v," SELECT ofx.empresa_id,
+    ofx.id AS of_id,
+    ofx.numero_of,
+    ofx.projeto_id,
+    ofx.projeto_item_id,
+    ofx.produto_id,
+    ip.pn AS produto_pn,
+    ip.descricao AS produto_descricao,
+    ofx.bom_id,
+    b.versao AS bom_versao,
+    b.descricao AS bom_descricao,
+    bi.id AS bom_item_id,
+    bi.componente_tipo,
+    bi.materia_prima_id,
+    mp.codigo AS materia_codigo,
+    mp.descricao AS materia_descricao,
+    bi.componente_produto_id,
+    cp.pn AS componente_pn,
+    cp.descricao AS componente_descricao,
+    bi.quantidade AS bom_quantidade,
+    ofx.quantidade_planejada,
+    ofx.unidade AS of_unidade,
+    bi.unidade AS componente_unidade,
+    ofx.quantidade_planejada * bi.quantidade AS quantidade_demanda,
+        CASE
+            WHEN bi.componente_tipo = 'materia_prima'::text THEN 'materia_prima'::text
+            ELSE 'subconjunto'::text
+        END AS demanda_tipo
+   FROM ordens_fabricacao ofx
+     JOIN boms b ON b.id = ofx.bom_id
+     JOIN bom_itens bi ON bi.bom_id = b.id
+     LEFT JOIN materias_primas mp ON mp.id = bi.materia_prima_id
+     LEFT JOIN itens_industriais cp ON cp.id = bi.componente_produto_id
+     LEFT JOIN itens_industriais ip ON ip.id = ofx.produto_id
+  WHERE ofx.ativo = true AND b.ativo = true AND bi.ativo = true;",Visao operacional da demanda de BOM por OF e por componente.
+public,vw_demanda_consumo_compra,v," SELECT e.empresa_id,
+    e.of_id,
+    e.numero_of,
+    e.projeto_id,
+    e.projeto_item_id,
+    e.produto_id,
+    e.produto_pn,
+    e.produto_descricao,
+    e.bom_id,
+    e.bom_versao,
+    e.bom_descricao,
+    e.bom_item_id,
+    e.componente_tipo,
+    e.materia_prima_id,
+    e.materia_codigo,
+    e.materia_descricao,
+    e.componente_produto_id,
+    e.componente_pn,
+    e.componente_descricao,
+    e.bom_quantidade,
+    e.quantidade_planejada,
+    e.of_unidade,
+    e.componente_unidade,
+    e.quantidade_demanda,
+    e.demanda_tipo,
+    e.saldo_disponivel,
+    e.saldo_reservado,
+    e.saldo_livre,
+    e.quantidade_falta,
+    e.falta_estoque,
+    COALESCE(ci.total_consumido, 0::numeric) AS total_consumo_interno,
+    COALESCE(rc.total_requisicao, 0::numeric) AS total_requisicao_compra,
+    GREATEST(e.quantidade_falta - COALESCE(ci.total_consumido, 0::numeric), 0::numeric) AS quantidade_para_compra_externa,
+        CASE
+            WHEN GREATEST(e.quantidade_falta - COALESCE(ci.total_consumido, 0::numeric), 0::numeric) > 0::numeric THEN true
+            ELSE false
+        END AS precisa_compra_externa
+   FROM vw_demanda_estoque e
+     LEFT JOIN ( SELECT consumos_internos.of_id,
+            consumos_internos.materia_prima_id,
+            sum(consumos_internos.quantidade) AS total_consumido
+           FROM consumos_internos
+          WHERE consumos_internos.ativo = true
+          GROUP BY consumos_internos.of_id, consumos_internos.materia_prima_id) ci ON ci.of_id = e.of_id AND ci.materia_prima_id = e.materia_prima_id
+     LEFT JOIN ( SELECT rc_1.of_id,
+            rci.materia_prima_id,
+            sum(rci.quantidade_necessaria) AS total_requisicao
+           FROM requisicoes_compra rc_1
+             JOIN requisicao_compra_itens rci ON rci.requisicao_compra_id = rc_1.id
+          WHERE rc_1.ativo = true AND rci.ativo = true
+          GROUP BY rc_1.of_id, rci.materia_prima_id) rc ON rc.of_id = e.of_id AND rc.materia_prima_id = e.materia_prima_id;",Visao que mostra a necessidade de compra externa depois de estoque e consumo interno.
+public,vw_demanda_estoque,v," SELECT d.empresa_id,
+    d.of_id,
+    d.numero_of,
+    d.projeto_id,
+    d.projeto_item_id,
+    d.produto_id,
+    d.produto_pn,
+    d.produto_descricao,
+    d.bom_id,
+    d.bom_versao,
+    d.bom_descricao,
+    d.bom_item_id,
+    d.componente_tipo,
+    d.materia_prima_id,
+    d.materia_codigo,
+    d.materia_descricao,
+    d.componente_produto_id,
+    d.componente_pn,
+    d.componente_descricao,
+    d.bom_quantidade,
+    d.quantidade_planejada,
+    d.of_unidade,
+    d.componente_unidade,
+    d.quantidade_demanda,
+    d.demanda_tipo,
+    es.saldo_disponivel,
+    es.saldo_reservado,
+    es.saldo_livre,
+    GREATEST(d.quantidade_demanda - COALESCE(es.saldo_livre, 0::numeric), 0::numeric) AS quantidade_falta,
+        CASE
+            WHEN COALESCE(es.saldo_livre, 0::numeric) >= d.quantidade_demanda THEN false
+            ELSE true
+        END AS falta_estoque
+   FROM vw_demanda_bom_of d
+     LEFT JOIN estoque_saldos es ON es.empresa_id = d.empresa_id AND es.materia_prima_id = d.materia_prima_id AND es.local_estoque = 'principal'::text;",Visao de cobertura de estoque para a demanda BOM das OFs.
+public,vw_of_consumo_detalhado,v," SELECT ofx.empresa_id,
+    ofx.id AS of_id,
+    ofx.numero_of,
+    ofx.projeto_id,
+    ofx.produto_id,
+    ip.pn AS produto_pn,
+    ip.descricao AS produto_descricao,
+    ofx.bom_id,
+    b.versao AS bom_versao,
+    bi.id AS bom_item_id,
+    bi.componente_tipo,
+    bi.materia_prima_id,
+    mp.codigo AS materia_codigo,
+    mp.descricao AS materia_descricao,
+    bi.componente_produto_id,
+    cp.pn AS componente_pn,
+    cp.descricao AS componente_descricao,
+    bi.quantidade AS bom_quantidade,
+    bi.unidade AS bom_unidade,
+    ofx.quantidade_planejada,
+    ofx.unidade AS of_unidade,
+    ofx.quantidade_planejada * bi.quantidade AS quantidade_demanda,
+    COALESCE(es.saldo_livre, 0::numeric) AS estoque_saldo_livre,
+    COALESCE(ci.quantidade_consumo_interno, 0::numeric) AS quantidade_consumo_interno,
+    COALESCE(rc.quantidade_compra_externa, 0::numeric) AS quantidade_compra_externa,
+    GREATEST(ofx.quantidade_planejada * bi.quantidade - COALESCE(es.saldo_livre, 0::numeric), 0::numeric) AS quantidade_falta_estoque,
+    GREATEST(GREATEST(ofx.quantidade_planejada * bi.quantidade - COALESCE(es.saldo_livre, 0::numeric), 0::numeric) - COALESCE(ci.quantidade_consumo_interno, 0::numeric), 0::numeric) AS quantidade_para_compra_externa,
+        CASE
+            WHEN COALESCE(ci.quantidade_consumo_interno, 0::numeric) > 0::numeric AND COALESCE(rc.quantidade_compra_externa, 0::numeric) > 0::numeric THEN 'ci_parcial_compra_parcial'::text
+            WHEN COALESCE(ci.quantidade_consumo_interno, 0::numeric) > 0::numeric THEN 'ci_total'::text
+            ELSE 'compra_total'::text
+        END AS status_fluxo
+   FROM ordens_fabricacao ofx
+     JOIN boms b ON b.id = ofx.bom_id
+     JOIN bom_itens bi ON bi.bom_id = b.id
+     LEFT JOIN itens_industriais ip ON ip.id = ofx.produto_id
+     LEFT JOIN materias_primas mp ON mp.id = bi.materia_prima_id
+     LEFT JOIN itens_industriais cp ON cp.id = bi.componente_produto_id
+     LEFT JOIN estoque_saldos es ON es.empresa_id = ofx.empresa_id AND es.materia_prima_id = bi.materia_prima_id AND es.local_estoque = 'principal'::text
+     LEFT JOIN ( SELECT consumos_internos.of_id,
+            consumos_internos.materia_prima_id,
+            sum(consumos_internos.quantidade) AS quantidade_consumo_interno
+           FROM consumos_internos
+          WHERE consumos_internos.ativo = true AND consumos_internos.deleted_at IS NULL
+          GROUP BY consumos_internos.of_id, consumos_internos.materia_prima_id) ci ON ci.of_id = ofx.id AND ci.materia_prima_id = bi.materia_prima_id
+     LEFT JOIN ( SELECT rc_1.of_id,
+            rci.materia_prima_id,
+            sum(rci.quantidade_necessaria) AS quantidade_compra_externa
+           FROM requisicoes_compra rc_1
+             JOIN requisicao_compra_itens rci ON rci.requisicao_compra_id = rc_1.id
+          WHERE rc_1.ativo = true AND rc_1.deleted_at IS NULL AND rci.ativo = true AND rci.deleted_at IS NULL
+          GROUP BY rc_1.of_id, rci.materia_prima_id) rc ON rc.of_id = ofx.id AND rc.materia_prima_id = bi.materia_prima_id
+  WHERE ofx.ativo = true AND b.ativo = true AND bi.ativo = true;","Visao detalhada do consumo por OF, mostrando demanda, estoque, CI e compra externa."
+public,vw_of_fluxo_industrial,v," SELECT ofx.id AS of_id,
+    ofx.numero_of,
+    ofx.projeto_id,
+    ofx.projeto_item_id,
+    ofx.produto_id,
+    ofx.bom_id,
+    ofx.status AS of_status,
+    ofx.tipo AS of_tipo,
+    ofx.quantidade_planejada,
+    ofx.quantidade_produzida,
+    ofx.unidade,
+    COALESCE(sum(ci.quantidade), 0::numeric) AS total_consumo_interno,
+    COALESCE(sum(rcit.quantidade_necessaria), 0::numeric) AS total_requisicao_compra,
+    count(DISTINCT pc.id) AS pedidos_compra_abertos
+   FROM ordens_fabricacao ofx
+     LEFT JOIN consumos_internos ci ON ci.of_id = ofx.id
+     LEFT JOIN requisicoes_compra rc ON rc.of_id = ofx.id
+     LEFT JOIN requisicao_compra_itens rcit ON rcit.requisicao_compra_id = rc.id
+     LEFT JOIN pedidos_compra pc ON pc.of_id = ofx.id
+  WHERE ofx.ativo = true
+  GROUP BY ofx.id, ofx.numero_of, ofx.projeto_id, ofx.projeto_item_id, ofx.produto_id, ofx.bom_id, ofx.status, ofx.tipo, ofx.quantidade_planejada, ofx.quantidade_produzida, ofx.unidade;",
+public,vw_of_fluxo_operacional,v," SELECT ofx.id AS of_id,
+    ofx.numero_of,
+    ofx.projeto_id,
+    ofx.produto_id,
+    ip.pn AS produto_pn,
+    ofx.bom_id,
+    b.versao AS bom_versao,
+    sum(d.quantidade_demanda) AS total_demanda_bom,
+    sum(d.estoque_saldo_livre) AS total_estoque_livre,
+    sum(d.quantidade_consumo_interno) AS total_consumo_interno,
+    sum(d.quantidade_para_compra_externa) AS total_compra_externa,
+    max(d.status_fluxo) AS status_fluxo
+   FROM vw_of_consumo_detalhado d
+     JOIN ordens_fabricacao ofx ON ofx.id = d.of_id
+     LEFT JOIN itens_industriais ip ON ip.id = ofx.produto_id
+     LEFT JOIN boms b ON b.id = ofx.bom_id
+  WHERE ofx.ativo = true
+  GROUP BY ofx.id, ofx.numero_of, ofx.projeto_id, ofx.produto_id, ip.pn, ofx.bom_id, b.versao;",Visao operacional agregada por OF do fluxo BOM -> estoque -> consumo interno -> compra externa.
+public,vw_planejamento_compras_operacional,v," SELECT p.id AS planejamento_compra_id,
+    p.empresa_id,
+    p.numero_planejamento,
+    p.materia_prima_id,
+    mp.codigo AS materia_prima_codigo,
+    mp.descricao AS materia_prima_descricao,
+    p.descricao_compra,
+    p.material_base,
+    p.forma_material,
+    p.bitola_ou_espessura,
+    p.chave_industrial_compra,
+    p.modo_planejamento,
+    p.criterio_calculo,
+    p.unidade_necessidade,
+    p.quantidade_necessaria_total,
+    p.unidade_compra,
+    p.quantidade_planejada_compra,
+    p.sobra_prevista,
+    p.status,
+    count(o.id) FILTER (WHERE o.incluir_no_planejamento = true) AS origens_incluidas,
+    count(o.id) FILTER (WHERE o.incluir_no_planejamento = false) AS origens_excluidas,
+    sum(o.quantidade_necessaria) FILTER (WHERE o.incluir_no_planejamento = true) AS quantidade_origens_incluidas,
+    string_agg(DISTINCT o.of_numero, ', '::text) FILTER (WHERE o.incluir_no_planejamento = true AND o.of_numero IS NOT NULL) AS ofs_incluidas,
+    max(o.created_at) AS ultima_origem_em,
+    p.created_at,
+    p.updated_at,
+    p.quantidade_necessaria_total AS soma_total,
+    p.quantidade_planejada_compra AS sugestao_compra,
+    p.comprar_descricao
+   FROM planejamentos_compra p
+     LEFT JOIN materias_primas mp ON mp.id = p.materia_prima_id
+     LEFT JOIN planejamento_compra_origens o ON o.planejamento_compra_id = p.id
+  WHERE p.ativo = true AND p.deleted_at IS NULL
+  GROUP BY p.id, p.empresa_id, p.numero_planejamento, p.materia_prima_id, mp.codigo, mp.descricao, p.descricao_compra, p.material_base, p.forma_material, p.bitola_ou_espessura, p.chave_industrial_compra, p.modo_planejamento, p.criterio_calculo, p.unidade_necessidade, p.quantidade_necessaria_total, p.unidade_compra, p.quantidade_planejada_compra, p.sobra_prevista, p.status, p.created_at, p.updated_at, p.comprar_descricao;","Resumo do planejamento com modo de escolha, soma total, sugestao de compra e sobra prevista."

@@ -1,0 +1,11 @@
+﻿enum_values|4
+foreign_keys|117
+functions|23
+invalid_constraints|0
+invalid_indexes|0
+policies|106
+rls_enabled_tables|27
+sequences|1
+tables|29
+triggers|29
+views|16

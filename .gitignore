@@ -79,6 +79,12 @@ web_modules/
 .env.production.local
 .env.local
 
+# Local database backups (may contain sensitive production data)
+.backups/
+
+# Disposable PostgreSQL cluster used for backup restore validation
+.local-postgres/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

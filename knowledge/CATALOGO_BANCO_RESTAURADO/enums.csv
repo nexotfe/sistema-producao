@@ -1,0 +1,5 @@
+schema_name,enum_name,enumsortorder,enumlabel
+public,nivel_acesso,1,admin
+public,nivel_acesso,2,gestor
+public,nivel_acesso,3,operador
+public,nivel_acesso,4,leitura
