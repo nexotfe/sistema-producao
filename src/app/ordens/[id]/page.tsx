@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabaseClient";
 
@@ -200,12 +200,32 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Dados da OF</p>
                 <dl className="mt-3 grid gap-2 text-sm text-slate-700">
                   <div className="flex items-center justify-between">
+                    <dt className="font-medium text-slate-600">Projeto</dt>
+                    <dd>
+                      {ofData?.projeto_id ? (
+                        <EntityLink type="projeto" id={ofData.projeto_id}>
+                          {ofData.projeto_id}
+                        </EntityLink>
+                      ) : (
+                        "—"
+                      )}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <dt className="font-medium text-slate-600">BOM</dt>
                     <dd>{flowData?.bom_versao ?? "—"}</dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="font-medium text-slate-600">Produto</dt>
-                    <dd>{flowData?.produto_pn ?? "—"}</dd>
+                    <dd>
+                      {flowData?.produto_pn ? (
+                        <EntityLink type="item" id={flowData.produto_pn}>
+                          {flowData.produto_pn}
+                        </EntityLink>
+                      ) : (
+                        "—"
+                      )}
+                    </dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="font-medium text-slate-600">Versão BOM</dt>

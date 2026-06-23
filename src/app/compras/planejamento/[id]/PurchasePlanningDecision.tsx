@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 const partialOrigins = [
   {
@@ -186,10 +187,24 @@ export function PurchasePlanningDecision({
                 />
                 <span>
                   <span className="block font-bold text-slate-950">
-                    {origin.of}
+                    <EntityLink
+                      type="of"
+                      id={origin.of}
+                      className="font-bold text-slate-950 transition hover:text-slate-700"
+                    >
+                      {origin.of}
+                    </EntityLink>
                   </span>
                   <span className="block text-xs text-slate-600">
-                    Projeto {origin.project} - {origin.need}
+                    Projeto{" "}
+                    <EntityLink
+                      type="projeto"
+                      id={origin.project}
+                      className="font-semibold text-blue-700 transition hover:text-blue-900"
+                    >
+                      {origin.project}
+                    </EntityLink>{" "}
+                    - {origin.need}
                   </span>
                 </span>
               </label>

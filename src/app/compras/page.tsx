@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 const decisionSummary = [
   { label: "CI total", value: "8", tone: "text-emerald-700" },
@@ -195,10 +196,18 @@ export default function PurchasesPage() {
                   {openRequisitions.map((row) => (
                     <tr key={`${row.of}-${row.material}`} className="hover:bg-slate-50">
                       <td className="px-4 py-3 font-bold text-blue-700">
-                        {row.project}
+                        <EntityLink type="projeto" id={row.project}>
+                          {row.project}
+                        </EntityLink>
                       </td>
                       <td className="px-4 py-3 font-semibold text-slate-950">
-                        {row.of}
+                        <EntityLink
+                          type="of"
+                          id={row.of}
+                          className="font-semibold text-slate-950 transition hover:text-slate-700"
+                        >
+                          {row.of}
+                        </EntityLink>
                       </td>
                       <td className="px-4 py-3 text-slate-700">{row.material}</td>
                       <td className="px-4 py-3 text-slate-700">{row.quantity}</td>
@@ -262,10 +271,18 @@ export default function PurchasesPage() {
                 {recentInternalConsumptions.map((row) => (
                   <tr key={`${row.of}-${row.material}`} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-bold text-blue-700">
-                      {row.project}
+                      <EntityLink type="projeto" id={row.project}>
+                        {row.project}
+                      </EntityLink>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-950">
-                      {row.of}
+                      <EntityLink
+                        type="of"
+                        id={row.of}
+                        className="font-semibold text-slate-950 transition hover:text-slate-700"
+                      >
+                        {row.of}
+                      </EntityLink>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{row.material}</td>
                     <td className="px-4 py-3 text-slate-700">{row.quantity}</td>
