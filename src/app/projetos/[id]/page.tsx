@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 type ProjectPageProps = {
   params: Promise<{
@@ -383,13 +384,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             {purchasesPending.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {purchasesPending.map((purchase) => (
-                  <Link
+                  <EntityLink
                     key={purchase}
-                    href={`/compras/requisicoes/${purchase}`}
+                    type="req"
+                    id={purchase}
                     className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 hover:border-blue-300"
                   >
                     {purchase}
-                  </Link>
+                  </EntityLink>
                 ))}
               </div>
             ) : (

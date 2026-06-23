@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { StatusBadge } from "@/modules/projetos/StatusBadge";
 import type { ProjectStatus } from "@/modules/projetos/types";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 const projectRows = [
   {
@@ -124,12 +125,13 @@ export default function ProjectsPage() {
                 {projectRows.map((row) => (
                   <tr key={row.project} className="transition hover:bg-slate-50">
                     <td className="px-5 py-4">
-                      <Link
-                        href={`/projetos/${row.project}`}
+                      <EntityLink
+                        type="projeto"
+                        id={row.project}
                         className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
                       >
                         {row.project}
-                      </Link>
+                      </EntityLink>
                     </td>
                     <td className="px-5 py-4 text-slate-700">{row.client}</td>
                     <td className="px-5 py-4 text-slate-700">{row.type}</td>

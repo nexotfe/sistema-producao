@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 type PurchaseOrderDraftPageProps = {
   params: Promise<{
@@ -134,12 +135,18 @@ export default async function PurchaseOrderDraftPage({
                 {orderOrigins.map((origin) => (
                   <tr key={origin.of}>
                     <td className="px-4 py-3 font-bold text-blue-700">
-                      <Link href={`/projetos/${origin.project}`}>
+                      <EntityLink type="projeto" id={origin.project}>
                         {origin.project}
-                      </Link>
+                      </EntityLink>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-950">
-                      {origin.of}
+                      <EntityLink
+                        type="of"
+                        id={origin.of}
+                        className="font-semibold text-slate-950 transition hover:text-slate-700"
+                      >
+                        {origin.of}
+                      </EntityLink>
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {origin.need}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 const quoteItems = [
   {
@@ -178,7 +179,9 @@ export default function NewProjectPage() {
                       {item.description}
                     </td>
                     <td className="px-4 py-3 font-semibold text-blue-700">
-                      <Link href={`/roteiros/${item.pn}`}>{item.pn}</Link>
+                      <EntityLink type="item" id={item.pn}>
+                        {item.pn}
+                      </EntityLink>
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {item.quantity}

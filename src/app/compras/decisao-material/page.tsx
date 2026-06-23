@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 const materialDecisions = [
   {
@@ -155,12 +156,18 @@ export default function MaterialDecisionPage() {
                     className="hover:bg-slate-50"
                   >
                     <td className="px-4 py-3 font-bold text-blue-700">
-                      <Link href={`/projetos/${decision.project}`}>
+                      <EntityLink type="projeto" id={decision.project}>
                         {decision.project}
-                      </Link>
+                      </EntityLink>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-950">
-                      {decision.of}
+                      <EntityLink
+                        type="of"
+                        id={decision.of}
+                        className="font-semibold text-slate-950 transition hover:text-slate-700"
+                      >
+                        {decision.of}
+                      </EntityLink>
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {decision.materialCode}

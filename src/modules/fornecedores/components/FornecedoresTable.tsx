@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/modules/clientes/components/EmptyState";
 import { LoadingState } from "@/modules/clientes/components/LoadingState";
 import { StatusBadge } from "@/modules/clientes/components/StatusBadge";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 type Fornecedor = {
   id: string;
@@ -93,12 +94,13 @@ export function FornecedoresTable({
                 >
                   {colunasVisiveis.nomeFantasia && (
                     <td className="px-5 py-3">
-                      <Link
-                        href={`/fornecedores/${fornecedor.id}`}
+                      <EntityLink
+                        type="fornecedor"
+                        id={fornecedor.id}
                         className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
                       >
                         {fornecedor.empresa || "Sem nome fantasia"}
-                      </Link>
+                      </EntityLink>
                     </td>
                   )}
 

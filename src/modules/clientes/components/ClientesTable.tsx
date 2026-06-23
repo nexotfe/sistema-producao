@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "./EmptyState";
 import { LoadingState } from "./LoadingState";
 import { StatusBadge } from "./StatusBadge";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 type Cliente = {
   id: string;
@@ -93,12 +94,13 @@ export function ClientesTable({
                 >
                   {colunasVisiveis.nomeFantasia && (
                     <td className="px-5 py-3">
-                      <Link
-                        href={`/clientes/${cliente.id}`}
+                      <EntityLink
+                        type="cliente"
+                        id={cliente.id}
                         className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
                       >
                         {cliente.empresa || "Sem nome fantasia"}
-                      </Link>
+                      </EntityLink>
                     </td>
                   )}
 
