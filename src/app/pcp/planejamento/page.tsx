@@ -13,8 +13,8 @@ const planningRows = [
       waitingMaterial: 30,
       programming: 15,
     },
-    nextAction: "Liberar compra complementar",
-    progress: "35%",
+    nextAction: "Comprar material",
+    progress: "0%",
     delivery: "26/06",
   },
   {
@@ -28,8 +28,8 @@ const planningRows = [
       waitingMaterial: 18,
       programming: 14,
     },
-    nextAction: "Separar roteiro e BOM",
-    progress: "20%",
+    nextAction: "Programar CNC",
+    progress: "25%",
     delivery: "28/06",
   },
   {
@@ -43,8 +43,8 @@ const planningRows = [
       waitingMaterial: 8,
       programming: 4,
     },
-    nextAction: "Acompanhar OF principal",
-    progress: "62%",
+    nextAction: "Produzir",
+    progress: "50%",
     delivery: "02/07",
   },
   {
@@ -58,9 +58,24 @@ const planningRows = [
       waitingMaterial: 2,
       programming: 3,
     },
-    nextAction: "Inspecao final",
-    progress: "84%",
+    nextAction: "Montar",
+    progress: "85%",
     delivery: "04/07",
+  },
+  {
+    priority: "05",
+    project: "260128",
+    client: "Cliente Precisao",
+    operationalState: {
+      total: 36,
+      released: 36,
+      blocked: 0,
+      waitingMaterial: 0,
+      programming: 0,
+    },
+    nextAction: "Terceirizar",
+    progress: "100%",
+    delivery: "08/07",
   },
 ];
 
@@ -178,7 +193,7 @@ export default function PCPPlanningPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-slate-700">{row.nextAction}</td>
-                    <td className="px-5 py-4 font-semibold text-slate-900">
+                    <td className="px-5 py-4 font-semibold tabular-nums text-slate-900">
                       {row.progress}
                     </td>
                     <td className="px-5 py-4 text-slate-700">{row.delivery}</td>
