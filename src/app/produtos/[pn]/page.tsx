@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 
 type ProductPageProps = {
   params: Promise<{
@@ -12,6 +13,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950">
       <section className="mx-auto max-w-2xl rounded-md border border-slate-200 bg-white p-5">
+        <ModuleBackLink href="/dashboard" label="PN" />
         <p className="text-sm font-semibold text-blue-700">PN {pn}</p>
         <h1 className="mt-1 text-2xl font-bold">Portal técnico operacional</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
