@@ -6,7 +6,13 @@ const planningRows = [
     priority: "01",
     project: "260124",
     client: "Cliente Delta",
-    state: "Aguardando material",
+    operationalState: {
+      total: 100,
+      released: 55,
+      blocked: 45,
+      waitingMaterial: 30,
+      programming: 15,
+    },
     nextAction: "Liberar compra complementar",
     progress: "35%",
     delivery: "26/06",
@@ -15,7 +21,13 @@ const planningRows = [
     priority: "02",
     project: "260125",
     client: "Cliente ABC",
-    state: "Em preparacao",
+    operationalState: {
+      total: 80,
+      released: 48,
+      blocked: 32,
+      waitingMaterial: 18,
+      programming: 14,
+    },
     nextAction: "Separar roteiro e BOM",
     progress: "20%",
     delivery: "28/06",
@@ -24,7 +36,13 @@ const planningRows = [
     priority: "03",
     project: "260126",
     client: "Cliente Metal",
-    state: "Em producao",
+    operationalState: {
+      total: 64,
+      released: 52,
+      blocked: 12,
+      waitingMaterial: 8,
+      programming: 4,
+    },
     nextAction: "Acompanhar OF principal",
     progress: "62%",
     delivery: "02/07",
@@ -33,19 +51,18 @@ const planningRows = [
     priority: "04",
     project: "260127",
     client: "Cliente Exemplo Ltda.",
-    state: "Qualidade",
+    operationalState: {
+      total: 42,
+      released: 37,
+      blocked: 5,
+      waitingMaterial: 2,
+      programming: 3,
+    },
     nextAction: "Inspecao final",
     progress: "84%",
     delivery: "04/07",
   },
 ];
-
-const stateStyles = {
-  "Aguardando material": "bg-amber-50 text-amber-700 ring-amber-200",
-  "Em preparacao": "bg-blue-50 text-blue-700 ring-blue-200",
-  "Em producao": "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  Qualidade: "bg-slate-100 text-slate-700 ring-slate-200",
-} as const;
 
 export default function PCPPlanningPage() {
   return (
@@ -74,7 +91,7 @@ export default function PCPPlanningPage() {
               <input
                 id="pcp-search"
                 type="search"
-                placeholder="Buscar projeto, cliente ou estado"
+                placeholder="Buscar projeto, cliente ou estado operacional"
                 className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               />
 
@@ -131,13 +148,34 @@ export default function PCPPlanningPage() {
                     </td>
                     <td className="px-5 py-4 text-slate-700">{row.client}</td>
                     <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
-                          stateStyles[row.state as keyof typeof stateStyles]
-                        }`}
-                      >
-                        {row.state}
-                      </span>
+                      <div className="group relative inline-flex">
+                        <span
+                          aria-label={`${row.operationalState.released} OFs liberadas e ${row.operationalState.blocked} OFs nao liberadas`}
+                          className="inline-flex h-7 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold tabular-nums text-slate-700"
+                        >
+                          <span>{row.operationalState.released}✓</span>
+                          <span>{row.operationalState.blocked}⚠</span>
+                        </span>
+
+                        <span className="pointer-events-none absolute left-0 top-9 z-10 hidden w-48 rounded-md border border-slate-200 bg-white p-3 text-xs font-medium leading-5 text-slate-700 shadow-lg group-hover:block">
+                          <span className="flex justify-between gap-3">
+                            <span>OF totais</span>
+                            <span>{row.operationalState.total}</span>
+                          </span>
+                          <span className="flex justify-between gap-3 text-emerald-700">
+                            <span>✓ Liberadas</span>
+                            <span>{row.operationalState.released}</span>
+                          </span>
+                          <span className="flex justify-between gap-3 text-amber-700">
+                            <span>📦 Aguardando MP</span>
+                            <span>{row.operationalState.waitingMaterial}</span>
+                          </span>
+                          <span className="flex justify-between gap-3 text-blue-700">
+                            <span>💻 Programacao</span>
+                            <span>{row.operationalState.programming}</span>
+                          </span>
+                        </span>
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-slate-700">{row.nextAction}</td>
                     <td className="px-5 py-4 font-semibold text-slate-900">
