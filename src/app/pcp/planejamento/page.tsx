@@ -3,7 +3,7 @@ import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
 
 const planningRows = [
   {
-    priority: "P1",
+    priority: "01",
     project: "260124",
     client: "Cliente Delta",
     state: "Aguardando material",
@@ -12,7 +12,7 @@ const planningRows = [
     delivery: "26/06",
   },
   {
-    priority: "P2",
+    priority: "02",
     project: "260125",
     client: "Cliente ABC",
     state: "Em preparacao",
@@ -21,7 +21,7 @@ const planningRows = [
     delivery: "28/06",
   },
   {
-    priority: "P3",
+    priority: "03",
     project: "260126",
     client: "Cliente Metal",
     state: "Em producao",
@@ -30,7 +30,7 @@ const planningRows = [
     delivery: "02/07",
   },
   {
-    priority: "P4",
+    priority: "04",
     project: "260127",
     client: "Cliente Exemplo Ltda.",
     state: "Qualidade",
@@ -116,7 +116,7 @@ export default function PCPPlanningPage() {
                 {planningRows.map((row) => (
                   <tr key={row.project} className="transition hover:bg-slate-50">
                     <td className="px-5 py-4">
-                      <span className="inline-flex h-7 min-w-9 items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700">
+                      <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700">
                         {row.priority}
                       </span>
                     </td>
