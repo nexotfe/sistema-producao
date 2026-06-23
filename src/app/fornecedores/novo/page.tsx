@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { useRouter } from "next/navigation";
 import { useNovoFornecedor } from "@/modules/fornecedores/hooks/useNovoFornecedor";
 
@@ -63,20 +63,7 @@ export default function NovoFornecedorPage() {
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-col gap-3">
-          <Link
-            href="/fornecedores"
-            className="inline-flex w-fit items-center gap-1 rounded-sm text-slate-400 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-          >
-            <span
-              aria-hidden="true"
-              className="text-sm font-semibold leading-none"
-            >
-              {"\u2039"}
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-[0.18em]">
-              Fornecedores
-            </span>
-          </Link>
+          <ModuleBackLink href="/fornecedores" label="Fornecedor" />
 
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">

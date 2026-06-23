@@ -32,7 +32,7 @@ Este diretório contém a instalação reproduzível do schema definitivo em ban
 
 ## Estado
 
-Em construção. Não aplicar ao projeto Supabase remoto.
+Completo e validado em PostgreSQL local descartável. Não aplicar ao projeto Supabase remoto sem plano formal de implantação.
 
 | Módulo | Estado |
 |---|---|
@@ -45,4 +45,15 @@ Em construção. Não aplicar ao projeto Supabase remoto.
 | `007_estoque.sql` | Aprovado em banco vazio e em teste de reprodução |
 | `008_suprimentos.sql` | Aprovado em banco vazio e em teste de reprodução |
 | `009_producao.sql` | Aprovado em banco vazio e em teste de reprodução |
-| `010_qualidade.sql` em diante | Pendente |
+| `010_qualidade.sql` | Aprovado em banco vazio e em teste de reprodução |
+| `011_expedicao.sql` | Aprovado em banco vazio e em teste de reprodução |
+| `012_views.sql` | Aprovado em banco vazio e em teste de reprodução |
+| `013_grants_rls.sql` | Aprovado em banco vazio e em teste de reprodução |
+| `014_comments.sql` | Aprovado em banco vazio e em teste de reprodução |
+| `015_validate.sql` | Aprovado em banco vazio e em teste de reprodução |
+
+## Evidência final
+
+O conjunto completo `001..015` foi instalado em dois bancos vazios independentes e produziu schemas normalizados idênticos.
+
+**SHA-256 do schema normalizado final:** `0ca39f928e8d798313eb96feb90d44dfb2c4526a43ffe84bc89ba3bb6ec7660e`

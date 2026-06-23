@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 
 const rawMaterials = [
   {
@@ -69,12 +70,7 @@ export default async function ManufacturingRoutePage({ params }: RoutePageProps)
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <Link
-            href="/projetos/novo"
-            className="text-sm font-semibold text-blue-700 hover:underline"
-          >
-            Voltar para o projeto
-          </Link>
+          <ModuleBackLink href="/projetos/novo" label="Projeto" />
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>

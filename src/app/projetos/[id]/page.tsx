@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 
 type ProjectPageProps = {
   params: Promise<{
@@ -55,25 +56,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
           {/* Topo: Voltar + Nome Usuário */}
           <div className="mb-4 flex items-center gap-3">
-            <Link
-              href="/projetos"
-              className="text-slate-400 transition hover:text-slate-600"
-              title="Voltar para Comercial"
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </Link>
+            <ModuleBackLink href="/projetos" label="Projeto" />
             <p className="text-sm font-semibold">Flavio Evangelista</p>
           </div>
 

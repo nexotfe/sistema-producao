@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabaseClient";
 
 type OFPageProps = {
@@ -83,7 +84,7 @@ async function getOFOperationalData(ofId: string) {
   };
 }
 
-function renderStatusBadge(status: string | null) {
+function renderStatusBadge(status: string | null | undefined) {
   const definedStatus = status ?? "desconhecido";
   const badgeStyles = {
     planejada: "bg-blue-100 text-blue-700",
@@ -151,9 +152,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
       <section className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link href="/central" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-              ← Voltar ao dashboard
-            </Link>
+            <ModuleBackLink href="/central" label="Dashboard" />
             <h1 className="mt-4 text-3xl font-bold text-slate-950">OF {ofData?.numero_of ?? id}</h1>
             <p className="mt-2 text-sm text-slate-500">Tela operacional da ordem de fabricação.</p>
           </div>

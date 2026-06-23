@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 
 const materials = [
   {
@@ -66,15 +67,7 @@ export default function RawMaterialsPage() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-5">
           <div>
-            <Link
-              href="/central"
-              className="inline-flex items-center text-sm font-semibold text-slate-500 outline-none transition hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-            >
-              <span aria-hidden="true" className="mr-2 text-base leading-none">
-                {"\u2039"}
-              </span>
-              ESTOQUE
-            </Link>
+            <ModuleBackLink href="/central" label="Estoque" />
 
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
               Materias-primas
