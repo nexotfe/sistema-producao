@@ -21,6 +21,7 @@ type ProjectRow = {
   prioridade: string | null;
   data_objetivo: string | null;
   observacoes: string | null;
+  created_at: string | null;
 };
 
 type ClientRow = {
@@ -47,7 +48,9 @@ type ContactRow = {
 
 type OFRow = {
   id: string;
+  numero_of: string | null;
   status: string | null;
+  created_at: string | null;
 };
 
 type ProjectItemRow = {
@@ -120,6 +123,46 @@ type ExecutiveSummaries = {
   quality: SummaryItem[];
 };
 
+type TimelineEvent = {
+  date: string;
+  event: string;
+  occurredAt: string;
+  source: string;
+};
+
+type ProjectStatusEventRow = {
+  id: string;
+  estado_anterior: string | null;
+  estado_novo: string;
+  motivo: string | null;
+  ocorrido_em: string;
+};
+
+type CommercialApprovalRow = {
+  id: string;
+  resultado: string | null;
+  decidido_em: string;
+};
+
+type OFStatusEventRow = {
+  id: string;
+  of_id: string;
+  estado_novo: string;
+  ocorrido_em: string;
+};
+
+type ProductionOperationEventRow = {
+  id: string;
+  estado_novo: string;
+  ocorrido_em: string;
+};
+
+type QualityInspectionEventRow = {
+  id: string;
+  estado_novo: string;
+  ocorrido_em: string;
+};
+
 type ProjectData =
   | {
       project: ProjectRow;
@@ -128,6 +171,7 @@ type ProjectData =
       ofs: OFRow[];
       purchases: PurchaseRow[];
       summaries: ExecutiveSummaries;
+      timeline: TimelineEvent[];
       error?: never;
     }
   | {
@@ -136,6 +180,8 @@ type ProjectData =
       contacts?: never;
       ofs?: never;
       purchases?: never;
+      summaries?: never;
+      timeline?: never;
       error: string;
     };
 
@@ -158,6 +204,11 @@ function formatLabel(value: string | null | undefined) {
 function formatDate(value: string | null | undefined) {
   if (!value) return EMPTY_VALUE;
   return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return EMPTY_VALUE;
+  return new Date(value).toLocaleDateString("pt-BR");
 }
 
 function present(value: string | null | undefined) {
@@ -237,10 +288,255 @@ function getPurchaseBadgeClass(status: string | null | undefined) {
   return "bg-amber-50 text-amber-700 ring-amber-200";
 }
 
+function getProjectStatusEventText(event: ProjectStatusEventRow) {
+  if (!event.estado_anterior && event.estado_novo === "rascunho") {
+    return "Projeto criado";
+  }
+
+  if (event.estado_novo === "aprovado") return "Projeto aprovado";
+  if (event.estado_novo === "cancelado") return "Projeto cancelado";
+  if (event.estado_novo === "concluido") return "Projeto encerrado";
+  if (event.estado_novo === "em_producao") return "Produção iniciada";
+
+  return `Mudança de status para ${formatLabel(event.estado_novo)}`;
+}
+
+function getTimelineEvent(date: string, event: string, occurredAt: string, source: string) {
+  return {
+    date,
+    event,
+    occurredAt,
+    source,
+  };
+}
+
+function dedupeTimeline(events: TimelineEvent[]) {
+  const singleMilestones = new Set([
+    "Projeto criado",
+    "Projeto aprovado",
+    "Projeto cancelado",
+    "Projeto encerrado",
+    "Primeira OF criada",
+    "Primeira OF liberada",
+    "Produção iniciada",
+    "Produção concluída",
+    "Inspeção concluída",
+  ]);
+
+  const sortedEvents = events
+    .filter((event) => event.occurredAt)
+    .sort(
+      (first, second) =>
+        new Date(first.occurredAt).getTime() - new Date(second.occurredAt).getTime()
+    );
+
+  return sortedEvents.filter((event, index, allEvents) => {
+    const firstSourceIndex = allEvents.findIndex((candidate) => candidate.source === event.source);
+    const firstMilestoneIndex = allEvents.findIndex(
+      (candidate) => candidate.event === event.event && singleMilestones.has(event.event)
+    );
+
+    return firstSourceIndex === index && (!singleMilestones.has(event.event) || firstMilestoneIndex === index);
+  });
+}
+
+function getFirstEvent<T extends { ocorrido_em: string }>(events: T[]) {
+  return [...events].sort(
+    (first, second) =>
+      new Date(first.ocorrido_em).getTime() - new Date(second.ocorrido_em).getTime()
+  )[0];
+}
+
+async function getProjectTimeline(
+  project: ProjectRow,
+  ofs: OFRow[],
+  operationIds: string[],
+  inspectionIds: string[]
+): Promise<{ timeline: TimelineEvent[]; error: string | null }> {
+  const ofIds = ofs.map((of) => of.id);
+  const events: TimelineEvent[] = [];
+
+  const [projectEventsResult, approvalsResult, ofEventsResult, operationEventsResult, inspectionEventsResult] =
+    await Promise.all([
+      supabase
+        .from("projeto_estado_eventos")
+        .select("id,estado_anterior,estado_novo,motivo,ocorrido_em")
+        .eq("projeto_id", project.id)
+        .order("ocorrido_em", { ascending: true }),
+      supabase
+        .from("aprovacoes_comerciais")
+        .select("id,resultado,decidido_em")
+        .eq("projeto_id", project.id)
+        .eq("resultado", "aprovado")
+        .order("decidido_em", { ascending: true }),
+      ofIds.length > 0
+        ? supabase
+            .from("of_estado_eventos")
+            .select("id,of_id,estado_novo,ocorrido_em")
+            .in("of_id", ofIds)
+            .order("ocorrido_em", { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
+      operationIds.length > 0
+        ? supabase
+            .from("operacao_producao_eventos")
+            .select("id,estado_novo,ocorrido_em")
+            .in("operacao_producao_id", operationIds)
+            .order("ocorrido_em", { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
+      inspectionIds.length > 0
+        ? supabase
+            .from("inspecao_qualidade_eventos")
+            .select("id,estado_novo,ocorrido_em")
+            .in("inspecao_qualidade_id", inspectionIds)
+            .order("ocorrido_em", { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+  const error =
+    projectEventsResult.error ??
+    approvalsResult.error ??
+    ofEventsResult.error ??
+    operationEventsResult.error ??
+    inspectionEventsResult.error;
+
+  if (error) {
+    return { timeline: [], error: error.message };
+  }
+
+  const projectEvents = (projectEventsResult.data as ProjectStatusEventRow[] | null) ?? [];
+  const approvals = (approvalsResult.data as CommercialApprovalRow[] | null) ?? [];
+  const ofEvents = (ofEventsResult.data as OFStatusEventRow[] | null) ?? [];
+  const operationEvents =
+    (operationEventsResult.data as ProductionOperationEventRow[] | null) ?? [];
+  const inspectionEvents =
+    (inspectionEventsResult.data as QualityInspectionEventRow[] | null) ?? [];
+
+  if (project.created_at) {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(project.created_at),
+        "Projeto criado",
+        project.created_at,
+        `projeto:${project.id}:created`
+      )
+    );
+  }
+
+  projectEvents.forEach((event) => {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(event.ocorrido_em),
+        getProjectStatusEventText(event),
+        event.ocorrido_em,
+        `projeto_estado_eventos:${event.id}`
+      )
+    );
+  });
+
+  approvals.forEach((approval) => {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(approval.decidido_em),
+        "Projeto aprovado",
+        approval.decidido_em,
+        `aprovacoes_comerciais:${approval.id}`
+      )
+    );
+  });
+
+  const firstOF = [...ofs]
+    .filter((of) => of.created_at)
+    .sort(
+      (first, second) =>
+        new Date(first.created_at ?? "").getTime() -
+        new Date(second.created_at ?? "").getTime()
+    )[0];
+
+  if (firstOF?.created_at) {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(firstOF.created_at),
+        "Primeira OF criada",
+        firstOF.created_at,
+        `ordens_fabricacao:${firstOF.id}:created`
+      )
+    );
+  }
+
+  const firstReleasedOF = getFirstEvent(
+    ofEvents.filter((event) => ["pronta_programacao", "programada"].includes(event.estado_novo))
+  );
+
+  if (firstReleasedOF) {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(firstReleasedOF.ocorrido_em),
+        "Primeira OF liberada",
+        firstReleasedOF.ocorrido_em,
+        `of_estado_eventos:${firstReleasedOF.id}`
+      )
+    );
+  }
+
+  const firstProductionStarted = getFirstEvent(
+    operationEvents.filter((event) =>
+      ["preparacao", "em_execucao", "inspecao"].includes(event.estado_novo)
+    )
+  );
+
+  if (firstProductionStarted) {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(firstProductionStarted.ocorrido_em),
+        "Produção iniciada",
+        firstProductionStarted.ocorrido_em,
+        `operacao_producao_eventos:${firstProductionStarted.id}`
+      )
+    );
+  }
+
+  const firstProductionFinished = getFirstEvent(
+    operationEvents.filter((event) => event.estado_novo === "concluida")
+  );
+
+  if (firstProductionFinished) {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(firstProductionFinished.ocorrido_em),
+        "Produção concluída",
+        firstProductionFinished.ocorrido_em,
+        `operacao_producao_eventos:${firstProductionFinished.id}`
+      )
+    );
+  }
+
+  const firstInspectionFinished = getFirstEvent(
+    inspectionEvents.filter((event) => event.estado_novo === "concluida")
+  );
+
+  if (firstInspectionFinished) {
+    events.push(
+      getTimelineEvent(
+        formatDateTime(firstInspectionFinished.ocorrido_em),
+        "Inspeção concluída",
+        firstInspectionFinished.ocorrido_em,
+        `inspecao_qualidade_eventos:${firstInspectionFinished.id}`
+      )
+    );
+  }
+
+  return { timeline: dedupeTimeline(events), error: null };
+}
+
 async function getExecutiveSummaries(
   project: ProjectRow,
   ofs: OFRow[]
-): Promise<{ summaries: ExecutiveSummaries; error: string | null }> {
+): Promise<{
+  summaries: ExecutiveSummaries;
+  operationIds: string[];
+  inspectionIds: string[];
+  error: string | null;
+}> {
   const ofIds = ofs.map((of) => of.id);
 
   const projectItemsResult = await supabase
@@ -250,7 +546,12 @@ async function getExecutiveSummaries(
     .is("deleted_at", null);
 
   if (projectItemsResult.error) {
-    return { summaries: emptyExecutiveSummaries(), error: projectItemsResult.error.message };
+    return {
+      summaries: emptyExecutiveSummaries(),
+      operationIds: [],
+      inspectionIds: [],
+      error: projectItemsResult.error.message,
+    };
   }
 
   const projectItems = (projectItemsResult.data as ProjectItemRow[] | null) ?? [];
@@ -284,7 +585,12 @@ async function getExecutiveSummaries(
   const engineeringError = bomsResult.error ?? routesResult.error ?? documentsResult.error;
 
   if (engineeringError) {
-    return { summaries: emptyExecutiveSummaries(), error: engineeringError.message };
+    return {
+      summaries: emptyExecutiveSummaries(),
+      operationIds: [],
+      inspectionIds: [],
+      error: engineeringError.message,
+    };
   }
 
   const boms = (bomsResult.data as BomRow[] | null) ?? [];
@@ -314,7 +620,12 @@ async function getExecutiveSummaries(
       : { data: [], error: null };
 
   if (operationsResult.error) {
-    return { summaries: emptyExecutiveSummaries(), error: operationsResult.error.message };
+    return {
+      summaries: emptyExecutiveSummaries(),
+      operationIds: [],
+      inspectionIds: [],
+      error: operationsResult.error.message,
+    };
   }
 
   const operations = (operationsResult.data as ProductionOperationRow[] | null) ?? [];
@@ -328,7 +639,12 @@ async function getExecutiveSummaries(
       : { data: [], error: null };
 
   if (appointmentsResult.error) {
-    return { summaries: emptyExecutiveSummaries(), error: appointmentsResult.error.message };
+    return {
+      summaries: emptyExecutiveSummaries(),
+      operationIds: [],
+      inspectionIds: [],
+      error: appointmentsResult.error.message,
+    };
   }
 
   const appointments =
@@ -359,7 +675,12 @@ async function getExecutiveSummaries(
   const inspectionError = ofInspectionsResult.error ?? operationInspectionsResult.error;
 
   if (inspectionError) {
-    return { summaries: emptyExecutiveSummaries(), error: inspectionError.message };
+    return {
+      summaries: emptyExecutiveSummaries(),
+      operationIds: [],
+      inspectionIds: [],
+      error: inspectionError.message,
+    };
   }
 
   const inspections = [
@@ -391,7 +712,12 @@ async function getExecutiveSummaries(
   const qualityError = nonConformitiesResult.error ?? certificatesResult.error;
 
   if (qualityError) {
-    return { summaries: emptyExecutiveSummaries(), error: qualityError.message };
+    return {
+      summaries: emptyExecutiveSummaries(),
+      operationIds: [],
+      inspectionIds: [],
+      error: qualityError.message,
+    };
   }
 
   const nonConformities =
@@ -400,6 +726,8 @@ async function getExecutiveSummaries(
 
   return {
     error: null,
+    operationIds,
+    inspectionIds,
     summaries: {
       engineering: [
         { label: "PNs", value: String(itemIds.length) },
@@ -457,7 +785,7 @@ async function getProjectData(id: string): Promise<ProjectData> {
   const projectQuery = supabase
     .from("projetos")
     .select(
-      "id,empresa_id,cliente_id,contato_principal_id,numero_projeto,nome,tipo,status,prioridade,data_objetivo,observacoes"
+      "id,empresa_id,cliente_id,contato_principal_id,numero_projeto,nome,tipo,status,prioridade,data_objetivo,observacoes,created_at"
     )
     .is("deleted_at", null);
 
@@ -495,7 +823,7 @@ async function getProjectData(id: string): Promise<ProjectData> {
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("ordens_fabricacao")
-      .select("id,status")
+      .select("id,numero_of,status,created_at")
       .eq("projeto_id", project.id)
       .is("deleted_at", null),
     supabase
@@ -519,6 +847,17 @@ async function getProjectData(id: string): Promise<ProjectData> {
     return { error: summariesResult.error };
   }
 
+  const timelineResult = await getProjectTimeline(
+    project,
+    ofs,
+    summariesResult.operationIds,
+    summariesResult.inspectionIds
+  );
+
+  if (timelineResult.error) {
+    return { error: timelineResult.error };
+  }
+
   return {
     project,
     client: (clientResult.data as ClientRow | null) ?? null,
@@ -526,6 +865,7 @@ async function getProjectData(id: string): Promise<ProjectData> {
     ofs,
     purchases: (purchasesResult.data as PurchaseRow[] | null) ?? [],
     summaries: summariesResult.summaries,
+    timeline: timelineResult.timeline,
   };
 }
 
@@ -580,14 +920,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params;
   const data = await getProjectData(id);
 
-  const projectTimeline = [
-    { date: "22/06/2026", event: "Projeto criado" },
-    { date: "23/06/2026", event: "Orcamento aprovado" },
-    { date: "25/06/2026", event: "Material recebido" },
-    { date: "27/06/2026", event: "Producao iniciada" },
-    { date: "02/07/2026", event: "Projeto finalizado" },
-  ];
-
   if ("error" in data) {
     return (
       <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -612,7 +944,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     );
   }
 
-  const { project, client, contacts, ofs, purchases, summaries } = data;
+  const { project, client, contacts, ofs, purchases, summaries, timeline } = data;
   const projectType = formatLabel(project.tipo);
   const projectStatus = formatLabel(project.status);
   const projectPriority = formatLabel(project.prioridade);
@@ -868,14 +1200,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </div>
 
           <div className="space-y-4 p-4">
-            {projectTimeline.map((item) => (
-              <div key={`${item.date}-${item.event}`} className="grid gap-1 border-l border-slate-200 pl-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  {item.date}
-                </p>
-                <p className="text-sm font-medium text-slate-900">{item.event}</p>
-              </div>
-            ))}
+            {timeline.length === 0 ? (
+              <p className="text-sm font-medium text-slate-600">Nenhum evento registrado.</p>
+            ) : (
+              timeline.map((item) => (
+                <div key={item.source} className="grid gap-1 border-l border-slate-200 pl-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    {item.date}
+                  </p>
+                  <p className="text-sm font-medium text-slate-900">{item.event}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
