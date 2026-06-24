@@ -2,14 +2,17 @@
 
 import type { DragEvent } from "react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
+import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 
 type PlanningRow = {
+  projectId: string;
   priority: string;
   project: string;
   client: string;
+  status: string;
   situation: "Em andamento" | "Parado";
   operationalState: {
     total: number;
@@ -21,6 +24,21 @@ type PlanningRow = {
   nextAction: string;
   progress: string;
   delivery: string;
+};
+
+type ProjectRow = {
+  id: string;
+  cliente_id: string | null;
+  numero_projeto: string;
+  status: string | null;
+  prioridade: string | null;
+  data_objetivo: string | null;
+  created_at: string | null;
+};
+
+type ClientRow = {
+  id: string;
+  nome: string;
 };
 
 type QueueHistoryEntry = {
@@ -36,9 +54,11 @@ const currentUser = "Flavio Evangelista";
 
 const initialPlanningRows: PlanningRow[] = [
   {
+    projectId: "260124",
     priority: "01",
     project: "260124",
     client: "Cliente Delta",
+    status: "Em planejamento",
     situation: "Parado",
     operationalState: {
       total: 100,
@@ -52,9 +72,11 @@ const initialPlanningRows: PlanningRow[] = [
     delivery: "26/06",
   },
   {
+    projectId: "260125",
     priority: "02",
     project: "260125",
     client: "Cliente ABC",
+    status: "Em planejamento",
     situation: "Em andamento",
     operationalState: {
       total: 80,
@@ -68,9 +90,11 @@ const initialPlanningRows: PlanningRow[] = [
     delivery: "28/06",
   },
   {
+    projectId: "260126",
     priority: "03",
     project: "260126",
     client: "Cliente Metal",
+    status: "Em planejamento",
     situation: "Em andamento",
     operationalState: {
       total: 64,
@@ -84,9 +108,11 @@ const initialPlanningRows: PlanningRow[] = [
     delivery: "02/07",
   },
   {
+    projectId: "260127",
     priority: "04",
     project: "260127",
     client: "Cliente Exemplo Ltda.",
+    status: "Em planejamento",
     situation: "Em andamento",
     operationalState: {
       total: 42,
@@ -100,9 +126,11 @@ const initialPlanningRows: PlanningRow[] = [
     delivery: "04/07",
   },
   {
+    projectId: "260128",
     priority: "05",
     project: "260128",
     client: "Cliente Precisao",
+    status: "Em planejamento",
     situation: "Parado",
     operationalState: {
       total: 36,
@@ -122,10 +150,142 @@ const situationStyles = {
   Parado: "bg-rose-50 text-rose-700 ring-rose-200",
 } as const;
 
+const operationalTemplates = initialPlanningRows.map((row) => ({
+  situation: row.situation,
+  operationalState: row.operationalState,
+  nextAction: row.nextAction,
+  progress: row.progress,
+}));
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function formatStatus(value: string | null | undefined) {
+  if (!value) return "Sem status";
+  return value
+    .replace(/_/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function sortProjectsByPriority(projects: ProjectRow[]) {
+  const priorityWeight: Record<string, number> = {
+    critica: 0,
+    alta: 1,
+    normal: 2,
+    baixa: 3,
+  };
+
+  return [...projects].sort((first, second) => {
+    const firstPriority = priorityWeight[first.prioridade ?? "normal"] ?? 2;
+    const secondPriority = priorityWeight[second.prioridade ?? "normal"] ?? 2;
+
+    if (firstPriority !== secondPriority) return firstPriority - secondPriority;
+
+    const firstDate = first.data_objetivo ? new Date(first.data_objetivo).getTime() : Infinity;
+    const secondDate = second.data_objetivo ? new Date(second.data_objetivo).getTime() : Infinity;
+
+    if (firstDate !== secondDate) return firstDate - secondDate;
+
+    return first.numero_projeto.localeCompare(second.numero_projeto);
+  });
+}
+
+function buildPlanningRows(projects: ProjectRow[], clients: ClientRow[]) {
+  const clientNames = new Map(clients.map((client) => [client.id, client.nome]));
+
+  return sortProjectsByPriority(projects).map((project, index) => {
+    const template = operationalTemplates[index % operationalTemplates.length];
+
+    return {
+      projectId: project.id,
+      priority: String(index + 1).padStart(2, "0"),
+      project: project.numero_projeto,
+      client: project.cliente_id ? clientNames.get(project.cliente_id) ?? "Sem cliente" : "Sem cliente",
+      status: formatStatus(project.status),
+      situation: template.situation,
+      operationalState: template.operationalState,
+      nextAction: template.nextAction,
+      progress: template.progress,
+      delivery: formatDate(project.data_objetivo),
+    };
+  });
+}
+
 export default function PCPPlanningPage() {
-  const [planningRows, setPlanningRows] = useState(initialPlanningRows);
+  const [planningRows, setPlanningRows] = useState<PlanningRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [draggedProject, setDraggedProject] = useState<string | null>(null);
   const [, setQueueHistory] = useState<QueueHistoryEntry[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPlanningRows() {
+      if (!isSupabaseConfigured) {
+        if (isMounted) {
+          setPlanningRows([]);
+          setLoadError("Supabase não está configurado.");
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const projectsResult = await supabase
+        .from("projetos")
+        .select("id,cliente_id,numero_projeto,status,prioridade,data_objetivo,created_at")
+        .is("deleted_at", null)
+        .neq("status", "cancelado");
+
+      if (projectsResult.error) {
+        if (isMounted) {
+          setPlanningRows([]);
+          setLoadError(projectsResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const projects = (projectsResult.data as ProjectRow[] | null) ?? [];
+      const clientIds = Array.from(
+        new Set(projects.map((project) => project.cliente_id).filter(Boolean) as string[]),
+      );
+
+      const clientsResult =
+        clientIds.length > 0
+          ? await supabase.from("clientes").select("id,nome").in("id", clientIds)
+          : { data: [], error: null };
+
+      if (clientsResult.error) {
+        if (isMounted) {
+          setPlanningRows([]);
+          setLoadError(clientsResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setPlanningRows(buildPlanningRows(projects, (clientsResult.data as ClientRow[] | null) ?? []));
+        setLoadError(null);
+        setIsLoading(false);
+      }
+    }
+
+    loadPlanningRows();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function normalizePriorities(rows: PlanningRow[]) {
     return rows.map((row, index) => ({
@@ -146,10 +306,10 @@ export default function PCPPlanningPage() {
 
     setPlanningRows((currentRows) => {
       const draggedIndex = currentRows.findIndex(
-        (row) => row.project === draggedProject,
+        (row) => row.projectId === draggedProject,
       );
       const targetIndex = currentRows.findIndex(
-        (row) => row.project === targetProject,
+        (row) => row.projectId === targetProject,
       );
 
       if (draggedIndex < 0 || targetIndex < 0) {
@@ -162,7 +322,7 @@ export default function PCPPlanningPage() {
 
       const normalizedRows = normalizePriorities(nextRows);
       const movedRow = normalizedRows.find(
-        (row) => row.project === draggedProject,
+        (row) => row.projectId === draggedProject,
       );
 
       if (movedRow) {
@@ -278,19 +438,43 @@ export default function PCPPlanningPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-slate-500">
+                      Carregando projetos...
+                    </td>
+                  </tr>
+                ) : null}
+
+                {!isLoading && loadError ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-amber-700">
+                      {loadError}
+                    </td>
+                  </tr>
+                ) : null}
+
+                {!isLoading && !loadError && planningRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-slate-500">
+                      Nenhum projeto encontrado.
+                    </td>
+                  </tr>
+                ) : null}
+
                 {planningRows.map((row) => (
                   <tr
-                    key={row.project}
+                    key={row.projectId}
                     onDragOver={allowDrop}
-                    onDrop={() => handleDrop(row.project)}
+                    onDrop={() => handleDrop(row.projectId)}
                     className={`transition hover:bg-slate-50 ${
-                      draggedProject === row.project ? "bg-slate-100" : ""
+                      draggedProject === row.projectId ? "bg-slate-100" : ""
                     }`}
                   >
                     <td className="px-5 py-4">
                       <span
                         draggable
-                        onDragStart={() => handleDragStart(row.project)}
+                        onDragStart={() => handleDragStart(row.projectId)}
                         onDragEnd={() => setDraggedProject(null)}
                         className="inline-flex h-7 w-10 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700 active:cursor-grabbing"
                       >
@@ -300,7 +484,7 @@ export default function PCPPlanningPage() {
                     <td className="px-5 py-4">
                       <EntityLink
                         type="projeto"
-                        id={row.project}
+                        id={row.projectId}
                         className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
                       >
                         {row.project}
@@ -309,6 +493,8 @@ export default function PCPPlanningPage() {
                     <td className="px-5 py-4 text-slate-700">{row.client}</td>
                     <td className="px-5 py-4">
                       <span
+                        title={`Status do projeto: ${row.status}`}
+                        aria-label={`Situacao ${row.situation}. Status do projeto: ${row.status}`}
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
                           situationStyles[row.situation]
                         }`}
