@@ -42,14 +42,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     email: "costa@clienteexemplo.com",
   };
 
-  const operationalSummary = {
-    totalOFs: 12,
-    iniciadas: 5,
-    finalizadas: 3,
-  };
-
-  const purchasesPending = ["REQ-4287", "REQ-4291", "REQ-4302"];
-
   const projectSituation = {
     status: "Em andamento",
     totalOFs: 12,
@@ -57,7 +49,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     emProducao: 3,
     programacaoCnc: 2,
     aguardandoMaterial: 2,
+    finalizadas: 3,
   };
+
+  const projectPurchases = [
+    { req: "REQ-4101", status: "Concluida" },
+    { req: "REQ-4125", status: "Concluida" },
+    { req: "REQ-4287", status: "Pendente" },
+    { req: "REQ-4291", status: "Pendente" },
+  ];
 
   const engineeringSummary = [
     { label: "PNs", value: "24" },
@@ -381,36 +381,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </div>
         </div>
 
-        {/* BLOCO 6: RESUMO OPERACIONAL */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              Nº Total de OFs
-            </p>
-            <p className="mt-3 text-3xl font-bold text-slate-950">
-              {operationalSummary.totalOFs}
-            </p>
-          </div>
-
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              OFs Iniciadas
-            </p>
-            <p className="mt-3 text-3xl font-bold text-blue-700">
-              {operationalSummary.iniciadas}
-            </p>
-          </div>
-
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              OFs Finalizadas
-            </p>
-            <p className="mt-3 text-3xl font-bold text-emerald-700">
-              {operationalSummary.finalizadas}
-            </p>
-          </div>
-        </div>
-
         <div className="rounded-md border border-slate-200 bg-white">
           <div className="border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-950">Situação Operacional</h2>
@@ -424,12 +394,13 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
               <Metric label="OFs totais" value={String(projectSituation.totalOFs)} />
               <Metric label="Liberadas" value={String(projectSituation.liberadas)} />
               <Metric label="Em Produção" value={String(projectSituation.emProducao)} />
               <Metric label="Programação CNC" value={String(projectSituation.programacaoCnc)} />
               <Metric label="Aguardando Material" value={String(projectSituation.aguardandoMaterial)} />
+              <Metric label="Finalizadas" value={String(projectSituation.finalizadas)} />
             </div>
           </div>
         </div>
@@ -468,29 +439,33 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </div>
         </div>
 
-        {/* BLOCO 7: COMPRAS PENDENTES */}
         <div className="rounded-md border border-slate-200 bg-white">
           <div className="border-b border-slate-200 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-950">Compras Pendentes</h2>
+            <h2 className="text-sm font-semibold text-slate-950">Compras</h2>
           </div>
 
           <div className="p-4">
-            {purchasesPending.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {purchasesPending.map((purchase) => (
-                  <EntityLink
-                    key={purchase}
-                    type="req"
-                    id={purchase}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 hover:border-blue-300"
-                  >
-                    {purchase}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {projectPurchases.map((purchase) => (
+                <div
+                  key={purchase.req}
+                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                >
+                  <EntityLink type="req" id={purchase.req}>
+                    {purchase.req}
                   </EntityLink>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500">Nenhuma compra pendente</p>
-            )}
+                  <p
+                    className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                      purchase.status === "Concluida"
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                        : "bg-amber-50 text-amber-700 ring-amber-200"
+                    }`}
+                  >
+                    {purchase.status}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
