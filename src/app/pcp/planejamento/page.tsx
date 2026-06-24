@@ -13,18 +13,23 @@ type PlanningRow = {
   project: string;
   client: string;
   status: string;
-  situation: "Em andamento" | "Parado";
+  situation: "Em andamento" | "Parado" | "Concluído";
   operationalState: {
     total: number;
-    released: number;
+    ready: number;
     blocked: number;
     waitingMaterial: number;
+    inProduction: number;
     programming: number;
+    finished: number;
+    hasOrders: boolean;
   };
   nextAction: string;
   progress: string;
   delivery: string;
 };
+
+type PlanningSituation = PlanningRow["situation"];
 
 type ProjectRow = {
   id: string;
@@ -39,6 +44,12 @@ type ProjectRow = {
 type ClientRow = {
   id: string;
   nome: string;
+};
+
+type OFRow = {
+  id: string;
+  projeto_id: string;
+  status: string | null;
 };
 
 type QueueHistoryEntry = {
@@ -62,10 +73,13 @@ const initialPlanningRows: PlanningRow[] = [
     situation: "Parado",
     operationalState: {
       total: 100,
-      released: 55,
+      ready: 55,
       blocked: 45,
       waitingMaterial: 30,
+      inProduction: 10,
       programming: 15,
+      finished: 0,
+      hasOrders: true,
     },
     nextAction: "Comprar material",
     progress: "0%",
@@ -80,10 +94,13 @@ const initialPlanningRows: PlanningRow[] = [
     situation: "Em andamento",
     operationalState: {
       total: 80,
-      released: 48,
+      ready: 48,
       blocked: 32,
       waitingMaterial: 18,
+      inProduction: 10,
       programming: 14,
+      finished: 0,
+      hasOrders: true,
     },
     nextAction: "Programar CNC",
     progress: "25%",
@@ -98,10 +115,13 @@ const initialPlanningRows: PlanningRow[] = [
     situation: "Em andamento",
     operationalState: {
       total: 64,
-      released: 52,
+      ready: 52,
       blocked: 12,
       waitingMaterial: 8,
+      inProduction: 8,
       programming: 4,
+      finished: 0,
+      hasOrders: true,
     },
     nextAction: "Produzir",
     progress: "50%",
@@ -116,10 +136,13 @@ const initialPlanningRows: PlanningRow[] = [
     situation: "Em andamento",
     operationalState: {
       total: 42,
-      released: 37,
+      ready: 37,
       blocked: 5,
       waitingMaterial: 2,
+      inProduction: 4,
       programming: 3,
+      finished: 0,
+      hasOrders: true,
     },
     nextAction: "Montar",
     progress: "85%",
@@ -134,10 +157,13 @@ const initialPlanningRows: PlanningRow[] = [
     situation: "Parado",
     operationalState: {
       total: 36,
-      released: 36,
+      ready: 36,
       blocked: 0,
       waitingMaterial: 0,
+      inProduction: 0,
       programming: 0,
+      finished: 36,
+      hasOrders: true,
     },
     nextAction: "Terceirizar",
     progress: "100%",
@@ -148,6 +174,7 @@ const initialPlanningRows: PlanningRow[] = [
 const situationStyles = {
   "Em andamento": "bg-emerald-50 text-emerald-700 ring-emerald-200",
   Parado: "bg-rose-50 text-rose-700 ring-rose-200",
+  Concluído: "bg-blue-50 text-blue-700 ring-blue-200",
 } as const;
 
 const operationalTemplates = initialPlanningRows.map((row) => ({
@@ -198,11 +225,58 @@ function sortProjectsByPriority(projects: ProjectRow[]) {
   });
 }
 
-function buildPlanningRows(projects: ProjectRow[], clients: ClientRow[]) {
+function calculateOperationalState(project: ProjectRow, projectOrders: OFRow[]) {
+  const total = projectOrders.length;
+  const finished = projectOrders.filter((order) => order.status === "finalizada").length;
+  const inProduction = projectOrders.filter((order) => order.status === "em_producao").length;
+  const waitingMaterial = projectOrders.filter((order) => order.status === "aguardando_material").length;
+  const programming = projectOrders.filter((order) =>
+    ["simulacao", "pronta_programacao", "programada"].includes(order.status ?? ""),
+  ).length;
+  const ready = projectOrders.filter((order) =>
+    ["pronta_programacao", "programada", "em_producao"].includes(order.status ?? ""),
+  ).length;
+  const blocked = Math.max(total - ready, 0);
+  const situation: PlanningSituation =
+    total > 0 && finished === total
+      ? "Concluído"
+      : project.status === "concluido"
+        ? "Concluído"
+        : inProduction > 0 || projectOrders.some((order) => order.status === "programada")
+          ? "Em andamento"
+          : "Parado";
+
+  return {
+    situation,
+    operationalState: {
+      total,
+      ready,
+      blocked,
+      waitingMaterial,
+      inProduction,
+      programming,
+      finished,
+      hasOrders: total > 0,
+    },
+  };
+}
+
+function buildPlanningRows(projects: ProjectRow[], clients: ClientRow[], orders: OFRow[]) {
   const clientNames = new Map(clients.map((client) => [client.id, client.nome]));
+  const ordersByProject = orders.reduce((groupedOrders, order) => {
+    const projectOrders = groupedOrders.get(order.projeto_id) ?? [];
+    projectOrders.push(order);
+    groupedOrders.set(order.projeto_id, projectOrders);
+
+    return groupedOrders;
+  }, new Map<string, OFRow[]>());
 
   return sortProjectsByPriority(projects).map((project, index) => {
     const template = operationalTemplates[index % operationalTemplates.length];
+    const { situation, operationalState } = calculateOperationalState(
+      project,
+      ordersByProject.get(project.id) ?? [],
+    );
 
     return {
       projectId: project.id,
@@ -210,8 +284,8 @@ function buildPlanningRows(projects: ProjectRow[], clients: ClientRow[]) {
       project: project.numero_projeto,
       client: project.cliente_id ? clientNames.get(project.cliente_id) ?? "Sem cliente" : "Sem cliente",
       status: formatStatus(project.status),
-      situation: template.situation,
-      operationalState: template.operationalState,
+      situation,
+      operationalState,
       nextAction: template.nextAction,
       progress: template.progress,
       delivery: formatDate(project.data_objetivo),
@@ -273,8 +347,33 @@ export default function PCPPlanningPage() {
         return;
       }
 
+      const projectIds = projects.map((project) => project.id);
+      const ordersResult =
+        projectIds.length > 0
+          ? await supabase
+              .from("ordens_fabricacao")
+              .select("id,projeto_id,status")
+              .in("projeto_id", projectIds)
+              .is("deleted_at", null)
+          : { data: [], error: null };
+
+      if (ordersResult.error) {
+        if (isMounted) {
+          setPlanningRows([]);
+          setLoadError(ordersResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       if (isMounted) {
-        setPlanningRows(buildPlanningRows(projects, (clientsResult.data as ClientRow[] | null) ?? []));
+        setPlanningRows(
+          buildPlanningRows(
+            projects,
+            (clientsResult.data as ClientRow[] | null) ?? [],
+            (ordersResult.data as OFRow[] | null) ?? [],
+          ),
+        );
         setLoadError(null);
         setIsLoading(false);
       }
@@ -505,11 +604,21 @@ export default function PCPPlanningPage() {
                     <td className="px-5 py-4">
                       <div className="group relative inline-flex">
                         <span
-                          aria-label={`${row.operationalState.released} OFs liberadas e ${row.operationalState.blocked} OFs nao liberadas`}
+                          aria-label={
+                            row.operationalState.hasOrders
+                              ? `${row.operationalState.ready} OFs aptas e ${row.operationalState.blocked} OFs nao aptas`
+                              : "Sem OFs"
+                          }
                           className="inline-flex h-7 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold tabular-nums text-slate-700"
                         >
-                          <span>{row.operationalState.released}✓</span>
-                          <span>{row.operationalState.blocked}⚠</span>
+                          {row.operationalState.hasOrders ? (
+                            <>
+                              <span>{row.operationalState.ready}✓</span>
+                              <span>{row.operationalState.blocked}⚠</span>
+                            </>
+                          ) : (
+                            <span>Sem OF&apos;s</span>
+                          )}
                         </span>
 
                         <span className="pointer-events-none absolute left-0 top-9 z-10 hidden w-48 rounded-md border border-slate-200 bg-white p-3 text-xs font-medium leading-5 text-slate-700 shadow-lg group-hover:block">
@@ -518,16 +627,24 @@ export default function PCPPlanningPage() {
                             <span>{row.operationalState.total}</span>
                           </span>
                           <span className="flex justify-between gap-3 text-emerald-700">
-                            <span>✓ Liberadas</span>
-                            <span>{row.operationalState.released}</span>
+                            <span>✓ Aptas</span>
+                            <span>{row.operationalState.ready}</span>
                           </span>
                           <span className="flex justify-between gap-3 text-amber-700">
                             <span>📦 Aguardando MP</span>
                             <span>{row.operationalState.waitingMaterial}</span>
                           </span>
+                          <span className="flex justify-between gap-3 text-slate-700">
+                            <span>🏭 Em produção</span>
+                            <span>{row.operationalState.inProduction}</span>
+                          </span>
                           <span className="flex justify-between gap-3 text-blue-700">
-                            <span>💻 Programacao</span>
+                            <span>⚙ Programação</span>
                             <span>{row.operationalState.programming}</span>
+                          </span>
+                          <span className="flex justify-between gap-3 text-emerald-700">
+                            <span>Finalizadas</span>
+                            <span>{row.operationalState.finished}</span>
                           </span>
                         </span>
                       </div>
