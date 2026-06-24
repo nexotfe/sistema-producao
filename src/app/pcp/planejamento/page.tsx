@@ -8,10 +8,8 @@ import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
 type PlanningRow = {
   priority: string;
   project: string;
-  of: string;
-  req: string;
-  pn: string;
   client: string;
+  situation: "Em andamento" | "Parado";
   operationalState: {
     total: number;
     released: number;
@@ -39,10 +37,8 @@ const initialPlanningRows: PlanningRow[] = [
   {
     priority: "01",
     project: "260124",
-    of: "260124-0003",
-    req: "REQ-4287",
-    pn: "PN-000145",
     client: "Cliente Delta",
+    situation: "Parado",
     operationalState: {
       total: 100,
       released: 55,
@@ -57,10 +53,8 @@ const initialPlanningRows: PlanningRow[] = [
   {
     priority: "02",
     project: "260125",
-    of: "260125-0001",
-    req: "REQ-4291",
-    pn: "PN-000218",
     client: "Cliente ABC",
+    situation: "Em andamento",
     operationalState: {
       total: 80,
       released: 48,
@@ -75,10 +69,8 @@ const initialPlanningRows: PlanningRow[] = [
   {
     priority: "03",
     project: "260126",
-    of: "260126-0002",
-    req: "REQ-4302",
-    pn: "PN-000301",
     client: "Cliente Metal",
+    situation: "Em andamento",
     operationalState: {
       total: 64,
       released: 52,
@@ -93,10 +85,8 @@ const initialPlanningRows: PlanningRow[] = [
   {
     priority: "04",
     project: "260127",
-    of: "260127-0001",
-    req: "REQ-4310",
-    pn: "PN-000412",
     client: "Cliente Exemplo Ltda.",
+    situation: "Em andamento",
     operationalState: {
       total: 42,
       released: 37,
@@ -111,10 +101,8 @@ const initialPlanningRows: PlanningRow[] = [
   {
     priority: "05",
     project: "260128",
-    of: "260128-0004",
-    req: "REQ-4318",
-    pn: "PN-000519",
     client: "Cliente Precisao",
+    situation: "Parado",
     operationalState: {
       total: 36,
       released: 36,
@@ -127,6 +115,11 @@ const initialPlanningRows: PlanningRow[] = [
     delivery: "08/07",
   },
 ];
+
+const situationStyles = {
+  "Em andamento": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  Parado: "bg-rose-50 text-rose-700 ring-rose-200",
+} as const;
 
 export default function PCPPlanningPage() {
   const [planningRows, setPlanningRows] = useState(initialPlanningRows);
@@ -229,7 +222,7 @@ export default function PCPPlanningPage() {
                 Atualizar
               </button>
 
-              <button className="h-11 rounded-md bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800">
+              <button className="h-11 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800">
                 Filtros
               </button>
             </div>
@@ -247,15 +240,13 @@ export default function PCPPlanningPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1240px] text-left text-sm">
+            <table className="w-full min-w-[1040px] text-left text-sm">
               <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                 <tr>
                   <th className="px-5 py-3">Prioridade</th>
                   <th className="px-5 py-3">Projeto</th>
-                  <th className="px-5 py-3">OF</th>
-                  <th className="px-5 py-3">REQ</th>
-                  <th className="px-5 py-3">PN</th>
                   <th className="px-5 py-3">Cliente</th>
+                  <th className="px-5 py-3">Situacao</th>
                   <th className="px-5 py-3">Estado</th>
                   <th className="px-5 py-3">Proxima acao</th>
                   <th className="px-5 py-3">Avanco</th>
@@ -291,34 +282,16 @@ export default function PCPPlanningPage() {
                         {row.project}
                       </EntityLink>
                     </td>
-                    <td className="px-5 py-4">
-                      <EntityLink
-                        type="of"
-                        id={row.of}
-                        className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                      >
-                        {row.of}
-                      </EntityLink>
-                    </td>
-                    <td className="px-5 py-4">
-                      <EntityLink
-                        type="req"
-                        id={row.req}
-                        className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                      >
-                        {row.req}
-                      </EntityLink>
-                    </td>
-                    <td className="px-5 py-4">
-                      <EntityLink
-                        type="item"
-                        id={row.pn}
-                        className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                      >
-                        {row.pn}
-                      </EntityLink>
-                    </td>
                     <td className="px-5 py-4 text-slate-700">{row.client}</td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                          situationStyles[row.situation]
+                        }`}
+                      >
+                        {row.situation}
+                      </span>
+                    </td>
                     <td className="px-5 py-4">
                       <div className="group relative inline-flex">
                         <span
