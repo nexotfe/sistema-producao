@@ -50,6 +50,43 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   const purchasesPending = ["REQ-4287", "REQ-4291", "REQ-4302"];
 
+  const projectSituation = {
+    status: "Em andamento",
+    totalOFs: 12,
+    liberadas: 5,
+    emProducao: 3,
+    programacaoCnc: 2,
+    aguardandoMaterial: 2,
+  };
+
+  const engineeringSummary = [
+    { label: "PNs", value: "24" },
+    { label: "BOM", value: "Liberada" },
+    { label: "Roteiros", value: "100%" },
+    { label: "Documentos", value: "8" },
+  ];
+
+  const productionSummary = [
+    { label: "Horas Planejadas", value: "680" },
+    { label: "Horas Apontadas", value: "420" },
+    { label: "Avanco", value: "62%" },
+  ];
+
+  const qualitySummary = [
+    { label: "Inspecoes", value: "12" },
+    { label: "RNC abertas", value: "1" },
+    { label: "Certificados", value: "8" },
+  ];
+
+  const projectTimeline = [
+    { date: "22/06/2026", event: "Projeto criado" },
+    { date: "23/06/2026", event: "Orcamento aprovado" },
+    { date: "24/06/2026", event: "REQ-4287 criada", req: "REQ-4287" },
+    { date: "25/06/2026", event: "Material recebido" },
+    { date: "27/06/2026", event: "Producao iniciada" },
+    { date: "02/07/2026", event: "Projeto finalizado" },
+  ];
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       {/* HEADER COM PADRÃO VISUAL COMERCIAL */}
@@ -374,6 +411,63 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </div>
         </div>
 
+        <div className="rounded-md border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 px-4 py-3">
+            <h2 className="text-sm font-semibold text-slate-950">Situação Operacional</h2>
+          </div>
+
+          <div className="grid gap-4 p-4 md:grid-cols-[1fr_2fr]">
+            <div>
+              <p className="text-xs font-semibold uppercase text-slate-500">Status</p>
+              <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                {projectSituation.status}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <Metric label="OFs totais" value={String(projectSituation.totalOFs)} />
+              <Metric label="Liberadas" value={String(projectSituation.liberadas)} />
+              <Metric label="Em Produção" value={String(projectSituation.emProducao)} />
+              <Metric label="Programação CNC" value={String(projectSituation.programacaoCnc)} />
+              <Metric label="Aguardando Material" value={String(projectSituation.aguardandoMaterial)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <SummaryCard title="Engenharia" items={engineeringSummary} />
+          <SummaryCard title="Produção" items={productionSummary} />
+          <SummaryCard title="Qualidade" items={qualitySummary} />
+        </div>
+
+        <div className="rounded-md border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 px-4 py-3">
+            <h2 className="text-sm font-semibold text-slate-950">Histórico do Projeto</h2>
+          </div>
+
+          <div className="space-y-4 p-4">
+            {projectTimeline.map((item) => (
+              <div key={`${item.date}-${item.event}`} className="grid gap-1 border-l border-slate-200 pl-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {item.date}
+                </p>
+                <p className="text-sm font-medium text-slate-900">
+                  {item.req ? (
+                    <>
+                      <EntityLink type="req" id={item.req}>
+                        {item.req}
+                      </EntityLink>{" "}
+                      criada
+                    </>
+                  ) : (
+                    item.event
+                  )}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* BLOCO 7: COMPRAS PENDENTES */}
         <div className="rounded-md border border-slate-200 bg-white">
           <div className="border-b border-slate-200 px-4 py-3">
@@ -401,5 +495,38 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </div>
       </section>
     </main>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
+      <p className="mt-2 text-xl font-bold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function SummaryCard({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 px-4 py-3">
+        <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
+      </div>
+      <div className="grid gap-3 p-4">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center justify-between gap-4 text-sm">
+            <span className="font-medium text-slate-600">{item.label}</span>
+            <span className="font-semibold text-slate-950">{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
