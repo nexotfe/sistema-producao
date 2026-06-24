@@ -1,6 +1,7 @@
 "use client";
 
 import type { DragEvent } from "react";
+import Link from "next/link";
 import { useState } from "react";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
@@ -227,6 +228,29 @@ export default function PCPPlanningPage() {
               </button>
             </div>
           </div>
+
+          <nav aria-label="Navegacao PCP" className="flex flex-wrap gap-2">
+            <Link
+              href="/pcp/planejamento"
+              className="rounded-md bg-blue-700 px-3 py-2 text-xs font-semibold text-white"
+            >
+              Planejamento PCP
+            </Link>
+            <Link
+              href="/pcp/programacao-diaria"
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Programacao diaria
+            </Link>
+            {["Capacidade", "Carga Maquina", "Sequenciamento"].map((item) => (
+              <span
+                key={item}
+                className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-400"
+              >
+                {item}
+              </span>
+            ))}
+          </nav>
         </header>
 
         <section className="rounded-lg border border-slate-200 bg-white">
