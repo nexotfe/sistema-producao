@@ -50,12 +50,74 @@ type OFRow = {
   status: string | null;
 };
 
+type ProjectItemRow = {
+  id: string;
+  item_industrial_id: string;
+};
+
+type BomRow = {
+  id: string;
+  produto_id: string;
+  publicada_em: string | null;
+  inativada_em: string | null;
+};
+
+type RouteRow = {
+  id: string;
+  produto_id: string;
+  status: string | null;
+};
+
+type DocumentRow = {
+  id: string;
+  item_industrial_id: string;
+};
+
+type ProductionOperationRow = {
+  id: string;
+  of_id: string;
+  tempo_planejado_snapshot: number | string | null;
+  unidade_tempo_snapshot: string | null;
+};
+
+type ProductionAppointmentRow = {
+  id: string;
+  operacao_producao_id: string;
+  duracao_minutos: number | string | null;
+};
+
+type QualityInspectionRow = {
+  id: string;
+  of_id: string | null;
+  operacao_producao_id: string | null;
+};
+
+type NonConformityRow = {
+  id: string;
+  status: string | null;
+};
+
+type CertificateRow = {
+  id: string;
+};
+
 type PurchaseRow = {
   id: string;
   numero_requisicao: string;
   status: string | null;
   data_solicitacao: string | null;
   projeto_id: string | null;
+};
+
+type SummaryItem = {
+  label: string;
+  value: string;
+};
+
+type ExecutiveSummaries = {
+  engineering: SummaryItem[];
+  production: SummaryItem[];
+  quality: SummaryItem[];
 };
 
 type ProjectData =
@@ -65,6 +127,7 @@ type ProjectData =
       contacts: ContactRow[];
       ofs: OFRow[];
       purchases: PurchaseRow[];
+      summaries: ExecutiveSummaries;
       error?: never;
     }
   | {
@@ -99,6 +162,35 @@ function formatDate(value: string | null | undefined) {
 
 function present(value: string | null | undefined) {
   return value?.trim() ? value : EMPTY_VALUE;
+}
+
+function uniqueValues(values: string[]) {
+  return Array.from(new Set(values));
+}
+
+function toNumber(value: number | string | null | undefined) {
+  if (value == null) return 0;
+  return Number(value) || 0;
+}
+
+function toHours(value: number | string | null | undefined, unit: string | null | undefined) {
+  const numericValue = toNumber(value);
+  const normalizedUnit = unit?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() ?? "";
+
+  if (normalizedUnit.includes("min")) return numericValue / 60;
+  if (normalizedUnit.includes("seg")) return numericValue / 3600;
+
+  return numericValue;
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: value % 1 === 0 ? 0 : 1,
+  }).format(value);
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value)}%`;
 }
 
 function normalizeContactKey(value: string | null | undefined) {
@@ -143,6 +235,218 @@ function getPurchaseBadgeClass(status: string | null | undefined) {
   }
 
   return "bg-amber-50 text-amber-700 ring-amber-200";
+}
+
+async function getExecutiveSummaries(
+  project: ProjectRow,
+  ofs: OFRow[]
+): Promise<{ summaries: ExecutiveSummaries; error: string | null }> {
+  const ofIds = ofs.map((of) => of.id);
+
+  const projectItemsResult = await supabase
+    .from("projeto_itens")
+    .select("id,item_industrial_id")
+    .eq("projeto_id", project.id)
+    .is("deleted_at", null);
+
+  if (projectItemsResult.error) {
+    return { summaries: emptyExecutiveSummaries(), error: projectItemsResult.error.message };
+  }
+
+  const projectItems = (projectItemsResult.data as ProjectItemRow[] | null) ?? [];
+  const itemIds = uniqueValues(projectItems.map((item) => item.item_industrial_id));
+
+  const [bomsResult, routesResult, documentsResult] =
+    itemIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("boms")
+            .select("id,produto_id,publicada_em,inativada_em")
+            .in("produto_id", itemIds)
+            .is("deleted_at", null),
+          supabase
+            .from("roteiros_fabricacao")
+            .select("id,produto_id,status")
+            .in("produto_id", itemIds)
+            .is("deleted_at", null),
+          supabase
+            .from("documentos_tecnicos")
+            .select("id,item_industrial_id")
+            .in("item_industrial_id", itemIds)
+            .is("deleted_at", null),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  const engineeringError = bomsResult.error ?? routesResult.error ?? documentsResult.error;
+
+  if (engineeringError) {
+    return { summaries: emptyExecutiveSummaries(), error: engineeringError.message };
+  }
+
+  const boms = (bomsResult.data as BomRow[] | null) ?? [];
+  const routes = (routesResult.data as RouteRow[] | null) ?? [];
+  const documents = (documentsResult.data as DocumentRow[] | null) ?? [];
+  const activeBomProductIds = uniqueValues(
+    boms
+      .filter((bom) => bom.publicada_em && !bom.inativada_em)
+      .map((bom) => bom.produto_id)
+  );
+  const bomStatus =
+    itemIds.length === 0
+      ? "Pendente"
+      : activeBomProductIds.length === itemIds.length
+        ? "Liberada"
+        : boms.length > 0
+          ? "Em revisão"
+          : "Pendente";
+  const activeRoutes = routes.filter((route) => route.status === "ativo").length;
+
+  const operationsResult =
+    ofIds.length > 0
+      ? await supabase
+          .from("operacoes_producao")
+          .select("id,of_id,tempo_planejado_snapshot,unidade_tempo_snapshot")
+          .in("of_id", ofIds)
+      : { data: [], error: null };
+
+  if (operationsResult.error) {
+    return { summaries: emptyExecutiveSummaries(), error: operationsResult.error.message };
+  }
+
+  const operations = (operationsResult.data as ProductionOperationRow[] | null) ?? [];
+  const operationIds = operations.map((operation) => operation.id);
+  const appointmentsResult =
+    operationIds.length > 0
+      ? await supabase
+          .from("apontamentos_producao")
+          .select("id,operacao_producao_id,duracao_minutos")
+          .in("operacao_producao_id", operationIds)
+      : { data: [], error: null };
+
+  if (appointmentsResult.error) {
+    return { summaries: emptyExecutiveSummaries(), error: appointmentsResult.error.message };
+  }
+
+  const appointments =
+    (appointmentsResult.data as ProductionAppointmentRow[] | null) ?? [];
+  const plannedHours = operations.reduce(
+    (total, operation) =>
+      total + toHours(operation.tempo_planejado_snapshot, operation.unidade_tempo_snapshot),
+    0
+  );
+  const appointedHours = appointments.reduce(
+    (total, appointment) => total + toHours(appointment.duracao_minutos, "minutos"),
+    0
+  );
+  const progress = plannedHours > 0 ? Math.min((appointedHours / plannedHours) * 100, 100) : 0;
+
+  const [ofInspectionsResult, operationInspectionsResult] = await Promise.all([
+    ofIds.length > 0
+      ? supabase.from("inspecoes_qualidade").select("id,of_id,operacao_producao_id").in("of_id", ofIds)
+      : Promise.resolve({ data: [], error: null }),
+    operationIds.length > 0
+      ? supabase
+          .from("inspecoes_qualidade")
+          .select("id,of_id,operacao_producao_id")
+          .in("operacao_producao_id", operationIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const inspectionError = ofInspectionsResult.error ?? operationInspectionsResult.error;
+
+  if (inspectionError) {
+    return { summaries: emptyExecutiveSummaries(), error: inspectionError.message };
+  }
+
+  const inspections = [
+    ...((ofInspectionsResult.data as QualityInspectionRow[] | null) ?? []),
+    ...((operationInspectionsResult.data as QualityInspectionRow[] | null) ?? []),
+  ].filter(
+    (inspection, index, allInspections) =>
+      allInspections.findIndex((candidate) => candidate.id === inspection.id) === index
+  );
+  const inspectionIds = inspections.map((inspection) => inspection.id);
+  const [nonConformitiesResult, certificatesResult] =
+    inspectionIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("nao_conformidades")
+            .select("id,status")
+            .in("inspecao_qualidade_id", inspectionIds),
+          supabase
+            .from("certificados_qualidade")
+            .select("id")
+            .in("inspecao_qualidade_id", inspectionIds)
+            .not("emitido_em", "is", null),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  const qualityError = nonConformitiesResult.error ?? certificatesResult.error;
+
+  if (qualityError) {
+    return { summaries: emptyExecutiveSummaries(), error: qualityError.message };
+  }
+
+  const nonConformities =
+    (nonConformitiesResult.data as NonConformityRow[] | null) ?? [];
+  const certificates = (certificatesResult.data as CertificateRow[] | null) ?? [];
+
+  return {
+    error: null,
+    summaries: {
+      engineering: [
+        { label: "PNs", value: String(itemIds.length) },
+        { label: "BOM", value: bomStatus },
+        { label: "Roteiros", value: String(activeRoutes) },
+        { label: "Documentos", value: String(documents.length) },
+      ],
+      production: [
+        { label: "Horas Planejadas", value: formatNumber(plannedHours) },
+        { label: "Horas Apontadas", value: formatNumber(appointedHours) },
+        { label: "Avanco", value: formatPercent(progress) },
+      ],
+      quality: [
+        { label: "Inspecoes", value: String(inspections.length) },
+        {
+          label: "RNC abertas",
+          value: String(
+            nonConformities.filter((item) =>
+              ["aberta", "em_tratamento"].includes(item.status ?? "")
+            ).length
+          ),
+        },
+        { label: "Certificados", value: String(certificates.length) },
+      ],
+    },
+  };
+}
+
+function emptyExecutiveSummaries(): ExecutiveSummaries {
+  return {
+    engineering: [
+      { label: "PNs", value: "0" },
+      { label: "BOM", value: "Pendente" },
+      { label: "Roteiros", value: "0" },
+      { label: "Documentos", value: "0" },
+    ],
+    production: [
+      { label: "Horas Planejadas", value: "0" },
+      { label: "Horas Apontadas", value: "0" },
+      { label: "Avanco", value: "0%" },
+    ],
+    quality: [
+      { label: "Inspecoes", value: "0" },
+      { label: "RNC abertas", value: "0" },
+      { label: "Certificados", value: "0" },
+    ],
+  };
 }
 
 async function getProjectData(id: string): Promise<ProjectData> {
@@ -208,12 +512,20 @@ async function getProjectData(id: string): Promise<ProjectData> {
     return { error: error.message };
   }
 
+  const ofs = (ofsResult.data as OFRow[] | null) ?? [];
+  const summariesResult = await getExecutiveSummaries(project, ofs);
+
+  if (summariesResult.error) {
+    return { error: summariesResult.error };
+  }
+
   return {
     project,
     client: (clientResult.data as ClientRow | null) ?? null,
     contacts: (contactsResult.data as ContactRow[] | null) ?? [],
-    ofs: (ofsResult.data as OFRow[] | null) ?? [],
+    ofs,
     purchases: (purchasesResult.data as PurchaseRow[] | null) ?? [],
+    summaries: summariesResult.summaries,
   };
 }
 
@@ -268,25 +580,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params;
   const data = await getProjectData(id);
 
-  const engineeringSummary = [
-    { label: "PNs", value: "24" },
-    { label: "BOM", value: "Liberada" },
-    { label: "Roteiros", value: "100%" },
-    { label: "Documentos", value: "8" },
-  ];
-
-  const productionSummary = [
-    { label: "Horas Planejadas", value: "680" },
-    { label: "Horas Apontadas", value: "420" },
-    { label: "Avanco", value: "62%" },
-  ];
-
-  const qualitySummary = [
-    { label: "Inspecoes", value: "12" },
-    { label: "RNC abertas", value: "1" },
-    { label: "Certificados", value: "8" },
-  ];
-
   const projectTimeline = [
     { date: "22/06/2026", event: "Projeto criado" },
     { date: "23/06/2026", event: "Orcamento aprovado" },
@@ -319,7 +612,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     );
   }
 
-  const { project, client, contacts, ofs, purchases } = data;
+  const { project, client, contacts, ofs, purchases, summaries } = data;
   const projectType = formatLabel(project.tipo);
   const projectStatus = formatLabel(project.status);
   const projectPriority = formatLabel(project.prioridade);
@@ -564,9 +857,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <SummaryCard title="Engenharia" items={engineeringSummary} />
-          <SummaryCard title="Produção" items={productionSummary} />
-          <SummaryCard title="Qualidade" items={qualitySummary} />
+          <SummaryCard title="Engenharia" items={summaries.engineering} />
+          <SummaryCard title="Produção" items={summaries.production} />
+          <SummaryCard title="Qualidade" items={summaries.quality} />
         </div>
 
         <div className="rounded-md border border-slate-200 bg-white">
