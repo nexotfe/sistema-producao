@@ -1,7 +1,41 @@
+"use client";
+
+import type { DragEvent } from "react";
+import { useState } from "react";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
 
-const planningRows = [
+type PlanningRow = {
+  priority: string;
+  project: string;
+  of: string;
+  req: string;
+  pn: string;
+  client: string;
+  operationalState: {
+    total: number;
+    released: number;
+    blocked: number;
+    waitingMaterial: number;
+    programming: number;
+  };
+  nextAction: string;
+  progress: string;
+  delivery: string;
+};
+
+type QueueHistoryEntry = {
+  user: string;
+  date: string;
+  project: string;
+  previousPriority: string;
+  newPriority: string;
+  reason: string;
+};
+
+const currentUser = "Flavio Evangelista";
+
+const initialPlanningRows: PlanningRow[] = [
   {
     priority: "01",
     project: "260124",
@@ -95,13 +129,79 @@ const planningRows = [
 ];
 
 export default function PCPPlanningPage() {
+  const [planningRows, setPlanningRows] = useState(initialPlanningRows);
+  const [draggedProject, setDraggedProject] = useState<string | null>(null);
+  const [, setQueueHistory] = useState<QueueHistoryEntry[]>([]);
+
+  function normalizePriorities(rows: PlanningRow[]) {
+    return rows.map((row, index) => ({
+      ...row,
+      priority: String(index + 1).padStart(2, "0"),
+    }));
+  }
+
+  function handleDragStart(project: string) {
+    setDraggedProject(project);
+  }
+
+  function handleDrop(targetProject: string) {
+    if (!draggedProject || draggedProject === targetProject) {
+      setDraggedProject(null);
+      return;
+    }
+
+    setPlanningRows((currentRows) => {
+      const draggedIndex = currentRows.findIndex(
+        (row) => row.project === draggedProject,
+      );
+      const targetIndex = currentRows.findIndex(
+        (row) => row.project === targetProject,
+      );
+
+      if (draggedIndex < 0 || targetIndex < 0) {
+        return currentRows;
+      }
+
+      const nextRows = [...currentRows];
+      const [draggedRow] = nextRows.splice(draggedIndex, 1);
+      nextRows.splice(targetIndex, 0, draggedRow);
+
+      const normalizedRows = normalizePriorities(nextRows);
+      const movedRow = normalizedRows.find(
+        (row) => row.project === draggedProject,
+      );
+
+      if (movedRow) {
+        setQueueHistory((history) => [
+          ...history,
+          {
+            user: currentUser,
+            date: new Date().toISOString(),
+            project: movedRow.project,
+            previousPriority: draggedRow.priority,
+            newPriority: movedRow.priority,
+            reason: "Reorganizacao manual da fila",
+          },
+        ]);
+      }
+
+      return normalizedRows;
+    });
+
+    setDraggedProject(null);
+  }
+
+  function allowDrop(event: DragEvent<HTMLTableRowElement>) {
+    event.preventDefault();
+  }
+
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-5">
           <div className="flex items-center gap-3">
             <ModuleBackButton label="PCP" />
-            <p className="text-sm font-semibold">Flavio Evangelista</p>
+            <p className="text-sm font-semibold">{currentUser}</p>
           </div>
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -164,9 +264,21 @@ export default function PCPPlanningPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {planningRows.map((row) => (
-                  <tr key={row.project} className="transition hover:bg-slate-50">
+                  <tr
+                    key={row.project}
+                    onDragOver={allowDrop}
+                    onDrop={() => handleDrop(row.project)}
+                    className={`transition hover:bg-slate-50 ${
+                      draggedProject === row.project ? "bg-slate-100" : ""
+                    }`}
+                  >
                     <td className="px-5 py-4">
-                      <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700">
+                      <span
+                        draggable
+                        onDragStart={() => handleDragStart(row.project)}
+                        onDragEnd={() => setDraggedProject(null)}
+                        className="inline-flex h-7 w-10 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700 active:cursor-grabbing"
+                      >
                         {row.priority}
                       </span>
                     </td>
