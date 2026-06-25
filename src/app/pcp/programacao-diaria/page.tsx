@@ -1,84 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
-
-type DailyScheduleRow = {
-  resource: string;
-  of: string;
-  project: string;
-  client: string;
-  pn: string;
-  estimatedTime: string;
-  priority: string;
-  situation: "Programada" | "Em execucao" | "Concluida" | "Parada";
-};
+import {
+  buildDailyScheduleRows,
+  type ClientRow,
+  type DailyOFRow,
+  type DailyProductionOperationRow,
+  type DailyScheduleRow,
+  type OperationAllocationRow,
+  type ProductionAppointmentRow,
+  type ProductItemRow,
+  type ProductiveResourceRow,
+  type ProjectRow,
+} from "@/modules/pcp/planningRules";
 
 const currentUser = "Flavio Evangelista";
-
-const scheduleRows: DailyScheduleRow[] = [
-  {
-    resource: "Torno CNC 01",
-    of: "260124-0010",
-    project: "260124",
-    client: "Delta",
-    pn: "PN-000145",
-    estimatedTime: "1,5h",
-    priority: "01",
-    situation: "Programada",
-  },
-  {
-    resource: "Torno CNC 01",
-    of: "260124-0015",
-    project: "260124",
-    client: "Delta",
-    pn: "PN-000218",
-    estimatedTime: "3,0h",
-    priority: "01",
-    situation: "Em execucao",
-  },
-  {
-    resource: "Centro Usinagem 01",
-    of: "260126-0001",
-    project: "260126",
-    client: "Metal",
-    pn: "PN-000301",
-    estimatedTime: "8,0h",
-    priority: "03",
-    situation: "Programada",
-  },
-  {
-    resource: "Centro Usinagem 01",
-    of: "260126-0002",
-    project: "260126",
-    client: "Metal",
-    pn: "PN-000302",
-    estimatedTime: "12,0h",
-    priority: "03",
-    situation: "Parada",
-  },
-  {
-    resource: "Caldeiraria",
-    of: "260127-0002",
-    project: "260127",
-    client: "Exemplo",
-    pn: "PN-000412",
-    estimatedTime: "8,0h",
-    priority: "04",
-    situation: "Programada",
-  },
-  {
-    resource: "Montagem",
-    of: "260128-0001",
-    project: "260128",
-    client: "Precisao",
-    pn: "PN-000519",
-    estimatedTime: "3,0h",
-    priority: "05",
-    situation: "Concluida",
-  },
-];
 
 const situationStyles = {
   Programada: "bg-blue-50 text-blue-700 ring-blue-200",
@@ -87,15 +27,165 @@ const situationStyles = {
   Parada: "bg-rose-50 text-rose-700 ring-rose-200",
 } as const;
 
-const groupedSchedule = scheduleRows.reduce<Record<string, DailyScheduleRow[]>>(
-  (groups, row) => {
-    groups[row.resource] = [...(groups[row.resource] ?? []), row];
-    return groups;
-  },
-  {},
-);
-
 export default function DailySchedulePage() {
+  const [scheduleRows, setScheduleRows] = useState<DailyScheduleRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadScheduleRows() {
+      if (!isSupabaseConfigured) {
+        if (isMounted) {
+          setScheduleRows([]);
+          setLoadError("Supabase nao esta configurado.");
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const ordersResult = await supabase
+        .from("ordens_fabricacao")
+        .select("id,numero_of,projeto_id,produto_id,status")
+        .is("deleted_at", null);
+
+      if (ordersResult.error) {
+        if (isMounted) {
+          setScheduleRows([]);
+          setLoadError(ordersResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const orders = (ordersResult.data as DailyOFRow[] | null) ?? [];
+      const orderIds = orders.map((order) => order.id);
+      const projectIds = Array.from(new Set(orders.map((order) => order.projeto_id)));
+      const productIds = Array.from(
+        new Set(orders.map((order) => order.produto_id).filter(Boolean) as string[]),
+      );
+
+      const [projectsResult, itemsResult, operationsResult] = await Promise.all([
+        projectIds.length > 0
+          ? supabase
+              .from("projetos")
+              .select("id,cliente_id,numero_projeto,status,prioridade,data_objetivo,created_at")
+              .in("id", projectIds)
+              .is("deleted_at", null)
+          : { data: [], error: null },
+        productIds.length > 0
+          ? supabase.from("itens_industriais").select("id,pn").in("id", productIds)
+          : { data: [], error: null },
+        orderIds.length > 0
+          ? supabase
+              .from("operacoes_producao")
+              .select("id,of_id,sequencia_snapshot,tempo_planejado_snapshot,unidade_tempo_snapshot")
+              .in("of_id", orderIds)
+          : { data: [], error: null },
+      ]);
+
+      const firstError = projectsResult.error ?? itemsResult.error ?? operationsResult.error;
+      if (firstError) {
+        if (isMounted) {
+          setScheduleRows([]);
+          setLoadError(firstError.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const projects = (projectsResult.data as ProjectRow[] | null) ?? [];
+      const operations = (operationsResult.data as DailyProductionOperationRow[] | null) ?? [];
+      const clientIds = Array.from(
+        new Set(projects.map((project) => project.cliente_id).filter(Boolean) as string[]),
+      );
+      const operationIds = operations.map((operation) => operation.id);
+
+      const [clientsResult, appointmentsResult, allocationsResult] = await Promise.all([
+        clientIds.length > 0
+          ? supabase.from("clientes").select("id,nome").in("id", clientIds)
+          : { data: [], error: null },
+        operationIds.length > 0
+          ? supabase
+              .from("apontamentos_producao")
+              .select("operacao_producao_id,duracao_minutos")
+              .in("operacao_producao_id", operationIds)
+          : { data: [], error: null },
+        operationIds.length > 0
+          ? supabase
+              .from("operacao_alocacoes")
+              .select("operacao_producao_id,recurso_produtivo_id,ativa")
+              .in("operacao_producao_id", operationIds)
+          : { data: [], error: null },
+      ]);
+
+      const secondError = clientsResult.error ?? appointmentsResult.error ?? allocationsResult.error;
+      if (secondError) {
+        if (isMounted) {
+          setScheduleRows([]);
+          setLoadError(secondError.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const allocations = (allocationsResult.data as OperationAllocationRow[] | null) ?? [];
+      const resourceIds = Array.from(
+        new Set(
+          allocations
+            .map((allocation) => allocation.recurso_produtivo_id)
+            .filter(Boolean) as string[],
+        ),
+      );
+      const resourcesResult =
+        resourceIds.length > 0
+          ? await supabase.from("recursos_produtivos").select("id,nome").in("id", resourceIds)
+          : { data: [], error: null };
+
+      if (resourcesResult.error) {
+        if (isMounted) {
+          setScheduleRows([]);
+          setLoadError(resourcesResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setScheduleRows(
+          buildDailyScheduleRows(
+            projects,
+            (clientsResult.data as ClientRow[] | null) ?? [],
+            orders,
+            (itemsResult.data as ProductItemRow[] | null) ?? [],
+            operations,
+            (appointmentsResult.data as ProductionAppointmentRow[] | null) ?? [],
+            allocations,
+            (resourcesResult.data as ProductiveResourceRow[] | null) ?? [],
+          ),
+        );
+        setLoadError(null);
+        setIsLoading(false);
+      }
+    }
+
+    loadScheduleRows();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const groupedSchedule = useMemo(
+    () =>
+      scheduleRows.reduce<Record<string, DailyScheduleRow[]>>((groups, row) => {
+        groups[row.resource] = [...(groups[row.resource] ?? []), row];
+        return groups;
+      }, {}),
+    [scheduleRows],
+  );
+
   function handlePrint() {
     window.print();
   }
@@ -200,6 +290,11 @@ export default function DailySchedulePage() {
             <p className="mt-2 text-sm text-slate-500">
               Planejamento micro da fabrica para execucao dos lideres.
             </p>
+            {loadError ? (
+              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {loadError}
+              </p>
+            ) : null}
           </div>
 
           <div className="overflow-x-auto">
@@ -217,59 +312,80 @@ export default function DailySchedulePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {Object.entries(groupedSchedule).map(([resource, rows]) =>
-                  rows.map((row, index) => (
-                    <tr key={`${row.resource}-${row.of}`} className="transition hover:bg-slate-50">
-                      <td className="px-5 py-4 font-semibold text-slate-900">
-                        {index === 0 ? resource : ""}
-                      </td>
-                      <td className="px-5 py-4">
-                        <EntityLink
-                          type="of"
-                          id={row.of}
-                          className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                        >
-                          {row.of}
-                        </EntityLink>
-                      </td>
-                      <td className="px-5 py-4">
-                        <EntityLink
-                          type="projeto"
-                          id={row.project}
-                          className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                        >
-                          {row.project}
-                        </EntityLink>
-                      </td>
-                      <td className="px-5 py-4 text-slate-700">{row.client}</td>
-                      <td className="px-5 py-4">
-                        <EntityLink
-                          type="item"
-                          id={row.pn}
-                          className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                        >
-                          {row.pn}
-                        </EntityLink>
-                      </td>
-                      <td className="px-5 py-4 tabular-nums text-slate-700">
-                        {row.estimatedTime}
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700">
-                          {row.priority}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
-                            situationStyles[row.situation]
-                          }`}
-                        >
-                          {row.situation}
-                        </span>
-                      </td>
-                    </tr>
-                  )),
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500">
+                      Carregando programacao diaria...
+                    </td>
+                  </tr>
+                ) : Object.entries(groupedSchedule).length > 0 ? (
+                  Object.entries(groupedSchedule).map(([resource, rows]) =>
+                    rows.map((row, index) => (
+                      <tr key={row.ofId} className="transition hover:bg-slate-50">
+                        <td className="px-5 py-4 font-semibold text-slate-900">
+                          {index === 0 ? resource : ""}
+                        </td>
+                        <td className="px-5 py-4">
+                          <EntityLink
+                            type="of"
+                            id={row.ofId}
+                            className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+                          >
+                            {row.of}
+                          </EntityLink>
+                        </td>
+                        <td className="px-5 py-4">
+                          <EntityLink
+                            type="projeto"
+                            id={row.projectId}
+                            className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+                          >
+                            {row.project}
+                          </EntityLink>
+                        </td>
+                        <td className="px-5 py-4 text-slate-700">{row.client}</td>
+                        <td className="px-5 py-4">
+                          {row.pnId ? (
+                            <EntityLink
+                              type="item"
+                              id={row.pnId}
+                              className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+                            >
+                              {row.pn}
+                            </EntityLink>
+                          ) : (
+                            <span className="text-slate-500">{row.pn}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 tabular-nums text-slate-700">
+                          <span>{row.estimatedTime}</span>
+                          <span className="mt-1 block text-xs text-slate-400">
+                            Apontado {row.reportedTime}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700">
+                            {row.priority}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                              situationStyles[row.situation]
+                            }`}
+                          >
+                            {row.situation}
+                          </span>
+                        </td>
+                      </tr>
+                    )),
+                  )
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500">
+                      Nenhuma OF encontrada para a programacao diaria.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

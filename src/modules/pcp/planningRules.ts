@@ -22,6 +22,23 @@ export type PlanningRow = {
   delivery: string;
 };
 
+export type DailyScheduleSituation = "Programada" | "Em execucao" | "Concluida" | "Parada";
+
+export type DailyScheduleRow = {
+  resource: string;
+  ofId: string;
+  of: string;
+  projectId: string;
+  project: string;
+  client: string;
+  pnId: string | null;
+  pn: string;
+  estimatedTime: string;
+  reportedTime: string;
+  priority: string;
+  situation: DailyScheduleSituation;
+};
+
 export type ProjectRow = {
   id: string;
   cliente_id: string | null;
@@ -43,9 +60,41 @@ export type OFRow = {
   status: string | null;
 };
 
+export type DailyOFRow = OFRow & {
+  numero_of: string;
+  produto_id: string | null;
+};
+
 export type ProductionOperationRow = {
   id: string;
   of_id: string;
+};
+
+export type DailyProductionOperationRow = ProductionOperationRow & {
+  sequencia_snapshot: number | null;
+  tempo_planejado_snapshot: number | string | null;
+  unidade_tempo_snapshot: string | null;
+};
+
+export type ProductionAppointmentRow = {
+  operacao_producao_id: string;
+  duracao_minutos: number | string | null;
+};
+
+export type OperationAllocationRow = {
+  operacao_producao_id: string;
+  recurso_produtivo_id: string | null;
+  ativa: boolean | null;
+};
+
+export type ProductItemRow = {
+  id: string;
+  pn: string;
+};
+
+export type ProductiveResourceRow = {
+  id: string;
+  nome: string;
 };
 
 export type ProductionProgressRow = {
@@ -132,6 +181,41 @@ function sortProjectsByPriority(projects: ProjectRow[]) {
 
     return first.numero_projeto.localeCompare(second.numero_projeto);
   });
+}
+
+function formatHours(value: number) {
+  return `${value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}h`;
+}
+
+function formatPlannedTime(operations: DailyProductionOperationRow[]) {
+  const totalMinutes = operations.reduce((total, operation) => {
+    const time = toNumber(operation.tempo_planejado_snapshot);
+    const unit = (operation.unidade_tempo_snapshot ?? "").toLowerCase();
+
+    if (unit.startsWith("min")) return total + time;
+    return total + time * 60;
+  }, 0);
+
+  return formatHours(totalMinutes / 60);
+}
+
+function formatReportedTime(appointments: ProductionAppointmentRow[]) {
+  const totalMinutes = appointments.reduce(
+    (total, appointment) => total + toNumber(appointment.duracao_minutos),
+    0,
+  );
+
+  return formatHours(totalMinutes / 60);
+}
+
+function getDailyScheduleSituation(status: string | null | undefined): DailyScheduleSituation {
+  if (status === "finalizada") return "Concluida";
+  if (status === "em_producao") return "Em execucao";
+  if (["aguardando_material", "parada", "cancelada"].includes(status ?? "")) return "Parada";
+  return "Programada";
 }
 
 function calculateOperationalState(project: ProjectRow, projectOrders: OFRow[]) {
@@ -294,4 +378,94 @@ export function buildPlanningRows(
       delivery: formatDate(project.data_objetivo),
     };
   });
+}
+
+export function buildDailyScheduleRows(
+  projects: ProjectRow[],
+  clients: ClientRow[],
+  orders: DailyOFRow[],
+  items: ProductItemRow[],
+  operations: DailyProductionOperationRow[],
+  appointments: ProductionAppointmentRow[],
+  allocations: OperationAllocationRow[],
+  resources: ProductiveResourceRow[],
+) {
+  const clientNames = new Map(clients.map((client) => [client.id, client.nome]));
+  const projectsById = new Map(projects.map((project) => [project.id, project]));
+  const itemPNs = new Map(items.map((item) => [item.id, item.pn]));
+  const resourceNames = new Map(resources.map((resource) => [resource.id, resource.nome]));
+  const projectPriorities = new Map(
+    sortProjectsByPriority(projects).map((project, index) => [
+      project.id,
+      String(index + 1).padStart(2, "0"),
+    ]),
+  );
+  const operationsByOrder = operations.reduce((groupedOperations, operation) => {
+    const orderOperations = groupedOperations.get(operation.of_id) ?? [];
+    orderOperations.push(operation);
+    groupedOperations.set(operation.of_id, orderOperations);
+
+    return groupedOperations;
+  }, new Map<string, DailyProductionOperationRow[]>());
+  const appointmentsByOperation = appointments.reduce((groupedAppointments, appointment) => {
+    const operationAppointments = groupedAppointments.get(appointment.operacao_producao_id) ?? [];
+    operationAppointments.push(appointment);
+    groupedAppointments.set(appointment.operacao_producao_id, operationAppointments);
+
+    return groupedAppointments;
+  }, new Map<string, ProductionAppointmentRow[]>());
+  const allocationsByOperation = allocations.reduce((groupedAllocations, allocation) => {
+    const operationAllocations = groupedAllocations.get(allocation.operacao_producao_id) ?? [];
+    operationAllocations.push(allocation);
+    groupedAllocations.set(allocation.operacao_producao_id, operationAllocations);
+
+    return groupedAllocations;
+  }, new Map<string, OperationAllocationRow[]>());
+
+  return [...orders]
+    .sort((first, second) => {
+      const firstPriority = projectPriorities.get(first.projeto_id) ?? "99";
+      const secondPriority = projectPriorities.get(second.projeto_id) ?? "99";
+
+      if (firstPriority !== secondPriority) return firstPriority.localeCompare(secondPriority);
+
+      return first.numero_of.localeCompare(second.numero_of);
+    })
+    .map((order) => {
+      const project = projectsById.get(order.projeto_id);
+      const pn = order.produto_id ? itemPNs.get(order.produto_id) ?? "Sem PN" : "Sem PN";
+      const orderOperations = [...(operationsByOrder.get(order.id) ?? [])].sort(
+        (first, second) => (first.sequencia_snapshot ?? 0) - (second.sequencia_snapshot ?? 0),
+      );
+      const firstOperation = orderOperations[0];
+      const activeAllocation = firstOperation
+        ? (allocationsByOperation.get(firstOperation.id) ?? []).find(
+            (allocation) => allocation.ativa !== false && allocation.recurso_produtivo_id,
+          )
+        : null;
+      const orderAppointments = orderOperations.flatMap(
+        (operation) => appointmentsByOperation.get(operation.id) ?? [],
+      );
+      const client =
+        project?.cliente_id && clientNames.has(project.cliente_id)
+          ? clientNames.get(project.cliente_id) ?? "Sem cliente"
+          : "Sem cliente";
+
+      return {
+        resource: activeAllocation?.recurso_produtivo_id
+          ? resourceNames.get(activeAllocation.recurso_produtivo_id) ?? "Sem recurso"
+          : "Sem recurso",
+        ofId: order.id,
+        of: order.numero_of,
+        projectId: order.projeto_id,
+        project: project?.numero_projeto ?? order.projeto_id,
+        client,
+        pnId: pn !== "Sem PN" ? pn : null,
+        pn,
+        estimatedTime: formatPlannedTime(orderOperations),
+        reportedTime: formatReportedTime(orderAppointments),
+        priority: projectPriorities.get(order.projeto_id) ?? "99",
+        situation: getDailyScheduleSituation(order.status),
+      };
+    });
 }
