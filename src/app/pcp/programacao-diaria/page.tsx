@@ -11,6 +11,7 @@ import {
   type DailyOFRow,
   type DailyProductionOperationRow,
   type DailyScheduleRow,
+  type MaterialNeedRow,
   type OperationAllocationRow,
   type ProductionAppointmentRow,
   type ProductItemRow,
@@ -130,6 +131,23 @@ export default function DailySchedulePage() {
         return;
       }
 
+      const materialNeedsResult =
+        orderIds.length > 0
+          ? await supabase
+              .from("necessidades_materiais")
+              .select("of_id,status,status_atendimento,cancelada_em")
+              .in("of_id", orderIds)
+          : { data: [], error: null };
+
+      if (materialNeedsResult.error) {
+        if (isMounted) {
+          setScheduleRows([]);
+          setLoadError(materialNeedsResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       const allocations = (allocationsResult.data as OperationAllocationRow[] | null) ?? [];
       const resourceIds = Array.from(
         new Set(
@@ -162,6 +180,7 @@ export default function DailySchedulePage() {
             operations,
             (appointmentsResult.data as ProductionAppointmentRow[] | null) ?? [],
             allocations,
+            (materialNeedsResult.data as MaterialNeedRow[] | null) ?? [],
             (resourcesResult.data as ProductiveResourceRow[] | null) ?? [],
           ),
         );
@@ -376,6 +395,21 @@ export default function DailySchedulePage() {
                           >
                             {row.situation}
                           </span>
+                          <span
+                            title={row.programmability.details}
+                            className={`mt-1 block text-xs font-semibold ${
+                              row.programmability.isProgrammable
+                                ? "text-emerald-700"
+                                : "text-amber-700"
+                            }`}
+                          >
+                            {row.programmability.label}
+                          </span>
+                          {!row.programmability.isProgrammable ? (
+                            <span className="mt-0.5 block text-xs text-slate-400">
+                              {row.programmability.blockers.join(", ")}
+                            </span>
+                          ) : null}
                         </td>
                       </tr>
                     )),

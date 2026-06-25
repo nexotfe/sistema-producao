@@ -37,6 +37,12 @@ export type DailyScheduleRow = {
   reportedTime: string;
   priority: string;
   situation: DailyScheduleSituation;
+  programmability: {
+    isProgrammable: boolean;
+    label: "Programavel" | "Bloqueada";
+    details: string;
+    blockers: string[];
+  };
 };
 
 export type ProjectRow = {
@@ -85,6 +91,13 @@ export type OperationAllocationRow = {
   operacao_producao_id: string;
   recurso_produtivo_id: string | null;
   ativa: boolean | null;
+};
+
+export type MaterialNeedRow = {
+  of_id: string;
+  status: string | null;
+  status_atendimento: string | null;
+  cancelada_em: string | null;
 };
 
 export type ProductItemRow = {
@@ -216,6 +229,43 @@ function getDailyScheduleSituation(status: string | null | undefined): DailySche
   if (status === "em_producao") return "Em execucao";
   if (["aguardando_material", "parada", "cancelada"].includes(status ?? "")) return "Parada";
   return "Programada";
+}
+
+function getOFProgrammability(
+  order: DailyOFRow,
+  operations: DailyProductionOperationRow[],
+  materialNeeds: MaterialNeedRow[],
+  activeAllocation: OperationAllocationRow | null | undefined,
+) {
+  const status = order.status ?? "";
+  const engineeringReleased = !["simulacao", "cancelada"].includes(status);
+  const materialAvailable =
+    status !== "aguardando_material" &&
+    materialNeeds
+      .filter((need) => !need.cancelada_em && need.status !== "cancelada")
+      .every((need) => ["reservado", "atendido", "cancelado"].includes(need.status_atendimento ?? ""));
+  const programmingAvailable = operations.length > 0;
+  const resourceAvailable = Boolean(activeAllocation?.recurso_produtivo_id);
+  const blockers = [
+    engineeringReleased ? null : "Engenharia",
+    materialAvailable ? null : "Material",
+    programmingAvailable ? null : "Programacao",
+    resourceAvailable ? null : "Recurso",
+  ].filter(Boolean) as string[];
+  const isProgrammable = blockers.length === 0;
+  const label: "Programavel" | "Bloqueada" = isProgrammable ? "Programavel" : "Bloqueada";
+
+  return {
+    isProgrammable,
+    label,
+    details: [
+      `Engenharia ${engineeringReleased ? "liberada" : "pendente"}`,
+      `Material ${materialAvailable ? "disponivel" : "pendente"}`,
+      `Programacao ${programmingAvailable ? "disponivel" : "pendente"}`,
+      `Recurso ${resourceAvailable ? "disponivel" : "pendente"}`,
+    ].join(" | "),
+    blockers,
+  };
 }
 
 function calculateOperationalState(project: ProjectRow, projectOrders: OFRow[]) {
@@ -388,6 +438,7 @@ export function buildDailyScheduleRows(
   operations: DailyProductionOperationRow[],
   appointments: ProductionAppointmentRow[],
   allocations: OperationAllocationRow[],
+  materialNeeds: MaterialNeedRow[],
   resources: ProductiveResourceRow[],
 ) {
   const clientNames = new Map(clients.map((client) => [client.id, client.nome]));
@@ -407,6 +458,13 @@ export function buildDailyScheduleRows(
 
     return groupedOperations;
   }, new Map<string, DailyProductionOperationRow[]>());
+  const materialNeedsByOrder = materialNeeds.reduce((groupedNeeds, need) => {
+    const orderNeeds = groupedNeeds.get(need.of_id) ?? [];
+    orderNeeds.push(need);
+    groupedNeeds.set(need.of_id, orderNeeds);
+
+    return groupedNeeds;
+  }, new Map<string, MaterialNeedRow[]>());
   const appointmentsByOperation = appointments.reduce((groupedAppointments, appointment) => {
     const operationAppointments = groupedAppointments.get(appointment.operacao_producao_id) ?? [];
     operationAppointments.push(appointment);
@@ -466,6 +524,12 @@ export function buildDailyScheduleRows(
         reportedTime: formatReportedTime(orderAppointments),
         priority: projectPriorities.get(order.projeto_id) ?? "99",
         situation: getDailyScheduleSituation(order.status),
+        programmability: getOFProgrammability(
+          order,
+          orderOperations,
+          materialNeedsByOrder.get(order.id) ?? [],
+          activeAllocation,
+        ),
       };
     });
 }
