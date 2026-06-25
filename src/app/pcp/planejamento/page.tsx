@@ -57,6 +57,13 @@ type ProductionOperationRow = {
   of_id: string;
 };
 
+type ProductionProgressRow = {
+  operacao_id: string;
+  of_id: string;
+  quantidade_planejada_snapshot: number | string | null;
+  quantidade_produzida: number | string | null;
+};
+
 type OutsourcedServiceRow = {
   id: string;
   operacao_producao_id: string;
@@ -213,6 +220,15 @@ function formatStatus(value: string | null | undefined) {
     .join(" ");
 }
 
+function toNumber(value: number | string | null | undefined) {
+  if (value == null) return 0;
+  return Number(value) || 0;
+}
+
+function formatProgress(value: number) {
+  return `${Math.round(value)}%`;
+}
+
 function sortProjectsByPriority(projects: ProjectRow[]) {
   const priorityWeight: Record<string, number> = {
     critica: 0,
@@ -303,12 +319,32 @@ function getNextAction(project: ProjectRow, projectOrders: OFRow[], outsourcedSe
   return "Programar CNC";
 }
 
+function getProgress(project: ProjectRow, projectOrders: OFRow[], productionRows: ProductionProgressRow[]) {
+  if (project.status === "concluido") return "100%";
+  if (projectOrders.length === 0) return "0%";
+  if (projectOrders.every((order) => order.status === "finalizada")) return "100%";
+
+  const plannedQuantity = productionRows.reduce(
+    (total, row) => total + toNumber(row.quantidade_planejada_snapshot),
+    0,
+  );
+  const producedQuantity = productionRows.reduce(
+    (total, row) => total + toNumber(row.quantidade_produzida),
+    0,
+  );
+
+  if (plannedQuantity <= 0) return "0%";
+
+  return formatProgress(Math.min((producedQuantity / plannedQuantity) * 100, 100));
+}
+
 function buildPlanningRows(
   projects: ProjectRow[],
   clients: ClientRow[],
   orders: OFRow[],
   outsourcedServices: OutsourcedServiceRow[],
   operations: ProductionOperationRow[],
+  productionProgressRows: ProductionProgressRow[],
 ) {
   const clientNames = new Map(clients.map((client) => [client.id, client.nome]));
   const ordersByProject = orders.reduce((groupedOrders, order) => {
@@ -339,6 +375,17 @@ function buildPlanningRows(
 
     return groupedServices;
   }, new Map<string, OutsourcedServiceRow[]>());
+  const productionRowsByProject = productionProgressRows.reduce((groupedRows, productionRow) => {
+    const order = ordersById.get(productionRow.of_id);
+
+    if (order) {
+      const projectRows = groupedRows.get(order.projeto_id) ?? [];
+      projectRows.push(productionRow);
+      groupedRows.set(order.projeto_id, projectRows);
+    }
+
+    return groupedRows;
+  }, new Map<string, ProductionProgressRow[]>());
 
   return sortProjectsByPriority(projects).map((project, index) => {
     const template = operationalTemplates[index % operationalTemplates.length];
@@ -361,7 +408,7 @@ function buildPlanningRows(
         projectOrders,
         outsourcedServicesByProject.get(project.id) ?? [],
       ),
-      progress: template.progress,
+      progress: getProgress(project, projectOrders, productionRowsByProject.get(project.id) ?? []),
       delivery: formatDate(project.data_objetivo),
     };
   });
@@ -457,18 +504,36 @@ export default function PCPPlanningPage() {
 
       const operations = (operationsResult.data as ProductionOperationRow[] | null) ?? [];
       const operationIds = operations.map((operation) => operation.id);
-      const outsourcedServicesResult =
+      const [outsourcedServicesResult, productionProgressResult] =
         operationIds.length > 0
-          ? await supabase
-              .from("servicos_terceirizados")
-              .select("id,operacao_producao_id,status")
-              .in("operacao_producao_id", operationIds)
-          : { data: [], error: null };
+          ? await Promise.all([
+              supabase
+                .from("servicos_terceirizados")
+                .select("id,operacao_producao_id,status")
+                .in("operacao_producao_id", operationIds),
+              supabase
+                .from("vw_producao_operacional")
+                .select("operacao_id,of_id,quantidade_planejada_snapshot,quantidade_produzida")
+                .in("operacao_id", operationIds),
+            ])
+          : [
+              { data: [], error: null },
+              { data: [], error: null },
+            ];
 
       if (outsourcedServicesResult.error) {
         if (isMounted) {
           setPlanningRows([]);
           setLoadError(outsourcedServicesResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (productionProgressResult.error) {
+        if (isMounted) {
+          setPlanningRows([]);
+          setLoadError(productionProgressResult.error.message);
           setIsLoading(false);
         }
         return;
@@ -482,6 +547,7 @@ export default function PCPPlanningPage() {
             orders,
             (outsourcedServicesResult.data as OutsourcedServiceRow[] | null) ?? [],
             operations,
+            (productionProgressResult.data as ProductionProgressRow[] | null) ?? [],
           ),
         );
         setLoadError(null);
