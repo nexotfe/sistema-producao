@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
@@ -32,6 +32,7 @@ export default function DailySchedulePage() {
   const [scheduleRows, setScheduleRows] = useState<DailyScheduleRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [printDate] = useState(() => new Date().toLocaleDateString("pt-BR"));
 
   useEffect(() => {
     let isMounted = true;
@@ -197,11 +198,18 @@ export default function DailySchedulePage() {
   }, []);
 
   const groupedSchedule = useMemo(
-    () =>
-      scheduleRows.reduce<Record<string, DailyScheduleRow[]>>((groups, row) => {
+    () => {
+      const groups = scheduleRows.reduce<Record<string, DailyScheduleRow[]>>((groups, row) => {
         groups[row.resource] = [...(groups[row.resource] ?? []), row];
         return groups;
-      }, {}),
+      }, {});
+
+      return Object.entries(groups).sort(([firstResource], [secondResource]) => {
+        if (firstResource === "Sem recurso") return 1;
+        if (secondResource === "Sem recurso") return -1;
+        return firstResource.localeCompare(secondResource);
+      });
+    },
     [scheduleRows],
   );
 
@@ -210,7 +218,7 @@ export default function DailySchedulePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 print:bg-white sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 print:bg-white print:px-0 print:py-0 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-5 print:hidden">
           <div className="flex items-center gap-3">
@@ -298,8 +306,28 @@ export default function DailySchedulePage() {
           </section>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white print:border-slate-300">
-          <div className="border-b border-slate-100 px-5 py-4">
+        <section className="rounded-lg border border-slate-200 bg-white print:rounded-none print:border-0">
+          <div className="hidden border-b border-slate-300 px-5 py-4 print:block">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              NEXOTFE - PCP
+            </p>
+            <div className="mt-2 flex items-end justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-semibold text-slate-950">
+                  Programacao Diaria
+                </h1>
+                <p className="mt-1 text-xs text-slate-600">
+                  Data {printDate || "__/__/____"} - Emitido por {currentUser}
+                </p>
+              </div>
+              <div className="text-right text-xs text-slate-600">
+                <p>Turno: ____________________</p>
+                <p className="mt-1">Lider: ____________________</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-b border-slate-100 px-5 py-4 print:hidden">
             <p className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 print:block">
               PCP
             </p>
@@ -317,112 +345,127 @@ export default function DailySchedulePage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm print:min-w-0">
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            <table className="w-full min-w-[980px] text-left text-sm print:min-w-0 print:text-[11px]">
+              <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 print:border-slate-300 print:bg-white print:text-[10px] print:text-slate-700">
                 <tr>
-                  <th className="px-5 py-3">Recurso</th>
-                  <th className="px-5 py-3">OF</th>
-                  <th className="px-5 py-3">Projeto</th>
-                  <th className="px-5 py-3">Cliente</th>
-                  <th className="px-5 py-3">PN</th>
-                  <th className="px-5 py-3">Tempo Previsto</th>
-                  <th className="px-5 py-3">Prioridade</th>
-                  <th className="px-5 py-3">Situacao</th>
+                  <th className="px-5 py-3 print:hidden">Recurso</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">OF</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">Projeto</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">Cliente</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">PN</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">Tempo Previsto</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">Prioridade</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">Situacao</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500 print:py-6">
                       Carregando programacao diaria...
                     </td>
                   </tr>
-                ) : Object.entries(groupedSchedule).length > 0 ? (
-                  Object.entries(groupedSchedule).map(([resource, rows]) =>
-                    rows.map((row, index) => (
-                      <tr key={row.ofId} className="transition hover:bg-slate-50">
-                        <td className="px-5 py-4 font-semibold text-slate-900">
-                          {index === 0 ? resource : ""}
-                        </td>
-                        <td className="px-5 py-4">
-                          <EntityLink
-                            type="of"
-                            id={row.ofId}
-                            className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                          >
-                            {row.of}
-                          </EntityLink>
-                        </td>
-                        <td className="px-5 py-4">
-                          <EntityLink
-                            type="projeto"
-                            id={row.projectId}
-                            className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                          >
-                            {row.project}
-                          </EntityLink>
-                        </td>
-                        <td className="px-5 py-4 text-slate-700">{row.client}</td>
-                        <td className="px-5 py-4">
-                          {row.pnId ? (
-                            <EntityLink
-                              type="item"
-                              id={row.pnId}
-                              className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                            >
-                              {row.pn}
-                            </EntityLink>
-                          ) : (
-                            <span className="text-slate-500">{row.pn}</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 tabular-nums text-slate-700">
-                          <span>{row.estimatedTime}</span>
-                          <span className="mt-1 block text-xs text-slate-400">
-                            Apontado {row.reportedTime}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700">
-                            {row.priority}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
-                              situationStyles[row.situation]
-                            }`}
-                          >
-                            {row.situation}
-                          </span>
-                          <span
-                            title={row.programmability.details}
-                            className={`mt-1 block text-xs font-semibold ${
-                              row.programmability.isProgrammable
-                                ? "text-emerald-700"
-                                : "text-amber-700"
-                            }`}
-                          >
-                            {row.programmability.label}
-                          </span>
-                          {!row.programmability.isProgrammable ? (
-                            <span className="mt-0.5 block text-xs text-slate-400">
-                              {row.programmability.blockers.join(", ")}
-                            </span>
-                          ) : null}
+                ) : groupedSchedule.length > 0 ? (
+                  groupedSchedule.map(([resource, rows]) => (
+                    <Fragment key={resource}>
+                      <tr key={`${resource}-header`} className="bg-slate-50 print:bg-white">
+                        <td
+                          colSpan={8}
+                          className="px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 print:border-y print:border-slate-300 print:px-2 print:py-1 print:text-[10px] print:text-slate-800"
+                        >
+                          {resource} - {rows.length} OF{rows.length > 1 ? "s" : ""}
                         </td>
                       </tr>
-                    )),
-                  )
+                      {rows.map((row) => (
+                        <tr key={row.ofId} className="transition hover:bg-slate-50 print:break-inside-avoid print:hover:bg-white">
+                          <td className="px-5 py-4 font-semibold text-slate-900 print:hidden" />
+                          <td className="px-5 py-4 print:px-2 print:py-2">
+                            <EntityLink
+                              type="of"
+                              id={row.ofId}
+                              className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 print:text-slate-950"
+                            >
+                              {row.of}
+                            </EntityLink>
+                          </td>
+                          <td className="px-5 py-4 print:px-2 print:py-2">
+                            <EntityLink
+                              type="projeto"
+                              id={row.projectId}
+                              className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 print:text-slate-950"
+                            >
+                              {row.project}
+                            </EntityLink>
+                          </td>
+                          <td className="px-5 py-4 text-slate-700 print:px-2 print:py-2 print:text-slate-800">
+                            {row.client}
+                          </td>
+                          <td className="px-5 py-4 print:px-2 print:py-2">
+                            {row.pnId ? (
+                              <EntityLink
+                                type="item"
+                                id={row.pnId}
+                                className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 print:text-slate-950"
+                              >
+                                {row.pn}
+                              </EntityLink>
+                            ) : (
+                              <span className="text-slate-500">{row.pn}</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 tabular-nums text-slate-700 print:px-2 print:py-2 print:text-slate-800">
+                            <span>{row.estimatedTime}</span>
+                            <span className="mt-1 block text-xs text-slate-400 print:text-[10px] print:text-slate-600">
+                              Apontado {row.reportedTime}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 print:px-2 print:py-2">
+                            <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700 print:h-auto print:border-0 print:bg-white print:text-slate-950">
+                              {row.priority}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 print:px-2 print:py-2">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 print:px-0 print:py-0 print:ring-0 ${
+                                situationStyles[row.situation]
+                              }`}
+                            >
+                              {row.situation}
+                            </span>
+                            <span
+                              title={row.programmability.details}
+                              className={`mt-1 block text-xs font-semibold print:text-[10px] ${
+                                row.programmability.isProgrammable
+                                  ? "text-emerald-700 print:text-slate-800"
+                                  : "text-amber-700 print:text-slate-800"
+                              }`}
+                            >
+                              {row.programmability.label}
+                            </span>
+                            {!row.programmability.isProgrammable ? (
+                              <span className="mt-0.5 block text-xs text-slate-400 print:text-[10px] print:text-slate-600">
+                                {row.programmability.blockers.join(", ")}
+                              </span>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500 print:py-6">
                       Nenhuma OF encontrada para a programacao diaria.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="hidden grid-cols-2 gap-8 px-5 pt-10 text-xs text-slate-700 print:grid">
+            <div className="border-t border-slate-400 pt-2">Assinatura PCP</div>
+            <div className="border-t border-slate-400 pt-2">Assinatura Lider</div>
           </div>
         </section>
       </div>
