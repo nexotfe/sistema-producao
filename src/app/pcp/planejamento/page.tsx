@@ -52,6 +52,17 @@ type OFRow = {
   status: string | null;
 };
 
+type ProductionOperationRow = {
+  id: string;
+  of_id: string;
+};
+
+type OutsourcedServiceRow = {
+  id: string;
+  operacao_producao_id: string;
+  status: string | null;
+};
+
 type QueueHistoryEntry = {
   user: string;
   date: string;
@@ -261,7 +272,44 @@ function calculateOperationalState(project: ProjectRow, projectOrders: OFRow[]) 
   };
 }
 
-function buildPlanningRows(projects: ProjectRow[], clients: ClientRow[], orders: OFRow[]) {
+function getNextAction(project: ProjectRow, projectOrders: OFRow[], outsourcedServices: OutsourcedServiceRow[]) {
+  if (project.status === "cancelado") return "Cancelado";
+  if (project.status === "concluido") return "Concluído";
+  if (projectOrders.length === 0) return "Sem OF's";
+  if (projectOrders.every((order) => order.status === "finalizada")) return "Concluído";
+  if (projectOrders.some((order) => order.status === "aguardando_material")) {
+    return "Comprar material";
+  }
+  if (projectOrders.some((order) => order.status === "pronta_programacao")) {
+    return "Programar CNC";
+  }
+  if (projectOrders.some((order) => order.status === "simulacao")) {
+    return "Liberar engenharia";
+  }
+  if (projectOrders.some((order) => order.status === "programada")) {
+    return "Produzir";
+  }
+  if (projectOrders.some((order) => order.status === "em_producao")) {
+    return "Montar";
+  }
+  if (
+    outsourcedServices.some((service) =>
+      ["planejado", "enviado", "em_execucao"].includes(service.status ?? ""),
+    )
+  ) {
+    return "Terceirizar";
+  }
+
+  return "Programar CNC";
+}
+
+function buildPlanningRows(
+  projects: ProjectRow[],
+  clients: ClientRow[],
+  orders: OFRow[],
+  outsourcedServices: OutsourcedServiceRow[],
+  operations: ProductionOperationRow[],
+) {
   const clientNames = new Map(clients.map((client) => [client.id, client.nome]));
   const ordersByProject = orders.reduce((groupedOrders, order) => {
     const projectOrders = groupedOrders.get(order.projeto_id) ?? [];
@@ -270,12 +318,34 @@ function buildPlanningRows(projects: ProjectRow[], clients: ClientRow[], orders:
 
     return groupedOrders;
   }, new Map<string, OFRow[]>());
+  const ordersById = new Map(orders.map((order) => [order.id, order]));
+  const projectIdsByOperation = operations.reduce((operationProjects, operation) => {
+    const order = ordersById.get(operation.of_id);
+
+    if (order) {
+      operationProjects.set(operation.id, order.projeto_id);
+    }
+
+    return operationProjects;
+  }, new Map<string, string>());
+  const outsourcedServicesByProject = outsourcedServices.reduce((groupedServices, service) => {
+    const projectId = projectIdsByOperation.get(service.operacao_producao_id);
+
+    if (projectId) {
+      const projectServices = groupedServices.get(projectId) ?? [];
+      projectServices.push(service);
+      groupedServices.set(projectId, projectServices);
+    }
+
+    return groupedServices;
+  }, new Map<string, OutsourcedServiceRow[]>());
 
   return sortProjectsByPriority(projects).map((project, index) => {
     const template = operationalTemplates[index % operationalTemplates.length];
+    const projectOrders = ordersByProject.get(project.id) ?? [];
     const { situation, operationalState } = calculateOperationalState(
       project,
-      ordersByProject.get(project.id) ?? [],
+      projectOrders,
     );
 
     return {
@@ -286,7 +356,11 @@ function buildPlanningRows(projects: ProjectRow[], clients: ClientRow[], orders:
       status: formatStatus(project.status),
       situation,
       operationalState,
-      nextAction: template.nextAction,
+      nextAction: getNextAction(
+        project,
+        projectOrders,
+        outsourcedServicesByProject.get(project.id) ?? [],
+      ),
       progress: template.progress,
       delivery: formatDate(project.data_objetivo),
     };
@@ -316,8 +390,7 @@ export default function PCPPlanningPage() {
       const projectsResult = await supabase
         .from("projetos")
         .select("id,cliente_id,numero_projeto,status,prioridade,data_objetivo,created_at")
-        .is("deleted_at", null)
-        .neq("status", "cancelado");
+        .is("deleted_at", null);
 
       if (projectsResult.error) {
         if (isMounted) {
@@ -366,12 +439,49 @@ export default function PCPPlanningPage() {
         return;
       }
 
+      const orders = (ordersResult.data as OFRow[] | null) ?? [];
+      const orderIds = orders.map((order) => order.id);
+      const operationsResult =
+        orderIds.length > 0
+          ? await supabase.from("operacoes_producao").select("id,of_id").in("of_id", orderIds)
+          : { data: [], error: null };
+
+      if (operationsResult.error) {
+        if (isMounted) {
+          setPlanningRows([]);
+          setLoadError(operationsResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const operations = (operationsResult.data as ProductionOperationRow[] | null) ?? [];
+      const operationIds = operations.map((operation) => operation.id);
+      const outsourcedServicesResult =
+        operationIds.length > 0
+          ? await supabase
+              .from("servicos_terceirizados")
+              .select("id,operacao_producao_id,status")
+              .in("operacao_producao_id", operationIds)
+          : { data: [], error: null };
+
+      if (outsourcedServicesResult.error) {
+        if (isMounted) {
+          setPlanningRows([]);
+          setLoadError(outsourcedServicesResult.error.message);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       if (isMounted) {
         setPlanningRows(
           buildPlanningRows(
             projects,
             (clientsResult.data as ClientRow[] | null) ?? [],
-            (ordersResult.data as OFRow[] | null) ?? [],
+            orders,
+            (outsourcedServicesResult.data as OutsourcedServiceRow[] | null) ?? [],
+            operations,
           ),
         );
         setLoadError(null);
