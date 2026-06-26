@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type {
-  GrupoRecurso,
-  RecursoProdutivo,
-  SituacaoRecurso,
-} from "../types";
-
-type RecursoRow = Omit<RecursoProdutivo, "grupo">;
+import type { RecursoProdutivo, SituacaoRecurso } from "../types";
 
 export function useRecursos() {
   const [recursos, setRecursos] = useState<RecursoProdutivo[]>([]);
@@ -31,37 +25,21 @@ export function useRecursos() {
         setUsuario(user.email);
       }
 
-      const [recursosResult, gruposResult] = await Promise.all([
-        supabase
-          .from("recursos_produtivos")
-          .select(
-            "id,grupo_recurso_id,codigo,nome,fabricante,modelo,setor,capacidade,ativo,created_at",
-          )
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("grupos_recursos")
-          .select("id,codigo,nome,setor")
-          .order("nome", { ascending: true }),
-      ]);
+      const recursosResult = await supabase
+        .from("recursos_produtivos")
+        .select(
+          "id,codigo,nome,fabricante,modelo,setor,capacidade,ativo,created_at",
+        )
+        .order("created_at", { ascending: false });
 
-      if (recursosResult.error || gruposResult.error) {
+      if (recursosResult.error) {
         setErro("Nao foi possivel carregar os recursos produtivos.");
         setRecursos([]);
         setLoading(false);
         return;
       }
 
-      const grupos = (gruposResult.data ?? []) as GrupoRecurso[];
-      const gruposPorId = new Map(grupos.map((grupo) => [grupo.id, grupo]));
-
-      setRecursos(
-        ((recursosResult.data ?? []) as RecursoRow[]).map((recurso) => ({
-          ...recurso,
-          grupo: recurso.grupo_recurso_id
-            ? gruposPorId.get(recurso.grupo_recurso_id) ?? null
-            : null,
-        })),
-      );
+      setRecursos((recursosResult.data ?? []) as RecursoProdutivo[]);
       setLoading(false);
     }
 
@@ -98,9 +76,6 @@ export function useRecursos() {
           recurso.fabricante,
           recurso.modelo,
           recurso.setor,
-          recurso.grupo?.codigo,
-          recurso.grupo?.nome,
-          recurso.grupo?.setor,
         ]
           .filter(Boolean)
           .join(" ")

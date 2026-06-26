@@ -56,7 +56,7 @@ export function RecursosHeader({
           spellCheck={false}
           value={busca}
           onChange={(event) => setBusca(event.target.value)}
-          placeholder="Buscar por recurso, codigo, grupo ou setor"
+          placeholder="Buscar por recurso, codigo, centro de trabalho ou setor"
           className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
         />
 
@@ -114,7 +114,6 @@ export function RecursosHeader({
                       [
                         ["codigo", "Codigo"],
                         ["nome", "Nome"],
-                        ["grupo", "Grupo"],
                         ["setor", "Setor"],
                         ["capacidade", "Capacidade"],
                         ["status", "Status"],

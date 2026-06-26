@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { GrupoRecurso } from "../types";
 
 type SupabaseErrorLike = {
   message?: string;
@@ -13,12 +12,10 @@ type SupabaseErrorLike = {
 export function useEditarRecurso(id: string) {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
-  const [grupoRecursoId, setGrupoRecursoId] = useState("");
   const [fabricante, setFabricante] = useState("");
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
   const [capacidade, setCapacidade] = useState("");
-  const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -34,21 +31,11 @@ export function useEditarRecurso(id: string) {
       setLoading(true);
       setErro(null);
 
-      const [recursoResult, gruposResult] = await Promise.all([
-        supabase
-          .from("recursos_produtivos")
-          .select(
-            "id,grupo_recurso_id,codigo,nome,fabricante,modelo,setor,capacidade",
-          )
-          .eq("id", id)
-          .single(),
-        supabase
-          .from("grupos_recursos")
-          .select("id,codigo,nome,setor")
-          .order("nome", { ascending: true }),
-      ]);
-
-      setGrupos((gruposResult.data ?? []) as GrupoRecurso[]);
+      const recursoResult = await supabase
+        .from("recursos_produtivos")
+        .select("id,codigo,nome,fabricante,modelo,setor,capacidade")
+        .eq("id", id)
+        .single();
 
       if (recursoResult.error || !recursoResult.data) {
         setErro("Nao foi possivel carregar o recurso produtivo.");
@@ -59,7 +46,6 @@ export function useEditarRecurso(id: string) {
       const recurso = recursoResult.data;
       setCodigo(recurso.codigo ?? "");
       setNome(recurso.nome ?? "");
-      setGrupoRecursoId(recurso.grupo_recurso_id ?? "");
       setFabricante(recurso.fabricante ?? "");
       setModelo(recurso.modelo ?? "");
       setSetor(recurso.setor ?? "");
@@ -94,15 +80,9 @@ export function useEditarRecurso(id: string) {
         return false;
       }
 
-      if (!grupoRecursoId) {
-        setErro("Selecione o grupo ou centro de trabalho.");
-        return false;
-      }
-
       const { error } = await supabase
         .from("recursos_produtivos")
         .update({
-          grupo_recurso_id: grupoRecursoId,
           codigo,
           nome,
           fabricante,
@@ -138,8 +118,6 @@ export function useEditarRecurso(id: string) {
     setCodigo,
     nome,
     setNome,
-    grupoRecursoId,
-    setGrupoRecursoId,
     fabricante,
     setFabricante,
     modelo,
@@ -148,7 +126,6 @@ export function useEditarRecurso(id: string) {
     setSetor,
     capacidade,
     setCapacidade,
-    grupos,
     loading,
     salvando,
     erro,

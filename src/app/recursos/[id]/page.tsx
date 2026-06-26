@@ -74,8 +74,7 @@ export default function RecursoPage({ params }: Props) {
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2 xl:grid-cols-3">
               <Info label="Codigo" value={recurso.codigo} />
               <Info label="Nome" value={recurso.nome} />
-              <Info label="Grupo" value={recurso.grupo?.nome} />
-              <Info label="Setor" value={recurso.setor || recurso.grupo?.setor} />
+              <Info label="Setor / Centro de trabalho" value={recurso.setor} />
             </div>
           </Card>
 

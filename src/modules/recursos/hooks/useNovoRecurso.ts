@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { GrupoRecurso } from "../types";
 
 type SupabaseErrorLike = {
   message?: string;
@@ -13,31 +12,12 @@ type SupabaseErrorLike = {
 export function useNovoRecurso() {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
-  const [grupoRecursoId, setGrupoRecursoId] = useState("");
   const [fabricante, setFabricante] = useState("");
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
   const [capacidade, setCapacidade] = useState("");
-  const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingGrupos, setLoadingGrupos] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function carregarGrupos() {
-      setLoadingGrupos(true);
-
-      const { data } = await supabase
-        .from("grupos_recursos")
-        .select("id,codigo,nome,setor")
-        .order("nome", { ascending: true });
-
-      setGrupos((data ?? []) as GrupoRecurso[]);
-      setLoadingGrupos(false);
-    }
-
-    carregarGrupos();
-  }, []);
 
   async function salvarRecurso() {
     try {
@@ -51,11 +31,6 @@ export function useNovoRecurso() {
 
       if (!nome.trim()) {
         setErro("Informe o nome do recurso.");
-        return false;
-      }
-
-      if (!grupoRecursoId) {
-        setErro("Selecione o grupo ou centro de trabalho.");
         return false;
       }
 
@@ -82,7 +57,6 @@ export function useNovoRecurso() {
       const { error } = await supabase.from("recursos_produtivos").insert({
         empresa_id: usuario.empresa_id,
         created_by: user.id,
-        grupo_recurso_id: grupoRecursoId,
         codigo,
         nome,
         fabricante,
@@ -118,8 +92,6 @@ export function useNovoRecurso() {
     setCodigo,
     nome,
     setNome,
-    grupoRecursoId,
-    setGrupoRecursoId,
     fabricante,
     setFabricante,
     modelo,
@@ -128,9 +100,7 @@ export function useNovoRecurso() {
     setSetor,
     capacidade,
     setCapacidade,
-    grupos,
     loading,
-    loadingGrupos,
     erro,
     salvarRecurso,
   };
