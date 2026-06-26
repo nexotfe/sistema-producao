@@ -3,9 +3,9 @@ import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabaseClient";
 
 type OFPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 type OFDetailRow = {
@@ -116,7 +116,7 @@ function formatDate(value: string | null | undefined) {
 }
 
 export default async function OFOperationalPage({ params }: OFPageProps) {
-  const { id } = params;
+  const { id } = await params;
   const data = await getOFOperationalData(id);
 
   if (!isSupabaseConfigured) {
