@@ -43,6 +43,8 @@ const navigationGroups: NavigationGroup[] = [
     title: "Estoque",
     description: "Consulta de materias-primas e saldos operacionais.",
     links: [
+      { label: "Grupos de recursos", href: "/grupos-recursos" },
+      { label: "Novo grupo de recursos", href: "/grupos-recursos/novo" },
       { label: "Recursos produtivos", href: "/recursos" },
       { label: "Novo recurso", href: "/recursos/novo" },
       { label: "Materias-primas", href: "/estoque/materias-primas" },
