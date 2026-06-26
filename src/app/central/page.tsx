@@ -19,6 +19,8 @@ const navigationGroups: NavigationGroup[] = [
     links: [
       { label: "Clientes", href: "/clientes" },
       { label: "Novo cliente", href: "/clientes/novo" },
+      { label: "Colaboradores", href: "/colaboradores" },
+      { label: "Novo colaborador", href: "/colaboradores/novo" },
       { label: "Projetos", href: "/projetos" },
       { label: "Novo projeto", href: "/projetos/novo" },
       { label: "Detalhe de projeto", href: "/projetos/260123", note: "exemplo" },
