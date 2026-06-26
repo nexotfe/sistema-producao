@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { FornecedoresHeader } from "@/modules/fornecedores/components/FornecedoresHeader";
 import { FornecedoresTable } from "@/modules/fornecedores/components/FornecedoresTable";
+import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { useFornecedores } from "@/modules/fornecedores/hooks/useFornecedores";
 
 export default function FornecedoresPage() {
@@ -75,6 +76,8 @@ export default function FornecedoresPage() {
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <ModuleBackLink href="/central" label="Fornecedores" />
+
         <FornecedoresHeader
           usuario={usuario}
           busca={busca}
