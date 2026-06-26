@@ -11,6 +11,8 @@ export default function NovoRecursoPage() {
     setCodigo,
     nome,
     setNome,
+    grupoId,
+    setGrupoId,
     fabricante,
     setFabricante,
     modelo,
@@ -19,6 +21,8 @@ export default function NovoRecursoPage() {
     setSetor,
     capacidade,
     setCapacidade,
+    grupos,
+    loadingGrupos,
     loading,
     erro,
     salvarRecurso,
@@ -54,6 +58,16 @@ export default function NovoRecursoPage() {
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
               <Field label="Codigo" value={codigo} onChange={setCodigo} />
               <Field label="Nome do recurso" value={nome} onChange={setNome} />
+              <SelectField
+                label="Grupo / Centro de trabalho"
+                value={grupoId}
+                onChange={setGrupoId}
+                disabled={loadingGrupos}
+                options={grupos.map((grupo) => ({
+                  value: grupo.id,
+                  label: [grupo.codigo, grupo.nome].filter(Boolean).join(" - "),
+                }))}
+              />
               <Field
                 label="Setor / Centro de trabalho"
                 value={setor}
@@ -134,6 +148,42 @@ function Field({
         onChange={(event) => onChange(event.target.value)}
         className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
       />
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  disabled,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
+
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <option value="">Selecione</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

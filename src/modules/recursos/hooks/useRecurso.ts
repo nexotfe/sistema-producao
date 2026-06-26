@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { RecursoProdutivo } from "../types";
+import type { GrupoRecurso, RecursoProdutivo } from "../types";
+
+type RecursoRow = Omit<RecursoProdutivo, "grupo">;
 
 export function useRecurso(id: string) {
   const [recurso, setRecurso] = useState<RecursoProdutivo | null>(null);
@@ -23,7 +25,7 @@ export function useRecurso(id: string) {
       const { data, error } = await supabase
         .from("recursos_produtivos")
         .select(
-          "id,codigo,nome,fabricante,modelo,setor,capacidade,ativo,created_at",
+          "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,ativo,created_at",
         )
         .eq("id", id)
         .single();
@@ -35,7 +37,22 @@ export function useRecurso(id: string) {
         return;
       }
 
-      setRecurso(data as RecursoProdutivo);
+      let grupo: GrupoRecurso | null = null;
+
+      if (data.grupo_id) {
+        const { data: grupoData } = await supabase
+          .from("grupos_recursos")
+          .select("id,codigo,nome,setor")
+          .eq("id", data.grupo_id)
+          .single();
+
+        grupo = grupoData ?? null;
+      }
+
+      setRecurso({
+        ...(data as RecursoRow),
+        grupo,
+      });
       setLoading(false);
     }
 

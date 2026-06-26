@@ -11,6 +11,7 @@ export default function RecursosPage() {
   const [colunasVisiveis, setColunasVisiveis] = useState({
     codigo: true,
     nome: true,
+    grupo: true,
     setor: true,
     capacidade: true,
     status: true,
@@ -32,6 +33,7 @@ export default function RecursosPage() {
     const cabecalho = [
       "Codigo",
       "Nome",
+      "Grupo",
       "Setor",
       "Fabricante",
       "Modelo",
@@ -42,6 +44,7 @@ export default function RecursosPage() {
     const linhas = recursos.map((recurso) => [
       recurso.codigo ?? "",
       recurso.nome ?? "",
+      recurso.grupo?.nome ?? "",
       recurso.setor ?? "",
       recurso.fabricante ?? "",
       recurso.modelo ?? "",

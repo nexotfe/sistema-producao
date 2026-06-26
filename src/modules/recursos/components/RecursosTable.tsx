@@ -64,6 +64,7 @@ export function RecursosTable({
               <tr className="border-b border-slate-100 bg-slate-50 text-left">
                 {colunasVisiveis.codigo && <Th>Codigo</Th>}
                 {colunasVisiveis.nome && <Th>Nome</Th>}
+                {colunasVisiveis.grupo && <Th>Grupo</Th>}
                 {colunasVisiveis.setor && <Th>Setor</Th>}
                 {colunasVisiveis.capacidade && <Th>Capacidade</Th>}
                 {colunasVisiveis.status && <Th>Status</Th>}
@@ -99,6 +100,12 @@ export function RecursosTable({
                             .join(" / ")}
                         </p>
                       ) : null}
+                    </td>
+                  )}
+
+                  {colunasVisiveis.grupo && (
+                    <td className="px-5 py-3 text-sm text-slate-600">
+                      {recurso.grupo?.nome || "Nao informado"}
                     </td>
                   )}
 

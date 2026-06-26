@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import type { GrupoRecurso } from "../types";
 
 type SupabaseErrorLike = {
   message?: string;
@@ -12,12 +13,31 @@ type SupabaseErrorLike = {
 export function useNovoRecurso() {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
+  const [grupoId, setGrupoId] = useState("");
   const [fabricante, setFabricante] = useState("");
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
   const [capacidade, setCapacidade] = useState("");
+  const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingGrupos, setLoadingGrupos] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function carregarGrupos() {
+      setLoadingGrupos(true);
+
+      const { data } = await supabase
+        .from("grupos_recursos")
+        .select("id,codigo,nome,setor")
+        .order("nome", { ascending: true });
+
+      setGrupos((data ?? []) as GrupoRecurso[]);
+      setLoadingGrupos(false);
+    }
+
+    carregarGrupos();
+  }, []);
 
   async function salvarRecurso() {
     try {
@@ -31,6 +51,18 @@ export function useNovoRecurso() {
 
       if (!nome.trim()) {
         setErro("Informe o nome do recurso.");
+        return false;
+      }
+
+      if (!grupoId) {
+        setErro("Selecione o grupo ou centro de trabalho.");
+        return false;
+      }
+
+      const capacidadeNumerica = capacidade ? Number(capacidade) : null;
+
+      if (capacidade && !Number.isFinite(capacidadeNumerica)) {
+        setErro("Capacidade deve ser numerica. Medidas podem ficar em modelo.");
         return false;
       }
 
@@ -57,12 +89,13 @@ export function useNovoRecurso() {
       const { error } = await supabase.from("recursos_produtivos").insert({
         empresa_id: usuario.empresa_id,
         created_by: user.id,
+        grupo_id: grupoId,
         codigo,
         nome,
         fabricante,
         modelo,
         setor,
-        capacidade: capacidade ? Number(capacidade) : null,
+        capacidade: capacidadeNumerica,
         ativo: true,
       });
 
@@ -92,6 +125,8 @@ export function useNovoRecurso() {
     setCodigo,
     nome,
     setNome,
+    grupoId,
+    setGrupoId,
     fabricante,
     setFabricante,
     modelo,
@@ -100,6 +135,8 @@ export function useNovoRecurso() {
     setSetor,
     capacidade,
     setCapacidade,
+    grupos,
+    loadingGrupos,
     loading,
     erro,
     salvarRecurso,
