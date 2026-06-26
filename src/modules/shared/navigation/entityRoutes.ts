@@ -5,7 +5,8 @@ export type EntityType =
   | "item"
   | "cliente"
   | "fornecedor"
-  | "colaborador";
+  | "colaborador"
+  | "recurso";
 
 type EntityRouteBuilder = (id: string) => string;
 
@@ -17,6 +18,7 @@ export const entityRoutes: Record<EntityType, EntityRouteBuilder> = {
   cliente: (id) => `/clientes/${id}`,
   fornecedor: (id) => `/fornecedores/${id}`,
   colaborador: (id) => `/colaboradores/${id}`,
+  recurso: (id) => `/recursos/${id}`,
 };
 
 export const entityLabels: Record<EntityType, string> = {
@@ -27,6 +29,7 @@ export const entityLabels: Record<EntityType, string> = {
   cliente: "Cliente",
   fornecedor: "Fornecedor",
   colaborador: "Colaborador",
+  recurso: "Recurso",
 };
 
 export function getEntityHref(type: EntityType, id: string) {
