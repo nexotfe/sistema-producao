@@ -8,6 +8,10 @@ type ProductFormProps = {
   mode: "new" | "edit";
 };
 
+type ProductFormState = ProductFormValues & {
+  currentRouting: string;
+};
+
 const emptyValues: ProductFormValues = {
   code: "",
   description: "",
@@ -20,15 +24,17 @@ const emptyValues: ProductFormValues = {
 };
 
 export function ProductForm({ initialValues, mode }: ProductFormProps) {
-  const [values, setValues] = useState<ProductFormValues>(
-    initialValues ?? emptyValues,
-  );
+  const [values, setValues] = useState<ProductFormState>({
+    ...(initialValues ?? emptyValues),
+    quantity: 0,
+    currentRouting: "",
+  });
   const [codeValidationMessage] = useState<string | null>(null);
   const [descriptionValidationMessage] = useState<string | null>(null);
 
-  function updateValue<K extends keyof ProductFormValues>(
+  function updateValue<K extends keyof ProductFormState>(
     key: K,
-    value: ProductFormValues[K],
+    value: ProductFormState[K],
   ) {
     setValues((current) => ({
       ...current,
@@ -56,13 +62,8 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
 
       <Card titulo="Classificacao">
         <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
-          <Field
-            label="Cliente"
-            value={values.customer}
-            onChange={(value) => updateValue("customer", value)}
-          />
           <SelectField
-            label="Tipo de produto"
+            label="Tipo"
             value={values.type}
             onChange={(value) => updateValue("type", value)}
             options={["Produto Acabado", "Semiacabado"]}
@@ -84,8 +85,13 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
               onChange={(event) => updateValue("active", event.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-slate-900"
             />
-            Ativo
+            Situacao
           </label>
+          <Field
+            label="Roteiro Atual"
+            value={values.currentRouting}
+            onChange={(value) => updateValue("currentRouting", value)}
+          />
         </div>
 
         <div className="px-6 pb-6">
