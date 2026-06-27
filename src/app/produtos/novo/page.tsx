@@ -10,11 +10,11 @@ export default function NewProductPage() {
 
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              New Product
+              Novo Produto
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              Frontend-only product registration using mocked data.
+              Cadastro frontend de produto utilizando dados mockados.
             </p>
           </div>
         </header>

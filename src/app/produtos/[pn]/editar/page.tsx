@@ -22,14 +22,14 @@ export default async function EditProductPage({ params }: Props) {
         unit: product.unit,
         active: product.active,
         notes: product.notes,
-        quantity: 0,
+        quantity: product.quantity,
       }
     : {
         code: pn,
         description: "",
         customer: "",
-        type: "",
-        unit: "pc",
+        type: "Produto Acabado",
+        unit: "un",
         active: true,
         notes: "",
         quantity: 0,
@@ -43,11 +43,11 @@ export default async function EditProductPage({ params }: Props) {
 
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Edit Product
+              Editar Produto
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              Frontend-only product editing using mocked data.
+              Edicao frontend de produto utilizando dados mockados.
             </p>
           </div>
         </header>

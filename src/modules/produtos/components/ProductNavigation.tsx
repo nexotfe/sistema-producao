@@ -13,14 +13,14 @@ export function ProductNavigation() {
         onClick={() => router.back()}
         className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
-        Back
+        Voltar
       </button>
 
       <Link
         href="/central"
         className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
-        Home
+        Inicio
       </Link>
     </div>
   );

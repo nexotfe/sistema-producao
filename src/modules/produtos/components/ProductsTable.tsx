@@ -17,7 +17,7 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
             href="/produtos/novo"
             className="inline-flex w-fit items-center rounded-sm text-base font-semibold text-slate-900 outline-none transition hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
           >
-            Product Register
+            Cadastro de Produtos
             <span
               aria-hidden="true"
               className="ml-2 text-base font-semibold leading-none"
@@ -27,18 +27,18 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
           </Link>
 
           <p className="mt-1 text-sm text-slate-500">
-            Frontend-only product structure using mocked data.
+            Estrutura frontend de produtos utilizando dados mockados.
           </p>
         </div>
       </div>
 
       {products.length === 0 ? (
         <EmptyState
-          titulo="No products found"
+          titulo="Nenhum produto encontrado"
           descricao={
             search
-              ? "Adjust the search to find another product."
-              : "Registered products will appear here."
+              ? "Ajuste a busca para encontrar outro produto."
+              : "Os produtos cadastrados aparecerao aqui."
           }
         />
       ) : (
@@ -46,12 +46,13 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
           <table className="w-full min-w-[860px] border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-left">
-                <Th>Code</Th>
-                <Th>Description</Th>
-                <Th>Customer</Th>
-                <Th>Type</Th>
+                <Th>Codigo</Th>
+                <Th>Descricao</Th>
+                <Th>Cliente</Th>
+                <Th>Quantidade</Th>
+                <Th>Tipo</Th>
                 <Th>Status</Th>
-                <Th>Actions</Th>
+                <Th>Acoes</Th>
               </tr>
             </thead>
 
@@ -71,6 +72,9 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
                     {product.customer}
                   </td>
                   <td className="px-5 py-3 text-sm text-slate-600">
+                    {product.quantity}
+                  </td>
+                  <td className="px-5 py-3 text-sm text-slate-600">
                     {product.type}
                   </td>
                   <td className="px-5 py-3">
@@ -81,7 +85,7 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
                       href={`/produtos/${product.code}/editar`}
                       className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
                     >
-                      Edit
+                      Editar
                     </Link>
                   </td>
                 </tr>

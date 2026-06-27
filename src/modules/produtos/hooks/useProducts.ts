@@ -19,7 +19,7 @@ export function useProducts() {
         product.description,
         product.customer,
         product.type,
-        product.active ? "Active" : "Inactive",
+        product.active ? "Ativo" : "Inativo",
       ]
         .join(" ")
         .toLowerCase()

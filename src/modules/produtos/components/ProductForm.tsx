@@ -12,8 +12,8 @@ const emptyValues: ProductFormValues = {
   code: "",
   description: "",
   customer: "",
-  type: "",
-  unit: "pc",
+  type: "Produto Acabado",
+  unit: "un",
   active: true,
   notes: "",
   quantity: 0,
@@ -39,42 +39,43 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
 
   return (
     <section className="flex flex-col gap-5">
-      <Card titulo="Identification">
+      <Card titulo="Identificacao">
         <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
           <Field
-            label="Code"
+            label="Codigo"
             value={values.code}
             onChange={(value) => updateValue("code", value)}
           />
           <Field
-            label="Description"
+            label="Descricao"
             value={values.description}
             onChange={(value) => updateValue("description", value)}
           />
         </div>
       </Card>
 
-      <Card titulo="Classification">
+      <Card titulo="Classificacao">
         <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
           <Field
-            label="Customer"
+            label="Cliente"
             value={values.customer}
             onChange={(value) => updateValue("customer", value)}
           />
-          <Field
-            label="Product Type"
+          <SelectField
+            label="Tipo de produto"
             value={values.type}
             onChange={(value) => updateValue("type", value)}
+            options={["Produto Acabado", "Semiacabado"]}
           />
           <Field
-            label="Unit"
+            label="Unidade"
             value={values.unit}
             onChange={(value) => updateValue("unit", value)}
           />
         </div>
       </Card>
 
-      <Card titulo="Control">
+      <Card titulo="Controle">
         <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
           <label className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700">
             <input
@@ -83,13 +84,13 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
               onChange={(event) => updateValue("active", event.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-slate-900"
             />
-            Active
+            Ativo
           </label>
         </div>
 
         <div className="px-6 pb-6">
           <label className="mb-2 block text-sm font-medium text-slate-700">
-            Notes
+            Observacoes
           </label>
           <textarea
             rows={5}
@@ -100,10 +101,10 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
         </div>
       </Card>
 
-      <Card titulo="Inventory">
+      <Card titulo="Estoque">
         <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
           <Field
-            label="Quantity"
+            label="Quantidade"
             value={String(values.quantity)}
             onChange={() => undefined}
             readOnly
@@ -114,12 +115,12 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
       <div className="space-y-2">
         {codeValidationMessage && (
           <p className="text-sm font-medium text-red-600">
-            Code already exists. Please use another code.
+            Codigo ja existe. Use outro codigo.
           </p>
         )}
         {descriptionValidationMessage && (
           <p className="text-sm font-medium text-red-600">
-            Description already exists. Please use another description.
+            Descricao ja existe. Use outra descricao.
           </p>
         )}
       </div>
@@ -129,7 +130,7 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
           type="button"
           className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          {mode === "new" ? "Save" : "Update"}
+          {mode === "new" ? "Salvar" : "Atualizar"}
         </button>
       </div>
     </section>
@@ -150,6 +151,38 @@ function Card({
       </div>
 
       {children}
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
+
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
