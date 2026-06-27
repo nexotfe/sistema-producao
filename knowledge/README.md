@@ -27,6 +27,19 @@ Documento que define a filosofia do NEXOTFE.
 
 ---
 
+## Documentos Normativos Operacionais
+
+Documentos de referencia para orientar novos prompts, homologacoes e desenvolvimento.
+
+```
+BASELINE_OPERACIONAL_NEXOTFE_1_0.md
+ARQUITETURA_ENTIDADES_NEXOTFE_1_0.md
+PADROES_DESENVOLVIMENTO_NEXOTFE_1_0.md
+STATUS_HOMOLOGACAO_NEXOTFE_1_0.md
+```
+
+---
+
 ## Módulos
 
 Documentação funcional de cada módulo do sistema.
