@@ -17,7 +17,6 @@ export function useProducts() {
       [
         product.code,
         product.description,
-        product.customer,
         product.type,
         product.active ? "Ativo" : "Inativo",
       ]

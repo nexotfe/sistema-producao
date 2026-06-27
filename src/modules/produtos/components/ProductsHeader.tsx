@@ -24,7 +24,7 @@ export function ProductsHeader({ search, setSearch }: ProductsHeaderProps) {
           spellCheck={false}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar por codigo, descricao, cliente ou tipo"
+          placeholder="Buscar por codigo, descricao ou tipo"
           className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
         />
 

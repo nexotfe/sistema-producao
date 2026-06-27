@@ -43,12 +43,11 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
         />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse">
+          <table className="w-full min-w-[760px] border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-left">
                 <Th>Codigo</Th>
                 <Th>Descricao</Th>
-                <Th>Cliente</Th>
                 <Th>Quantidade</Th>
                 <Th>Tipo</Th>
                 <Th>Status</Th>
@@ -67,9 +66,6 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
                   </td>
                   <td className="px-5 py-3 text-sm text-slate-600">
                     {product.description}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-slate-600">
-                    {product.customer}
                   </td>
                   <td className="px-5 py-3 text-sm text-slate-600">
                     {product.quantity}
