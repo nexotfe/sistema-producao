@@ -54,6 +54,8 @@ const navigationGroups: NavigationGroup[] = [
     title: "Producao e Engenharia",
     description: "Produtos, roteiros e ordens de fabricacao.",
     links: [
+      { label: "Produtos", href: "/produtos" },
+      { label: "Novo produto", href: "/produtos/novo" },
       { label: "Produto", href: "/produtos/1243-01", note: "exemplo" },
       { label: "Roteiro", href: "/roteiros/1243-01", note: "exemplo" },
       { label: "Ordem de fabricacao", href: "/ordens/OF-001", note: "exemplo" },
