@@ -17,7 +17,6 @@ export default async function EditProductPage({ params }: Props) {
     ? {
         code: product.code,
         description: product.description,
-        customer: product.customer,
         type: product.type,
         unit: product.unit,
         active: product.active,
@@ -27,7 +26,6 @@ export default async function EditProductPage({ params }: Props) {
     : {
         code: pn,
         description: "",
-        customer: "",
         type: "Produto Acabado",
         unit: "un",
         active: true,

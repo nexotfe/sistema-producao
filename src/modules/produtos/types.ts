@@ -1,9 +1,6 @@
-export type ProductStatus = "Ativo" | "Inativo";
-
 export type Product = {
   code: string;
   description: string;
-  customer: string;
   type: string;
   unit: string;
   active: boolean;
@@ -14,7 +11,6 @@ export type Product = {
 export type ProductFormValues = {
   code: string;
   description: string;
-  customer: string;
   type: string;
   unit: string;
   active: boolean;

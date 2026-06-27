@@ -15,7 +15,6 @@ type ProductFormState = ProductFormValues & {
 const emptyValues: ProductFormValues = {
   code: "",
   description: "",
-  customer: "",
   type: "Produto Acabado",
   unit: "un",
   active: true,

@@ -78,12 +78,12 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                    <Link
-                      href={`/produtos/${product.code}/editar`}
-                      className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
-                    >
-                      Editar
-                    </Link>
+                      <Link
+                        href={`/produtos/${product.code}/editar`}
+                        className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
+                      >
+                        Editar
+                      </Link>
                       <button
                         type="button"
                         className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
