@@ -118,6 +118,17 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
         </div>
       </Card>
 
+      <Card titulo="Regras do Baseline">
+        <div className="space-y-2 px-6 py-6 text-sm text-slate-600">
+          <p>Produto nao pertence a cliente.</p>
+          <p>Codigo deve ser unico.</p>
+          <p>Descricao deve ser unica.</p>
+          <p>Quantidade inicia em zero.</p>
+          <p>Produto pode existir sem roteiro.</p>
+          <p>Roteiro e obrigatorio apenas para Ordem de Fabricacao.</p>
+        </div>
+      </Card>
+
       <div className="space-y-2">
         {codeValidationMessage && (
           <p className="text-sm font-medium text-red-600">
