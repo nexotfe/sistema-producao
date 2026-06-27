@@ -8,6 +8,12 @@ type ProductsTableProps = {
   search: string;
 };
 
+const productRoutingByCode: Record<string, string> = {
+  "COD-000145": "RT000154",
+  "COD-000212": "RT000201",
+  "COD-000318": "Sem roteiro",
+};
+
 export function ProductsTable({ products, search }: ProductsTableProps) {
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -43,11 +49,12 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
         />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse">
+          <table className="w-full min-w-[860px] border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-left">
                 <Th>Codigo</Th>
                 <Th>Descricao</Th>
+                <Th>Roteiro</Th>
                 <Th>Quantidade</Th>
                 <Th>Tipo</Th>
                 <Th>Status</Th>
@@ -66,6 +73,9 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
                   </td>
                   <td className="px-5 py-3 text-sm text-slate-600">
                     {product.description}
+                  </td>
+                  <td className="px-5 py-3 text-sm text-slate-600">
+                    {productRoutingByCode[product.code] ?? "Sem roteiro"}
                   </td>
                   <td className="px-5 py-3 text-sm text-slate-600">
                     {product.quantity}
