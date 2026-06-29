@@ -48,37 +48,37 @@ export default function ColaboradorPage({ params }: Props) {
               onClick={() => router.back()}
               className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              ← Back
+              Voltar
             </button>
             <Link
               href="/central"
               className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              Home
+              Inicio
             </Link>
             <Link
               href="/colaboradores/novo"
               className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              New
+              Incluir
             </Link>
             <Link
               href={`/colaboradores/${id}/editar`}
               className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              Edit
+              Editar
             </Link>
             <button
               type="button"
               className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              Delete
+              Excluir
             </button>
             <button
               type="button"
               className="inline-flex h-9 items-center justify-center rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Save
+              Salvar
             </button>
           </div>
 
@@ -86,7 +86,7 @@ export default function ColaboradorPage({ params }: Props) {
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-                  Employee
+                  Colaborador
                 </h1>
 
                 <span className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -95,7 +95,7 @@ export default function ColaboradorPage({ params }: Props) {
               </div>
 
               <p className="mt-2 text-sm text-slate-500">
-                {colaborador.nome || "Colaborador sem nome"} · Codigo{" "}
+                {colaborador.nome || "Colaborador sem nome"} - Codigo{" "}
                 {colaborador.codigo ?? "nao informado"}
               </p>
             </div>
