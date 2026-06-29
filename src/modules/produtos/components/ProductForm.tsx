@@ -22,7 +22,7 @@ const emptyValues: ProductFormValues = {
   quantity: 0,
 };
 
-export function ProductForm({ initialValues, mode }: ProductFormProps) {
+export function ProductForm({ initialValues }: ProductFormProps) {
   const [values, setValues] = useState<ProductFormState>({
     ...(initialValues ?? emptyValues),
     quantity: 0,
@@ -43,9 +43,9 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
   }
 
   return (
-    <section className="flex flex-col gap-5">
+    <section className="flex flex-col gap-4">
       <Card titulo="Identificacao">
-        <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
+        <div className="grid gap-4 px-5 py-4 md:grid-cols-3">
           <Field
             label="Codigo"
             value={values.code}
@@ -56,11 +56,6 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
             value={values.description}
             onChange={(value) => updateValue("description", value)}
           />
-        </div>
-      </Card>
-
-      <Card titulo="Classificacao">
-        <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
           <SelectField
             label="Tipo"
             value={values.type}
@@ -76,7 +71,18 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
       </Card>
 
       <Card titulo="Controle">
-        <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
+        <div className="grid gap-4 px-5 py-4 md:grid-cols-3">
+          <Field
+            label="Unidade"
+            value={values.unit}
+            onChange={(value) => updateValue("unit", value)}
+          />
+          <Field
+            label="Quantidade"
+            value={String(values.quantity)}
+            onChange={() => undefined}
+            readOnly
+          />
           <label className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
@@ -86,45 +92,36 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
             />
             Situacao
           </label>
+        </div>
+      </Card>
+
+      <Card titulo="Engenharia">
+        <div className="grid gap-4 px-5 py-4 md:grid-cols-3">
           <Field
             label="Roteiro Atual"
-            value={values.currentRouting}
-            onChange={(value) => updateValue("currentRouting", value)}
+            value={values.currentRouting || "Sem roteiro"}
+            onChange={() => undefined}
+            readOnly
           />
+          <div className="flex items-end">
+            <button
+              type="button"
+              className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 md:w-auto"
+            >
+              Criar Roteiro
+            </button>
+          </div>
         </div>
+      </Card>
 
-        <div className="px-6 pb-6">
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Observacoes
-          </label>
+      <Card titulo="Observacoes">
+        <div className="px-5 py-4">
           <textarea
-            rows={5}
+            rows={4}
             value={values.notes}
             onChange={(event) => updateValue("notes", event.target.value)}
             className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
           />
-        </div>
-      </Card>
-
-      <Card titulo="Estoque">
-        <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
-          <Field
-            label="Quantidade"
-            value={String(values.quantity)}
-            onChange={() => undefined}
-            readOnly
-          />
-        </div>
-      </Card>
-
-      <Card titulo="Regras do Baseline">
-        <div className="space-y-2 px-6 py-6 text-sm text-slate-600">
-          <p>Produto nao pertence a cliente.</p>
-          <p>Codigo deve ser unico.</p>
-          <p>Descricao deve ser unica.</p>
-          <p>Quantidade inicia em zero.</p>
-          <p>Produto pode existir sem roteiro.</p>
-          <p>Roteiro e obrigatorio apenas para Ordem de Fabricacao.</p>
         </div>
       </Card>
 
@@ -141,12 +138,18 @@ export function ProductForm({ initialValues, mode }: ProductFormProps) {
         )}
       </div>
 
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          className="rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          Cancelar
+        </button>
         <button
           type="button"
           className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          {mode === "new" ? "Salvar" : "Atualizar"}
+          Salvar
         </button>
       </div>
     </section>
@@ -162,7 +165,7 @@ function Card({
 }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-100 px-6 py-5">
+      <div className="border-b border-slate-100 px-5 py-3">
         <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
       </div>
 
