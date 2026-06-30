@@ -76,7 +76,7 @@ export default function ColaboradorPage({ params }: Props) {
             </button>
             <button
               type="button"
-              className="inline-flex h-9 items-center justify-center rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex h-9 items-center justify-center rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
             >
               Salvar
             </button>
@@ -111,6 +111,14 @@ export default function ColaboradorPage({ params }: Props) {
               <Info label="Setor" value={colaborador.setor} />
               <Info label="Funcao" value={colaborador.funcao} />
               <Info label="Data de admissao" value={colaborador.data_admissao} />
+            </div>
+          </Card>
+
+          <Card titulo="Capacidade Produtiva">
+            <div className="grid gap-4 px-5 py-4 md:grid-cols-3">
+              <Info label="Capacidade Semanal" value="44 horas" />
+              <Info label="Tipo de Contratacao" value="Tempo Integral" />
+              <Info label="Jornada de Trabalho" value="Segunda a Sexta" />
             </div>
           </Card>
 
