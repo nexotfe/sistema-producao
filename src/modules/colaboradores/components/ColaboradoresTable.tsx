@@ -71,7 +71,7 @@ export function ColaboradoresTable({
                   cálculo de capacidade. Férias, feriados, ausências e eventos
                   de calendário pertencem ao Planejamento, não a esta listagem.
                 */}
-                {colunasVisiveis.disponibilidade && <Th>Carga Produtiva</Th>}
+                {colunasVisiveis.cargaProdutiva && <Th>Carga Produtiva</Th>}
                 {colunasVisiveis.status && <Th>Status</Th>}
               </tr>
             </thead>
@@ -117,9 +117,9 @@ export function ColaboradoresTable({
                     </td>
                   )}
 
-                  {colunasVisiveis.disponibilidade && (
+                  {colunasVisiveis.cargaProdutiva && (
                     <td className="px-5 py-3 text-sm text-slate-600">
-                      {formatHoras(colaborador.disponibilidade_atual)}
+                      {formatHoras(colaborador.carga_produtiva)}
                     </td>
                   )}
 

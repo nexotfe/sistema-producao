@@ -77,7 +77,7 @@ export function useEditarGrupoRecurso(id: string) {
           codigo,
           nome,
           descricao,
-          unidade_capacidade: unidadeCapacidade || null,
+          unidade_capacidade: unidadeCapacidade || "h/dia",
         })
         .eq("id", id);
 

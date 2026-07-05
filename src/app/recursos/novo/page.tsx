@@ -19,6 +19,8 @@ export default function NovoRecursoPage() {
     setModelo,
     capacidade,
     setCapacidade,
+    valorHora,
+    setValorHora,
     grupos,
     loadingGrupos,
     loading,
@@ -119,7 +121,11 @@ export default function NovoRecursoPage() {
                   label: [grupo.codigo, grupo.nome].filter(Boolean).join(" - "),
                 }))}
               />
-              <CurrencyField label="Valor Hora" defaultValue="R$ 0,00/h" />
+              <CurrencyField
+                label="Valor Hora"
+                value={valorHora}
+                onChange={setValorHora}
+              />
             </div>
           </Card>
 
@@ -227,10 +233,12 @@ function SelectField({
 
 function CurrencyField({
   label,
-  defaultValue,
+  value,
+  onChange,
 }: {
   label: string;
-  defaultValue: string;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <div>
@@ -244,8 +252,10 @@ function CurrencyField({
         custo do orçamento e simulações de produção.
       */}
       <input
-        defaultValue={defaultValue}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         inputMode="decimal"
+        placeholder="R$ 0,00/h"
         className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
       />
     </div>

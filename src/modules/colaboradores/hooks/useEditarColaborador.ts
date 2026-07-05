@@ -10,8 +10,7 @@ export function useEditarColaborador(id: string) {
   const [setor, setSetor] = useState("");
   const [funcao, setFuncao] = useState("");
   const [habilidades, setHabilidades] = useState("");
-  const [cargaHoraria, setCargaHoraria] = useState("");
-  const [disponibilidadeAtual, setDisponibilidadeAtual] = useState("");
+  const [cargaProdutiva, setCargaProdutiva] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
   const [dataAdmissao, setDataAdmissao] = useState("");
@@ -22,7 +21,7 @@ export function useEditarColaborador(id: string) {
 
   useEffect(() => {
     async function carregarColaborador() {
-      if (!id) {
+      if (!id || id === "novo") {
         setErro("Colaborador nao informado.");
         setLoading(false);
         return;
@@ -34,7 +33,7 @@ export function useEditarColaborador(id: string) {
       const { data, error } = await supabase
         .from("funcionarios")
         .select(
-          "id,codigo,nome,apelido,setor,funcao,habilidades,carga_horaria,disponibilidade_atual,telefone,email,data_admissao,observacoes",
+          "id,codigo,nome,apelido,setor,funcao,habilidades,carga_produtiva,telefone,email,data_admissao,observacoes",
         )
         .eq("id", id)
         .single();
@@ -51,15 +50,9 @@ export function useEditarColaborador(id: string) {
       setSetor(data.setor ?? "");
       setFuncao(data.funcao ?? "");
       setHabilidades(data.habilidades ?? "");
-      setCargaHoraria(
-        data.carga_horaria !== null && data.carga_horaria !== undefined
-          ? String(data.carga_horaria)
-          : "",
-      );
-      setDisponibilidadeAtual(
-        data.disponibilidade_atual !== null &&
-          data.disponibilidade_atual !== undefined
-          ? String(data.disponibilidade_atual)
+      setCargaProdutiva(
+        data.carga_produtiva !== null && data.carga_produtiva !== undefined
+          ? String(data.carga_produtiva)
           : "",
       );
       setTelefone(data.telefone ?? "");
@@ -73,7 +66,7 @@ export function useEditarColaborador(id: string) {
   }, [id]);
 
   async function salvarColaborador() {
-    if (!id) {
+    if (!id || id === "novo") {
       setErro("Colaborador nao informado.");
       return false;
     }
@@ -103,10 +96,7 @@ export function useEditarColaborador(id: string) {
           setor,
           funcao,
           habilidades,
-          carga_horaria: cargaHoraria ? Number(cargaHoraria) : null,
-          disponibilidade_atual: disponibilidadeAtual
-            ? Number(disponibilidadeAtual)
-            : null,
+          carga_produtiva: cargaProdutiva ? Number(cargaProdutiva) : null,
           telefone,
           email: email ? email.toLowerCase().trim() : null,
           data_admissao: dataAdmissao || null,
@@ -127,6 +117,36 @@ export function useEditarColaborador(id: string) {
     }
   }
 
+  async function inativarColaborador() {
+    if (!id || id === "novo") {
+      setErro("Colaborador nao informado.");
+      return false;
+    }
+
+    try {
+      setSalvando(true);
+      setErro(null);
+
+      const { error } = await supabase
+        .from("funcionarios")
+        .update({
+          ativo: false,
+        })
+        .eq("id", id);
+
+      if (error) {
+        throw error;
+      }
+
+      return true;
+    } catch {
+      setErro("Nao foi possivel inativar o colaborador.");
+      return false;
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   return {
     codigo,
     setCodigo,
@@ -140,10 +160,8 @@ export function useEditarColaborador(id: string) {
     setFuncao,
     habilidades,
     setHabilidades,
-    cargaHoraria,
-    setCargaHoraria,
-    disponibilidadeAtual,
-    setDisponibilidadeAtual,
+    cargaProdutiva,
+    setCargaProdutiva,
     telefone,
     setTelefone,
     email,
@@ -156,5 +174,6 @@ export function useEditarColaborador(id: string) {
     salvando,
     erro,
     salvarColaborador,
+    inativarColaborador,
   };
 }

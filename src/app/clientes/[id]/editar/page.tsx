@@ -18,8 +18,8 @@ export default function EditarClientePage({ params }: Props) {
   const {
     nome,
     setNome,
-    empresa,
-    setEmpresa,
+    nomeFantasia,
+    setNomeFantasia,
     telefone,
     setTelefone,
     email,
@@ -99,7 +99,7 @@ export default function EditarClientePage({ params }: Props) {
           <Card titulo="Informacoes da empresa">
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
               <Field label="Razao social" value={nome} onChange={setNome} />
-              <Field label="Nome fantasia" value={empresa} onChange={setEmpresa} />
+              <Field label="Nome fantasia" value={nomeFantasia} onChange={setNomeFantasia} />
               <Field label="CNPJ" value={cnpj} onChange={setCnpj} />
               <Field label="Inscricao estadual" value={inscricaoEstadual} onChange={setInscricaoEstadual} />
               <Field label="Inscricao municipal" value={inscricaoMunicipal} onChange={setInscricaoMunicipal} />

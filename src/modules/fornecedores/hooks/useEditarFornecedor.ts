@@ -11,7 +11,7 @@ type SupabaseErrorLike = {
 
 export function useEditarFornecedor(id: string) {
   const [nome, setNome] = useState("");
-  const [empresa, setEmpresa] = useState("");
+  const [nomeFantasia, setNomeFantasia] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [inscricaoEstadual, setInscricaoEstadual] = useState("");
   const [inscricaoMunicipal, setInscricaoMunicipal] = useState("");
@@ -48,7 +48,7 @@ export function useEditarFornecedor(id: string) {
       const { data, error } = await supabase
         .from("fornecedores")
         .select(
-          "id,nome,empresa,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,site,cep,estado,bairro,endereco,numero,complemento",
+          "id,nome,nome_fantasia,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,site,cep,estado,bairro,endereco,numero,complemento",
         )
         .eq("id", id)
         .single();
@@ -60,7 +60,7 @@ export function useEditarFornecedor(id: string) {
       }
 
       setNome(data.nome ?? "");
-      setEmpresa(data.empresa ?? "");
+      setNomeFantasia(data.nome_fantasia ?? "");
       setCnpj(data.cnpj ?? "");
       setInscricaoEstadual(data.inscricao_estadual ?? "");
       setInscricaoMunicipal(data.inscricao_municipal ?? "");
@@ -99,7 +99,7 @@ export function useEditarFornecedor(id: string) {
         .from("fornecedores")
         .update({
           nome,
-          empresa,
+          nome_fantasia: nomeFantasia,
           cnpj,
           inscricao_estadual: inscricaoEstadual,
           inscricao_municipal: inscricaoMunicipal,
@@ -144,8 +144,8 @@ export function useEditarFornecedor(id: string) {
   return {
     nome,
     setNome,
-    empresa,
-    setEmpresa,
+    nomeFantasia,
+    setNomeFantasia,
     cnpj,
     setCnpj,
     inscricaoEstadual,

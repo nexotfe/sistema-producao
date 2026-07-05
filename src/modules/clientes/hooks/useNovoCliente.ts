@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export function useNovoCliente() {
   const [nome, setNome] = useState("");
-  const [empresa, setEmpresa] = useState("");
+  const [nomeFantasia, setNomeFantasia] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
   const [cidade, setCidade] = useState("");
@@ -57,7 +57,7 @@ const { data, error } = await supabase
     empresa_id: usuario.empresa_id,
     created_by: userData.user.id,
     nome,
-    empresa,
+    nome_fantasia: nomeFantasia,
     telefone,
     email,
     cidade,
@@ -103,8 +103,8 @@ console.log("ERROR:", error);
     nome,
     setNome,
 
-    empresa,
-    setEmpresa,
+    nomeFantasia,
+    setNomeFantasia,
 
     telefone,
     setTelefone,

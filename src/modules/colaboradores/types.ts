@@ -8,8 +8,7 @@ export type Colaborador = {
   setor: string | null;
   funcao: string | null;
   habilidades: string | null;
-  carga_horaria: number | null;
-  disponibilidade_atual: number | null;
+  carga_produtiva: number | null;
   telefone: string | null;
   email: string | null;
   data_admissao: string | null;
@@ -24,6 +23,6 @@ export type ColunasColaboradores = {
   nome: boolean;
   setor: boolean;
   funcao: boolean;
-  disponibilidade: boolean;
+  cargaProdutiva: boolean;
   status: boolean;
 };

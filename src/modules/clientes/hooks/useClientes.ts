@@ -8,7 +8,7 @@ type SituacaoCliente = "todos" | "ativos" | "inativos";
 type Cliente = {
   id: string;
   nome: string | null;
-  empresa: string | null;
+  nome_fantasia: string | null;
   telefone: string | null;
   email: string | null;
   cnpj: string | null;
@@ -41,7 +41,7 @@ export function useClientes() {
 
       const { data, error } = await supabase
         .from("clientes")
-        .select("id,nome,empresa,telefone,email,cnpj,cidade,ativo,created_at")
+        .select("id,nome,nome_fantasia,telefone,email,cnpj,cidade,ativo,created_at")
         .order("created_at", {
           ascending: false,
         });
@@ -85,7 +85,7 @@ export function useClientes() {
       resultado = resultado.filter((cliente) =>
         [
           cliente.nome,
-          cliente.empresa,
+          cliente.nome_fantasia,
           cliente.cnpj,
           cliente.cidade,
           cliente.telefone,

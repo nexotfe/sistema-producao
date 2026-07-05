@@ -29,6 +29,8 @@ export default function EditarRecursoPage({ params }: Props) {
     setSetor,
     capacidade,
     setCapacidade,
+    valorHora,
+    setValorHora,
     grupos,
     loading,
     salvando,
@@ -89,6 +91,11 @@ export default function EditarRecursoPage({ params }: Props) {
                 label="Setor / Centro de trabalho"
                 value={setor}
                 onChange={setSetor}
+              />
+              <CurrencyField
+                label="Valor Hora"
+                value={valorHora}
+                onChange={setValorHora}
               />
             </div>
           </Card>
@@ -206,6 +213,32 @@ function SelectField({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+function CurrencyField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
+
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        inputMode="decimal"
+        placeholder="R$ 0,00/h"
+        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+      />
     </div>
   );
 }

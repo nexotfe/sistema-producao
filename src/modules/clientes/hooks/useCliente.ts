@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 type Cliente = {
   id: string;
   nome: string | null;
-  empresa: string | null;
+  nome_fantasia: string | null;
   telefone: string | null;
   email: string | null;
   cnpj: string | null;
@@ -47,7 +47,7 @@ export function useCliente(id: string) {
       const { data, error } = await supabase
         .from("clientes")
         .select(
-          "id,nome,empresa,telefone,email,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,telefone_fiscal,email_fiscal,site,cep,estado,bairro,endereco,numero,complemento,ativo,created_at",
+          "id,nome,nome_fantasia,telefone,email,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,telefone_fiscal,email_fiscal,site,cep,estado,bairro,endereco,numero,complemento,ativo,created_at",
         )
         .eq("id", id)
         .single();

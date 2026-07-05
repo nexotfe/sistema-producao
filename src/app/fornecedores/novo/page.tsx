@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useNovoFornecedor } from "@/modules/fornecedores/hooks/useNovoFornecedor";
 
 export default function NovoFornecedorPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const retorno = searchParams.get("retorno");
 
   const {
     nome,
     setNome,
-    empresa,
-    setEmpresa,
+    nomeFantasia,
+    setNomeFantasia,
     cnpj,
     setCnpj,
     inscricaoEstadual,
@@ -55,7 +57,7 @@ export default function NovoFornecedorPage() {
     const sucesso = await salvarFornecedor();
 
     if (sucesso) {
-      router.push("/fornecedores");
+      router.push(retorno || "/fornecedores");
     }
   }
 
@@ -133,7 +135,7 @@ export default function NovoFornecedorPage() {
           <Card titulo="Informações da empresa">
             <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
               <Field label="Razão social" value={nome} onChange={setNome} />
-              <Field label="Nome fantasia" value={empresa} onChange={setEmpresa} />
+              <Field label="Nome fantasia" value={nomeFantasia} onChange={setNomeFantasia} />
               <Field label="CNPJ" value={cnpj} onChange={setCnpj} />
               <Field label="Inscrição estadual" value={inscricaoEstadual} onChange={setInscricaoEstadual} />
               <Field label="Inscrição municipal" value={inscricaoMunicipal} onChange={setInscricaoMunicipal} />

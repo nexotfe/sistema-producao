@@ -16,6 +16,7 @@ export type RecursoProdutivo = {
   modelo: string | null;
   setor: string | null;
   capacidade: number | null;
+  valor_hora: number | null;
   ativo: boolean | null;
   created_at: string | null;
   grupo?: GrupoRecurso | null;

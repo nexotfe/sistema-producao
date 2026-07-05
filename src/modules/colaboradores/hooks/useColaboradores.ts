@@ -28,7 +28,7 @@ export function useColaboradores() {
       const { data, error } = await supabase
         .from("funcionarios")
         .select(
-          "id,codigo,nome,apelido,setor,funcao,habilidades,carga_horaria,disponibilidade_atual,telefone,email,data_admissao,observacoes,ativo,created_at,tecnologia_aplicada_id",
+          "id,codigo,nome,apelido,setor,funcao,habilidades,carga_produtiva,telefone,email,data_admissao,observacoes,ativo,created_at,tecnologia_aplicada_id",
         )
         .order("created_at", {
           ascending: false,

@@ -10,8 +10,7 @@ export function useNovoColaborador() {
   const [setor, setSetor] = useState("");
   const [funcao, setFuncao] = useState("");
   const [habilidades, setHabilidades] = useState("");
-  const [cargaHoraria, setCargaHoraria] = useState("");
-  const [disponibilidadeAtual, setDisponibilidadeAtual] = useState("");
+  const [cargaProdutiva, setCargaProdutiva] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
   const [dataAdmissao, setDataAdmissao] = useState("");
@@ -65,10 +64,7 @@ export function useNovoColaborador() {
         setor,
         funcao,
         habilidades,
-        carga_horaria: cargaHoraria ? Number(cargaHoraria) : null,
-        disponibilidade_atual: disponibilidadeAtual
-          ? Number(disponibilidadeAtual)
-          : null,
+        carga_produtiva: cargaProdutiva ? Number(cargaProdutiva) : null,
         telefone,
         email: email ? email.toLowerCase().trim() : null,
         data_admissao: dataAdmissao || null,
@@ -102,10 +98,8 @@ export function useNovoColaborador() {
     setFuncao,
     habilidades,
     setHabilidades,
-    cargaHoraria,
-    setCargaHoraria,
-    disponibilidadeAtual,
-    setDisponibilidadeAtual,
+    cargaProdutiva,
+    setCargaProdutiva,
     telefone,
     setTelefone,
     email,

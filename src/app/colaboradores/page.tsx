@@ -1,114 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ColaboradoresTable } from "@/modules/colaboradores/components/ColaboradoresTable";
+import { useColaboradores } from "@/modules/colaboradores/hooks/useColaboradores";
 import type {
-  Colaborador,
   ColunasColaboradores,
   SituacaoColaborador,
 } from "@/modules/colaboradores/types";
 
-const colaboradoresMock: Colaborador[] = [
-  {
-    id: "colaborador-001",
-    codigo: 101,
-    nome: "Marcos Oliveira",
-    apelido: "Marcos",
-    setor: "Usinagem",
-    funcao: "Operador CNC",
-    habilidades: "Torno CNC, centro de usinagem",
-    carga_horaria: 44,
-    disponibilidade_atual: 32,
-    telefone: "(11) 90000-0001",
-    email: "marcos@nexotfe.com.br",
-    data_admissao: "2024-02-05",
-    observacoes: null,
-    ativo: true,
-    created_at: "2026-06-01",
-  },
-  {
-    id: "colaborador-002",
-    codigo: 102,
-    nome: "Ana Ribeiro",
-    apelido: "Ana",
-    setor: "Qualidade",
-    funcao: "Inspetora",
-    habilidades: "Inspecao dimensional",
-    carga_horaria: 44,
-    disponibilidade_atual: 28,
-    telefone: "(11) 90000-0002",
-    email: "ana@nexotfe.com.br",
-    data_admissao: "2023-09-18",
-    observacoes: null,
-    ativo: true,
-    created_at: "2026-06-01",
-  },
-  {
-    id: "colaborador-003",
-    codigo: 103,
-    nome: "Carlos Mendes",
-    apelido: "Carlos",
-    setor: "Montagem",
-    funcao: "Montador",
-    habilidades: "Montagem mecanica",
-    carga_horaria: 44,
-    disponibilidade_atual: 0,
-    telefone: "(11) 90000-0003",
-    email: "carlos@nexotfe.com.br",
-    data_admissao: "2022-11-03",
-    observacoes: null,
-    ativo: false,
-    created_at: "2026-06-01",
-  },
-];
-
 export default function ColaboradoresPage() {
   const router = useRouter();
-  const [busca, setBusca] = useState("");
-  const [situacao, setSituacao] = useState<SituacaoColaborador>("todos");
+  const {
+    colaboradores,
+    busca,
+    setBusca,
+    situacao,
+    setSituacao,
+    totais,
+    loading,
+    erro,
+  } = useColaboradores();
   const [colunasVisiveis] = useState<ColunasColaboradores>({
     codigo: true,
     nome: true,
     setor: true,
     funcao: true,
-    disponibilidade: true,
+    cargaProdutiva: true,
     status: true,
   });
-
-  const colaboradores = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-
-    return colaboradoresMock.filter((colaborador) => {
-      const correspondeSituacao =
-        situacao === "todos" ||
-        (situacao === "ativos" && colaborador.ativo) ||
-        (situacao === "inativos" && !colaborador.ativo);
-
-      const correspondeBusca =
-        termo.length === 0 ||
-        [
-          colaborador.codigo?.toString(),
-          colaborador.nome,
-          colaborador.apelido,
-          colaborador.setor,
-          colaborador.funcao,
-        ]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(termo));
-
-      return correspondeSituacao && correspondeBusca;
-    });
-  }, [busca, situacao]);
-
-  const totais = {
-    todos: colaboradoresMock.length,
-    ativos: colaboradoresMock.filter((colaborador) => colaborador.ativo).length,
-    inativos: colaboradoresMock.filter((colaborador) => !colaborador.ativo)
-      .length,
-  };
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
@@ -187,8 +109,8 @@ export default function ColaboradoresPage() {
 
         <ColaboradoresTable
           colaboradores={colaboradores}
-          loading={false}
-          erro={null}
+          loading={loading}
+          erro={erro}
           busca={busca}
           colunasVisiveis={colunasVisiveis}
         />

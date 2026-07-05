@@ -84,19 +84,30 @@ export function ProjectStructureItemsTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1180px] table-fixed text-left text-sm">
+      <div>
+        <table className="w-full table-fixed text-left text-sm">
+          <colgroup>
+            <col className="w-[31.82%]" />
+            <col className="w-[9.09%]" />
+            <col className="w-[4.55%]" />
+            <col className="w-[10.91%]" />
+            <col className="w-[9.09%]" />
+            <col className="w-[9.09%]" />
+            <col className="w-[9.09%]" />
+            <col className="w-[9.09%]" />
+            <col className="w-[7.27%]" />
+          </colgroup>
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
             <tr>
-              <th className="w-[26%] px-4 py-3 font-bold">Descrição</th>
-              <th className="w-[11%] px-4 py-3 text-center font-bold">Código</th>
-              <th className="w-[6%] px-4 py-3 text-center font-bold">Qtd</th>
-              <th className="w-[12%] px-4 py-3 font-bold">Roteiro</th>
-              <th className="w-[10%] px-4 py-3 text-center font-bold">Custo</th>
-              <th className="w-[10%] px-4 py-3 text-center font-bold">Impostos</th>
-              <th className="w-[9%] px-4 py-3 text-center font-bold">Lucro</th>
-              <th className="w-[10%] px-4 py-3 text-center font-bold">Total</th>
-              <th className="w-[6%] px-4 py-3 text-center font-bold">Estrutura</th>
+              <th className="px-4 py-3 font-bold">Descrição</th>
+              <th className="px-4 py-3 text-center font-bold">Código</th>
+              <th className="px-4 py-3 text-center font-bold">Qtd</th>
+              <th className="px-4 py-3 font-bold">Roteiro</th>
+              <th className="px-4 py-3 text-center font-bold">Custo</th>
+              <th className="px-4 py-3 text-center font-bold">Impostos</th>
+              <th className="px-4 py-3 text-center font-bold">Lucro</th>
+              <th className="px-4 py-3 text-center font-bold">Total</th>
+              <th className="px-4 py-3 text-center font-bold">Estrutura</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

@@ -11,7 +11,7 @@ type SupabaseErrorLike = {
 
 export function useNovoFornecedor() {
   const [nome, setNome] = useState("");
-  const [empresa, setEmpresa] = useState("");
+  const [nomeFantasia, setNomeFantasia] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [inscricaoEstadual, setInscricaoEstadual] = useState("");
   const [inscricaoMunicipal, setInscricaoMunicipal] = useState("");
@@ -58,7 +58,7 @@ export function useNovoFornecedor() {
         empresa_id: usuario.empresa_id,
         created_by: userData.user.id,
         nome,
-        empresa,
+        nome_fantasia: nomeFantasia,
         cnpj,
         inscricao_estadual: inscricaoEstadual,
         inscricao_municipal: inscricaoMunicipal,
@@ -103,8 +103,8 @@ export function useNovoFornecedor() {
   return {
     nome,
     setNome,
-    empresa,
-    setEmpresa,
+    nomeFantasia,
+    setNomeFantasia,
     cnpj,
     setCnpj,
     inscricaoEstadual,

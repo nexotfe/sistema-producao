@@ -112,7 +112,7 @@ export function RecursosTable({
 
                   {colunasVisiveis.valorHora && (
                     <td className="px-5 py-3 text-sm text-slate-600">
-                      {formatValorHora(getValorHoraMock(recurso))}
+                      {formatValorHora(recurso.valor_hora)}
                     </td>
                   )}
 
@@ -159,23 +159,12 @@ function formatNumero(value: number | null | undefined) {
   return value.toLocaleString("pt-BR");
 }
 
-function getValorHoraMock(recurso: RecursoProdutivo) {
-  /*
-    Valor Hora representa o custo/hora padrão do recurso produtivo.
-    Futuramente será utilizado pelo Roteiro para calcular custos de operação.
-  */
-  const valoresPorCodigo: Record<string, number> = {
-    REC001: 120,
-    REC002: 85,
-    REC003: 0,
-  };
+function formatValorHora(value: number | null | undefined) {
+  const valor = value ?? 0;
 
-  return valoresPorCodigo[recurso.codigo ?? ""] ?? 0;
-}
-
-function formatValorHora(value: number) {
-  return `${value.toLocaleString("pt-BR", {
+  return `${valor.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   })}/h`;
 }
+

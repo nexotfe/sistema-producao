@@ -9,8 +9,8 @@ export default function NovoClientePage() {
   const {
     nome,
     setNome,
-    empresa,
-    setEmpresa,
+    nomeFantasia,
+    setNomeFantasia,
     telefone,
     setTelefone,
     email,
@@ -64,9 +64,7 @@ export default function NovoClientePage() {
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
                   Cliente
                 </h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  Novo cliente
-                </p>
+                <p className="mt-1 text-sm text-slate-500">Novo cliente</p>
               </div>
             </div>
 
@@ -91,24 +89,6 @@ export default function NovoClientePage() {
                 </Link>
                 <button
                   type="button"
-                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Duplicar
-                </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Excluir
-                </button>
-                <button
-                  type="button"
                   onClick={salvarCliente}
                   disabled={loading}
                   className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -121,56 +101,93 @@ export default function NovoClientePage() {
         </header>
 
         <section className="flex flex-col gap-5">
-          <Card titulo="Informacoes da empresa">
-            <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
-              <Field label="Razao social" value={nome} onChange={setNome} />
-              <Field label="Nome fantasia" value={empresa} onChange={setEmpresa} />
-              <Field label="CNPJ" value={cnpj} onChange={setCnpj} />
-              <Field label="Inscricao estadual" value={inscricaoEstadual} onChange={setInscricaoEstadual} />
-              <Field label="Inscricao municipal" value={inscricaoMunicipal} onChange={setInscricaoMunicipal} />
-              <Field label="Segmento" value={segmento} onChange={setSegmento} />
-            </div>
-          </Card>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Card titulo="Informações da empresa">
+              <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <Field label="Razão social" value={nome} onChange={setNome} />
+                </div>
+                <Field
+                  label="Nome fantasia"
+                  value={nomeFantasia}
+                  onChange={setNomeFantasia}
+                />
+                <Field label="CNPJ" value={cnpj} onChange={setCnpj} />
+                <Field
+                  label="Inscrição estadual"
+                  value={inscricaoEstadual}
+                  onChange={setInscricaoEstadual}
+                />
+                <Field
+                  label="Inscrição municipal"
+                  value={inscricaoMunicipal}
+                  onChange={setInscricaoMunicipal}
+                />
+                <div className="md:col-span-2">
+                  <Field
+                    label="Segmento"
+                    value={segmento}
+                    onChange={setSegmento}
+                  />
+                </div>
+              </div>
+            </Card>
 
-          <Card titulo="Contato">
-            <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
-              <Field label="Telefone" value={telefone} onChange={setTelefone} />
-              <Field label="E-mail" value={email} onChange={setEmail} />
-              <Field label="Telefone fiscal" value={telefoneFiscal} onChange={setTelefoneFiscal} />
-              <Field label="E-mail fiscal" value={emailFiscal} onChange={setEmailFiscal} />
-              <Field label="Site" value={site} onChange={setSite} />
-            </div>
-          </Card>
+            <Card titulo="Contato">
+              <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
+                <Field label="Telefone" value={telefone} onChange={setTelefone} />
+                <Field label="E-mail" value={email} onChange={setEmail} />
+                <Field
+                  label="Telefone fiscal"
+                  value={telefoneFiscal}
+                  onChange={setTelefoneFiscal}
+                />
+                <Field
+                  label="E-mail fiscal"
+                  value={emailFiscal}
+                  onChange={setEmailFiscal}
+                />
+                <div className="md:col-span-2">
+                  <Field label="Site" value={site} onChange={setSite} />
+                </div>
+              </div>
+            </Card>
+          </div>
 
-          <Card titulo="Localizacao">
-            <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
+          <Card titulo="Localização">
+            <div className="grid gap-4 px-4 py-4 md:grid-cols-2 lg:grid-cols-4">
               <Field label="CEP" value={cep} onChange={setCep} />
               <Field label="Estado" value={estado} onChange={setEstado} />
               <Field label="Cidade" value={cidade} onChange={setCidade} />
               <Field label="Bairro" value={bairro} onChange={setBairro} />
-              <Field label="Endereco" value={endereco} onChange={setEndereco} />
-              <Field label="Numero" value={numero} onChange={setNumero} />
-              <Field label="Complemento" value={complemento} onChange={setComplemento} />
-            </div>
-          </Card>
-
-          <Card titulo="Observacoes">
-            <div className="px-6 py-6">
-              <textarea
-                rows={5}
-                value={observacoes}
-                onChange={(event) => setObservacoes(event.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+              <div className="lg:col-span-2">
+                <Field
+                  label="Endereço"
+                  value={endereco}
+                  onChange={setEndereco}
+                />
+              </div>
+              <Field label="Número" value={numero} onChange={setNumero} />
+              <Field
+                label="Complemento"
+                value={complemento}
+                onChange={setComplemento}
               />
             </div>
           </Card>
 
-          {erro && (
-            <p className="text-sm font-medium text-red-600">
-              {erro}
-            </p>
-          )}
+          <Card titulo="Observações">
+            <div className="px-4 py-4">
+              <textarea
+                rows={5}
+                value={observacoes}
+                onChange={(event) => setObservacoes(event.target.value)}
+                className="w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          </Card>
 
+          {erro && <p className="text-sm font-medium text-red-600">{erro}</p>}
         </section>
       </div>
     </main>
@@ -185,11 +202,9 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-100 px-6 py-5">
-        <h2 className="text-base font-semibold text-slate-900">
-          {titulo}
-        </h2>
+    <div className="rounded-md border border-slate-200 bg-white transition hover:border-blue-700">
+      <div className="border-b border-slate-100 px-4 py-3">
+        <h2 className="text-sm font-bold text-slate-950">{titulo}</h2>
       </div>
 
       {children}
@@ -206,16 +221,15 @@ type FieldProps = {
 function Field({ label, value, onChange }: FieldProps) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
         {label}
       </label>
 
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
       />
     </div>
   );
 }
-

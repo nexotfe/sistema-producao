@@ -8,7 +8,7 @@ type SituacaoFornecedor = "todos" | "ativos" | "inativos";
 type Fornecedor = {
   id: string;
   nome: string | null;
-  empresa: string | null;
+  nome_fantasia: string | null;
   telefone: string | null;
   email: string | null;
   telefone_comercial: string | null;
@@ -44,7 +44,7 @@ export function useFornecedores() {
       const { data, error } = await supabase
         .from("fornecedores")
         .select(
-          "id,nome,empresa,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,ativo,created_at",
+          "id,nome,nome_fantasia,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,ativo,created_at",
         )
         .order("created_at", {
           ascending: false,
@@ -91,7 +91,7 @@ export function useFornecedores() {
       resultado = resultado.filter((fornecedor) =>
         [
           fornecedor.nome,
-          fornecedor.empresa,
+          fornecedor.nome_fantasia,
           fornecedor.cnpj,
           fornecedor.cidade,
           fornecedor.telefone,

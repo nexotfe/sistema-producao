@@ -13,7 +13,7 @@ export function useNovoGrupoRecurso() {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [unidadeCapacidade, setUnidadeCapacidade] = useState("");
+  const [unidadeCapacidade, setUnidadeCapacidade] = useState("h/dia");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -58,7 +58,7 @@ export function useNovoGrupoRecurso() {
         codigo,
         nome,
         descricao,
-        unidade_capacidade: unidadeCapacidade || null,
+        unidade_capacidade: unidadeCapacidade || "h/dia",
         ativo: true,
       });
 

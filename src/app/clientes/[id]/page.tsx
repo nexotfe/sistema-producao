@@ -56,7 +56,7 @@ export default function ClientePage({ params }: Props) {
               </div>
 
               <p className="mt-2 text-sm text-slate-500">
-                {cliente.empresa || "Nome fantasia nao informado"}
+                {cliente.nome_fantasia || "Nome fantasia nao informado"}
               </p>
             </div>
 
@@ -73,7 +73,7 @@ export default function ClientePage({ params }: Props) {
           <Card titulo="Informacoes da empresa">
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2 xl:grid-cols-3">
               <Info label="Razao social" value={cliente.nome} />
-              <Info label="Nome fantasia" value={cliente.empresa} />
+              <Info label="Nome fantasia" value={cliente.nome_fantasia} />
               <Info label="CNPJ" value={cliente.cnpj} />
               <Info label="Inscricao estadual" value={cliente.inscricao_estadual} />
               <Info label="Inscricao municipal" value={cliente.inscricao_municipal} />

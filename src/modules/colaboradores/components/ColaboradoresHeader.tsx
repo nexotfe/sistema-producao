@@ -157,11 +157,11 @@ export function ColaboradoresHeader({
                     />
                     <CheckboxCampo
                       label="Carga Produtiva"
-                      checked={colunasVisiveis.disponibilidade}
+                      checked={colunasVisiveis.cargaProdutiva}
                       onChange={() =>
                         setColunasVisiveis((prev) => ({
                           ...prev,
-                          disponibilidade: !prev.disponibilidade,
+                          cargaProdutiva: !prev.cargaProdutiva,
                         }))
                       }
                     />

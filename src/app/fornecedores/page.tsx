@@ -1,69 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { FornecedoresTable } from "@/modules/fornecedores/components/FornecedoresTable";
+import { useFornecedores } from "@/modules/fornecedores/hooks/useFornecedores";
 
 type SituacaoFornecedor = "todos" | "ativos" | "inativos";
 
-type FornecedorMock = {
-  id: string;
-  nome: string | null;
-  empresa: string | null;
-  telefone: string | null;
-  email: string | null;
-  telefone_comercial?: string | null;
-  email_comercial?: string | null;
-  cnpj: string | null;
-  cidade: string | null;
-  ativo: boolean | null;
-};
-
-const fornecedoresMock: FornecedorMock[] = [
-  {
-    id: "fornecedor-001",
-    nome: "GRUPO GONCALVES DIAS S/A",
-    empresa: "GGD METALS",
-    telefone: "(11) 3000-0001",
-    email: "contato@ggdmetals.com.br",
-    telefone_comercial: "(11) 3000-0002",
-    email_comercial: "comercial@ggdmetals.com.br",
-    cnpj: "09.328.663/0001-04",
-    cidade: "Sao Paulo",
-    ativo: true,
-  },
-  {
-    id: "fornecedor-002",
-    nome: "ACOS BRASIL LTDA",
-    empresa: "ACOS BRASIL",
-    telefone: "(11) 3000-0003",
-    email: "contato@acosbrasil.com.br",
-    telefone_comercial: "(11) 3000-0004",
-    email_comercial: "vendas@acosbrasil.com.br",
-    cnpj: "11.222.333/0001-44",
-    cidade: "Guarulhos",
-    ativo: true,
-  },
-  {
-    id: "fornecedor-003",
-    nome: "TRANSPORTES DELTA LTDA",
-    empresa: "DELTA LOG",
-    telefone: "(11) 3000-0005",
-    email: "delta@transportes.com.br",
-    telefone_comercial: "(11) 3000-0006",
-    email_comercial: "comercial@transportes.com.br",
-    cnpj: "22.333.444/0001-55",
-    cidade: "Campinas",
-    ativo: false,
-  },
-];
-
 export default function FornecedoresPage() {
   const router = useRouter();
-  const [busca, setBusca] = useState("");
-  const [situacao, setSituacao] = useState<SituacaoFornecedor>("todos");
+  const {
+    fornecedores,
+    busca,
+    setBusca,
+    situacao,
+    setSituacao,
+    totais,
+    loading,
+    erro,
+  } = useFornecedores();
   const [mostrarColunas, setMostrarColunas] = useState(false);
   const [colunasVisiveis, setColunasVisiveis] = useState({
     nomeFantasia: true,
@@ -72,31 +29,6 @@ export default function FornecedoresPage() {
     cidade: true,
     status: true,
   });
-
-  const fornecedores = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-
-    return fornecedoresMock.filter((fornecedor) => {
-      const correspondeSituacao =
-        situacao === "todos" ||
-        (situacao === "ativos" && fornecedor.ativo) ||
-        (situacao === "inativos" && !fornecedor.ativo);
-
-      const correspondeBusca =
-        termo.length === 0 ||
-        [fornecedor.empresa, fornecedor.nome, fornecedor.cnpj, fornecedor.cidade]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(termo));
-
-      return correspondeSituacao && correspondeBusca;
-    });
-  }, [busca, situacao]);
-
-  const totais = {
-    todos: fornecedoresMock.length,
-    ativos: fornecedoresMock.filter((fornecedor) => fornecedor.ativo).length,
-    inativos: fornecedoresMock.filter((fornecedor) => !fornecedor.ativo).length,
-  };
 
   function exportarFornecedores() {
     const cabecalho = [
@@ -112,7 +44,7 @@ export default function FornecedoresPage() {
     ];
 
     const linhas = fornecedores.map((fornecedor) => [
-      fornecedor.empresa ?? "",
+      fornecedor.nome_fantasia ?? "",
       fornecedor.nome ?? "",
       fornecedor.cnpj ?? "",
       fornecedor.cidade ?? "",
@@ -324,8 +256,8 @@ export default function FornecedoresPage() {
 
         <FornecedoresTable
           fornecedores={fornecedores}
-          loading={false}
-          erro={null}
+          loading={loading}
+          erro={erro}
           busca={busca}
           colunasVisiveis={colunasVisiveis}
         />

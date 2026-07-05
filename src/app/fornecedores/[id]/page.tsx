@@ -56,7 +56,7 @@ export default function FornecedorPage({ params }: Props) {
               </div>
 
               <p className="mt-2 text-sm text-slate-500">
-                {fornecedor.empresa || "Nome fantasia nao informado"}
+                {fornecedor.nome_fantasia || "Nome fantasia nao informado"}
               </p>
             </div>
 
@@ -73,7 +73,7 @@ export default function FornecedorPage({ params }: Props) {
           <Card titulo="Informacoes da empresa">
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2 xl:grid-cols-3">
               <Info label="Razao social" value={fornecedor.nome} />
-              <Info label="Nome fantasia" value={fornecedor.empresa} />
+              <Info label="Nome fantasia" value={fornecedor.nome_fantasia} />
               <Info label="CNPJ" value={fornecedor.cnpj} />
               <Info label="Inscricao estadual" value={fornecedor.inscricao_estadual} />
               <Info label="Inscricao municipal" value={fornecedor.inscricao_municipal} />

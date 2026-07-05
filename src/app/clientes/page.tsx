@@ -1,61 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ClientesTable } from "@/modules/clientes/components/ClientesTable";
+import { useClientes } from "@/modules/clientes/hooks/useClientes";
 
 type SituacaoCliente = "todos" | "ativos" | "inativos";
 
-type ClienteMock = {
-  id: string;
-  nome: string | null;
-  empresa: string | null;
-  telefone: string | null;
-  email: string | null;
-  cnpj: string | null;
-  cidade: string | null;
-  ativo: boolean | null;
-};
-
-const clientesMock: ClienteMock[] = [
-  {
-    id: "cliente-001",
-    nome: "GRUPO GONCALVES DIAS S/A",
-    empresa: "GGD METALS",
-    telefone: "(11) 3000-0001",
-    email: "compras@ggdmetals.com.br",
-    cnpj: "09.328.663/0001-04",
-    cidade: "Sao Paulo",
-    ativo: true,
-  },
-  {
-    id: "cliente-002",
-    nome: "FUNDICAO ALFA LTDA",
-    empresa: "ALFA",
-    telefone: "(11) 3000-0002",
-    email: "contato@alfa.com.br",
-    cnpj: "10.111.222/0001-33",
-    cidade: "Campinas",
-    ativo: true,
-  },
-  {
-    id: "cliente-003",
-    nome: "METALURGICA DELTA LTDA",
-    empresa: "DELTA",
-    telefone: "(11) 3000-0003",
-    email: "delta@metalurgica.com.br",
-    cnpj: "22.333.444/0001-55",
-    cidade: "Santo Andre",
-    ativo: false,
-  },
-];
-
 export default function ClientesPage() {
   const router = useRouter();
-  const [busca, setBusca] = useState("");
-  const [situacao, setSituacao] = useState<SituacaoCliente>("todos");
+  const {
+    clientes,
+    busca,
+    setBusca,
+    situacao,
+    setSituacao,
+    totais,
+    loading,
+    erro,
+  } = useClientes();
   const [mostrarColunas, setMostrarColunas] = useState(false);
   const [colunasVisiveis, setColunasVisiveis] = useState({
     nomeFantasia: true,
@@ -64,31 +29,6 @@ export default function ClientesPage() {
     cidade: true,
     status: true,
   });
-
-  const clientes = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-
-    return clientesMock.filter((cliente) => {
-      const correspondeSituacao =
-        situacao === "todos" ||
-        (situacao === "ativos" && cliente.ativo) ||
-        (situacao === "inativos" && !cliente.ativo);
-
-      const correspondeBusca =
-        termo.length === 0 ||
-        [cliente.empresa, cliente.nome, cliente.cnpj, cliente.cidade]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(termo));
-
-      return correspondeSituacao && correspondeBusca;
-    });
-  }, [busca, situacao]);
-
-  const totais = {
-    todos: clientesMock.length,
-    ativos: clientesMock.filter((cliente) => cliente.ativo).length,
-    inativos: clientesMock.filter((cliente) => !cliente.ativo).length,
-  };
 
   function exportarClientes() {
     const cabecalho = [
@@ -102,7 +42,7 @@ export default function ClientesPage() {
     ];
 
     const linhas = clientes.map((cliente) => [
-      cliente.empresa ?? "",
+      cliente.nome_fantasia ?? "",
       cliente.nome ?? "",
       cliente.cnpj ?? "",
       cliente.cidade ?? "",
@@ -312,8 +252,8 @@ export default function ClientesPage() {
 
         <ClientesTable
           clientes={clientes}
-          loading={false}
-          erro={null}
+          loading={loading}
+          erro={erro}
           busca={busca}
           colunasVisiveis={colunasVisiveis}
         />

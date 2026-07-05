@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export function useEditarCliente(id: string) {
   const [nome, setNome] = useState("");
-  const [empresa, setEmpresa] = useState("");
+  const [nomeFantasia, setNomeFantasia] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
   const [cidade, setCidade] = useState("");
@@ -45,7 +45,7 @@ export function useEditarCliente(id: string) {
       const { data, error } = await supabase
         .from("clientes")
         .select(
-          "id,nome,empresa,telefone,email,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,telefone_fiscal,email_fiscal,site,cep,estado,bairro,endereco,numero,complemento",
+          "id,nome,nome_fantasia,telefone,email,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,telefone_fiscal,email_fiscal,site,cep,estado,bairro,endereco,numero,complemento",
         )
         .eq("id", id)
         .single();
@@ -57,7 +57,7 @@ export function useEditarCliente(id: string) {
       }
 
       setNome(data.nome ?? "");
-      setEmpresa(data.empresa ?? "");
+      setNomeFantasia(data.nome_fantasia ?? "");
       setTelefone(data.telefone ?? "");
       setEmail(data.email ?? "");
       setCidade(data.cidade ?? "");
@@ -99,7 +99,7 @@ export function useEditarCliente(id: string) {
         .from("clientes")
         .update({
           nome,
-          empresa,
+          nome_fantasia: nomeFantasia,
           telefone,
           email,
           cidade,
@@ -138,8 +138,8 @@ export function useEditarCliente(id: string) {
     nome,
     setNome,
 
-    empresa,
-    setEmpresa,
+    nomeFantasia,
+    setNomeFantasia,
 
     telefone,
     setTelefone,

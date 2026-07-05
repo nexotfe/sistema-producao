@@ -8,7 +8,7 @@ import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 type Cliente = {
   id: string;
   nome: string | null;
-  empresa: string | null;
+  nome_fantasia: string | null;
   telefone: string | null;
   email: string | null;
   cnpj: string | null;
@@ -99,7 +99,7 @@ export function ClientesTable({
                         id={cliente.id}
                         className="text-sm font-semibold text-slate-900 transition hover:text-slate-600"
                       >
-                        {cliente.empresa || "Sem nome fantasia"}
+                        {cliente.nome_fantasia || "Sem nome fantasia"}
                       </EntityLink>
                     </td>
                   )}

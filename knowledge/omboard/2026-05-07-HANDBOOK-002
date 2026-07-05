@@ -1,0 +1,210 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-002
+
+Title:
+About NEXOTFE
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document explains what NEXOTFE is.
+
+Every Artificial Intelligence participating in the project must understand the business before writing code.
+
+Technical excellence without business understanding is not acceptable.
+
+==========================================================
+WHAT IS NEXOTFE
+==========================================================
+
+NEXOTFE is a Premium Industrial ERP.
+
+It was designed specifically for industrial companies that manufacture products, machines, equipment and engineering solutions.
+
+It is NOT a generic ERP.
+
+It is NOT an accounting system.
+
+It is NOT a financial management platform.
+
+Its primary focus is industrial operations.
+
+==========================================================
+WHO USES NEXOTFE
+==========================================================
+
+Typical customers include:
+
+• Precision machining companies.
+
+• CNC machining shops.
+
+• Machine manufacturers.
+
+• Industrial equipment manufacturers.
+
+• Automation companies.
+
+• Engineering companies.
+
+• Industrial service providers.
+
+• Custom manufacturing companies.
+
+==========================================================
+BUSINESS PHILOSOPHY
+==========================================================
+
+NEXOTFE was created with one principle:
+
+Transform complex industrial processes into simple business decisions.
+
+Every feature must contribute to this philosophy.
+
+Complexity belongs inside the software.
+
+Simplicity belongs to the user.
+
+==========================================================
+PROJECT PHILOSOPHY
+==========================================================
+
+NEXOTFE is built around real industrial workflows.
+
+The system must represent how factories actually work.
+
+The software must adapt to the business.
+
+The business must never adapt to software limitations.
+
+==========================================================
+CORE VALUES
+==========================================================
+
+Every engineering decision must prioritize:
+
+Business value.
+
+Engineering quality.
+
+Industrial reality.
+
+Simplicity.
+
+Consistency.
+
+Long-term maintainability.
+
+==========================================================
+DEVELOPMENT PHILOSOPHY
+==========================================================
+
+The project is developed module by module.
+
+Each module is independent.
+
+Modules communicate through approved business relationships.
+
+Modules must never become unnecessarily dependent on each other.
+
+==========================================================
+BUSINESS FIRST
+==========================================================
+
+Every implementation begins with the business process.
+
+Never start from:
+
+Database.
+
+Frontend.
+
+Backend.
+
+Technology.
+
+Always start from the business need.
+
+==========================================================
+INDUSTRIAL THINKING
+==========================================================
+
+The project must always reflect industrial reality.
+
+Materials.
+
+Machines.
+
+People.
+
+Operations.
+
+Projects.
+
+Engineering.
+
+Purchasing.
+
+Planning.
+
+Production.
+
+Quality.
+
+Every software component exists because a real industrial process exists.
+
+==========================================================
+PREMIUM PRODUCT
+==========================================================
+
+NEXOTFE is a premium software product.
+
+Its objective is not simply to work.
+
+Its objective is to provide an engineering-grade experience.
+
+Professional.
+
+Reliable.
+
+Elegant.
+
+Fast.
+
+Consistent.
+
+==========================================================
+LONG-TERM VISION
+==========================================================
+
+Every implementation must be evaluated considering the next ten years.
+
+Avoid temporary solutions.
+
+Avoid shortcuts.
+
+Prefer architecture over speed.
+
+Prefer maintainability over convenience.
+
+==========================================================
+FINAL OBJECTIVE
+==========================================================
+
+NEXOTFE is not just another ERP.
+
+Its objective is to become one of the reference industrial ERP platforms for custom manufacturing and engineering companies.
+
+Every engineering decision must contribute to that objective.

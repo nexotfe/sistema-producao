@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 type Fornecedor = {
   id: string;
   nome: string | null;
-  empresa: string | null;
+  nome_fantasia: string | null;
   telefone: string | null;
   email: string | null;
   telefone_comercial: string | null;
@@ -47,7 +47,7 @@ export function useFornecedor(id: string) {
       const { data, error } = await supabase
         .from("fornecedores")
         .select(
-          "id,nome,empresa,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,site,cep,estado,bairro,endereco,numero,complemento,ativo,created_at",
+          "id,nome,nome_fantasia,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,site,cep,estado,bairro,endereco,numero,complemento,ativo,created_at",
         )
         .eq("id", id)
         .single();

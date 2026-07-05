@@ -18,6 +18,7 @@ export function useNovoRecurso() {
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
   const [capacidade, setCapacidade] = useState("");
+  const [valorHora, setValorHora] = useState("0");
   const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingGrupos, setLoadingGrupos] = useState(true);
@@ -60,9 +61,15 @@ export function useNovoRecurso() {
       }
 
       const capacidadeNumerica = capacidade ? Number(capacidade) : null;
+      const valorHoraNumerico = parseValorHora(valorHora);
 
       if (capacidade && !Number.isFinite(capacidadeNumerica)) {
         setErro("Capacidade deve ser numerica. Medidas podem ficar em modelo.");
+        return false;
+      }
+
+      if (!Number.isFinite(valorHoraNumerico) || valorHoraNumerico < 0) {
+        setErro("Valor Hora deve ser numerico e maior ou igual a zero.");
         return false;
       }
 
@@ -96,6 +103,7 @@ export function useNovoRecurso() {
         modelo,
         setor,
         capacidade: capacidadeNumerica,
+        valor_hora: valorHoraNumerico,
         ativo: true,
       });
 
@@ -135,10 +143,21 @@ export function useNovoRecurso() {
     setSetor,
     capacidade,
     setCapacidade,
+    valorHora,
+    setValorHora,
     grupos,
     loadingGrupos,
     loading,
     erro,
     salvarRecurso,
   };
+}
+
+function parseValorHora(value: string) {
+  const cleaned = value.replace(/[^\d,.-]/g, "");
+  const normalized = cleaned.includes(",")
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : cleaned;
+
+  return normalized ? Number(normalized) : 0;
 }

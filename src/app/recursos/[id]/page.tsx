@@ -75,6 +75,7 @@ export default function RecursoPage({ params }: Props) {
               <Info label="Codigo" value={recurso.codigo} />
               <Info label="Nome" value={recurso.nome} />
               <Info label="Grupo" value={recurso.grupo?.nome} />
+              <Info label="Valor Hora" value={formatValorHora(recurso.valor_hora)} />
               <Info label="Setor / Centro de trabalho" value={recurso.setor} />
             </div>
           </Card>
@@ -136,4 +137,13 @@ function formatNumero(value: number | null | undefined) {
   }
 
   return value.toLocaleString("pt-BR");
+}
+
+function formatValorHora(value: number | null | undefined) {
+  const valor = value ?? 0;
+
+  return `${valor.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  })}/h`;
 }
