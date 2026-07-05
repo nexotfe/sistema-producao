@@ -1,9 +1,11 @@
 "use client";
 
-import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useNovoCliente } from "@/modules/clientes/hooks/useNovoCliente";
 
 export default function NovoClientePage() {
+  const router = useRouter();
   const {
     nome,
     setNome,
@@ -51,17 +53,70 @@ export default function NovoClientePage() {
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-3">
-          <ModuleBackLink href="/clientes" label="Cliente" />
+        <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                LOGO
+              </div>
 
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Cliente
-            </h1>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  Cliente
+                </h1>
+                <p className="mt-1 text-sm text-slate-500">
+                  Novo cliente
+                </p>
+              </div>
+            </div>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Cadastro de cliente.
-            </p>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                Nome do usuário
+              </span>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Voltar
+                </button>
+                <Link
+                  href="/central"
+                  className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Início
+                </Link>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Duplicar
+                </button>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  onClick={salvarCliente}
+                  disabled={loading}
+                  className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -116,16 +171,6 @@ export default function NovoClientePage() {
             </p>
           )}
 
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={salvarCliente}
-              disabled={loading}
-              className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Salvando..." : "Salvar"}
-            </button>
-          </div>
         </section>
       </div>
     </main>

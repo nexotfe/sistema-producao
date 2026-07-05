@@ -8,12 +8,6 @@ type ProductsTableProps = {
   search: string;
 };
 
-const productRoutingByCode: Record<string, string> = {
-  "COD-000145": "RT000154",
-  "COD-000212": "RT000201",
-  "COD-000318": "Sem roteiro",
-};
-
 export function ProductsTable({ products, search }: ProductsTableProps) {
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -33,7 +27,7 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
           </Link>
 
           <p className="mt-1 text-sm text-slate-500">
-            Estrutura frontend de produtos utilizando dados mockados.
+            Produtos cadastrados para uso comercial e operacional.
           </p>
         </div>
       </div>
@@ -44,21 +38,19 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
           descricao={
             search
               ? "Ajuste a busca para encontrar outro produto."
-              : "Os produtos cadastrados aparecerao aqui."
+              : "Os produtos cadastrados aparecerão aqui."
           }
         />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse">
+          <table className="w-full min-w-[760px] border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-left">
-                <Th>Codigo</Th>
-                <Th>Descricao</Th>
-                <Th>Roteiro</Th>
-                <Th>Quantidade</Th>
-                <Th>Tipo</Th>
+                <Th>Código</Th>
+                <Th>Descrição</Th>
+                <Th>Quantidade Padrão</Th>
                 <Th>Status</Th>
-                <Th>Acoes</Th>
+                <Th>Ações</Th>
               </tr>
             </thead>
 
@@ -75,13 +67,7 @@ export function ProductsTable({ products, search }: ProductsTableProps) {
                     {product.description}
                   </td>
                   <td className="px-5 py-3 text-sm text-slate-600">
-                    {productRoutingByCode[product.code] ?? "Sem roteiro"}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-slate-600">
                     {product.quantity}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-slate-600">
-                    {product.type}
                   </td>
                   <td className="px-5 py-3">
                     <StatusBadge ativo={product.active} />

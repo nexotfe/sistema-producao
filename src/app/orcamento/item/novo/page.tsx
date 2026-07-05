@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ProductForm } from "@/modules/produtos/components/ProductForm";
 
-export default function NewProductPage() {
+export default function NovoItemProjetoPage() {
   const router = useRouter();
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
@@ -17,14 +16,25 @@ export default function NewProductPage() {
                 LOGO
               </div>
 
-              <div className="min-w-0">
-                <h1 className="text-2xl font-semibold tracking-tight text-blue-700">
-                  Novo Produto
-                </h1>
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                Novo Item do Projeto
+              </h1>
             </div>
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <label htmlFor="busca-novo-item-projeto" className="sr-only">
+                Buscar item do projeto
+              </label>
+              <input
+                id="busca-novo-item-projeto"
+                type="search"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="Buscar projeto, cliente, código, item, OF, NF ou documento..."
+                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+              />
+
               <span className="whitespace-nowrap text-sm font-medium text-slate-500">
                 Nome do usuário
               </span>
@@ -43,36 +53,19 @@ export default function NewProductPage() {
                 >
                   Início
                 </Link>
-                <button
-                  type="button"
-                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Duplicar
-                </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Excluir
-                </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
-                >
-                  Salvar
-                </button>
               </div>
             </div>
           </div>
         </header>
 
-        <ProductForm mode="new" />
+        <section className="mx-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-white px-5 py-5">
+          <h2 className="text-sm font-bold text-slate-950">
+            Novo Item do Projeto
+          </h2>
+          <p className="mt-4 text-sm text-slate-600">
+            Esta página será implementada na próxima Sprint.
+          </p>
+        </section>
       </div>
     </main>
   );

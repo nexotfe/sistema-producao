@@ -1,12 +1,8 @@
-import Link from "next/link";
-import { EntityLink } from "@/modules/shared/navigation/EntityLink";
+"use client";
 
-const decisionSummary = [
-  { label: "CI total", value: "8", tone: "text-emerald-700" },
-  { label: "CI parcial", value: "3", tone: "text-amber-700" },
-  { label: "Compra total", value: "5", tone: "text-red-700" },
-  { label: "Requisicoes abertas", value: "11", tone: "text-blue-700" },
-];
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 const openRequisitions = [
   {
@@ -76,44 +72,60 @@ const alerts = [
 ];
 
 export default function PurchasesPage() {
+  const router = useRouter();
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <div className="grid gap-3 lg:grid-cols-[180px_1fr_180px] lg:items-center">
-            <p className="text-sm font-semibold">Flavio Evangelista</p>
+          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                  LOGO
+                </div>
 
-            <label htmlFor="purchase-search" className="sr-only">
-              Buscar compras
-            </label>
-            <input
-              id="purchase-search"
-              type="search"
-              placeholder="Buscar requisicao, OF ou materia-prima"
-              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
+                <h1 className="min-w-0 text-2xl font-semibold tracking-tight text-slate-950">
+                  Compras
+                </h1>
+              </div>
 
-            <Link
-              href="/compras/planejamento"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
-            >
-              Planejamento
-            </Link>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <label htmlFor="purchase-search" className="sr-only">
+                  Buscar compras
+                </label>
+                <input
+                  id="purchase-search"
+                  type="search"
+                  placeholder="Buscar requisição, OF ou matéria-prima"
+                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+                />
+
+                <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                  Nome do usuário
+                </span>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Voltar
+                  </button>
+                  <Link
+                    href="/central"
+                    className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Início
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-blue-700">Suprimentos</p>
-              <h1 className="mt-1 text-2xl font-bold">Compras</h1>
-            </div>
-
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             <nav aria-label="Atalhos de compras" className="flex flex-wrap gap-2">
-              <Link
-                href="/compras"
-                className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-              >
-                Compras
-              </Link>
               <Link
                 href="/fornecedores"
                 className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -127,18 +139,6 @@ export default function PurchasesPage() {
                 Planejamento
               </Link>
               <Link
-                href="/compras/decisao-material"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Decisao material
-              </Link>
-              <Link
-                href="/projetos"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Comercial
-              </Link>
-              <Link
                 href="/estoque/materias-primas"
                 className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
@@ -150,19 +150,6 @@ export default function PurchasesPage() {
       </header>
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {decisionSummary.map((item) => (
-            <div key={item.label} className="rounded-md border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase text-slate-500">
-                {item.label}
-              </p>
-              <p className={`mt-2 text-2xl font-bold ${item.tone}`}>
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </section>
-
         <section className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="rounded-md border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">

@@ -21,9 +21,9 @@ const navigationGroups: NavigationGroup[] = [
       { label: "Novo cliente", href: "/clientes/novo" },
       { label: "Colaboradores", href: "/colaboradores" },
       { label: "Novo colaborador", href: "/colaboradores/novo" },
+      { label: "Projeto", href: "/projeto" },
       { label: "Projetos", href: "/projetos" },
       { label: "Novo projeto", href: "/projetos/novo" },
-      { label: "Detalhe de projeto", href: "/projetos/260123", note: "exemplo" },
     ],
   },
   {
@@ -56,7 +56,6 @@ const navigationGroups: NavigationGroup[] = [
     links: [
       { label: "Produtos", href: "/produtos" },
       { label: "Novo produto", href: "/produtos/novo" },
-      { label: "Produto", href: "/produtos/1243-01", note: "exemplo" },
       { label: "Roteiro", href: "/roteiros/1243-01", note: "exemplo" },
       { label: "Ordem de fabricacao", href: "/ordens/OF-001", note: "exemplo" },
     ],

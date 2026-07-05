@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
+import Link from "next/link";
 import { useNovoGrupoRecurso } from "@/modules/grupos-recursos/hooks/useNovoGrupoRecurso";
 import { useRouter } from "next/navigation";
 
@@ -31,24 +31,77 @@ export default function NovoGrupoRecursoPage() {
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-3">
-          <ModuleBackLink href="/grupos-recursos" label="Grupo de Recursos" />
+        <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                LOGO
+              </div>
 
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Grupo de Recursos
-            </h1>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  Grupo de Recursos
+                </h1>
+                <p className="mt-1 text-sm text-slate-500">
+                  Novo grupo de recursos
+                </p>
+              </div>
+            </div>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Cadastro de familia produtiva para recursos industriais.
-            </p>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                Nome do usuário
+              </span>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Voltar
+                </button>
+                <Link
+                  href="/central"
+                  className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Início
+                </Link>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Duplicar
+                </button>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSalvar}
+                  disabled={loading}
+                  className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
         <section className="flex flex-col gap-5">
-          <Card titulo="Informacoes do grupo">
+          <Card titulo="Informações do grupo">
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
-              <Field label="Codigo" value={codigo} onChange={setCodigo} />
+              <Field label="Código" value={codigo} onChange={setCodigo} />
               <Field label="Nome do grupo" value={nome} onChange={setNome} />
               <Field
                 label="Unidade de capacidade"
@@ -58,29 +111,19 @@ export default function NovoGrupoRecursoPage() {
             </div>
           </Card>
 
-          <Card titulo="Descricao / Observacoes">
+          <Card titulo="Descrição / Observações">
             <div className="px-6 py-6">
               <textarea
                 rows={5}
                 value={descricao}
                 onChange={(event) => setDescricao(event.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+                className="w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </Card>
 
           {erro && <p className="text-sm font-medium text-red-600">{erro}</p>}
 
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={handleSalvar}
-              disabled={loading}
-              className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Salvando..." : "Salvar"}
-            </button>
-          </div>
         </section>
       </div>
     </main>
@@ -95,9 +138,9 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-100 px-6 py-5">
-        <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
+    <div className="rounded-md border border-slate-200 bg-white transition hover:border-blue-700">
+      <div className="border-b border-slate-100 px-4 py-3">
+        <h2 className="text-sm font-bold text-slate-950">{titulo}</h2>
       </div>
 
       {children}
@@ -116,14 +159,14 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
         {label}
       </label>
 
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
       />
     </div>
   );

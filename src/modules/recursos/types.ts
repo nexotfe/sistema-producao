@@ -25,6 +25,7 @@ export type ColunasRecursos = {
   codigo: boolean;
   nome: boolean;
   grupo: boolean;
+  valorHora: boolean;
   setor: boolean;
   capacidade: boolean;
   status: boolean;

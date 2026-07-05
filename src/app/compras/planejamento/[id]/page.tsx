@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { PurchasePlanningDecision } from "./PurchasePlanningDecision";
 
@@ -41,34 +44,67 @@ const statusStyles = {
   Excluida: "bg-slate-50 text-slate-600 ring-slate-200",
 } as const;
 
-export default async function PurchasePlanningDetailPage({
+export default function PurchasePlanningDetailPage({
   params,
 }: PurchasePlanningDetailPageProps) {
-  const { id } = await params;
+  const { id } = use(params);
+  const router = useRouter();
+  const [busca, setBusca] = useState("");
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <ModuleBackLink href="/compras/planejamento" label="Planejamento" />
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                LOGO
+              </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-blue-700">
-                Planejamento de compras
-              </p>
-              <h1 className="mt-1 text-2xl font-bold">{id}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                Planejamento de Compras
+              </h1>
             </div>
 
-            <Link
-              href="/compras"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Compras
-            </Link>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <label htmlFor="busca-clientes" className="sr-only">
+                Buscar clientes
+              </label>
+              <input
+                id="busca-clientes"
+                type="search"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                value={busca}
+                onChange={(event) => setBusca(event.target.value)}
+                placeholder="Buscar por cliente, CNPJ, cidade ou contato"
+                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+              />
+
+              <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                Nome do usuário
+              </span>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Voltar
+                </button>
+                <Link
+                  href="/central"
+                  className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Início
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <section className="grid gap-4 lg:grid-cols-2">

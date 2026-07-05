@@ -66,7 +66,12 @@ export function ColaboradoresTable({
                 {colunasVisiveis.nome && <Th>Nome</Th>}
                 {colunasVisiveis.setor && <Th>Setor</Th>}
                 {colunasVisiveis.funcao && <Th>Funcao</Th>}
-                {colunasVisiveis.disponibilidade && <Th>Disponibilidade</Th>}
+                {/*
+                  Futuramente a Carga Produtiva será usada pelo PCP/APS para
+                  cálculo de capacidade. Férias, feriados, ausências e eventos
+                  de calendário pertencem ao Planejamento, não a esta listagem.
+                */}
+                {colunasVisiveis.disponibilidade && <Th>Carga Produtiva</Th>}
                 {colunasVisiveis.status && <Th>Status</Th>}
               </tr>
             </thead>

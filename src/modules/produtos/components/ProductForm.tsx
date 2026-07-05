@@ -22,7 +22,8 @@ const emptyValues: ProductFormValues = {
   quantity: 0,
 };
 
-export function ProductForm({ initialValues }: ProductFormProps) {
+export function ProductForm({ initialValues, mode }: ProductFormProps) {
+  const usarPadraoProjeto = mode === "new";
   const [values, setValues] = useState<ProductFormState>({
     ...(initialValues ?? emptyValues),
     quantity: 0,
@@ -44,69 +45,50 @@ export function ProductForm({ initialValues }: ProductFormProps) {
 
   return (
     <section className="flex flex-col gap-4">
-      <Card titulo="Identificacao">
-        <div className="grid gap-4 px-5 py-4 md:grid-cols-3">
+      <Card titulo="Identificação" usarPadraoProjeto={usarPadraoProjeto}>
+        <div className="grid gap-4 px-4 py-4 md:grid-cols-3">
           <Field
-            label="Codigo"
+            label="Código"
             value={values.code}
             onChange={(value) => updateValue("code", value)}
+            usarPadraoProjeto={usarPadraoProjeto}
           />
           <Field
-            label="Descricao"
+            label="Descrição"
             value={values.description}
             onChange={(value) => updateValue("description", value)}
-          />
-          <SelectField
-            label="Tipo"
-            value={values.type}
-            onChange={(value) => updateValue("type", value)}
-            options={["Produto Acabado", "Semiacabado"]}
-          />
-          <Field
-            label="Unidade"
-            value={values.unit}
-            onChange={(value) => updateValue("unit", value)}
-          />
-        </div>
-      </Card>
-
-      <Card titulo="Controle">
-        <div className="grid gap-4 px-5 py-4 md:grid-cols-3">
-          <Field
-            label="Unidade"
-            value={values.unit}
-            onChange={(value) => updateValue("unit", value)}
+            usarPadraoProjeto={usarPadraoProjeto}
           />
           <Field
             label="Quantidade"
             value={String(values.quantity)}
             onChange={() => undefined}
             readOnly
+            usarPadraoProjeto={usarPadraoProjeto}
           />
-          <label className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700">
-            <input
-              type="checkbox"
-              checked={values.active}
-              onChange={(event) => updateValue("active", event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-slate-900"
-            />
-            Situacao
-          </label>
+          <SelectField
+            label="Status"
+            value={values.active ? "Ativo" : "Inativo"}
+            onChange={(value) => updateValue("active", value === "Ativo")}
+            options={["Ativo", "Inativo"]}
+            usarPadraoProjeto={usarPadraoProjeto}
+          />
         </div>
       </Card>
 
-      <Card titulo="Engenharia">
-        <div className="grid gap-4 px-5 py-4 md:grid-cols-3">
+      <Card titulo="Engenharia" usarPadraoProjeto={usarPadraoProjeto}>
+        <div className="grid gap-4 px-4 py-4 md:grid-cols-3">
           <Field
             label="Roteiro Atual"
             value={values.currentRouting || "Sem roteiro"}
             onChange={() => undefined}
             readOnly
+            usarPadraoProjeto={usarPadraoProjeto}
           />
           <div className="flex items-end">
             <button
               type="button"
-              className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 md:w-auto"
+              className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 md:w-auto"
             >
               Criar Roteiro
             </button>
@@ -114,13 +96,17 @@ export function ProductForm({ initialValues }: ProductFormProps) {
         </div>
       </Card>
 
-      <Card titulo="Observacoes">
-        <div className="px-5 py-4">
+      <Card titulo="Observações" usarPadraoProjeto={usarPadraoProjeto}>
+        <div className="px-4 py-4">
           <textarea
             rows={4}
             value={values.notes}
             onChange={(event) => updateValue("notes", event.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+            className={
+              usarPadraoProjeto
+                ? "w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                : "w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+            }
           />
         </div>
       </Card>
@@ -128,30 +114,16 @@ export function ProductForm({ initialValues }: ProductFormProps) {
       <div className="space-y-2">
         {codeValidationMessage && (
           <p className="text-sm font-medium text-red-600">
-            Codigo ja existe. Use outro codigo.
+            Código já existe. Use outro código.
           </p>
         )}
         {descriptionValidationMessage && (
           <p className="text-sm font-medium text-red-600">
-            Descricao ja existe. Use outra descricao.
+            Descrição já existe. Use outra descrição.
           </p>
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          className="rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Salvar
-        </button>
-      </div>
     </section>
   );
 }
@@ -159,14 +131,28 @@ export function ProductForm({ initialValues }: ProductFormProps) {
 function Card({
   titulo,
   children,
+  usarPadraoProjeto,
 }: {
   titulo: string;
   children: React.ReactNode;
+  usarPadraoProjeto: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-100 px-5 py-3">
-        <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
+    <div
+      className={
+        usarPadraoProjeto
+          ? "rounded-md border border-slate-200 bg-white transition hover:border-blue-700"
+          : "rounded-md border border-slate-200 bg-white transition-colors hover:border-blue-700"
+      }
+    >
+      <div
+        className={
+          usarPadraoProjeto
+            ? "border-b border-slate-100 px-4 py-3"
+            : "border-b border-slate-200 px-4 py-3"
+        }
+      >
+        <h2 className="text-sm font-bold text-slate-950">{titulo}</h2>
       </div>
 
       {children}
@@ -179,22 +165,34 @@ function SelectField({
   value,
   onChange,
   options,
+  usarPadraoProjeto,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
+  usarPadraoProjeto: boolean;
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+      <label
+        className={
+          usarPadraoProjeto
+            ? "mb-1.5 block text-xs font-semibold text-slate-600"
+            : "mb-2 block text-sm font-medium text-slate-700"
+        }
+      >
         {label}
       </label>
 
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        className={
+          usarPadraoProjeto
+            ? "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            : "h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        }
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -211,15 +209,23 @@ function Field({
   value,
   onChange,
   readOnly = false,
+  usarPadraoProjeto,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   readOnly?: boolean;
+  usarPadraoProjeto: boolean;
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+      <label
+        className={
+          usarPadraoProjeto
+            ? "mb-1.5 block text-xs font-semibold text-slate-600"
+            : "mb-2 block text-sm font-medium text-slate-700"
+        }
+      >
         {label}
       </label>
 
@@ -227,7 +233,11 @@ function Field({
         value={value}
         readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition read-only:bg-slate-50 read-only:text-slate-500 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        className={
+          usarPadraoProjeto
+            ? "h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition read-only:bg-slate-50 read-only:text-slate-700 placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            : "h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition read-only:bg-slate-50 read-only:text-slate-500 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        }
       />
     </div>
   );

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type ProductsHeaderProps = {
   search: string;
@@ -6,37 +9,58 @@ type ProductsHeaderProps = {
 };
 
 export function ProductsHeader({ search, setSearch }: ProductsHeaderProps) {
+  const router = useRouter();
+
   return (
-    <header className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-            Produtos
-          </h1>
-        </div>
-      </div>
+    <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+              LOGO
+            </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <input
-          type="search"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar por codigo, descricao ou tipo"
-          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
-        />
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Produtos
+            </h1>
+          </div>
 
-        <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:justify-end">
-          <Link
-            href="/produtos/novo"
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Novo
-          </Link>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <label htmlFor="busca-produtos" className="sr-only">
+              Buscar produtos
+            </label>
+            <input
+              id="busca-produtos"
+              type="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar produto, código, descrição, desenho, cliente ou documento..."
+              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+            />
+
+            <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+              Nome do usuário
+            </span>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Voltar
+              </button>
+              <Link
+                href="/central"
+                className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Início
+              </Link>
+            </div>
+          </div>
         </div>
-      </div>
     </header>
   );
 }

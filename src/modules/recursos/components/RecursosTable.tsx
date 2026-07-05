@@ -59,12 +59,13 @@ export function RecursosTable({
         />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse">
+          <table className="w-full min-w-[980px] border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-left">
                 {colunasVisiveis.codigo && <Th>Codigo</Th>}
                 {colunasVisiveis.nome && <Th>Nome</Th>}
                 {colunasVisiveis.grupo && <Th>Grupo</Th>}
+                {colunasVisiveis.valorHora && <Th>Valor Hora</Th>}
                 {colunasVisiveis.setor && <Th>Setor</Th>}
                 {colunasVisiveis.capacidade && <Th>Capacidade</Th>}
                 {colunasVisiveis.status && <Th>Status</Th>}
@@ -109,6 +110,12 @@ export function RecursosTable({
                     </td>
                   )}
 
+                  {colunasVisiveis.valorHora && (
+                    <td className="px-5 py-3 text-sm text-slate-600">
+                      {formatValorHora(getValorHoraMock(recurso))}
+                    </td>
+                  )}
+
                   {colunasVisiveis.setor && (
                     <td className="px-5 py-3 text-sm text-slate-600">
                       {recurso.setor || "Nao informado"}
@@ -150,4 +157,25 @@ function formatNumero(value: number | null | undefined) {
   }
 
   return value.toLocaleString("pt-BR");
+}
+
+function getValorHoraMock(recurso: RecursoProdutivo) {
+  /*
+    Valor Hora representa o custo/hora padrão do recurso produtivo.
+    Futuramente será utilizado pelo Roteiro para calcular custos de operação.
+  */
+  const valoresPorCodigo: Record<string, number> = {
+    REC001: 120,
+    REC002: 85,
+    REC003: 0,
+  };
+
+  return valoresPorCodigo[recurso.codigo ?? ""] ?? 0;
+}
+
+function formatValorHora(value: number) {
+  return `${value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  })}/h`;
 }

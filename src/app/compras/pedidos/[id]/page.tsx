@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
+import { use } from "react";
+import { useRouter } from "next/navigation";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 type PurchaseOrderDraftPageProps = {
@@ -26,32 +29,78 @@ const orderOrigins = [
   },
 ];
 
-export default async function PurchaseOrderDraftPage({
+export default function PurchaseOrderDraftPage({
   params,
 }: PurchaseOrderDraftPageProps) {
-  const { id } = await params;
+  const { id } = use(params);
+  const router = useRouter();
   const planningNumber = id.replace("PED-", "PC-");
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <ModuleBackLink href={`/compras/planejamento/${planningNumber}`} label="Pedido" />
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6">
+        <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                LOGO
+              </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-blue-700">
-                Pedido de compra
-              </p>
-              <h1 className="mt-1 text-2xl font-bold">{id}</h1>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  Pedido de Compras
+                </h1>
+              </div>
             </div>
 
-            <span className="inline-flex h-9 items-center rounded-full bg-slate-100 px-3 text-xs font-bold uppercase text-slate-700 ring-1 ring-slate-200">
-              Rascunho
-            </span>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                Nome do usuário
+              </span>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Voltar
+                </button>
+                <Link
+                  href="/central"
+                  className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Início
+                </Link>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Duplicar
+                </button>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <section className="grid gap-4 lg:grid-cols-3">

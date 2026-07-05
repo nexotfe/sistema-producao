@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const purchasePlans = [
   {
@@ -30,65 +33,74 @@ const statusStyles = {
 } as const;
 
 export default function PurchasePlanningPage() {
+  const router = useRouter();
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <div className="grid gap-3 lg:grid-cols-[180px_1fr_180px] lg:items-center">
-            <p className="text-sm font-semibold">Flavio Evangelista</p>
+      <header className="px-4 py-6 sm:px-6">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                  LOGO
+                </div>
 
-            <label htmlFor="planning-search" className="sr-only">
-              Buscar planejamento
-            </label>
-            <input
-              id="planning-search"
-              type="search"
-              placeholder="Buscar planejamento ou material"
-              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                    Planejamento de compras
+                  </h1>
+                  <p className="mt-1 text-sm text-slate-500">Compras</p>
+                </div>
+              </div>
 
-            <Link
-              href="/compras/decisao-material"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Decisao material
-            </Link>
-          </div>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                  Nome do usuário
+                </span>
 
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-blue-700">Compras</p>
-              <h1 className="mt-1 text-2xl font-bold">
-                Planejamento de compras
-              </h1>
+                <label htmlFor="planning-search" className="sr-only">
+                  Buscar planejamento
+                </label>
+                <input
+                  id="planning-search"
+                  type="search"
+                  placeholder="Buscar planejamento ou material"
+                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-72"
+                />
+
+                <nav
+                  aria-label="Ações do planejamento"
+                  className="flex flex-wrap gap-2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Voltar
+                  </button>
+                  <Link
+                    href="/central"
+                    className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Início
+                  </Link>
+                  <Link
+                    href="/fornecedores"
+                    className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Fornecedores
+                  </Link>
+                  <Link
+                    href="/estoque/materias-primas"
+                    className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Estoque
+                  </Link>
+                </nav>
+              </div>
             </div>
-
-            <nav aria-label="Atalhos de planejamento" className="flex flex-wrap gap-2">
-              <Link
-                href="/compras"
-                className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-              >
-                Compras
-              </Link>
-              <Link
-                href="/fornecedores"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Fornecedores
-              </Link>
-              <Link
-                href="/compras/decisao-material"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Decisao material
-              </Link>
-              <Link
-                href="/estoque/materias-primas"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Estoque
-              </Link>
-            </nav>
           </div>
         </div>
       </header>

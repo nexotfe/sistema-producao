@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import type {
-  ColunasGruposRecursos,
-  SituacaoGrupoRecurso,
-} from "../types";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { SituacaoGrupoRecurso } from "../types";
 
 type GruposRecursosHeaderProps = {
   usuario: string;
@@ -17,11 +15,6 @@ type GruposRecursosHeaderProps = {
     ativos: number;
     inativos: number;
   };
-  colunasVisiveis: ColunasGruposRecursos;
-  setColunasVisiveis: React.Dispatch<
-    React.SetStateAction<ColunasGruposRecursos>
-  >;
-  onExportar: () => void;
 };
 
 export function GruposRecursosHeader({
@@ -31,126 +24,89 @@ export function GruposRecursosHeader({
   situacao,
   setSituacao,
   totais,
-  colunasVisiveis,
-  setColunasVisiveis,
-  onExportar,
 }: GruposRecursosHeaderProps) {
-  const [mostrarColunas, setMostrarColunas] = useState(false);
+  const router = useRouter();
 
   return (
-    <header className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Administrativo
-          </p>
-
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-            Grupos de Recursos
-          </h1>
-        </div>
-
-        <div className="text-sm font-medium text-slate-500">{usuario}</div>
-      </div>
-
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <input
-          type="search"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          value={busca}
-          onChange={(event) => setBusca(event.target.value)}
-          placeholder="Buscar por grupo, codigo, descricao ou unidade"
-          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
-        />
-
-        <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:justify-end">
-          <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1">
-            <SituacaoButton
-              label="Todos"
-              quantidade={totais.todos}
-              ativo={situacao === "todos"}
-              onClick={() => setSituacao("todos")}
-            />
-            <SituacaoButton
-              label="Ativos"
-              quantidade={totais.ativos}
-              ativo={situacao === "ativos"}
-              onClick={() => setSituacao("ativos")}
-            />
-            <SituacaoButton
-              label="Inativos"
-              quantidade={totais.inativos}
-              ativo={situacao === "inativos"}
-              onClick={() => setSituacao("inativos")}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMostrarColunas(!mostrarColunas)}
-                className="inline-flex h-9 min-w-24 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Exibir
-                <span className="text-xs text-slate-400">{"\u25BE"}</span>
-              </button>
-
-              {mostrarColunas && (
-                <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Exibir campos
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={() => setMostrarColunas(false)}
-                      className="text-xs font-semibold text-slate-500 transition hover:text-slate-900"
-                    >
-                      Fechar
-                    </button>
-                  </div>
-
-                  <div className="space-y-1">
-                    {(
-                      [
-                        ["codigo", "Codigo"],
-                        ["nome", "Nome"],
-                        ["unidade", "Unidade"],
-                        ["status", "Status"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <CheckboxCampo
-                        key={key}
-                        label={label}
-                        checked={colunasVisiveis[key]}
-                        onChange={() =>
-                          setColunasVisiveis((prev) => ({
-                            ...prev,
-                            [key]: !prev[key],
-                          }))
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+    <>
+      <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+              LOGO
             </div>
 
-            <button
-              type="button"
-              onClick={onExportar}
-              className="inline-flex h-9 min-w-24 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Exportar
-            </button>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Grupos de Recursos
+            </h1>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <label htmlFor="busca-grupos-recursos" className="sr-only">
+              Buscar grupos de recursos
+            </label>
+            <input
+              id="busca-grupos-recursos"
+              type="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={busca}
+              onChange={(event) => setBusca(event.target.value)}
+              placeholder="Buscar por grupo, codigo, descricao ou unidade"
+              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+            />
+
+            <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+              Nome do Usuário
+            </span>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Voltar
+              </button>
+              <Link
+                href="/central"
+                className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Início
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex w-full flex-wrap items-center justify-start gap-2">
+            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1">
+              <SituacaoButton
+                label="Todos"
+                quantidade={totais.todos}
+                ativo={situacao === "todos"}
+                onClick={() => setSituacao("todos")}
+              />
+              <SituacaoButton
+                label="Ativos"
+                quantidade={totais.ativos}
+                ativo={situacao === "ativos"}
+                onClick={() => setSituacao("ativos")}
+              />
+              <SituacaoButton
+                label="Inativos"
+                quantidade={totais.inativos}
+                ativo={situacao === "inativos"}
+                onClick={() => setSituacao("inativos")}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -177,27 +133,5 @@ function SituacaoButton({
     >
       {label} ({quantidade})
     </button>
-  );
-}
-
-function CheckboxCampo({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-sm text-slate-600 transition hover:bg-slate-50">
-      <span>{label}</span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="h-4 w-4 rounded border-slate-300 text-slate-900"
-      />
-    </label>
   );
 }

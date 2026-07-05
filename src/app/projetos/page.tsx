@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { StatusBadge } from "@/modules/projetos/StatusBadge";
 import type { ProjectStatus } from "@/modules/projetos/types";
@@ -29,65 +32,54 @@ const projectRows = [
 ];
 
 export default function ProjectsPage() {
+  const router = useRouter();
+
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="flex flex-col gap-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Comercial
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Projetos
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Orcamentos e demandas industriais em andamento.
-            </p>
-          </div>
+        <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                LOGO
+              </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-            <label htmlFor="project-search" className="sr-only">
-              Buscar projetos
-            </label>
-            <input
-              id="project-search"
-              type="search"
-              placeholder="Buscar projeto, cliente ou PN"
-              className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-            />
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                Projeto
+              </h1>
+            </div>
 
-            <nav aria-label="Atalhos comerciais" className="flex flex-wrap gap-2">
-              <Link
-                href="/projetos"
-                className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-              >
-                Projetos
-              </Link>
-              <Link
-                href="/clientes"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Clientes
-              </Link>
-              <Link
-                href="/central"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Central
-              </Link>
-              <Link
-                href="/compras"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Compras
-              </Link>
-              <Link
-                href="/estoque/materias-primas"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Estoque
-              </Link>
-            </nav>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <label htmlFor="project-search" className="sr-only">
+                Buscar projetos
+              </label>
+              <input
+                id="project-search"
+                type="search"
+                placeholder="Buscar projeto, cliente ou PN"
+                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+              />
+
+              <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                Nome do usuário
+              </span>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Voltar
+                </button>
+                <Link
+                  href="/central"
+                  className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Início
+                </Link>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -125,13 +117,19 @@ export default function ProjectsPage() {
                 {projectRows.map((row) => (
                   <tr key={row.project} className="transition hover:bg-slate-50">
                     <td className="px-5 py-4">
-                      <EntityLink
-                        type="projeto"
-                        id={row.project}
-                        className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                      >
-                        {row.project}
-                      </EntityLink>
+                      {row.project === "260123" ? (
+                        <span className="font-semibold text-slate-950">
+                          {row.project}
+                        </span>
+                      ) : (
+                        <EntityLink
+                          type="projeto"
+                          id={row.project}
+                          className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+                        >
+                          {row.project}
+                        </EntityLink>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-slate-700">{row.client}</td>
                     <td className="px-5 py-4 text-slate-700">{row.type}</td>
