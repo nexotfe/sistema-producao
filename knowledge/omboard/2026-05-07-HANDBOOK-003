@@ -1,0 +1,270 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-003
+
+Title:
+Architecture Principles
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the official architectural principles of the NEXOTFE ERP.
+
+These principles are mandatory.
+
+Every technical decision must comply with them.
+
+If a proposed solution violates any principle described here, the solution must be rejected.
+
+==========================================================
+BUSINESS FIRST
+==========================================================
+
+Every implementation begins with the business.
+
+Never begin with:
+
+• Database
+
+• Backend
+
+• Frontend
+
+• Technology
+
+The correct sequence is always:
+
+Business Process
+
+↓
+
+Business Rules
+
+↓
+
+Business Entities
+
+↓
+
+Database
+
+↓
+
+Backend
+
+↓
+
+Frontend
+
+↓
+
+Optimization
+
+==========================================================
+DATABASE PHILOSOPHY
+==========================================================
+
+The database represents the business.
+
+It does not represent:
+
+Pages.
+
+Screens.
+
+Components.
+
+React structure.
+
+Frontend layout.
+
+Every table must exist because a real business entity exists.
+
+==========================================================
+MODULE PHILOSOPHY
+==========================================================
+
+NEXOTFE is composed of independent business modules.
+
+Examples:
+
+Customers
+
+Suppliers
+
+Employees
+
+Products
+
+Raw Materials
+
+Projects
+
+Purchasing
+
+Routing
+
+Quotations
+
+Commercial Proposals
+
+Modules may communicate.
+
+Modules must not become unnecessarily dependent.
+
+==========================================================
+BUSINESS OWNERSHIP
+==========================================================
+
+Business modules own database tables.
+
+Database tables never define business modules.
+
+The business always comes first.
+
+==========================================================
+SIMPLICITY
+==========================================================
+
+Prefer the simplest solution that correctly represents the business.
+
+Avoid unnecessary abstractions.
+
+Avoid unnecessary layers.
+
+Avoid duplicated information.
+
+Avoid unnecessary configuration.
+
+==========================================================
+LONG-TERM THINKING
+==========================================================
+
+Every implementation must consider long-term maintenance.
+
+Temporary solutions should be avoided.
+
+Architecture must survive future expansion.
+
+==========================================================
+APPROVED DECISIONS
+==========================================================
+
+Previously approved business decisions are permanent.
+
+Never redesign approved concepts.
+
+Never replace approved architecture without explicit authorization.
+
+Evolution means extending the approved architecture.
+
+It never means recreating it.
+
+==========================================================
+DATABASE MODIFICATIONS
+==========================================================
+
+Database changes require explicit approval.
+
+Never modify Supabase automatically.
+
+Never rename tables without approval.
+
+Never rename fields without approval.
+
+Never remove business information without approval.
+
+==========================================================
+FRONT-END PHILOSOPHY
+==========================================================
+
+The Front-End exists to represent the business.
+
+It must be:
+
+Simple.
+
+Consistent.
+
+Professional.
+
+Fast.
+
+Predictable.
+
+The user interface must never introduce unnecessary complexity.
+
+==========================================================
+USER EXPERIENCE
+==========================================================
+
+Every screen must help users make faster and better business decisions.
+
+Visual beauty is important.
+
+Productivity is mandatory.
+
+Whenever there is a conflict between aesthetics and productivity,
+
+productivity wins.
+
+==========================================================
+IMPLEMENTATION PHILOSOPHY
+==========================================================
+
+Work one module at a time.
+
+Finish it.
+
+Test it.
+
+Approve it.
+
+Freeze it.
+
+Then continue with the next module.
+
+Avoid parallel implementation of multiple modules.
+
+==========================================================
+ENGINEERING STANDARD
+==========================================================
+
+Every implementation must improve at least one of the following:
+
+Business value.
+
+Maintainability.
+
+Performance.
+
+Security.
+
+Consistency.
+
+User productivity.
+
+If none of these improves,
+
+the implementation should be reconsidered.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+The objective of NEXOTFE is not to create software.
+
+The objective is to create an engineering platform that faithfully represents the operation of a modern industrial company.
+
+Every architectural decision must reinforce this objective.

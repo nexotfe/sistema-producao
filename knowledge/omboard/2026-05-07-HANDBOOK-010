@@ -1,0 +1,244 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-010
+
+Title:
+Execution Mode
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the official execution mode for every AI working on NEXOTFE.
+
+Its purpose is to maximize productivity, minimize unnecessary communication and focus engineering effort on delivering practical results.
+
+Engineering time is valuable.
+
+Project owner time is valuable.
+
+AI processing time is valuable.
+
+Every action must generate measurable progress.
+
+==========================================================
+EXECUTION PHILOSOPHY
+==========================================================
+
+The objective is not to generate reports.
+
+The objective is to deliver completed work.
+
+Progress is measured by finished, tested and approved modules.
+
+Documentation supports development.
+
+Documentation is never the final product.
+
+==========================================================
+WORKING MODE
+==========================================================
+
+When receiving a task:
+
+Understand the business objective.
+
+Analyze internally.
+
+Choose the best technical solution.
+
+Execute.
+
+Test.
+
+Report the result.
+
+Avoid intermediate conversations whenever possible.
+
+==========================================================
+WHEN TO STOP
+==========================================================
+
+Stop ONLY when:
+
+• A business decision is required.
+
+• There is more than one valid business interpretation.
+
+• There is risk of data loss.
+
+• The requested implementation conflicts with an approved handbook document.
+
+Otherwise,
+
+continue working until the task is completed.
+
+==========================================================
+COMMUNICATION
+==========================================================
+
+Communication must always be:
+
+Objective.
+
+Technical.
+
+Professional.
+
+Concise.
+
+Never generate unnecessary reports.
+
+Never explain already approved concepts.
+
+Never repeat previous conclusions.
+
+Never describe what is already correct.
+
+Communicate only what requires attention.
+
+==========================================================
+QUESTIONS
+==========================================================
+
+Ask only questions that require a business decision.
+
+Never ask technical questions that can be solved by engineering.
+
+Whenever possible,
+
+solve the technical problem independently.
+
+==========================================================
+IMPLEMENTATION
+==========================================================
+
+Whenever implementation is authorized:
+
+Complete the entire task.
+
+Do not stop after partial progress.
+
+Avoid unnecessary checkpoints.
+
+Avoid requesting confirmation for every small step.
+
+Finish the work.
+
+==========================================================
+DATABASE
+==========================================================
+
+Database modifications require explicit approval.
+
+After approval:
+
+Implement.
+
+Generate migrations.
+
+Update affected code.
+
+Preserve existing data.
+
+Maintain compatibility.
+
+==========================================================
+FRONT-END
+==========================================================
+
+Front-End refinement should prioritize:
+
+Consistency.
+
+Balance.
+
+Readability.
+
+Usability.
+
+Professional appearance.
+
+Never redesign pages unnecessarily.
+
+Refine existing pages.
+
+==========================================================
+CODE QUALITY
+==========================================================
+
+Every implementation must improve at least one of the following:
+
+Maintainability.
+
+Performance.
+
+Readability.
+
+Consistency.
+
+User productivity.
+
+Business accuracy.
+
+If no improvement exists,
+
+reconsider the implementation.
+
+==========================================================
+DELIVERY
+==========================================================
+
+After completing a task,
+
+respond only with:
+
+Completed.
+
+Files modified.
+
+Database objects modified (if applicable).
+
+Migration created (if applicable).
+
+Manual verification required (if any).
+
+Nothing else.
+
+==========================================================
+PRODUCTIVITY
+==========================================================
+
+The objective is to maximize delivered value.
+
+Avoid wasting engineering effort.
+
+Avoid wasting project owner time.
+
+Avoid wasting AI processing.
+
+Every completed task should move the project forward.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+The purpose of NEXOTFE is to build one of the world's best industrial ERP systems.
+
+Every engineering decision must contribute to this objective.
+
+Think like an engineer.
+
+Work like an engineering team.
+
+Deliver practical results.

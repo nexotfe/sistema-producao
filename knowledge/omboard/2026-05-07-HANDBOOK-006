@@ -1,0 +1,298 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-006
+
+Title:
+Front-End Standards
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the official Front-End standards for the NEXOTFE ERP.
+
+Every page must follow these standards.
+
+Consistency across the entire system is mandatory.
+
+==========================================================
+GENERAL PHILOSOPHY
+==========================================================
+
+NEXOTFE is a Premium Industrial ERP.
+
+The interface must communicate:
+
+Professionalism.
+
+Engineering.
+
+Organization.
+
+Reliability.
+
+Industrial identity.
+
+The user must immediately recognize that every page belongs to the same system.
+
+==========================================================
+DESIGN PRINCIPLES
+==========================================================
+
+Every interface must prioritize:
+
+Business productivity.
+
+Visual consistency.
+
+Easy navigation.
+
+Fast data entry.
+
+Low cognitive load.
+
+Clear information hierarchy.
+
+==========================================================
+PAGE STRUCTURE
+==========================================================
+
+Every registration page follows the same structure.
+
+Header
+
+↓
+
+Page actions
+
+↓
+
+Business cards
+
+↓
+
+Footer actions
+
+Never create different layouts for similar pages.
+
+==========================================================
+HEADER STANDARD
+==========================================================
+
+Every page header must contain:
+
+Page title.
+
+Short description.
+
+Current user.
+
+Back button.
+
+Home button.
+
+Primary action button (Save, Create, Update, etc.).
+
+The header must be identical throughout the system.
+
+==========================================================
+CARDS
+==========================================================
+
+Cards are the primary organizational element.
+
+Rules:
+
+Balanced proportions.
+
+Compact height.
+
+Consistent spacing.
+
+Same border radius.
+
+Same shadows.
+
+Same internal padding.
+
+Avoid oversized cards.
+
+Avoid unnecessary empty space.
+
+==========================================================
+FORMS
+==========================================================
+
+Forms must follow a logical business sequence.
+
+The most important information appears first.
+
+Group related fields.
+
+Avoid duplicated information.
+
+Remove unnecessary fields.
+
+Keep labels short and clear.
+
+==========================================================
+TABLES
+==========================================================
+
+Tables represent operational information.
+
+Rules:
+
+Occupy the available width.
+
+No unnecessary horizontal scrolling.
+
+Columns sized according to business importance.
+
+Description fields receive more space.
+
+Numeric fields remain compact.
+
+Actions remain aligned.
+
+Never distribute columns randomly.
+
+==========================================================
+BUTTONS
+==========================================================
+
+Buttons must have consistent behavior.
+
+Primary action:
+
+Blue.
+
+Secondary action:
+
+Neutral.
+
+Danger actions:
+
+Red.
+
+Never use different colors for identical actions.
+
+==========================================================
+TYPOGRAPHY
+==========================================================
+
+Use clear hierarchy.
+
+Page title:
+
+Largest.
+
+Card titles:
+
+Medium.
+
+Field labels:
+
+Smaller.
+
+Values:
+
+Readable.
+
+Avoid excessive bold text.
+
+Bold is reserved only for information that truly requires emphasis.
+
+==========================================================
+SPACING
+==========================================================
+
+Spacing must be consistent.
+
+Equal margins.
+
+Equal paddings.
+
+Balanced vertical rhythm.
+
+Never leave unnecessary empty areas.
+
+==========================================================
+MODALS
+==========================================================
+
+Whenever possible,
+
+related entity selection must occur inside a modal.
+
+Examples:
+
+Select Customer.
+
+Select Supplier.
+
+Select Product.
+
+Select Resource.
+
+Creating a new entity is always a secondary action.
+
+==========================================================
+LIST PAGES
+==========================================================
+
+List pages are operational screens.
+
+They must prioritize:
+
+Filtering.
+
+Searching.
+
+Quick actions.
+
+Status visualization.
+
+Fast navigation.
+
+==========================================================
+RESPONSIVENESS
+==========================================================
+
+The desktop experience is the primary target.
+
+Responsive behavior must preserve usability without compromising productivity.
+
+==========================================================
+VISUAL CONSISTENCY
+==========================================================
+
+Never redesign a single page independently.
+
+Every visual improvement must strengthen the overall identity of NEXOTFE.
+
+The system must feel like one product.
+
+Not multiple disconnected pages.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+Users should learn the interface only once.
+
+After understanding one module,
+
+they should immediately understand every other module.
+
+Consistency is more valuable than visual novelty.

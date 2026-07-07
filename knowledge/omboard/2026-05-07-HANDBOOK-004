@@ -1,0 +1,314 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-004
+
+Title:
+Supabase Engineering Standards
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the official Supabase engineering standards for the NEXOTFE ERP.
+
+Every database decision must comply with these standards.
+
+Consistency is mandatory.
+
+==========================================================
+SUPABASE PHILOSOPHY
+==========================================================
+
+Supabase is the official Backend-as-a-Service platform for NEXOTFE.
+
+PostgreSQL is the official database.
+
+Every database structure must represent real business entities.
+
+The database is the foundation of the ERP.
+
+Frontend and Backend are built on top of it.
+
+==========================================================
+DATABASE PRINCIPLES
+==========================================================
+
+The database represents the business.
+
+Never create tables to represent screens.
+
+Never create fields to satisfy temporary interface needs.
+
+Every table must exist because a business entity exists.
+
+==========================================================
+PRIMARY KEYS
+==========================================================
+
+Every table must use:
+
+UUID
+
+Primary Key
+
+Generated automatically.
+
+Sequential numeric IDs must never be used as primary keys.
+
+==========================================================
+AUDIT FIELDS
+==========================================================
+
+Every master and transactional table must contain:
+
+id
+
+created_at
+
+updated_at
+
+created_by
+
+empresa_id
+
+Whenever applicable:
+
+deleted_at
+
+deleted_by
+
+These fields are mandatory standards.
+
+==========================================================
+MULTI-COMPANY
+==========================================================
+
+NEXOTFE is a multi-company ERP.
+
+Every business table must belong to one company.
+
+Use:
+
+empresa_id
+
+Never mix information from different companies.
+
+==========================================================
+SOFT DELETE
+==========================================================
+
+Business data must never be physically deleted.
+
+Use logical deletion whenever possible.
+
+Official fields:
+
+ativo
+
+deleted_at
+
+deleted_by
+
+Physical DELETE is exceptional.
+
+==========================================================
+ROW LEVEL SECURITY
+==========================================================
+
+RLS is mandatory.
+
+Every business table must protect company data.
+
+Users must access only authorized information.
+
+Security is mandatory.
+
+Convenience is never a justification for disabling RLS.
+
+==========================================================
+FOREIGN KEYS
+==========================================================
+
+Relationships must exist only when required by business rules.
+
+Never create unnecessary relationships.
+
+Never relate tables because they "look related".
+
+Relationships represent real business processes.
+
+==========================================================
+INDEXES
+==========================================================
+
+Indexes must improve performance.
+
+Never create unnecessary indexes.
+
+Typical indexed fields:
+
+empresa_id
+
+created_at
+
+updated_at
+
+ativo
+
+Business search fields
+
+Indexes must be reviewed periodically.
+
+==========================================================
+NAMING STANDARD
+==========================================================
+
+Use consistent naming.
+
+Examples:
+
+cliente_id
+
+fornecedor_id
+
+produto_id
+
+recurso_id
+
+empresa_id
+
+created_at
+
+updated_at
+
+deleted_at
+
+Never mix languages.
+
+Never use abbreviations unless officially approved.
+
+==========================================================
+DATA TYPES
+==========================================================
+
+Choose data types according to business meaning.
+
+Do not oversize fields.
+
+Avoid generic text fields when a specific type exists.
+
+==========================================================
+MIGRATIONS
+==========================================================
+
+Every structural modification must be executed through migrations.
+
+Never modify Production manually.
+
+Every migration must be reversible whenever possible.
+
+==========================================================
+DATABASE CHANGES
+==========================================================
+
+Before changing any table:
+
+Understand the business rule.
+
+Verify impacts.
+
+Check related modules.
+
+Protect existing data.
+
+Only then implement.
+
+==========================================================
+PERFORMANCE
+==========================================================
+
+Performance must be considered from the beginning.
+
+Avoid unnecessary joins.
+
+Avoid duplicated data.
+
+Prefer normalized structures.
+
+Denormalization only when technically justified.
+
+==========================================================
+BUSINESS CONSISTENCY
+==========================================================
+
+Business consistency is more important than programming convenience.
+
+Never simplify the business to simplify the code.
+
+Simplify the code.
+
+Never simplify the business.
+
+==========================================================
+IMPLEMENTATION ORDER
+==========================================================
+
+Review.
+
+Approve.
+
+Implement.
+
+Test.
+
+Freeze.
+
+Proceed to the next module.
+
+Never skip steps.
+
+==========================================================
+ERROR PREVENTION
+==========================================================
+
+Before implementing any modification ask internally:
+
+Does this represent the business?
+
+Will this preserve data integrity?
+
+Will this affect other modules?
+
+Can this be maintained in five years?
+
+If any answer is uncertain,
+
+stop and ask.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+Supabase is not simply a database.
+
+It is the digital representation of an industrial company.
+
+Every table,
+
+every field,
+
+every relationship,
+
+must exist because a real business process exists.
+
+Nothing else.

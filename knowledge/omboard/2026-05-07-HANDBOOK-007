@@ -1,0 +1,326 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-007
+
+Title:
+Database Standards
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the official database standards for NEXOTFE.
+
+Every table, column, relationship and constraint must follow these standards.
+
+Database consistency is mandatory.
+
+==========================================================
+DATABASE PHILOSOPHY
+==========================================================
+
+The database represents the industrial business.
+
+It does not represent screens.
+
+It does not represent pages.
+
+It does not represent React components.
+
+Every table exists because a real business entity exists.
+
+==========================================================
+TABLE CLASSIFICATION
+==========================================================
+
+Tables are classified into:
+
+• Master Data
+
+• Transactional Data
+
+• Configuration
+
+• System
+
+Every table must belong to one category.
+
+==========================================================
+MASTER DATA
+==========================================================
+
+Examples:
+
+Customers
+
+Suppliers
+
+Employees
+
+Products
+
+Raw Materials
+
+Resources
+
+Resource Groups
+
+Master Data is stable.
+
+It is referenced by multiple business processes.
+
+==========================================================
+TRANSACTIONAL DATA
+==========================================================
+
+Examples:
+
+Projects
+
+Quotations
+
+Commercial Proposals
+
+Purchase Requests
+
+Purchase Orders
+
+Inventory Movements
+
+Production Orders
+
+Transactional tables record business events.
+
+==========================================================
+STANDARD FIELDS
+==========================================================
+
+Every business table must contain:
+
+id
+
+empresa_id
+
+created_at
+
+updated_at
+
+created_by
+
+Whenever applicable:
+
+ativo
+
+deleted_at
+
+deleted_by
+
+These fields are official standards.
+
+==========================================================
+PRIMARY KEYS
+==========================================================
+
+Every table uses UUID.
+
+Sequential numeric identifiers are never used as Primary Keys.
+
+==========================================================
+FOREIGN KEYS
+==========================================================
+
+Foreign Keys represent real business relationships.
+
+Never create relationships without business justification.
+
+==========================================================
+NAMING STANDARD
+==========================================================
+
+Tables:
+
+Plural.
+
+Examples:
+
+clientes
+
+fornecedores
+
+produtos
+
+projetos
+
+Columns:
+
+Singular.
+
+Examples:
+
+cliente_id
+
+produto_id
+
+fornecedor_id
+
+empresa_id
+
+Use snake_case.
+
+Never mix languages.
+
+==========================================================
+DATA TYPES
+==========================================================
+
+Choose the most appropriate type.
+
+UUID for identifiers.
+
+TEXT for descriptions.
+
+BOOLEAN for logical states.
+
+NUMERIC for quantities and monetary values.
+
+TIMESTAMP WITH TIME ZONE for dates.
+
+Avoid generic fields.
+
+==========================================================
+SOFT DELETE
+==========================================================
+
+Business records are never physically removed.
+
+Logical deletion is the standard.
+
+Use:
+
+ativo
+
+deleted_at
+
+deleted_by
+
+Physical DELETE is exceptional.
+
+==========================================================
+AUDIT
+==========================================================
+
+Every important business action must be traceable.
+
+Always preserve:
+
+Creation.
+
+Modification.
+
+Logical deletion.
+
+Responsible user.
+
+==========================================================
+MULTI-COMPANY
+==========================================================
+
+Business data belongs to one company.
+
+Use empresa_id consistently.
+
+Never allow one company to access another company's data.
+
+==========================================================
+INDEXES
+==========================================================
+
+Indexes must improve performance.
+
+Typical indexes include:
+
+empresa_id
+
+ativo
+
+created_at
+
+updated_at
+
+Business search fields
+
+Avoid unnecessary indexes.
+
+==========================================================
+CONSTRAINTS
+==========================================================
+
+Use constraints to protect business integrity.
+
+Examples:
+
+Required fields.
+
+Unique values.
+
+Valid references.
+
+Valid business states.
+
+Business consistency is more important than application validation.
+
+==========================================================
+MIGRATIONS
+==========================================================
+
+Every structural change must be performed through migrations.
+
+Never edit production manually.
+
+Every migration must be version controlled.
+
+==========================================================
+BUSINESS OWNERSHIP
+==========================================================
+
+Every table has one business owner.
+
+Examples:
+
+Customers module owns the Customers table.
+
+Suppliers module owns the Suppliers table.
+
+Projects module owns the Projects table.
+
+Frontend pages never own database structures.
+
+==========================================================
+DATABASE EVOLUTION
+==========================================================
+
+The database evolves with the business.
+
+Never redesign approved structures without authorization.
+
+Prefer evolution over replacement.
+
+Protect existing data.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+The database is one of the most valuable assets of NEXOTFE.
+
+Every table, every field and every relationship must faithfully represent the industrial business and remain maintainable for many years.

@@ -1,0 +1,296 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-008
+
+Title:
+Industrial Business Rules
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the official industrial business philosophy of NEXOTFE.
+
+Every AI participating in the project must understand how a real manufacturing company operates before implementing software.
+
+Business knowledge is mandatory.
+
+Technical knowledge alone is not sufficient.
+
+==========================================================
+INDUSTRY FIRST
+==========================================================
+
+NEXOTFE does not force companies to adapt to software.
+
+The software must adapt to the industrial reality.
+
+Every implementation must faithfully represent real manufacturing processes.
+
+==========================================================
+BUSINESS BEFORE SOFTWARE
+==========================================================
+
+Every business rule originates from a real industrial activity.
+
+Software exists only to organize, automate and improve those activities.
+
+Technology is never the objective.
+
+Business is.
+
+==========================================================
+MASTER DATA
+==========================================================
+
+Master Data represents stable business information.
+
+Examples:
+
+Customers
+
+Suppliers
+
+Employees
+
+Products
+
+Raw Materials
+
+Resources
+
+Resource Groups
+
+Master Data supports every operational process.
+
+==========================================================
+TRANSACTIONAL DATA
+==========================================================
+
+Transactional data represents business events.
+
+Examples:
+
+Projects
+
+Quotations
+
+Commercial Proposals
+
+Purchase Requests
+
+Purchase Orders
+
+Inventory Movements
+
+Production Orders
+
+Every transaction must be traceable.
+
+==========================================================
+CUSTOM MANUFACTURING
+==========================================================
+
+NEXOTFE is primarily designed for custom manufacturing.
+
+Every project may be unique.
+
+Products may never be manufactured twice.
+
+Engineering is part of the commercial process.
+
+==========================================================
+PROJECT PHILOSOPHY
+==========================================================
+
+Projects are the center of industrial operations.
+
+Projects generate:
+
+Engineering.
+
+Products.
+
+Quotations.
+
+Commercial Proposals.
+
+Purchasing.
+
+Manufacturing.
+
+Planning.
+
+Every project has its own identity.
+
+==========================================================
+RAW MATERIALS
+==========================================================
+
+Raw materials represent physical inventory.
+
+Each material has:
+
+Description.
+
+Commercial characteristics.
+
+Inventory information.
+
+Approved suppliers.
+
+Storage location.
+
+Business information must never be duplicated.
+
+==========================================================
+PRODUCTS
+==========================================================
+
+Products represent manufactured items.
+
+A product may be:
+
+Manufactured.
+
+Developed.
+
+Industrialized.
+
+Resold.
+
+Serviced.
+
+Every product belongs to a business process.
+
+==========================================================
+SUPPLIERS
+==========================================================
+
+Suppliers are business partners.
+
+One supplier may provide multiple materials.
+
+The same material may have multiple approved suppliers.
+
+Supplier selection is a purchasing decision.
+
+==========================================================
+PURCHASING
+==========================================================
+
+Purchasing exists to satisfy business demand.
+
+Purchasing is driven by:
+
+Projects.
+
+Inventory.
+
+Production.
+
+Operational needs.
+
+The buyer decides how to group purchase requests.
+
+The software must support this decision.
+
+==========================================================
+RESOURCES
+==========================================================
+
+Resources represent productive capacity.
+
+Examples:
+
+Machines.
+
+Workstations.
+
+Equipment.
+
+Resources have operational characteristics.
+
+Resources are not employees.
+
+==========================================================
+EMPLOYEES
+==========================================================
+
+Employees represent people.
+
+Resources represent production capacity.
+
+These concepts must never be confused.
+
+==========================================================
+ROUTINGS
+==========================================================
+
+A routing defines how a product is manufactured.
+
+It represents:
+
+Operations.
+
+Resources.
+
+Estimated times.
+
+Manufacturing sequence.
+
+The routing represents knowledge.
+
+Not production history.
+
+==========================================================
+SIMPLICITY
+==========================================================
+
+Industrial software must simplify complex operations.
+
+Avoid unnecessary screens.
+
+Avoid duplicated information.
+
+Avoid unnecessary approvals.
+
+Avoid unnecessary configuration.
+
+==========================================================
+USER PRODUCTIVITY
+==========================================================
+
+Every screen must reduce the user's work.
+
+The software exists to accelerate industrial decisions.
+
+Never increase operational effort.
+
+==========================================================
+LONG-TERM THINKING
+==========================================================
+
+Every implementation must remain useful for many years.
+
+Avoid temporary business rules.
+
+Avoid solutions that create future maintenance problems.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+NEXOTFE is an industrial engineering platform.
+
+Every implementation must faithfully represent real industrial operations while keeping the user experience simple, fast and professional.

@@ -1,0 +1,158 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-011
+
+Title:
+Approved Business Rules - Quotation, Routing and Product Structure
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document registers the official business decisions approved by the
+project owner regarding the Quotation, Routing, Product and Project
+Structure modules.
+
+These decisions are final.
+
+They must never be redesigned without explicit new authorization from the
+project owner.
+
+==========================================================
+CONTEXT
+==========================================================
+
+These rules apply to the module chain responsible for generating a
+Commercial Proposal, from customer need to production readiness:
+
+Project → Product Items → Routing → Quotation → Commercial Proposal
+
+==========================================================
+DECISION 1 - PRODUCT DEFINITION
+==========================================================
+
+A product is not always fully defined at the moment of quotation.
+
+Product definition may evolve gradually during the commercial process.
+
+Engineering is part of the commercial process, not a separate phase.
+
+==========================================================
+DECISION 2 - ROUTING OWNERSHIP
+==========================================================
+
+The routing is linked to the specific project item, not to a generic
+reusable product catalog entry.
+
+Each project item has its own routing.
+
+The routing defines the operations, resources and estimated times required
+to manufacture that specific item.
+
+==========================================================
+DECISION 3 - QUOTATION COST SOURCE
+==========================================================
+
+The quotation calculates cost automatically from the routing.
+
+Cost is never entered manually.
+
+Cost is derived from:
+
+Labor (resource cost x estimated time).
+
+Raw materials consumed by the routing operations.
+
+Productive resources used by the routing operations.
+
+Consequence:
+
+The routing must be technically complete (resources, materials, time)
+before the quotation can calculate a valid total cost.
+
+==========================================================
+DECISION 4 - PRODUCT STRUCTURE (BOM)
+==========================================================
+
+Project items support infinite multi-level structure (multi-level Bill of
+Materials).
+
+In practice, structures rarely exceed three levels, but the system must
+not impose a hard limit.
+
+A project item may contain child items.
+
+A child item may itself contain further child items, recursively.
+
+==========================================================
+DECISION 5 - COST AGGREGATION RULE
+==========================================================
+
+The cost of a parent item is the sum of the cost of its child items,
+calculated recursively.
+
+If an item has children:
+
+Its cost equals the sum of all child item costs, recursively resolved to
+the leaf level.
+
+If an item has no children (leaf item):
+
+Its cost comes directly from its own routing (labor + raw materials +
+resources).
+
+This aggregation must be calculated bottom-up, from leaf items to the root
+item, and finally to the project total.
+
+==========================================================
+TECHNICAL CONSEQUENCE
+==========================================================
+
+The project items table must be self-referencing (parent_id / item_pai_id)
+to support infinite hierarchy.
+
+Cost aggregation must be resolved through a recursive query (recursive
+CTE), not through manual summation logic scattered across the frontend.
+
+This does not conflict with existing architecture principles. It is the
+standard relational solution for hierarchical business structures.
+
+==========================================================
+IMPLEMENTATION ORDER (CONFIRMED)
+==========================================================
+
+Products → Routing → Quotation (consumes Routing) → Commercial Proposal
+
+Routing must be functionally complete before Quotation cost calculation is
+implemented.
+
+==========================================================
+OPEN ITEMS
+==========================================================
+
+Database schema for produtos, projetos, roteiros and orcamentos tables has
+not yet been reviewed against these rules.
+
+Database Review (per HANDBOOK-005 workflow) is pending and must occur
+before implementation begins.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+These decisions represent approved business truth for this module chain.
+
+Future engineering work must build on top of these rules.
+
+Any technical solution that contradicts this document must be rejected or
+escalated to the project owner before proceeding.

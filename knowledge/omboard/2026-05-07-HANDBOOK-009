@@ -1,0 +1,224 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-009
+
+Title:
+Industrial Engineering Knowledge
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the industrial engineering knowledge that guides every business decision in NEXOTFE.
+
+It represents real manufacturing experience accumulated over many years.
+
+Every AI participating in the project must respect these principles before proposing software solutions.
+
+==========================================================
+ENGINEERING PHILOSOPHY
+==========================================================
+
+NEXOTFE was designed by industrial professionals.
+
+Business rules are based on real factory operations.
+
+Whenever software theory conflicts with industrial practice,
+
+industrial practice has priority.
+
+==========================================================
+INDUSTRIAL REALITY
+==========================================================
+
+Factories do not operate in perfect conditions.
+
+Customers change requirements.
+
+Suppliers delay deliveries.
+
+Machines stop unexpectedly.
+
+Engineering evolves.
+
+Production priorities change.
+
+The software must support this reality instead of assuming ideal conditions.
+
+==========================================================
+DECISION SUPPORT
+==========================================================
+
+The purpose of NEXOTFE is not only to register information.
+
+Its main objective is to support decision making.
+
+Every screen must help users decide faster and with greater confidence.
+
+==========================================================
+PROJECTS
+==========================================================
+
+Every project is unique.
+
+Projects may originate from:
+
+Customer demand.
+
+Custom manufacturing.
+
+Product development.
+
+Industrial services.
+
+Industrialization.
+
+Resale.
+
+The project is the central business entity.
+
+==========================================================
+ENGINEERING
+==========================================================
+
+Engineering is part of the commercial process.
+
+Products are not always completely defined before quotation.
+
+The software must support gradual definition of technical information.
+
+==========================================================
+PURCHASING
+==========================================================
+
+Purchasing is a strategic activity.
+
+The buyer decides how to negotiate.
+
+The buyer decides how to group purchase requests.
+
+The software must provide information.
+
+The decision belongs to the buyer.
+
+==========================================================
+PLANNING
+==========================================================
+
+Planning must reflect real factory capacity.
+
+Estimated dates must consider available resources.
+
+Capacity is more important than optimistic scheduling.
+
+==========================================================
+PRODUCTION
+==========================================================
+
+Production is dynamic.
+
+Unexpected events occur every day.
+
+The ERP must help reorganize work instead of creating rigid processes.
+
+==========================================================
+ROUTINGS
+==========================================================
+
+A routing is manufacturing knowledge.
+
+It defines the recommended manufacturing sequence.
+
+Production supervisors may optimize execution whenever appropriate.
+
+The ERP must preserve traceability while allowing operational flexibility.
+
+==========================================================
+RAW MATERIALS
+==========================================================
+
+Raw material information must be practical.
+
+Avoid unnecessary technical fields.
+
+Avoid duplicated information.
+
+Keep only information that supports industrial decisions.
+
+==========================================================
+MASTER DATA
+==========================================================
+
+Master data must remain simple.
+
+Register once.
+
+Reuse everywhere.
+
+Never duplicate business information.
+
+==========================================================
+USER EXPERIENCE
+==========================================================
+
+Industrial users work under time pressure.
+
+The ERP must minimize clicks.
+
+Reduce typing.
+
+Reduce unnecessary confirmations.
+
+Present only relevant information.
+
+==========================================================
+AUTOMATION
+==========================================================
+
+Automation must always reduce manual work.
+
+Automation must never remove business control.
+
+The user always keeps the final decision.
+
+==========================================================
+INDUSTRIAL FLEXIBILITY
+==========================================================
+
+Different companies work differently.
+
+Whenever possible,
+
+NEXOTFE must support different operational methods without compromising architecture.
+
+Configuration is preferable to customization.
+
+==========================================================
+LONG-TERM VISION
+==========================================================
+
+Every implementation must remain useful for many years.
+
+Temporary solutions are discouraged.
+
+The ERP must evolve without losing consistency.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+Technology is not the competitive advantage of NEXOTFE.
+
+Industrial knowledge is.
+
+Every software component must preserve and represent this knowledge with accuracy, simplicity and professionalism.

@@ -1,0 +1,250 @@
+# NEXOTFE AI ENGINEERING HANDBOOK
+
+Document:
+HANDBOOK-005
+
+Title:
+Development Workflow
+
+Version:
+1.0
+
+Status:
+Official
+
+Project:
+NEXOTFE ERP Industrial
+
+==========================================================
+PURPOSE
+==========================================================
+
+This document defines the official development workflow for the NEXOTFE project.
+
+Every AI engineer must follow this workflow.
+
+Its objective is to maximize productivity, reduce rework, preserve architecture consistency and optimize development time.
+
+==========================================================
+GENERAL PRINCIPLE
+==========================================================
+
+The project is developed one module at a time.
+
+Never work on multiple business modules simultaneously.
+
+Complete one module before starting another.
+
+==========================================================
+MODULE LIFE CYCLE
+==========================================================
+
+Every module follows the same sequence.
+
+1. Business Analysis
+
+Understand the approved business process.
+
+Confirm that the business rules already exist.
+
+If a business rule is missing, ask the project owner.
+
+Never invent business rules.
+
+==========================================================
+2. Database Review
+==========================================================
+
+Compare the approved business rules with the current Supabase structure.
+
+Identify only real differences.
+
+Never redesign approved structures.
+
+==========================================================
+3. Approval
+==========================================================
+
+If database modifications are required,
+
+request approval before changing Supabase.
+
+Never modify the database without authorization.
+
+==========================================================
+4. Implementation
+==========================================================
+
+After approval:
+
+Implement database changes.
+
+Generate migrations.
+
+Update backend.
+
+Update frontend.
+
+Remove mock data.
+
+Connect the module to Supabase.
+
+==========================================================
+5. Testing
+==========================================================
+
+Verify:
+
+Create
+
+Read
+
+Update
+
+Logical Delete (if applicable)
+
+Relationships
+
+Validation
+
+Business rules
+
+==========================================================
+6. Freeze
+==========================================================
+
+When the module is approved:
+
+Freeze it.
+
+Avoid new improvements unless:
+
+A bug exists.
+
+A business rule changes.
+
+The project owner explicitly requests an enhancement.
+
+==========================================================
+CURRENT DEVELOPMENT PRIORITY
+==========================================================
+
+Development priority is defined by business value.
+
+Current order:
+
+1. Master Data
+
+2. Commercial Modules
+
+3. Engineering
+
+4. Purchasing
+
+5. Planning
+
+6. Production
+
+7. Advanced Modules
+
+Never change this order without approval.
+
+==========================================================
+IMPLEMENTATION RULES
+==========================================================
+
+Always preserve:
+
+Business consistency.
+
+Existing data.
+
+Approved architecture.
+
+Approved naming.
+
+Approved standards.
+
+Never create temporary solutions.
+
+==========================================================
+FRONT-END WORKFLOW
+==========================================================
+
+When refining a page:
+
+Do not redesign.
+
+Refine.
+
+Standardize.
+
+Balance layouts.
+
+Improve usability.
+
+Maintain visual consistency.
+
+==========================================================
+BACK-END WORKFLOW
+==========================================================
+
+When working on Supabase:
+
+Protect existing data.
+
+Use migrations.
+
+Maintain RLS.
+
+Maintain audit fields.
+
+Maintain multi-company support.
+
+Never implement shortcuts.
+
+==========================================================
+COMMUNICATION
+==========================================================
+
+Avoid long reports.
+
+Avoid unnecessary explanations.
+
+After completing a task, report only:
+
+Files modified.
+
+Database objects modified.
+
+Migration created.
+
+Manual verification required.
+
+==========================================================
+PROJECT PHILOSOPHY
+==========================================================
+
+Progress is measured by completed modules.
+
+Not by lines of code.
+
+Not by documentation.
+
+Not by reports.
+
+A completed, tested and approved module is the unit of progress.
+
+==========================================================
+FINAL PRINCIPLE
+==========================================================
+
+Every engineering effort must generate practical value.
+
+Time, budget and engineering resources are valuable.
+
+Avoid unnecessary work.
+
+Avoid unnecessary discussions.
+
+Focus on delivering finished modules with professional quality.
