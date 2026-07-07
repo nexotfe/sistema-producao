@@ -23,28 +23,28 @@ const rawMaterials = [
 
 const operations = [
   {
-    op: "OP10",
+    op: "OP20",
     description: "Preparar material",
     resource: "Almoxarifado",
     time: "0,5h",
     note: "Separar matérias-primas do PN.",
   },
   {
-    op: "OP20",
+    op: "OP30",
     description: "Cortar conforme desenho",
     resource: "Serra horizontal",
     time: "0,8h",
     note: "Conferir medida antes de liberar.",
   },
   {
-    op: "OP30",
+    op: "OP40",
     description: "Desbastar conforme desenho",
     resource: "Torno CNC",
     time: "3h",
     note: "Fabricar conforme PDF anexado.",
   },
   {
-    op: "OP40",
+    op: "OP50",
     description: "Inspecionar conforme desenho",
     resource: "Inspeção",
     time: "0,4h",
