@@ -5,6 +5,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { FornecedorSelectionModal } from "@/modules/materias-primas/components/FornecedorSelectionModal";
 import { useMateriaPrimaForm } from "@/modules/materias-primas/hooks/useMateriaPrimaForm";
+import { useColumnConfig, type ColumnConfigItem } from "@/hooks/useColumnConfig";
+import {
+  MATERIAS_PRIMAS_COLUNAS_CHAVE,
+  materiasPrimasColunasPadrao,
+  campoLabel,
+  campoVisivel,
+} from "@/modules/materias-primas/columnConfig";
 import type {
   FornecedorMateriaPrima,
   MateriaPrimaForm,
@@ -38,6 +45,10 @@ export default function NovaMateriaPrimaPage() {
     erro,
     salvarMateriaPrima,
   } = useMateriaPrimaForm({ duplicar: materialDuplicado });
+  const { getColumn } = useColumnConfig(
+    MATERIAS_PRIMAS_COLUNAS_CHAVE,
+    materiasPrimasColunasPadrao,
+  );
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
@@ -58,6 +69,7 @@ export default function NovaMateriaPrimaPage() {
             fornecedoresAssociados={fornecedoresAssociados}
             abrirModalFornecedores={() => setModalFornecedoresAberto(true)}
             erro={erro}
+            getColumn={getColumn}
           />
         )}
       </div>
@@ -78,6 +90,7 @@ function FormularioMateriaPrima({
   fornecedoresAssociados,
   abrirModalFornecedores,
   erro,
+  getColumn,
 }: {
   form: MateriaPrimaForm;
   atualizarCampo: <K extends keyof MateriaPrimaForm>(
@@ -87,51 +100,64 @@ function FormularioMateriaPrima({
   fornecedoresAssociados: FornecedorMateriaPrima[];
   abrirModalFornecedores: () => void;
   erro: string | null;
+  getColumn: (field: string) => ColumnConfigItem | undefined;
 }) {
   return (
     <section className="flex flex-col gap-5">
       <div className="grid gap-5 lg:grid-cols-2">
         <Card titulo="Identificação">
           <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
-            <div className="md:col-span-2">
+            {campoVisivel(getColumn, "descricao") && (
+              <div className="md:col-span-2">
+                <Field
+                  label={campoLabel(getColumn, "descricao", "Descrição")}
+                  value={form.descricao}
+                  onChange={(value) => atualizarCampo("descricao", value)}
+                />
+              </div>
+            )}
+            {campoVisivel(getColumn, "codigo") && (
               <Field
-                label="Descrição"
-                value={form.descricao}
-                onChange={(value) => atualizarCampo("descricao", value)}
+                label={campoLabel(getColumn, "codigo", "Código")}
+                value={form.codigo}
+                onChange={(value) => atualizarCampo("codigo", value)}
               />
-            </div>
-            <Field
-              label="Código"
-              value={form.codigo}
-              onChange={(value) => atualizarCampo("codigo", value)}
-            />
-            <SelectField
-              label="Família"
-              value={form.familia}
-              onChange={(value) => atualizarCampo("familia", value)}
-              options={familiasMateriais}
-            />
-            <Field
-              label="Bitola"
-              value={form.bitola}
-              onChange={(value) => atualizarCampo("bitola", value)}
-            />
-            <SelectField
-              label="Unidade"
-              value={form.unidade}
-              onChange={(value) => atualizarCampo("unidade", value)}
-              options={unidadesMateriais}
-            />
+            )}
+            {campoVisivel(getColumn, "familia") && (
+              <SelectField
+                label={campoLabel(getColumn, "familia", "Família")}
+                value={form.familia}
+                onChange={(value) => atualizarCampo("familia", value)}
+                options={familiasMateriais}
+              />
+            )}
+            {campoVisivel(getColumn, "bitola") && (
+              <Field
+                label={campoLabel(getColumn, "bitola", "Bitola")}
+                value={form.bitola}
+                onChange={(value) => atualizarCampo("bitola", value)}
+              />
+            )}
+            {campoVisivel(getColumn, "unidade") && (
+              <SelectField
+                label={campoLabel(getColumn, "unidade", "Unidade")}
+                value={form.unidade}
+                onChange={(value) => atualizarCampo("unidade", value)}
+                options={unidadesMateriais}
+              />
+            )}
             <Field
               label="NCM"
               value={form.ncm}
               onChange={(value) => atualizarCampo("ncm", value)}
             />
-            <Field
-              label="Endereço"
-              value={form.endereco}
-              onChange={(value) => atualizarCampo("endereco", value)}
-            />
+            {campoVisivel(getColumn, "endereco") && (
+              <Field
+                label={campoLabel(getColumn, "endereco", "Endereço")}
+                value={form.endereco}
+                onChange={(value) => atualizarCampo("endereco", value)}
+              />
+            )}
           </div>
         </Card>
 

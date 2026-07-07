@@ -2,13 +2,63 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { useColumnConfig, type ColumnConfigItem } from "@/hooks/useColumnConfig";
 import { useMateriasPrimas } from "@/modules/materias-primas/hooks/useMateriasPrimas";
+import {
+  MATERIAS_PRIMAS_COLUNAS_CHAVE,
+  materiasPrimasColunasPadrao,
+} from "@/modules/materias-primas/columnConfig";
 import type { MateriaPrimaLista } from "@/modules/materias-primas/types";
 
 const statusStyles = {
   Ativo: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   Inativo: "bg-slate-100 text-slate-600 ring-slate-200",
 } as const;
+
+const colunaClassMap: Record<string, string> = {
+  codigo: "px-4 py-4 font-semibold text-slate-950",
+  descricao: "truncate px-4 py-4 text-slate-700",
+  bitola: "px-4 py-4 text-slate-700",
+  familia: "truncate px-4 py-4 text-slate-700",
+  unidade: "px-4 py-4 text-slate-700",
+  quantidade: "px-4 py-4 font-medium text-slate-950",
+  endereco: "truncate px-4 py-4 font-medium text-slate-700",
+  status: "px-4 py-4",
+};
+
+function renderCelulaMaterial(field: string, material: MateriaPrimaLista) {
+  switch (field) {
+    case "codigo":
+      return material.codigo ?? material.id;
+    case "descricao":
+      return material.descricao;
+    case "bitola":
+      return material.bitola || "—";
+    case "familia":
+      return material.familia || "—";
+    case "unidade":
+      return material.unidade;
+    case "quantidade":
+      return formatarQuantidade(material.quantidade);
+    case "endereco":
+      return material.endereco || "—";
+    case "status": {
+      const statusAtual = material.ativo ? "Ativo" : "Inativo";
+      return (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+            statusStyles[statusAtual]
+          }`}
+        >
+          {statusAtual}
+        </span>
+      );
+    }
+    default:
+      return null;
+  }
+}
 
 export default function RawMaterialsPage() {
   const router = useRouter();
@@ -22,6 +72,14 @@ export default function RawMaterialsPage() {
     erro,
     inativarMaterial,
   } = useMateriasPrimas();
+  const { columns } = useColumnConfig(
+    MATERIAS_PRIMAS_COLUNAS_CHAVE,
+    materiasPrimasColunasPadrao,
+  );
+  const colunasVisiveis = useMemo(
+    () => columns.filter((coluna) => coluna.visible),
+    [columns],
+  );
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
@@ -100,33 +158,39 @@ export default function RawMaterialsPage() {
             <table className="w-full table-auto text-left text-sm">
               <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                 <tr>
-                  <th className="px-4 py-3">Código</th>
-                  <th className="px-4 py-3">Descrição</th>
-                  <th className="px-4 py-3">Bitola</th>
-                  <th className="px-4 py-3">Família</th>
-                  <th className="px-4 py-3">Unidade</th>
-                  <th className="px-4 py-3">Quantidade</th>
-                  <th className="px-4 py-3">Endereço</th>
-                  <th className="px-4 py-3">Status</th>
+                  {colunasVisiveis.map((coluna) => (
+                    <th key={coluna.field} className="px-4 py-3">
+                      {coluna.label}
+                    </th>
+                  ))}
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td className="px-4 py-8 text-center text-slate-500" colSpan={9}>
+                    <td
+                      className="px-4 py-8 text-center text-slate-500"
+                      colSpan={colunasVisiveis.length + 1}
+                    >
                       Carregando matérias-primas...
                     </td>
                   </tr>
                 ) : erro ? (
                   <tr>
-                    <td className="px-4 py-8 text-center text-red-600" colSpan={9}>
+                    <td
+                      className="px-4 py-8 text-center text-red-600"
+                      colSpan={colunasVisiveis.length + 1}
+                    >
                       {erro}
                     </td>
                   </tr>
                 ) : materiais.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-8 text-center text-slate-500" colSpan={9}>
+                    <td
+                      className="px-4 py-8 text-center text-slate-500"
+                      colSpan={colunasVisiveis.length + 1}
+                    >
                       Nenhuma matéria-prima encontrada.
                     </td>
                   </tr>
@@ -135,6 +199,7 @@ export default function RawMaterialsPage() {
                     <MaterialRow
                       key={material.id}
                       material={material}
+                      colunas={colunasVisiveis}
                       menuAberto={menuAberto}
                       setMenuAberto={setMenuAberto}
                       inativarMaterial={inativarMaterial}
@@ -152,43 +217,30 @@ export default function RawMaterialsPage() {
 
 function MaterialRow({
   material,
+  colunas,
   menuAberto,
   setMenuAberto,
   inativarMaterial,
 }: {
   material: MateriaPrimaLista;
+  colunas: ColumnConfigItem[];
   menuAberto: string | null;
   setMenuAberto: (value: string | null) => void;
   inativarMaterial: (id: string) => void;
 }) {
-  const statusAtual = material.ativo ? "Ativo" : "Inativo";
   const codigo = material.codigo ?? material.id;
   const codigoUrl = encodeURIComponent(codigo);
 
   return (
     <tr className="transition hover:bg-slate-50">
-      <td className="px-4 py-4 font-semibold text-slate-950">{codigo}</td>
-      <td className="truncate px-4 py-4 text-slate-700">{material.descricao}</td>
-      <td className="px-4 py-4 text-slate-700">{material.bitola || "—"}</td>
-      <td className="truncate px-4 py-4 text-slate-700">
-        {material.familia || "—"}
-      </td>
-      <td className="px-4 py-4 text-slate-700">{material.unidade}</td>
-      <td className="px-4 py-4 font-medium text-slate-950">
-        {formatarQuantidade(material.quantidade)}
-      </td>
-      <td className="truncate px-4 py-4 font-medium text-slate-700">
-        {material.endereco || "—"}
-      </td>
-      <td className="px-4 py-4">
-        <span
-          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
-            statusStyles[statusAtual]
-          }`}
+      {colunas.map((coluna) => (
+        <td
+          key={coluna.field}
+          className={colunaClassMap[coluna.field] ?? "px-4 py-4 text-slate-700"}
         >
-          {statusAtual}
-        </span>
-      </td>
+          {renderCelulaMaterial(coluna.field, material)}
+        </td>
+      ))}
       <td className="relative px-4 py-4 text-right">
         <button
           type="button"
