@@ -1,15 +1,35 @@
-"use client";
-
 import Link from "next/link";
 import { ProductForm } from "@/modules/produtos/components/ProductForm";
+import { mockProducts } from "@/modules/produtos/mockProducts";
+import type { ProductFormValues } from "@/modules/produtos/types";
 
-export default function NewProductPage() {
+type Props = {
+  params: Promise<{
+    pn: string;
+  }>;
+};
+
+export default async function ProductPage({ params }: Props) {
+  const { pn } = await params;
+  const product = mockProducts.find((item) => item.code === pn);
+
+  const initialValues: ProductFormValues = {
+    code: product?.code ?? pn,
+    description: product?.description ?? "",
+    ncm: "",
+    unit: product?.unit ?? "un",
+    active: product?.active ?? true,
+    notes: product?.notes ?? "",
+    revisions: [],
+    roteiroVigente: product ? "Rot 01-001" : "",
+  };
+
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <Header titulo="Produto" subtitulo="Novo produto" />
+        <Header titulo="Produto" subtitulo="Cadastro do produto" />
 
-        <ProductForm mode="new" />
+        <ProductForm mode="edit" initialValues={initialValues} />
       </div>
     </main>
   );

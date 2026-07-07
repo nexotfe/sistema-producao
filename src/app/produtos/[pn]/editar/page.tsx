@@ -1,5 +1,5 @@
+import Link from "next/link";
 import { ProductForm } from "@/modules/produtos/components/ProductForm";
-import { ProductNavigation } from "@/modules/produtos/components/ProductNavigation";
 import { mockProducts } from "@/modules/produtos/mockProducts";
 import type { ProductFormValues } from "@/modules/produtos/types";
 
@@ -13,45 +13,72 @@ export default async function EditProductPage({ params }: Props) {
   const { pn } = await params;
   const product = mockProducts.find((item) => item.code === pn);
 
-  const initialValues: ProductFormValues = product
-    ? {
-        code: product.code,
-        description: product.description,
-        type: product.type,
-        unit: product.unit,
-        active: product.active,
-        notes: product.notes,
-        quantity: product.quantity,
-      }
-    : {
-        code: pn,
-        description: "",
-        type: "Produto Acabado",
-        unit: "un",
-        active: true,
-        notes: "",
-        quantity: 0,
-      };
+  const initialValues: ProductFormValues = {
+    code: product?.code ?? pn,
+    description: product?.description ?? "",
+    ncm: "",
+    unit: product?.unit ?? "un",
+    active: product?.active ?? true,
+    notes: product?.notes ?? "",
+    revisions: [],
+    roteiroVigente: product ? "Rot 01-001" : "",
+  };
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-3">
-          <ProductNavigation />
-
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Editar Produto
-            </h1>
-
-            <p className="mt-2 text-sm text-slate-500">
-              Edicao frontend de produto utilizando dados mockados.
-            </p>
-          </div>
-        </header>
+        <Header titulo="Produto" subtitulo="Editar produto" />
 
         <ProductForm mode="edit" initialValues={initialValues} />
       </div>
     </main>
+  );
+}
+
+function Header({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
+  return (
+    <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+            LOGO
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+              {titulo}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+            Nome do usuário
+          </span>
+
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/produtos"
+              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Voltar
+            </Link>
+            <Link
+              href="/central"
+              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Início
+            </Link>
+            <button
+              type="button"
+              className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
   );
 }
