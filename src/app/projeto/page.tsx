@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const cards = [
   "Identificação do Projeto",
@@ -10,8 +11,32 @@ const cards = [
   "Resumo Operacional",
 ];
 
+type StatusProjeto =
+  | "em_elaboracao"
+  | "em_analise"
+  | "aprovado"
+  | "perdido"
+  | "cancelado";
+
+const statusOptions: { value: StatusProjeto; label: string }[] = [
+  { value: "em_elaboracao", label: "Em elaboração" },
+  { value: "em_analise", label: "Em análise" },
+  { value: "aprovado", label: "Aprovado" },
+  { value: "perdido", label: "Perdido" },
+  { value: "cancelado", label: "Reprovado" },
+];
+
+const resumoOperacionalMock = {
+  produtos: "3",
+  ofs: "2",
+  custoEstimado: "Aguardando roteiro",
+  custoReal: "Aguardando produção",
+};
+
 export default function ProjetoPage() {
   const router = useRouter();
+  const [status, setStatus] = useState<StatusProjeto>("em_elaboracao");
+  const projetoAprovado = status === "aprovado";
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
@@ -156,11 +181,19 @@ export default function ProjetoPage() {
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                         Status
                       </label>
-                      <div className="flex h-10 items-center">
-                        <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-                          Em elaboração
-                        </span>
-                      </div>
+                      <select
+                        value={status}
+                        onChange={(event) =>
+                          setStatus(event.target.value as StatusProjeto)
+                        }
+                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      >
+                        {statusOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
@@ -264,18 +297,33 @@ export default function ProjetoPage() {
               {index === 3 ? (
                 <div className="mt-5 divide-y divide-slate-200 rounded-md border border-slate-200">
                   {[
-                    ["Pedido de Compra", "PC-000000"],
-                    ["OFs Abertas", "0"],
-                    ["Última Revisão", "Rev.00"],
-                    ["Data do Pedido", "--"],
-                    ["Responsável Atual", "Comercial"],
+                    ["Nº de Produtos", resumoOperacionalMock.produtos],
+                    ["Nº de OFs", resumoOperacionalMock.ofs],
+                    ["Custo Estimado", resumoOperacionalMock.custoEstimado],
+                    ["Custo Real", resumoOperacionalMock.custoReal],
                   ].map(([label, value]) => (
                     <div
                       key={label}
                       className="flex items-center justify-between gap-4 px-3 py-2 text-sm"
                     >
-                      <span className="font-medium text-slate-600">{label}</span>
-                      <span className="font-semibold text-slate-800">{value}</span>
+                      <span
+                        className={
+                          projetoAprovado
+                            ? "font-medium text-slate-600"
+                            : "font-medium text-slate-400"
+                        }
+                      >
+                        {label}
+                      </span>
+                      <span
+                        className={
+                          projetoAprovado
+                            ? "font-semibold text-slate-800"
+                            : "font-semibold text-slate-400"
+                        }
+                      >
+                        {projetoAprovado ? value : "—"}
+                      </span>
                     </div>
                   ))}
                 </div>
