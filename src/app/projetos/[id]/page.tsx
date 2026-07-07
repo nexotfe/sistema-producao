@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { ProjectDetailsPageContent } from "../novo/page";
+import { ProjectDetailsPageContent } from "@/modules/projetos/components/ProjectDetailsPageContent";
 
 type ProjectDetailsPageProps = {
   params: Promise<{
