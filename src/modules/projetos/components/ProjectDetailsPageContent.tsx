@@ -359,7 +359,7 @@ export function ProjectDetailsPageContent({
           */}
           <Link
             href="/proposta-comercial"
-            className="h-10 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
           >
             Gerar Proposta Comercial
           </Link>
