@@ -7,6 +7,7 @@ import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 export type ProjectStructureItem = {
   description: string;
   pn: string;
+  revision?: string;
   quantity: number;
   routeStatus: string;
   hours: string;
@@ -87,27 +88,29 @@ export function ProjectStructureItemsTable({
       <div>
         <table className="w-full table-fixed text-left text-sm">
           <colgroup>
-            <col className="w-[31.82%]" />
-            <col className="w-[9.09%]" />
-            <col className="w-[4.55%]" />
-            <col className="w-[10.91%]" />
-            <col className="w-[9.09%]" />
-            <col className="w-[9.09%]" />
-            <col className="w-[9.09%]" />
-            <col className="w-[9.09%]" />
-            <col className="w-[7.27%]" />
+            <col className="w-[26.5%]" />
+            <col className="w-[8%]" />
+            <col className="w-[7%]" />
+            <col className="w-[5%]" />
+            <col className="w-[10%]" />
+            <col className="w-[8.5%]" />
+            <col className="w-[8.5%]" />
+            <col className="w-[8.5%]" />
+            <col className="w-[9%]" />
+            <col className="w-[9%]" />
           </colgroup>
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
             <tr>
               <th className="px-4 py-3 font-bold">Descrição</th>
               <th className="px-4 py-3 text-center font-bold">Código</th>
+              <th className="px-4 py-3 text-center font-bold">Revisão</th>
               <th className="px-4 py-3 text-center font-bold">Qtd</th>
               <th className="px-4 py-3 font-bold">Roteiro</th>
               <th className="px-4 py-3 text-center font-bold">Custo</th>
               <th className="px-4 py-3 text-center font-bold">Impostos</th>
               <th className="px-4 py-3 text-center font-bold">Lucro</th>
               <th className="px-4 py-3 text-center font-bold">Total</th>
-              <th className="px-4 py-3 text-center font-bold">Estrutura</th>
+              <th className="py-3 pl-4 pr-6 text-center font-bold">Estrutura</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -124,13 +127,16 @@ export function ProjectStructureItemsTable({
                     selected ? "bg-slate-50" : ""
                   }`}
                 >
-                  <td className="truncate px-4 py-4 align-middle text-slate-700">
+                  <td className="line-clamp-2 px-4 py-4 align-middle text-slate-700">
                     {item.description}
                   </td>
                   <td className="px-4 py-4 text-center align-middle font-semibold text-blue-700">
                     <EntityLink type="item" id={item.pn}>
                       {item.pn}
                     </EntityLink>
+                  </td>
+                  <td className="px-4 py-4 text-center align-middle text-slate-700">
+                    {item.revision ?? "—"}
                   </td>
                   <td className="px-4 py-4 text-center align-middle text-slate-700">{item.quantity}</td>
                   <td className="px-4 py-4 align-middle">
@@ -153,7 +159,7 @@ export function ProjectStructureItemsTable({
                   <td className="px-4 py-4 text-center align-middle font-semibold text-slate-800">
                     {item.total ?? "—"}
                   </td>
-                  <td className="px-4 py-4 text-center align-middle">
+                  <td className="py-4 pl-4 pr-6 text-center align-middle">
                     {hasStructure ? (
                       <Link
                         href={structureHref}

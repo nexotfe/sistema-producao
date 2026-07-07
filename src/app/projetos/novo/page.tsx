@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,8 +9,10 @@ import {
 
 const quoteItems: ProjectStructureItem[] = [
   {
-    description: "Base soldada",
+    description:
+      "Base soldada estrutural para suporte de conjunto mecânico industrial",
     pn: "1243-01",
+    revision: "Rev.A",
     quantity: 1,
     routeStatus: "Em edição",
     hours: "Depende do roteiro",
@@ -26,6 +28,7 @@ const quoteItems: ProjectStructureItem[] = [
   {
     description: "Eixo usinado",
     pn: "1244-01",
+    revision: "Rev.B",
     quantity: 2,
     routeStatus: "Completo",
     hours: "5,5h",
@@ -39,6 +42,7 @@ const quoteItems: ProjectStructureItem[] = [
   {
     description: "Suporte",
     pn: "1245-01",
+    revision: "Rev.A",
     quantity: 4,
     routeStatus: "Pendente",
     hours: "Depende do roteiro",
