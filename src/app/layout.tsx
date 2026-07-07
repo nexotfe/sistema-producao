@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthGate } from "@/modules/auth/AuthGate";
+import { NavigationHistoryTracker } from "@/modules/shared/navigation/NavigationHistoryTracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
+        <NavigationHistoryTracker />
         <AuthGate>{children}</AuthGate>
       </body>
     </html>

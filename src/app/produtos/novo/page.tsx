@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ProductForm } from "@/modules/produtos/components/ProductForm";
+import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
 
 export default function NewProductPage() {
   return (
@@ -38,12 +39,12 @@ function Header({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
           </span>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/produtos"
+            <ModuleBackTrigger
+              fallbackHref="/produtos"
               className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Voltar
-            </Link>
+            </ModuleBackTrigger>
             <Link
               href="/central"
               className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"

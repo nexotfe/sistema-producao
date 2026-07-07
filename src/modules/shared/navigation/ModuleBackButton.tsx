@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useModuleBack } from "@/modules/shared/navigation/useModuleBack";
 
 type ModuleBackButtonProps = {
   label?: string;
@@ -16,21 +16,7 @@ export function ModuleBackButton({
   fallbackHref = "/dashboard",
   className,
 }: ModuleBackButtonProps) {
-  const router = useRouter();
-
-  function handleBack() {
-    const hasSameOriginReferrer =
-      typeof window !== "undefined" &&
-      document.referrer.length > 0 &&
-      new URL(document.referrer).origin === window.location.origin;
-
-    if (hasSameOriginReferrer && window.history.length > 1) {
-      router.back();
-      return;
-    }
-
-    router.push(fallbackHref);
-  }
+  const handleBack = useModuleBack(fallbackHref);
 
   return (
     <button
@@ -41,7 +27,7 @@ export function ModuleBackButton({
         .join(" ")}
     >
       <span aria-hidden="true" className="text-sm font-semibold leading-none">
-        {"\u2039"}
+        {"‹"}
       </span>
       <span className="leading-none">{label}</span>
     </button>
