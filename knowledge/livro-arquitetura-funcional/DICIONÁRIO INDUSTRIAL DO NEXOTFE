@@ -1,0 +1,374 @@
+# DICIONÁRIO INDUSTRIAL DO NEXOTFE
+
+## Versão 1.0
+
+## Objetivo
+
+Este documento define a linguagem oficial utilizada pelo NEXOTFE.
+
+Seu objetivo é garantir que todos os usuários, desenvolvedores, analistas e administradores utilizem os mesmos conceitos e a mesma terminologia em todo o sistema.
+
+Cada termo possui um único significado.
+
+Nenhuma definição poderá ser alterada sem revisão da Arquitetura do NEXOTFE.
+
+---
+
+# Filosofia
+
+O NEXOTFE foi desenvolvido para representar o funcionamento real de uma indústria.
+
+Por esse motivo, sua linguagem deverá refletir os processos industriais e não apenas conceitos de software.
+
+Toda palavra utilizada pelo sistema deverá possuir significado claro, único e rastreável.
+
+---
+
+# Empresa
+
+Organização responsável pela gestão de seus clientes, projetos, produção, suprimentos e operações.
+
+Toda informação do sistema pertence obrigatoriamente a uma empresa.
+
+---
+
+# Cliente
+
+Pessoa ou organização que solicita produtos, serviços, projetos ou desenvolvimentos.
+
+O Cliente representa a origem comercial do processo.
+
+---
+
+# Contato
+
+Pessoa vinculada ao Cliente.
+
+Pode possuir função Comercial, Técnica, Fiscal, Compras ou qualquer outra necessária ao relacionamento.
+
+---
+
+# Projeto
+
+Unidade principal de gestão do NEXOTFE.
+
+Todo trabalho nasce em um Projeto.
+
+O Projeto acompanha o ciclo completo, desde a oportunidade comercial até a entrega final.
+
+---
+
+# Projeto Comercial
+
+Fase inicial do Projeto.
+
+Representa estudos, propostas, orçamentos e negociações.
+
+Após aprovação, transforma-se naturalmente em Projeto Industrial, preservando o histórico.
+
+---
+
+# Projeto Industrial
+
+Representa a execução técnica e operacional do Projeto.
+
+É responsável pela geração de Itens, Ordens de Fabricação, Compras e Produção.
+
+---
+
+# Item
+
+Produto, conjunto, subconjunto ou componente pertencente a um Projeto.
+
+Cada Item poderá possuir sua própria estrutura técnica e operacional.
+
+---
+
+# Part Number (PN)
+
+Identidade técnica única de um Item.
+
+Um PN identifica exatamente um desenho ou componente.
+
+O mesmo PN poderá ser utilizado em diversos projetos ao longo do tempo.
+
+---
+
+# BOM (Bill of Materials)
+
+Estrutura física do produto.
+
+Responde à pergunta:
+
+> **"Do que o produto é composto?"**
+
+A BOM descreve materiais, componentes e quantidades.
+
+Ela não descreve como fabricar.
+
+---
+
+# Roteiro de Fabricação
+
+Processo de fabricação do Item.
+
+Responde à pergunta:
+
+> **"Como fabricar o produto?"**
+
+Define:
+
+* operações;
+* sequência;
+* tecnologias;
+* recursos;
+* materiais consumidos;
+* tempos previstos;
+* serviços terceirizados.
+
+---
+
+# Ordem de Fabricação (OF)
+
+Documento responsável por organizar a fabricação de um Item.
+
+Define quantidades, roteiro utilizado e necessidades produtivas.
+
+A OF organiza o trabalho.
+
+Ela não executa operações.
+
+---
+
+# Operação (OP)
+
+Etapa individual de execução pertencente a uma Ordem de Fabricação.
+
+Cada Operação representa uma atividade específica do processo produtivo.
+
+As Operações executam o trabalho.
+
+---
+
+# Tecnologia
+
+Conhecimento ou processo utilizado para executar uma Operação.
+
+Exemplos:
+
+* Torneamento CNC
+* Fresamento CNC
+* Soldagem TIG
+* Tratamento Térmico
+* Montagem
+* Inspeção
+
+Uma Tecnologia poderá utilizar diferentes Recursos Produtivos.
+
+---
+
+# Recurso Produtivo
+
+Máquina, equipamento, ferramenta, dispositivo ou fornecedor capaz de executar determinada Tecnologia.
+
+Exemplos:
+
+* Centro de Usinagem CNC 1000 mm
+* Centro de Usinagem CNC 3000 mm
+* Torno CNC
+* Serra Vertical
+* Empresa de Tratamento Térmico
+
+---
+
+# Necessidade de Material
+
+Quantidade calculada de material necessária para atender uma Ordem de Fabricação.
+
+A Necessidade nasce automaticamente a partir do Roteiro e da quantidade definida na OF.
+
+Toda Necessidade deverá ser analisada pelo PCP antes do atendimento.
+
+---
+
+# Decisão do PCP
+
+Registro formal da decisão sobre como atender uma Necessidade.
+
+As opções oficiais são:
+
+* Estoque;
+* Compra;
+* Estoque + Compra.
+
+O sistema poderá sugerir.
+
+A decisão pertence ao PCP.
+
+---
+
+# Reserva de Estoque
+
+Compromisso lógico de determinada quantidade de material para uma OF específica.
+
+A Reserva não representa movimentação física.
+
+Seu objetivo é impedir que o material reservado seja utilizado por outra necessidade.
+
+---
+
+# Consumo
+
+Movimentação física do material para a Produção.
+
+O Consumo reduz o estoque disponível.
+
+Sempre que possível deverá estar vinculado a uma Reserva previamente criada.
+
+Reserva e Consumo representam eventos distintos.
+
+---
+
+# Requisição de Compra
+
+Solicitação formal para aquisição de materiais ou serviços.
+
+A Requisição nasce quando o PCP decide que uma Necessidade será atendida por Compra.
+
+---
+
+# Planejamento de Compras
+
+Processo responsável por consolidar necessidades semelhantes e organizar futuras aquisições.
+
+O Planejamento apoia o Comprador.
+
+A decisão final permanece humana.
+
+---
+
+# Pedido de Compra
+
+Documento oficial enviado ao fornecedor para aquisição de materiais ou serviços.
+
+---
+
+# Recebimento
+
+Processo responsável por validar materiais recebidos.
+
+Possui duas etapas independentes:
+
+Recebimento Físico
+
+Confirma que o material recebido corresponde ao produto entregue.
+
+Recebimento Fiscal
+
+Confirma que a Nota Fiscal corresponde ao Pedido de Compra.
+
+Somente após ambas as validações o material poderá ser liberado para utilização.
+
+---
+
+# Produção
+
+Conjunto de operações responsáveis por transformar materiais em produtos acabados.
+
+Seu objetivo principal é manter o fluxo contínuo da fábrica.
+
+---
+
+# Qualidade
+
+Área responsável por validar materiais, processos e produtos, assegurando conformidade com requisitos técnicos.
+
+---
+
+# Expedição
+
+Processo responsável pela separação, conferência e entrega dos produtos ao cliente.
+
+Representa o encerramento do fluxo operacional.
+
+---
+
+# Fluxo Industrial
+
+Cliente
+
+↓
+
+Projeto Comercial
+
+↓
+
+Projeto Industrial
+
+↓
+
+Item
+
+↓
+
+PN
+
+↓
+
+BOM
+
+↓
+
+Roteiro
+
+↓
+
+OF
+
+↓
+
+Necessidades
+
+↓
+
+Decisão do PCP
+
+↓
+
+Reserva ou Compra
+
+↓
+
+Recebimento
+
+↓
+
+Produção
+
+↓
+
+Produto Acabado
+
+↓
+
+Expedição
+
+↓
+
+Entrega
+
+---
+
+# Princípios Fundamentais
+
+Cada termo possui um único significado.
+
+Cada informação possui uma única origem.
+
+Cada processo possui um responsável.
+
+O sistema organiza informações.
+
+As pessoas tomam decisões.
+
+A linguagem do NEXOTFE representa a linguagem da indústria e deverá permanecer consistente em toda a evolução do sistema.

@@ -1,0 +1,135 @@
+# PARTE V
+
+# SUPRIMENTOS
+
+## Objetivo
+
+O módulo de Suprimentos tem como objetivo garantir que materiais, serviços, transportes e recursos logísticos estejam disponíveis no momento correto para atender às necessidades da empresa.
+
+Seu propósito vai muito além da emissão de pedidos de compra.
+
+Suprimentos representa todo o fluxo de abastecimento da organização, desde o surgimento da necessidade até a disponibilização do recurso para a produção ou a entrega do produto ao cliente.
+
+Toda a arquitetura foi concebida para manter a produção abastecida, reduzir desperdícios, evitar atrasos e apoiar decisões relacionadas ao fluxo de materiais.
+
+---
+
+# Filosofia
+
+No NEXOTFE, Suprimentos não representa apenas um departamento.
+
+Representa uma função estratégica dentro da empresa.
+
+Independentemente da estrutura organizacional adotada, existe sempre alguém responsável por garantir que os recursos certos estejam disponíveis no momento correto.
+
+Cada empresa poderá chamar essa área de:
+
+* Compras;
+* Suprimentos;
+* Logística;
+* Almoxarifado;
+* PCP;
+* Administração.
+
+O sistema não impõe uma estrutura organizacional.
+
+Ele adapta-se à realidade operacional de cada empresa.
+
+---
+
+# Abrangência
+
+A área de Suprimentos poderá contemplar:
+
+* Planejamento Inteligente de Compras;
+* Lista de Necessidades;
+* Consumo Interno (CI);
+* Requisições de Compra;
+* Pedidos de Compra;
+* Gestão de Fornecedores;
+* Serviços Terceirizados;
+* Recebimento de Materiais;
+* Gestão de Estoque;
+* Coletas;
+* Transportes;
+* Entregas;
+* Apoio Logístico.
+
+Todos esses processos fazem parte de um único fluxo de abastecimento.
+
+---
+
+# Filosofia de Trabalho
+
+O sistema não será orientado por documentos.
+
+Será orientado por processos e decisões.
+
+Requisições, Pedidos de Compra e demais documentos existirão porque são necessários para formalizar as operações da empresa.
+
+Entretanto, o foco do usuário será sempre aquilo que realmente necessita de atenção.
+
+O objetivo não é controlar documentos.
+
+O objetivo é garantir que materiais e serviços estejam disponíveis antes que provoquem impactos na produção.
+
+---
+
+# Gestão Integrada
+
+A arquitetura permitirá acompanhar, em uma única visão:
+
+* o que precisa ser comprado;
+* o que está em negociação;
+* o que deverá ser coletado;
+* o que está em transporte;
+* o que deverá ser recebido;
+* o que está aguardando conferência;
+* o que deverá ser entregue ao cliente.
+
+Essa visão integrada permitirá que Compras e Logística trabalhem como partes de um mesmo processo.
+
+---
+
+# Pendências Operacionais
+
+O sistema não deverá gerar notificações para todas as atividades executadas.
+
+Seu papel será destacar apenas situações que dependam de decisão humana ou que possam comprometer o abastecimento da empresa.
+
+Exemplos:
+
+* materiais com risco de atraso;
+* entregas previstas para o dia;
+* fornecedores em atraso;
+* coletas pendentes;
+* serviços terceirizados aguardando envio;
+* requisições aguardando geração de Pedido de Compra.
+
+O objetivo é reduzir esquecimentos, eliminar controles paralelos e concentrar a atenção do usuário apenas nas atividades realmente importantes.
+
+---
+
+# Princípios Fundamentais
+
+As necessidades nascem na Produção.
+
+O Planejamento organiza essas necessidades.
+
+O PCP decide como elas serão atendidas.
+
+Compras define a estratégia de aquisição.
+
+A Logística movimenta materiais e produtos.
+
+O Estoque disponibiliza os recursos.
+
+A Produção transforma esses recursos em valor para o cliente.
+
+Todo esse fluxo representa uma única cadeia de abastecimento.
+
+O sistema calcula, organiza e apresenta informações.
+
+As decisões permanecem sob responsabilidade das pessoas.
+
+A tecnologia deve reduzir trabalho repetitivo, eliminar esquecimentos e apoiar a tomada de decisão, sem substituir a experiência dos profissionais da empresa.

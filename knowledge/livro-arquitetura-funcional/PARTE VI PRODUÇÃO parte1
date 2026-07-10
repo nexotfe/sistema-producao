@@ -1,0 +1,167 @@
+# PARTE VI
+
+# PRODUÇÃO
+
+# Capítulo 01
+
+# Organização do Fluxo Produtivo
+
+## Objetivo
+
+A Produção tem como objetivo transformar o planejamento em resultados, mantendo o fluxo contínuo das operações até a conclusão do projeto.
+
+Todas as atividades da Produção deverão contribuir para que as Ordens de Produção (OP) sejam executadas de forma organizada, segura e com o menor número possível de interrupções.
+
+O foco principal não é executar Ordens de Fabricação.
+
+O foco é manter o fluxo produtivo.
+
+---
+
+# Filosofia
+
+A Produção deverá trabalhar orientada pelo fluxo das Operações.
+
+As Ordens de Fabricação organizam os trabalhos.
+
+As Operações executam os trabalhos.
+
+Toda decisão tomada pelo PCP, Supervisão ou Produção deverá buscar manter a continuidade das operações e eliminar perdas provocadas por esperas, retrabalhos, falta de materiais ou recursos indisponíveis.
+
+---
+
+# Procedimento Operacional
+
+O fluxo produtivo deverá seguir, preferencialmente, a seguinte sequência:
+
+Projeto
+
+↓
+
+Ordem de Fabricação
+
+↓
+
+Operações
+
+↓
+
+Preparação
+
+↓
+
+Execução
+
+↓
+
+Inspeção
+
+↓
+
+Próxima Operação
+
+↓
+
+Conclusão
+
+Cada operação deverá agregar valor ao produto e preparar a etapa seguinte.
+
+---
+
+# Organização das Filas
+
+O PCP será responsável por organizar inicialmente as filas de produção, considerando:
+
+* prioridade do projeto;
+* data de necessidade;
+* capacidade produtiva;
+* disponibilidade de materiais;
+* recursos produtivos;
+* tecnologias;
+* carga de trabalho.
+
+Essa programação representa a melhor condição conhecida no momento do planejamento.
+
+---
+
+# Flexibilidade Operacional
+
+A Produção poderá alterar a sequência inicialmente planejada sempre que identificar oportunidades que tragam benefícios ao fluxo produtivo.
+
+Exemplos:
+
+* redução de setups;
+* melhor aproveitamento da máquina;
+* agrupamento de operações semelhantes;
+* disponibilidade de operador;
+* urgências operacionais;
+* necessidades do cliente;
+* retorno de serviços terceirizados.
+
+Essas alterações fazem parte da dinâmica da fábrica e não representam falhas do planejamento.
+
+Sempre que possível, essas alterações deverão permanecer registradas para conhecimento do PCP.
+
+---
+
+# Papel do PCP
+
+O PCP deverá:
+
+* planejar;
+* organizar;
+* antecipar riscos;
+* remover restrições;
+* acompanhar pendências;
+* apoiar a Produção.
+
+Sua principal missão é manter o fluxo produtivo.
+
+---
+
+# Papel da Produção
+
+A Produção deverá:
+
+* executar as operações;
+* informar ocorrências relevantes;
+* sugerir melhorias;
+* aproveitar oportunidades operacionais;
+* preservar a rastreabilidade;
+* manter o fluxo das operações.
+
+A experiência do chão de fábrica representa uma importante fonte de melhoria contínua do planejamento.
+
+---
+
+# Papel do Sistema
+
+O sistema deverá:
+
+* organizar informações;
+* calcular capacidades;
+* formar filas iniciais;
+* identificar riscos;
+* apresentar pendências;
+* registrar alterações;
+* manter a rastreabilidade.
+
+O sistema não substitui a experiência das pessoas.
+
+Ele apoia as decisões operacionais.
+
+---
+
+# Princípios Fundamentais
+
+O planejamento estabelece a melhor sequência conhecida no momento da programação.
+
+A Produção poderá adaptar essa sequência sempre que identificar oportunidades operacionais.
+
+Essas adaptações não representam desvios.
+
+Representam a capacidade da empresa de responder às condições reais do chão de fábrica.
+
+O objetivo comum entre PCP e Produção é manter o fluxo contínuo das operações, preservando prazo, qualidade, rastreabilidade e produtividade.
+
+O sucesso da Produção será medido pela capacidade da empresa em manter suas operações fluindo continuamente até a entrega do produto ao cliente.

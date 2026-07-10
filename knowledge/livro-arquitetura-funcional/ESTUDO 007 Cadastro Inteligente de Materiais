@@ -1,0 +1,209 @@
+# ESTUDO 007
+
+# Cadastro Inteligente de Materiais
+
+## Objetivo
+
+Estabelecer uma estrutura padronizada para cadastro de materiais, permitindo que cada empresa adapte sua classificação conforme sua realidade operacional.
+
+O NEXOTFE fornecerá uma arquitetura de cadastro.
+
+Jamais imporá uma forma única de classificação.
+
+Cada empresa poderá configurar sua própria nomenclatura, códigos e organização.
+
+---
+
+# 1. Código do Material
+
+O sistema deverá permitir diferentes critérios de codificação.
+
+Exemplos:
+
+* Sequencial.
+* Alfanumérico.
+* Inteligente.
+* Padrão da empresa.
+
+A definição do modelo será uma configuração da implantação.
+
+O sistema não imporá prefixos como "MP", "MT" ou similares.
+
+---
+
+# 2. Estrutura de Classificação
+
+O cadastro será organizado em níveis.
+
+Esses níveis poderão ser configurados pela empresa.
+
+Sugestão inicial:
+
+Família
+
+↓
+
+Classe
+
+↓
+
+Forma
+
+↓
+
+Bitola
+
+↓
+
+Unidade
+
+Essa estrutura representa uma recomendação baseada em boas práticas industriais.
+
+Poderá ser adaptada conforme a necessidade de cada empresa.
+
+---
+
+# 3. Família
+
+Representa o grande grupo do material.
+
+Exemplos:
+
+* Aços
+* Alumínios
+* Inoxidáveis
+* Metais Amarelos
+* Plásticos de Engenharia
+* Consumíveis
+* Ferramentas
+* Ativos
+* Uso e Consumo
+
+Cada empresa poderá criar, alterar ou remover famílias.
+
+---
+
+# 4. Classe
+
+Representa a classificação técnica do material.
+
+Exemplos:
+
+* SAE 1020
+* SAE 1045
+* SAE 4340
+* SAE 8620
+* Alumínio 6061
+* Bronze TM23
+
+Outras normas poderão ser utilizadas conforme a realidade da empresa.
+
+---
+
+# 5. Equivalências
+
+O sistema permitirá cadastrar materiais equivalentes.
+
+Exemplo:
+
+SAE 1045
+
+↓
+
+C45
+
+↓
+
+EN8
+
+Essa informação servirá como apoio técnico e não alterará automaticamente o material utilizado no projeto.
+
+---
+
+# 6. Forma
+
+Representa a geometria comercial do material.
+
+Exemplos:
+
+* Redondo
+* Chato
+* Quadrado
+* Sextavado
+* Tubo Redondo
+* Tubo Quadrado
+* Chapa
+* Cantoneira
+
+---
+
+# 7. Bitola
+
+Representa apenas a dimensão principal.
+
+A unidade será definida em campo próprio.
+
+Exemplos:
+
+50
+
+100
+
+4
+
+1/2
+
+---
+
+# 8. Unidade
+
+Campo obrigatório.
+
+Exemplos:
+
+* mm
+* polegada
+* metro
+* kg
+* chapa
+* barra
+
+---
+
+# 9. Descrição
+
+O sistema poderá gerar automaticamente uma descrição padronizada utilizando os campos cadastrados.
+
+A empresa poderá optar por editar essa descrição quando necessário.
+
+---
+
+# 10. Estoque Mínimo
+
+O estoque mínimo pertence ao cadastro do material.
+
+Cada empresa poderá definir seus próprios critérios de reposição.
+
+---
+
+# 11. Fornecedor Preferencial
+
+Opcional.
+
+Permite associar um ou mais fornecedores normalmente utilizados para aquele material.
+
+Não impede a compra de outros fornecedores.
+
+---
+
+# Princípios
+
+• O sistema fornece uma estrutura.
+
+• A empresa define sua classificação.
+
+• Menos campos obrigatórios significam maior produtividade.
+
+• O cadastro deverá evitar duplicidades sem dificultar o trabalho do usuário.
+
+• A padronização deverá ser construída através da inteligência do sistema e não pela burocracia.

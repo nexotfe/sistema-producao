@@ -1,0 +1,46 @@
+CLIENTE
+     │
+     ▼
+COMERCIAL
+     │
+     ▼
+PROJETO
+     │
+     ▼
+OF
+     │
+     ▼
+OP
+(Tecnologia + Tempo)
+     │
+     ▼
+Lista de Necessidades
+     │
+     ▼
+PCP
+     │
+ ┌───┴───────────────┐
+ │                   │
+ ▼                   ▼
+Consumo Interno     Compra
+(CI)                 │
+ │                   ▼
+ │          Planejamento Inteligente
+ │                   │
+ │                   ▼
+ │          Requisição de Compra
+ │                   ▼
+ │              Compras
+ │                   ▼
+ │          Pedido de Compra
+ │                   ▼
+ └────────► Recebimento
+                     │
+                     ▼
+                 Estoque
+                     │
+                     ▼
+              Liberação da OF
+                     │
+                     ▼
+                 Produção

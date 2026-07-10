@@ -1,0 +1,329 @@
+# ARQUITETURA DE DADOS DO NEXOTFE
+
+## Versão 1.0
+
+## Objetivo
+
+Este documento apresenta a arquitetura conceitual dos dados do NEXOTFE.
+
+Seu objetivo é definir as principais entidades do sistema, seus relacionamentos e responsabilidades, servindo como referência para o banco de dados, APIs e desenvolvimento da aplicação.
+
+Este documento não define campos, tipos de dados ou tecnologias específicas.
+
+Ele define apenas a organização das informações da empresa.
+
+---
+
+# Princípios
+
+Cada informação possui uma única origem.
+
+Nenhuma informação deverá ser duplicada entre módulos.
+
+Os relacionamentos deverão preservar a rastreabilidade completa do processo industrial.
+
+Toda informação deverá possuir um responsável funcional claramente definido.
+
+---
+
+# Núcleo Administrativo
+
+EMPRESA
+
+↓
+
+USUÁRIOS
+
+↓
+
+CONFIGURAÇÕES
+
+↓
+
+NUMERAÇÕES
+
+↓
+
+PARÂMETROS
+
+Essas entidades representam a configuração geral do sistema.
+
+---
+
+# Núcleo Comercial
+
+CLIENTES
+
+↓
+
+CONTATOS
+
+↓
+
+PROJETOS COMERCIAIS
+
+↓
+
+ORÇAMENTOS
+
+↓
+
+APROVAÇÕES
+
+O Comercial é responsável pela geração das oportunidades e aprovação dos projetos.
+
+---
+
+# Núcleo de Engenharia
+
+PROJETOS
+
+↓
+
+ITENS
+
+↓
+
+PART NUMBER (PN)
+
+↓
+
+BOM
+
+↓
+
+ROTEIROS
+
+↓
+
+DOCUMENTOS
+
+↓
+
+REVISÕES
+
+Toda identidade técnica nasce neste núcleo.
+
+Nenhuma informação técnica deverá ser criada diretamente na Produção.
+
+---
+
+# Núcleo PCP
+
+ORDENS DE FABRICAÇÃO
+
+↓
+
+NECESSIDADES
+
+↓
+
+DECISÕES PCP
+
+↓
+
+RESERVAS
+
+↓
+
+DEPENDÊNCIAS
+
+↓
+
+PROGRAMAÇÃO
+
+O PCP organiza o fluxo produtivo.
+
+Nenhuma compra ou reserva deverá ocorrer sem decisão registrada quando aplicável.
+
+---
+
+# Núcleo de Suprimentos
+
+ESTOQUE
+
+↓
+
+REQUISIÇÕES
+
+↓
+
+PLANEJAMENTO
+
+↓
+
+PEDIDOS
+
+↓
+
+RECEBIMENTO
+
+↓
+
+FORNECEDORES
+
+Suprimentos garante a disponibilidade dos recursos necessários para produção.
+
+---
+
+# Núcleo de Produção
+
+OPERAÇÕES
+
+↓
+
+TECNOLOGIAS
+
+↓
+
+RECURSOS
+
+↓
+
+COLABORADORES
+
+↓
+
+APONTAMENTOS
+
+↓
+
+HISTÓRICO
+
+Produção representa a execução física do planejamento.
+
+---
+
+# Núcleo da Qualidade
+
+INSPEÇÕES
+
+↓
+
+CERTIFICADOS
+
+↓
+
+NÃO CONFORMIDADES
+
+↓
+
+LIBERAÇÕES
+
+Qualidade valida materiais, processos e produtos.
+
+---
+
+# Núcleo de Expedição
+
+PRODUTOS ACABADOS
+
+↓
+
+SEPARAÇÃO
+
+↓
+
+EXPEDIÇÃO
+
+↓
+
+ENTREGA
+
+Expedição representa a conclusão do ciclo operacional.
+
+---
+
+# Fluxo entre as Entidades
+
+Cliente
+
+↓
+
+Projeto Comercial
+
+↓
+
+Projeto
+
+↓
+
+Itens
+
+↓
+
+PN
+
+↓
+
+BOM
+
+↓
+
+Roteiro
+
+↓
+
+OF
+
+↓
+
+Necessidades
+
+↓
+
+Decisão PCP
+
+↓
+
+Reserva / Compra
+
+↓
+
+Recebimento
+
+↓
+
+Produção
+
+↓
+
+Produto Acabado
+
+↓
+
+Entrega
+
+Todas as entidades deverão permitir rastreabilidade completa em ambos os sentidos.
+
+---
+
+# Regras Gerais
+
+Nenhuma entidade poderá assumir responsabilidades pertencentes a outra.
+
+BOM não substitui Roteiro.
+
+Reserva não representa Consumo.
+
+OF organiza.
+
+OP executa.
+
+Projeto representa a origem do processo.
+
+PN representa a identidade técnica.
+
+Toda decisão deverá permanecer registrada.
+
+Toda movimentação deverá ser rastreável.
+
+---
+
+# Filosofia
+
+A arquitetura de dados do NEXOTFE foi desenvolvida para representar o funcionamento real da indústria.
+
+O banco de dados deverá refletir os processos da empresa e não impor processos artificiais ao usuário.
+
+Seu principal objetivo é garantir consistência, rastreabilidade e evolução contínua do sistema.

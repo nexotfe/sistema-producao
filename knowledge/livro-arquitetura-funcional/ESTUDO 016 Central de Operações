@@ -1,0 +1,185 @@
+# ESTUDO 016
+
+# Central de Operações
+
+## Uma nova filosofia para Sistemas de Gestão Industrial
+
+### Objetivo
+
+A Central de Operações representa o ponto de entrada do sistema.
+
+Seu objetivo não é servir como um menu principal, mas orientar cada usuário sobre as atividades que realmente necessitam de sua atenção naquele momento.
+
+Nesta arquitetura, o sistema deixa de ser um conjunto de módulos independentes e passa a atuar como um ambiente integrado de trabalho, onde cada colaborador recebe informações de acordo com sua função, responsabilidades e prioridades.
+
+O sistema não pergunta:
+
+**"Qual módulo você deseja acessar?"**
+
+O sistema pergunta:
+
+**"Qual decisão você precisa tomar agora?"**
+
+---
+
+# A filosofia da Central de Operações
+
+Em muitos sistemas de gestão, a primeira tela apresenta menus, gráficos e indicadores.
+
+Embora essas informações sejam importantes, normalmente elas não representam a necessidade imediata do usuário.
+
+Quem inicia seu expediente deseja saber:
+
+* O que precisa ser feito?
+* O que está aguardando minha decisão?
+* Existe alguma prioridade?
+* Existe algum problema que exija minha atenção?
+
+A Central de Operações nasce para responder exatamente essas perguntas.
+
+---
+
+# Cada usuário possui uma perspectiva
+
+O sistema apresentará uma visão personalizada conforme a função exercida.
+
+O banco de dados permanece único.
+
+O que muda é a forma como as informações são organizadas.
+
+Exemplos:
+
+### Comercial
+
+* Oportunidades
+* Orçamentos em elaboração
+* Orçamentos aguardando resposta
+* Clientes
+* Agenda
+
+---
+
+### Engenharia
+
+* Projetos em desenvolvimento
+* PDR
+* CDR
+* FDR
+* Desenhos pendentes
+* Programação CNC
+
+---
+
+### PCP
+
+* OF aguardando liberação
+* Materiais pendentes
+* Gargalos produtivos
+* Capacidade disponível
+* Programação das máquinas
+
+---
+
+### Suprimentos
+
+* Requisições
+* Compras pendentes
+* Recebimentos previstos
+* Materiais críticos
+* Estoque
+
+---
+
+### Produção
+
+* Operações disponíveis
+* OP em execução
+* Máquinas paradas
+* Inspeções pendentes
+* Retrabalhos
+
+---
+
+### Diretoria
+
+* Situação dos Projetos
+* Entregas
+* Indicadores
+* Custos
+* Resultados
+
+---
+
+# Navegação orientada por decisões
+
+Cada informação apresentada deverá permitir aprofundamento.
+
+Exemplo:
+
+12 OF aguardando material
+
+↓
+
+Selecionar OF
+
+↓
+
+Projeto
+
+↓
+
+Material pendente
+
+↓
+
+Pedido de Compra
+
+↓
+
+Fornecedor
+
+↓
+
+Previsão de entrega
+
+O usuário inicia com uma informação resumida e aprofunda apenas quando necessário.
+
+---
+
+# Uma única porta de entrada
+
+Independentemente da área da empresa, todos os usuários iniciarão suas atividades na Central de Operações.
+
+Ela será responsável por organizar prioridades, comunicar pendências e facilitar o acesso aos processos da empresa.
+
+Não será apenas uma tela inicial.
+
+Será o ambiente de trabalho diário.
+
+---
+
+# Princípios Fundamentais
+
+O sistema não deverá obrigar o usuário a procurar informações.
+
+As informações deverão conduzir naturalmente o usuário até a decisão.
+
+A Central de Operações deverá apresentar apenas aquilo que exige atenção.
+
+O detalhamento ocorrerá somente quando solicitado.
+
+Menus continuam existindo.
+
+Entretanto, deixam de ser o principal meio de navegação.
+
+A navegação passa a ser orientada pelas necessidades reais da operação.
+
+---
+
+# Conclusão
+
+A Central de Operações representa uma mudança de paradigma.
+
+Em vez de organizar o sistema por módulos, esta arquitetura organiza a informação pelas decisões que precisam ser tomadas.
+
+Dessa forma, o sistema deixa de ser apenas um repositório de dados e passa a atuar como um verdadeiro ambiente de apoio à gestão industrial.

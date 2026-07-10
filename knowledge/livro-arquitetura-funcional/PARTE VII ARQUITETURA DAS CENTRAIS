@@ -1,0 +1,196 @@
+# PARTE VII
+
+# ARQUITETURA DAS CENTRAIS
+
+# Capítulo 01
+
+# Filosofia das Centrais
+
+## Objetivo
+
+As Centrais representam o principal ambiente de trabalho do NEXOTFE.
+
+Seu objetivo é organizar informações, apoiar decisões e direcionar as atividades diárias dos usuários, permitindo que cada profissional visualize rapidamente aquilo que realmente necessita de sua atenção.
+
+As Centrais não foram concebidas como painéis de indicadores.
+
+Foram concebidas como ambientes de trabalho.
+
+---
+
+# Filosofia
+
+Cada Central deverá responder a uma única pergunta.
+
+Essa pergunta representa a principal responsabilidade do usuário dentro da empresa.
+
+Exemplos:
+
+**Central Comercial**
+
+"O que preciso fazer para conquistar novos negócios e atender meus clientes?"
+
+**Central de Projetos**
+
+"Quais projetos precisam da minha atenção?"
+
+**Central de Suprimentos**
+
+"O que pode comprometer o abastecimento da empresa?"
+
+**Central de Operações**
+
+"O que pode interromper o fluxo da fábrica?"
+
+**Central da Produção**
+
+"O que devo produzir agora?"
+
+**Central da Qualidade**
+
+"O que precisa ser inspecionado?"
+
+**Central da Expedição**
+
+"O que está pronto para ser entregue?"
+
+Cada Central deverá permanecer focada em sua missão principal.
+
+---
+
+# Organização das Informações
+
+As informações deverão ser apresentadas em ordem de importância.
+
+O usuário deverá compreender a situação de sua área em poucos segundos, sem necessidade de navegar entre diversas telas.
+
+Sempre que necessário, será possível aprofundar a informação até encontrar sua origem.
+
+A navegação seguirá o princípio:
+
+Visão Geral
+
+↓
+
+Área
+
+↓
+
+Projeto
+
+↓
+
+OF
+
+↓
+
+OP
+
+↓
+
+Detalhes
+
+O usuário nunca deverá se perder durante esse processo.
+
+---
+
+# Pendências Operacionais
+
+As Centrais não deverão apresentar todas as informações disponíveis no sistema.
+
+Seu papel será destacar apenas situações que exijam atenção, decisão ou acompanhamento.
+
+Uma Pendência Operacional representa uma ação que depende de intervenção humana ou que possa comprometer prazo, qualidade, custo ou fluxo produtivo.
+
+Exemplos:
+
+* compra em atraso;
+* serviço terceirizado aguardando envio;
+* OF aguardando material;
+* inspeção pendente;
+* entrega programada;
+* fornecedor atrasado.
+
+O excesso de notificações reduz a eficiência do sistema.
+
+O foco deverá permanecer apenas no que realmente importa.
+
+---
+
+# Ações
+
+Sempre que possível, o usuário deverá resolver suas pendências diretamente na Central.
+
+Exemplos:
+
+* gerar Requisição;
+* liberar Ordem de Fabricação;
+* alterar prioridades;
+* confirmar recebimentos;
+* abrir Projetos;
+* consultar materiais;
+* iniciar apontamentos.
+
+O objetivo é reduzir deslocamentos entre telas e aumentar a produtividade.
+
+---
+
+# Navegação
+
+As Centrais representam o ponto inicial de navegação do sistema.
+
+Toda navegação deverá seguir o princípio do aprofundamento.
+
+O usuário inicia pela visão geral.
+
+À medida que identifica uma necessidade, poderá aprofundar a consulta até encontrar exatamente a informação desejada.
+
+Nenhuma informação deverá estar a mais de alguns cliques de distância.
+
+---
+
+# Simplicidade
+
+As Centrais deverão apresentar apenas informações úteis.
+
+Gráficos, indicadores e painéis somente serão utilizados quando realmente apoiarem uma decisão.
+
+A prioridade será sempre a clareza das informações.
+
+Menos informação.
+
+Mais significado.
+
+---
+
+# Flexibilidade
+
+Cada empresa poderá configurar quais informações serão exibidas em suas Centrais.
+
+A arquitetura permanecerá única.
+
+A configuração refletirá a realidade operacional de cada organização.
+
+O sistema adapta-se à empresa.
+
+A empresa não precisa adaptar-se ao sistema.
+
+---
+
+# Princípios Fundamentais
+
+Cada Central possui uma missão.
+
+Cada usuário possui uma responsabilidade.
+
+O sistema organiza informações.
+
+As pessoas tomam decisões.
+
+As Centrais existem para apoiar o trabalho diário das pessoas.
+
+Seu sucesso não será medido pela quantidade de informações apresentadas, mas pela capacidade de ajudar o usuário a tomar a decisão correta no momento certo.
+
+Uma Central bem construída permite que o usuário compreenda sua situação operacional em poucos segundos e execute suas atividades sem perder tempo procurando informações.
+
+Essa é a principal missão da arquitetura das Centrais do NEXOTFE.

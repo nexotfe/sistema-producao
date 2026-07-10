@@ -184,3 +184,5 @@ Preservar a lógica do negócio acima da tecnologia.
 > **A simplicidade é um compromisso permanente.**
 >
 > **Esse é o NEXOTFE.**
+
+

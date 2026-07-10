@@ -1,0 +1,268 @@
+#
+
+## Versão 1.0
+
+## Objetivo
+
+Este documento define a padronização oficial utilizada pelo NEXOTFE para classificar todas as entidades do sistema.
+
+Seu objetivo é garantir que Livro Mestre, Banco de Dados, APIs, TypeScript e Interface utilizem a mesma linguagem operacional.
+
+Toda nova classificação deverá seguir este padrão.
+
+---
+
+# Filosofia
+
+Toda entidade poderá possuir uma ou mais classificações.
+
+Cada classificação possui uma finalidade específica.
+
+Nunca deverão ser misturados conceitos diferentes.
+
+---
+
+# 1. Estado
+
+Representa **a fase atual** de uma entidade.
+
+Pergunta respondida:
+
+> **Em que situação ela está neste momento?**
+
+Exemplos:
+
+Projeto
+
+* Em Orçamento
+* Aprovado
+* Em Produção
+
+OF
+
+* Programada
+* Em Produção
+* Finalizada
+
+Pedido de Compra
+
+* Emitido
+* Recebido
+* Cancelado
+
+---
+
+# 2. Tipo
+
+Representa **a natureza da entidade**.
+
+Pergunta respondida:
+
+> **O que ela é?**
+
+Exemplos.
+
+Projeto
+
+* Fabricação
+* Desenvolvimento
+* Industrialização
+* Serviço
+* Revenda
+
+Operação
+
+* Interna
+* Terceirizada
+* Inspeção
+* Movimentação
+
+Fornecedor
+
+* Matéria-Prima
+* Tratamento Térmico
+* Usinagem
+* Pintura
+* Transporte
+
+---
+
+# 3. Categoria
+
+Representa **o agrupamento administrativo**.
+
+Pergunta respondida:
+
+> **Em qual grupo ela pertence?**
+
+Exemplos.
+
+Compras
+
+* Matéria-Prima
+* Ferramentas
+* Uso e Consumo
+* Manutenção
+* Escritório
+
+Materiais
+
+* Aços
+* Alumínio
+* Polímeros
+* Componentes
+* Consumíveis
+
+Tecnologias
+
+* Torneamento
+* Fresamento
+* Soldagem
+* Montagem
+* Inspeção
+
+---
+
+# 4. Origem
+
+Representa **quem ou o que gerou aquela informação**.
+
+Pergunta respondida:
+
+> **De onde surgiu?**
+
+Exemplos.
+
+Requisição
+
+* Projeto
+* Estoque
+* Manutenção
+* Administrativo
+
+OF
+
+* Projeto
+* Retrabalho
+* Try-Out
+* Programação
+
+Necessidade
+
+* Explosão do Roteiro
+* Ajuste Manual
+* Revisão Técnica
+
+---
+
+# 5. Prioridade
+
+Representa **a importância operacional**.
+
+Pergunta respondida:
+
+> **Qual a urgência?**
+
+Exemplos.
+
+* Baixa
+* Normal
+* Alta
+* Urgente
+* Crítica
+
+A prioridade auxilia o planejamento, mas não substitui a programação do PCP.
+
+---
+
+# 6. Situação
+
+Representa **uma condição operacional temporária**.
+
+Pergunta respondida:
+
+> **Existe alguma condição especial?**
+
+Exemplos.
+
+Material
+
+* Reservado
+* Bloqueado
+* Em Inspeção
+
+Fornecedor
+
+* Homologado
+* Suspenso
+* Em Avaliação
+
+Cliente
+
+* Ativo
+* Inativo
+* Bloqueado
+
+---
+
+# Regras Gerais
+
+Nunca utilizar um Estado para representar um Tipo.
+
+Nunca utilizar um Tipo para representar uma Categoria.
+
+Nunca utilizar Situação como Estado.
+
+Nunca utilizar Prioridade como Status.
+
+Cada classificação possui finalidade própria.
+
+Essa separação deverá ser respeitada em:
+
+* Banco de Dados;
+* APIs;
+* TypeScript;
+* Interface;
+* Relatórios;
+* Dashboards;
+* Integrações.
+
+---
+
+# Exemplo
+
+Projeto
+
+Tipo:
+
+Desenvolvimento
+
+Estado:
+
+Em Planejamento
+
+Prioridade:
+
+Alta
+
+Origem:
+
+Cliente
+
+Situação:
+
+Normal
+
+Cada informação responde uma pergunta diferente.
+
+---
+
+# Princípios Fundamentais
+
+Uma entidade pode possuir diversas classificações simultaneamente.
+
+Cada classificação possui um único significado.
+
+O sistema deverá refletir a realidade operacional da empresa e utilizar sempre uma linguagem única em todos os módulos.
+
+Essa padronização representa um dos pilares arquiteturais do NEXOTFE e deverá ser preservada durante toda a evolução do sistema.

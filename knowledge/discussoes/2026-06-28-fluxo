@@ -1,0 +1,52 @@
+CLIENTE
+      │
+      ▼
+OPORTUNIDADE
+      │
+      ▼
+ORÇAMENTO
+      │
+      ├── Natureza
+      ├── Produtos
+      ├── Roteiros
+      ├── Formação do Custo
+      ├── Capacidade Real
+      ├── Simulação de Cenários
+      └── Proposta Comercial
+      │
+      ▼
+CLIENTE APROVA?
+      │
+ ┌────┴────┐
+ │         │
+Não       Sim
+ │         │
+ │         ▼
+ │      PROJETO
+ │         │
+ │         ▼
+ │   ENGENHARIA
+ │         │
+ │         ▼
+ │      COMPRAS
+ │         │
+ │         ▼
+ │        PCP
+ │         │
+ │         ▼
+ │  PROGRAMAÇÃO
+ │         │
+ │         ▼
+ │   PRODUÇÃO
+ │         │
+ │         ▼
+ │   QUALIDADE
+ │         │
+ │         ▼
+ │   EXPEDIÇÃO
+ │         │
+ │         ▼
+ │    ENTREGA
+ │
+ ▼
+Histórico

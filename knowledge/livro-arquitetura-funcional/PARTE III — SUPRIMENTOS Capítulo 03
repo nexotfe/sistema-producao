@@ -1,0 +1,139 @@
+# LIVRO MESTRE 
+
+# PARTE III — SUPRIMENTOS
+
+# Capítulo 03
+
+## Da Necessidade ao Abastecimento da Produção
+
+### Objetivo
+
+O setor de Suprimentos tem como missão garantir que todos os recursos necessários para a execução industrial estejam disponíveis no momento certo, na quantidade correta, com a qualidade adequada e ao menor custo possível.
+
+No XXXXX, Suprimentos não representa apenas o processo de Compras.
+
+Representa todo o conjunto de atividades responsáveis por transformar uma necessidade da empresa em um recurso efetivamente disponível para utilização.
+
+Sua responsabilidade inicia quando uma necessidade é identificada e termina somente quando o recurso encontra-se disponível para atender a Produção ou outro setor da empresa.
+
+Na maioria das situações, essa necessidade terá origem em uma Ordem de Fabricação (OF), onde serão definidos os materiais necessários para a execução do projeto.
+
+Entretanto, o sistema também deverá atender necessidades provenientes da manutenção, infraestrutura, almoxarifado, escritório, limpeza, investimentos e demais áreas da organização.
+
+Independentemente da origem, toda necessidade deverá possuir rastreabilidade.
+
+O objetivo deste capítulo é definir os princípios, processos e regras que permitirão ao sistema administrar todo o ciclo de suprimentos, desde a identificação da necessidade até o abastecimento da Produção.
+
+Mais do que controlar compras e estoques, o xxxxxx deverá garantir que nenhuma Ordem de Fabricação deixe de ser executada por falta de recursos.
+
+Esse princípio orientará toda a arquitetura funcional dos módulos de Materiais, Planejamento de Compras, Compras, Recebimento, Estoque e Abastecimento da Produção.
+
+
+# 1. O que é Suprimentos?
+
+Suprimentos é o conjunto de processos responsáveis pelo abastecimento da empresa.
+
+Sua atuação envolve:
+
+* cadastro de materiais;
+* planejamento de compras;
+* requisições;
+* compras;
+* recebimento;
+* armazenamento;
+* controle de estoque;
+* abastecimento da produção.
+
+Cada etapa possui responsabilidades específicas, mas todas trabalham com um único objetivo:
+
+**Garantir que a produção nunca pare por falta de recursos.**
+
+---
+
+# 2. Origem das Necessidades
+
+No xxxxxx nenhuma compra deverá existir sem uma necessidade claramente identificada.
+
+A principal origem dessas necessidades será a Ordem de Fabricação (OF).
+
+Durante o planejamento, a OF identifica os materiais necessários para sua execução.
+
+Essas necessidades serão analisadas automaticamente pelo sistema.
+
+Quando houver disponibilidade em estoque, o material poderá ser reservado.
+
+Quando não houver disponibilidade, será gerada uma Requisição de Compra.
+
+Além das OFs, poderão existir necessidades operacionais, como:
+
+* manutenção;
+* almoxarifado;
+* escritório;
+* limpeza;
+* investimentos;
+* infraestrutura.
+
+Mesmo nesses casos, a origem da necessidade deverá permanecer registrada.
+
+---
+
+# 3. Filosofia do Suprimento
+
+O objetivo do xxxxxx não é simplesmente comprar materiais.
+
+O objetivo é garantir que a Produção receba exatamente o recurso necessário no momento adequado.
+
+Toda compra deverá possuir uma justificativa.
+
+Todo consumo deverá possuir rastreabilidade.
+
+Todo material deverá possuir uma origem.
+
+Toda movimentação deverá possuir um motivo.
+
+Essa filosofia permite reduzir desperdícios, aumentar a confiabilidade dos estoques e melhorar continuamente o planejamento industrial.
+
+---
+
+# 4. Estrutura do Capítulo
+
+Este capítulo será desenvolvido nos seguintes estudos:
+
+**ESTUDO 007**
+Cadastro Inteligente de Materiais
+
+**ESTUDO 008**
+Planejamento de Compras
+
+**ESTUDO 009**
+Requisição de Compra
+
+**ESTUDO 010**
+Compras
+
+**ESTUDO 011**
+Recebimento
+
+**ESTUDO 012**
+Estoque
+
+**ESTUDO 013**
+Movimentações
+
+**ESTUDO 014**
+Inventário
+
+**ESTUDO 015**
+Abastecimento da Produção
+
+Cada estudo aprofundará uma etapa específica do processo, mantendo a integração entre todas as áreas do sistema.
+
+---
+
+# Princípio Fundamental
+
+O setor de Suprimentos não existe para comprar materiais.
+
+Existe para garantir que a Produção nunca deixe de executar uma Ordem de Fabricação por falta de recursos.
+
+Essa diferença de filosofia orienta toda a arquitetura .

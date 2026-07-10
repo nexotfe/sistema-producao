@@ -1,0 +1,44 @@
+Cabeçalho
+Logo sempre à esquerda.
+Nome do usuário sempre visível.
+Busca quando aplicável.
+Botões Voltar e Início.
+Barra de ações
+
+Ordem fixa:
+
+Voltar
+
+Início
+
+Editar
+
+Duplicar
+
+Excluir
+
+Salvar
+
+Nunca alterar essa ordem.
+
+Botão principal
+
+Sempre:
+
+Blue 700.
+
+Devemos ser mais direto co o Codex.
+
+Traduzir os prompt par inglês.
+
+Porem informa-lo que as telas devera ser em português Brasil.
+
+Vamos refinar telas de cadastro, portanto ao criar prompt para o Codex pedir para ele não utilizar Supabase, ou outro elemento que consuma creditos , neste momento estaremos utilizando somente dados mocados!
+
+Uma Sprint = Uma Página = Uma Rota.
+
+O Codex só poderá trabalhar naquela rota até você aprová-la.
+
+Segue o prompt já ajustado.
+
+Do not continue automatically to another screen or module. Wait for visual approval before proceeding

@@ -1,0 +1,114 @@
+# Capítulo 01
+
+# Cadastro de Colaboradores
+
+## Objetivo
+
+O Cadastro de Colaboradores tem como objetivo identificar os recursos humanos disponíveis para execução das atividades da empresa, fornecendo informações utilizadas pelo Comercial, PCP, Planejamento, Produção e Central de Operações.
+
+Este cadastro representa um dos pilares da arquitetura do sistema, permitindo o cálculo da capacidade produtiva, da disponibilidade operacional e da alocação dos recursos durante todo o ciclo de vida dos projetos.
+
+Seu propósito não é substituir sistemas de Recursos Humanos, mas disponibilizar ao planejamento industrial apenas as informações necessárias para apoiar decisões operacionais.
+
+---
+
+## Filosofia
+
+O colaborador representa um recurso disponível para execução de atividades.
+
+O sistema deverá conhecer sua capacidade de trabalho e suas competências técnicas, mas não será responsável pela gestão administrativa da relação de trabalho.
+
+Questões relacionadas a folha de pagamento, controle de ponto, banco de horas, jornadas, escalas e demais rotinas de Recursos Humanos permanecerão sob responsabilidade dos sistemas específicos da empresa.
+
+O foco deste cadastro será exclusivamente o planejamento da capacidade operacional.
+
+---
+
+## Informações Gerais
+
+Cada colaborador deverá possuir, no mínimo, as seguintes informações:
+
+* Código ou Matrícula;
+* Nome;
+* Situação (Ativo/Inativo);
+* Tecnologias nas quais está habilitado;
+* Capacidade semanal disponível para planejamento;
+* Observações.
+
+Essas informações serão utilizadas em todos os processos de planejamento da empresa.
+
+---
+
+## Capacidade de Planejamento
+
+A capacidade do colaborador será representada pela quantidade de horas normalmente disponíveis para planejamento durante uma semana de trabalho.
+
+Exemplos:
+
+* 20 horas semanais;
+* 36 horas semanais;
+* 40 horas semanais;
+* 44 horas semanais.
+
+O sistema utilizará essas informações para calcular disponibilidade, ocupação, carga de trabalho e capacidade futura.
+
+Não será necessário controlar horários individuais de entrada e saída.
+
+---
+
+## Horários, Turnos e Jornadas
+
+Informações como:
+
+* horário de entrada;
+* horário de saída;
+* intervalos;
+* escalas;
+* turnos;
+* banco de horas;
+* controle de ponto;
+* jornadas administrativas.
+
+não fazem parte do escopo da Gestão Industrial.
+
+Esses controles pertencem aos processos administrativos da empresa e deverão permanecer sob responsabilidade dos sistemas de Recursos Humanos.
+
+O sistema utilizará apenas a capacidade disponível para planejamento.
+
+---
+
+## Horas Extras
+
+Sempre que a capacidade semanal planejada de um colaborador for ultrapassada, o sistema deverá sinalizar essa condição ao PCP.
+
+A utilização de horas extras nunca ocorrerá automaticamente.
+
+Ela dependerá de autorização da gestão responsável pelo planejamento da produção.
+
+Após autorizada, essa capacidade adicional poderá ser considerada nos cálculos de planejamento.
+
+---
+
+## Competências Técnicas
+
+Cada colaborador poderá estar habilitado para uma ou mais Tecnologias cadastradas no sistema.
+
+Essas habilitações permitirão ao PCP identificar rapidamente quais profissionais estão aptos a executar determinada Operação.
+
+A definição das Tecnologias será tratada em capítulo específico.
+
+---
+
+## Princípios Fundamentais
+
+O colaborador representa capacidade produtiva.
+
+O sistema planeja capacidade.
+
+O sistema não controla jornadas de trabalho.
+
+O sistema apoia decisões operacionais.
+
+As informações administrativas permanecem sob responsabilidade dos sistemas especializados de Recursos Humanos.
+
+O objetivo da Gestão Industrial é utilizar os recursos disponíveis da forma mais eficiente possível, preservando simplicidade, flexibilidade e aderência à realidade operacional da empresa.

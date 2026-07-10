@@ -1,0 +1,150 @@
+# Capítulo 05
+
+# Capacidade Operacional
+
+## Objetivo
+
+O Capítulo de Capacidade Operacional tem como objetivo determinar a capacidade produtiva disponível da empresa, fornecendo informações utilizadas pelo Comercial, PCP, Planejamento e Central de Operações para tomada de decisões.
+
+A capacidade operacional representa um dos principais indicadores do sistema, permitindo identificar disponibilidade, gargalos, sobrecargas e oportunidades de melhoria.
+
+---
+
+## Filosofia
+
+A capacidade operacional não será calculada considerando apenas máquinas ou colaboradores isoladamente.
+
+Ela será resultado da combinação entre:
+
+* Tecnologias;
+* Recursos Produtivos;
+* Colaboradores habilitados;
+* Fatores de Planejamento.
+
+Essa abordagem representa de forma mais fiel a capacidade real da empresa.
+
+---
+
+## Níveis de Análise
+
+O sistema permitirá visualizar a capacidade produtiva em dois níveis.
+
+### Grupo de Tecnologias
+
+Representa a visão gerencial da empresa.
+
+Exemplo:
+
+* Usinagem;
+* Caldeiraria;
+* Engenharia;
+* Montagem.
+
+Essa visão permitirá identificar rapidamente quais grandes áreas apresentam capacidade disponível ou sobrecarga.
+
+---
+
+### Tecnologia
+
+Representa a visão operacional.
+
+Exemplo:
+
+Grupo:
+
+Usinagem
+
+Tecnologias:
+
+* Torno CNC;
+* Centro de Usinagem;
+* Retífica;
+* Fresadora.
+
+Essa visualização permitirá ao PCP identificar exatamente onde se encontram os gargalos da produção.
+
+---
+
+## Cálculo da Capacidade
+
+O cálculo da capacidade deverá considerar:
+
+* quantidade de Recursos Produtivos;
+* capacidade semanal dos Colaboradores;
+* Tecnologias habilitadas;
+* Fatores de Planejamento configurados pela empresa;
+* carga de trabalho já comprometida.
+
+---
+
+## Informações Apresentadas
+
+O sistema deverá apresentar, no mínimo:
+
+* capacidade disponível;
+* capacidade comprometida;
+* saldo disponível;
+* percentual de ocupação;
+* tendência de sobrecarga.
+
+Essas informações poderão ser consultadas para qualquer período de planejamento.
+
+---
+
+## Utilização
+
+As informações de capacidade serão utilizadas por:
+
+### Comercial
+
+Avaliação da possibilidade de assumir novos projetos.
+
+Simulação de prazos durante elaboração de propostas.
+
+---
+
+### PCP
+
+Distribuição das Ordens de Fabricação.
+
+Balanceamento da carga de trabalho.
+
+Identificação de gargalos.
+
+Planejamento de horas extras.
+
+---
+
+### Central de Operações
+
+Acompanhamento da ocupação dos Grupos de Tecnologias.
+
+Visualização dos gargalos operacionais.
+
+Acompanhamento da capacidade futura.
+
+---
+
+## Horas Extras
+
+Quando a capacidade planejada for ultrapassada, o sistema deverá sinalizar essa condição ao PCP.
+
+A utilização de horas extras dependerá sempre de autorização da empresa e passará a integrar os cálculos de capacidade somente após sua aprovação.
+
+---
+
+## Princípios Fundamentais
+
+O Comercial precisa conhecer a capacidade antes de vender.
+
+O PCP precisa conhecer a capacidade antes de programar.
+
+A Produção precisa conhecer a capacidade antes de executar.
+
+O sistema deverá transformar informações operacionais em indicadores confiáveis para apoiar a tomada de decisão em todos os níveis da organização.
+
+A visão gerencial ocorrerá pelos Grupos de Tecnologias.
+
+A visão operacional ocorrerá pelas Tecnologias.
+
+Ambas utilizarão exatamente a mesma base de informações.

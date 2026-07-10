@@ -1,0 +1,200 @@
+# ESTUDO 002
+
+# Arquitetura Funcional das Ordens de Fabricação e Operações
+
+## Objetivo
+
+Definir a estrutura responsável por transformar um Projeto Industrial em atividades executáveis, preservando rastreabilidade, planejamento, controle de custos e integração entre todas as áreas da empresa.
+
+A Ordem de Fabricação representa o principal elemento de ligação entre Engenharia, PCP, Suprimentos, Produção, Qualidade e Gestão.
+
+As Operações representam as etapas necessárias para executar cada Ordem de Fabricação.
+
+Juntas, OF e OP constituem a espinha dorsal da execução industrial desta arquitetura.
+
+---
+
+# Filosofia
+
+Toda empresa de fabricação transforma necessidades em produtos.
+
+Nesta arquitetura essa transformação ocorre através da seguinte sequência:
+
+Cliente
+
+↓
+
+Projeto
+
+↓
+
+Ordem de Fabricação
+
+↓
+
+Operações
+
+↓
+
+Produto
+
+Cada etapa possui responsabilidades próprias, preservando rastreabilidade durante todo o ciclo de vida do projeto.
+
+---
+
+# Estrutura Hierárquica
+
+Projeto
+
+↓
+
+Conjunto
+
+↓
+
+Subconjunto
+
+↓
+
+Peça
+
+↓
+
+PN
+
+↓
+
+Ordem de Fabricação
+
+↓
+
+Operações
+
+↓
+
+Tecnologias
+
+↓
+
+Execução
+
+Essa estrutura permite representar desde uma peça simples até grandes equipamentos industriais.
+
+---
+
+# Princípios Fundamentais
+
+• Todo trabalho pertence a um Projeto.
+
+• Toda peça possui uma Ordem de Fabricação.
+
+• Toda Ordem de Fabricação possui uma ou mais Operações.
+
+• Toda Operação possui obrigatoriamente Tecnologia e Tempo Previsto.
+
+• Toda necessidade de material nasce em uma Ordem de Fabricação.
+
+• Toda Ordem de Fabricação deverá possuir rastreabilidade completa.
+
+---
+
+# Estrutura mínima da OP
+
+Cada Operação deverá possuir apenas os campos essenciais para o planejamento industrial.
+
+Obrigatórios:
+
+* Tecnologia
+* Tempo Previsto
+
+Opcionais:
+
+* Descrição
+* Observações
+* Próxima Ação
+
+A simplicidade operacional constitui um princípio desta arquitetura.
+
+---
+
+# Próxima Ação
+
+Além da tecnologia e do tempo previsto, uma Operação poderá informar qual ação deverá ocorrer após sua conclusão.
+
+Essa informação será selecionada através de uma lista configurável de ações operacionais.
+
+Exemplos:
+
+* Enviar para Tratamento Térmico
+* Enviar para Pintura
+* Solicitar Inspeção
+* Liberar Montagem
+* Liberar Expedição
+* Solicitar Programação CNC
+
+A Próxima Ação representa um gatilho operacional.
+
+Sua finalidade é orientar o fluxo da empresa sem depender exclusivamente da memória ou experiência dos colaboradores.
+
+---
+
+# Gatilhos Operacionais
+
+Ao concluir uma Operação, o sistema poderá identificar automaticamente a existência de uma Próxima Ação.
+
+Quando configurado, esse gatilho gerará uma missão para o responsável correspondente.
+
+Os gatilhos representam apoio operacional.
+
+Jamais substituem a decisão humana.
+
+---
+
+# Agrupamento Inteligente
+
+Operações semelhantes poderão ser executadas conjuntamente quando essa estratégia proporcionar ganhos de produtividade, redução de setup ou melhor utilização dos recursos disponíveis.
+
+A decisão permanecerá sob responsabilidade do PCP ou da liderança da produção.
+
+O sistema apenas sugerirá oportunidades.
+
+---
+
+# Liberação da OF
+
+A liberação da Ordem de Fabricação é responsabilidade do PCP.
+
+Como regra geral, nenhuma OF destinada à fabricação poderá ser liberada sem:
+
+* desenho liberado;
+* matéria-prima disponível.
+
+Dependendo da tecnologia utilizada, outros requisitos poderão ser considerados, como programas CNC, dispositivos, ferramentas especiais ou documentação técnica.
+
+---
+
+# Autonomia Operacional
+
+O sistema deverá permitir que líderes e responsáveis alterem a sequência planejada das Ordens de Fabricação quando identificarem oportunidades operacionais.
+
+Toda alteração permanecerá registrada, preservando a rastreabilidade das decisões.
+
+A arquitetura respeita o conhecimento do chão de fábrica.
+
+O sistema sugere.
+
+A equipe decide.
+
+---
+
+# Conclusão
+
+As Ordens de Fabricação representam muito mais do que documentos de produção.
+
+Elas constituem o elemento responsável por conectar planejamento, suprimentos, produção, qualidade e gestão.
+
+As Operações, por sua vez, representam o fluxo lógico de execução industrial.
+
+É através delas que surgem tempos, tecnologias, necessidades de materiais, eventos operacionais e informações utilizadas por toda a empresa.
+
+Essa arquitetura foi concebida para atender empresas de fabricação, independentemente do segmento industrial, permitindo que processos específicos sejam configurados sem alterar sua estrutura fundamental.
