@@ -1,25 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
-const proposalItems = [
-  {
-    product: "Base soldada",
-    code: "1243-01",
-    ncm: "7326.90.90",
-    quantity: "1",
-    unitValue: "R$ 713,29",
-    totalValue: "R$ 713,29",
-  },
-  {
-    product: "Eixo usinado",
-    code: "1244-01",
-    ncm: "8483.10.90",
-    quantity: "2",
-    unitValue: "R$ 282,10",
-    totalValue: "R$ 564,20",
-  },
-];
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { proximaRevisao, useProposta } from "@/modules/projetos/hooks/useProposta";
 
 const companyContactInfo = [
   ["Site", "www.nexotfe.com.br"],
@@ -40,23 +23,98 @@ const companyAddress = [
   ["CEP", "00000-000"],
 ];
 
-const commercialInfo = [
-  ["Nome do Vendedor", "Nome do usuário"],
-  ["E-mail do Vendedor", "comercial@nexotfe.com.br"],
-  ["Telefone de Contato", "(11) 0000-0000"],
-  ["Validade da Proposta", "15 dias"],
-  ["Impostos", "Inclusos conforme legislação vigente"],
-  ["Condição de Pagamento", "30/45 dias"],
-  ["Frete", "A combinar"],
-  ["Observações", "Prazo sujeito à confirmação no aceite da proposta."],
-];
+function formatarData(iso: string | null) {
+  if (!iso) {
+    return "—";
+  }
+
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
+
+function formatarMoeda(valor: number) {
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default function CommercialProposalPage() {
+  const searchParams = useSearchParams();
+  const idProjeto = searchParams.get("projeto");
+
+  const {
+    loading,
+    erro,
+    numeroProposta,
+    criadoEm,
+    cliente,
+    nomeSolicitante,
+    responsavelNome,
+    itens,
+    valorTotalProposta,
+    revisao,
+    salvandoRevisao,
+    avancarRevisao,
+    consideracoes,
+    salvandoConsideracoes,
+    salvarConsideracoes,
+  } = useProposta(idProjeto);
+
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isRevisaoModalOpen, setIsRevisaoModalOpen] = useState(false);
+  const [textoConsideracoes, setTextoConsideracoes] = useState(consideracoes);
+
+  useEffect(() => {
+    setTextoConsideracoes(consideracoes);
+  }, [consideracoes]);
+
+  async function handleConfirmarNovaRevisao() {
+    setIsRevisaoModalOpen(false);
+    await avancarRevisao();
+  }
+
+  // "Outras Informações" ainda sem schema proprio - campos visuais e
+  // editáveis em tela, SEM persistência real nesta rodada (mesmo
+  // tratamento dado a campos equivalentes na tela de Projeto antes de
+  // ganharem coluna). Nome do Vendedor tem como sugestão inicial o
+  // usuário logado (não existe coluna "responsavel" persistida em
+  // projetos - mesma aproximação usada no Orçamento).
+  const [nomeVendedor, setNomeVendedor] = useState("");
+  const [emailVendedor, setEmailVendedor] = useState("comercial@nexotfe.com.br");
+  const [telefoneContato, setTelefoneContato] = useState("(11) 0000-0000");
+  const [validadeProposta, setValidadeProposta] = useState("15 dias");
+  const [impostosInfo, setImpostosInfo] = useState(
+    "Inclusos conforme legislação vigente",
+  );
+  const [condicaoPagamento, setCondicaoPagamento] = useState("30/45 dias");
+  const [frete, setFrete] = useState("A combinar");
+  const [observacoesProposta, setObservacoesProposta] = useState(
+    "Prazo sujeito à confirmação no aceite da proposta.",
+  );
+
+  useEffect(() => {
+    if (responsavelNome) {
+      setNomeVendedor((atual) => atual || responsavelNome);
+    }
+  }, [responsavelNome]);
+
+  const outrasInformacoes: [string, string, (valor: string) => void][] = [
+    ["Nome do Vendedor", nomeVendedor, setNomeVendedor],
+    ["E-mail do Vendedor", emailVendedor, setEmailVendedor],
+    ["Telefone de Contato", telefoneContato, setTelefoneContato],
+    ["Validade da Proposta", validadeProposta, setValidadeProposta],
+    ["Impostos", impostosInfo, setImpostosInfo],
+    ["Condição de Pagamento", condicaoPagamento, setCondicaoPagamento],
+    ["Frete", frete, setFrete],
+    ["Observações", observacoesProposta, setObservacoesProposta],
+  ];
 
   return (
     <main className="min-h-screen bg-slate-50 px-5 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-5xl space-y-5">
+        {(erro || loading) && (
+          <p className="text-sm text-slate-500">
+            {erro ?? (idProjeto ? "Carregando proposta..." : null)}
+          </p>
+        )}
+
         <header className="rounded-lg border border-slate-200 bg-white px-6 py-6">
           <div className="flex min-w-0 gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
@@ -73,17 +131,27 @@ export default function CommercialProposalPage() {
                 </h1>
               </div>
 
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                 <span>
                   <strong className="text-slate-800">Proposta nº:</strong>{" "}
-                  PC-0001
+                  {numeroProposta ?? "—"}
                 </span>
                 <span>
-                  <strong className="text-slate-800">Revisão:</strong> Rev.00
+                  <strong className="text-slate-800">Revisão:</strong> Rev.
+                  {revisao}
                 </span>
                 <span>
-                  <strong className="text-slate-800">Data:</strong> 03/07/2026
+                  <strong className="text-slate-800">Data:</strong>{" "}
+                  {formatarData(criadoEm)}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setIsRevisaoModalOpen(true)}
+                  disabled={salvandoRevisao || !numeroProposta}
+                  className="h-8 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Nova Revisão
+                </button>
               </div>
 
               <div className="flex flex-wrap gap-x-2 gap-y-1">
@@ -129,7 +197,7 @@ export default function CommercialProposalPage() {
                 Nome da Empresa
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                EMBRAER
+                {cliente?.nome || "—"}
               </div>
             </div>
             <div>
@@ -137,7 +205,7 @@ export default function CommercialProposalPage() {
                 CNPJ
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                00.000.000/0001-00
+                {cliente?.cnpj || "—"}
               </div>
             </div>
             <div>
@@ -145,7 +213,7 @@ export default function CommercialProposalPage() {
                 E-mail
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                compras@cliente.com.br
+                {cliente?.email || "—"}
               </div>
             </div>
             <div>
@@ -153,19 +221,33 @@ export default function CommercialProposalPage() {
                 Nome do Solicitante
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                João Pereira
+                {nomeSolicitante || "—"}
               </div>
             </div>
           </div>
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white px-6 py-5">
-          <h2 className="text-sm font-bold text-slate-950">Considerações</h2>
-          <div className="mt-4 min-h-32 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
-            Apresentamos nossa proposta comercial para fornecimento dos itens
-            relacionados abaixo, conforme escopo técnico recebido e condições
-            comerciais indicadas neste documento.
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-sm font-bold text-slate-950">Considerações</h2>
+            <button
+              type="button"
+              onClick={() => salvarConsideracoes(textoConsideracoes)}
+              disabled={
+                salvandoConsideracoes ||
+                !numeroProposta ||
+                textoConsideracoes === consideracoes
+              }
+              className="h-8 rounded-md bg-blue-700 px-3 text-xs font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {salvandoConsideracoes ? "Salvando..." : "Salvar"}
+            </button>
           </div>
+          <textarea
+            value={textoConsideracoes}
+            onChange={(event) => setTextoConsideracoes(event.target.value)}
+            className="mt-4 min-h-32 w-full resize-y rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          />
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white">
@@ -192,21 +274,23 @@ export default function CommercialProposalPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {proposalItems.map((item) => (
-                  <tr key={item.code} className="transition hover:bg-slate-50">
+                {itens.map((item) => (
+                  <tr key={item.id} className="transition hover:bg-slate-50">
                     <td className="px-6 py-4 font-medium text-slate-800">
-                      {item.product}
+                      {item.descricao}
                     </td>
-                    <td className="px-4 py-4 text-slate-700">{item.code}</td>
-                    <td className="px-4 py-4 text-slate-700">{item.ncm}</td>
+                    <td className="px-4 py-4 text-slate-700">{item.codigo}</td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {item.ncm || "—"}
+                    </td>
                     <td className="px-4 py-4 text-center text-slate-700">
-                      {item.quantity}
+                      {item.quantidade}
                     </td>
                     <td className="px-4 py-4 text-right text-slate-700">
-                      {item.unitValue}
+                      {formatarMoeda(item.valorUnitario)}
                     </td>
                     <td className="px-6 py-4 text-right font-semibold text-slate-900">
-                      {item.totalValue}
+                      {formatarMoeda(item.valorTotal)}
                     </td>
                   </tr>
                 ))}
@@ -221,7 +305,7 @@ export default function CommercialProposalPage() {
                   Valor Total da Proposta
                 </span>
                 <span className="text-lg font-bold text-slate-950">
-                  R$ 1.277,49
+                  {formatarMoeda(valorTotalProposta)}
                 </span>
               </div>
             </div>
@@ -233,15 +317,19 @@ export default function CommercialProposalPage() {
             Outras Informações
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {commercialInfo.map(([label, value]) => (
+            {outrasInformacoes.map(([label, value, setValue]) => (
               <div
                 key={label}
                 className="flex min-h-10 items-center justify-between gap-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
               >
-                <span className="font-semibold text-slate-600">{label}</span>
-                <span className="text-right font-medium text-slate-800">
-                  {value}
+                <span className="whitespace-nowrap font-semibold text-slate-600">
+                  {label}
                 </span>
+                <input
+                  value={value}
+                  onChange={(event) => setValue(event.target.value)}
+                  className="w-full bg-transparent text-right font-medium text-slate-800 outline-none"
+                />
               </div>
             ))}
           </div>
@@ -333,7 +421,7 @@ export default function CommercialProposalPage() {
                   Assunto
                 </h3>
                 <input
-                  defaultValue="Proposta Comercial Nº PC-0001"
+                  defaultValue={`Proposta Comercial Nº ${numeroProposta ?? ""}`}
                   className="mt-3 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
@@ -392,6 +480,42 @@ Nome da Empresa`}
                 className="h-10 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
               >
                 Enviar Proposta
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {isRevisaoModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
+          <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-xl">
+            <div className="border-b border-slate-200 px-6 py-4">
+              <h2 className="text-base font-bold text-slate-950">
+                Confirmar nova revisão
+              </h2>
+            </div>
+
+            <div className="px-6 py-5 text-sm text-slate-700">
+              Confirma nova revisão da proposta? Isso mudará de Rev.
+              {revisao} para Rev.{proximaRevisao(revisao)}.
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setIsRevisaoModalOpen(false)}
+                className="h-10 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmarNovaRevisao}
+                disabled={salvandoRevisao}
+                className="h-10 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Confirmar
               </button>
             </div>
           </section>
