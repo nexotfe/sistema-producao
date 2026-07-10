@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
-import { use } from "react";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useGrupoRecurso } from "@/modules/grupos-recursos/hooks/useGrupoRecurso";
 
 type Props = {
@@ -13,7 +14,42 @@ type Props = {
 
 export default function GrupoRecursoPage({ params }: Props) {
   const { id } = use(params);
-  const { grupo, loading, erro } = useGrupoRecurso(id);
+  const router = useRouter();
+  const { grupo, loading, erro, processando, inativarGrupo, excluirGrupo } =
+    useGrupoRecurso(id);
+  const [bloqueioExclusao, setBloqueioExclusao] = useState<
+    "vinculado" | "sem_permissao" | null
+  >(null);
+
+  async function handleInativar() {
+    const sucesso = await inativarGrupo();
+
+    if (sucesso) {
+      router.push("/grupos-recursos");
+    }
+  }
+
+  async function handleExcluir() {
+    const confirmado = window.confirm(
+      "Deseja excluir permanentemente este grupo de recursos? Essa ação não pode ser desfeita.",
+    );
+
+    if (!confirmado) {
+      return;
+    }
+
+    setBloqueioExclusao(null);
+    const resultado = await excluirGrupo();
+
+    if (resultado.status === "excluido") {
+      router.push("/grupos-recursos");
+      return;
+    }
+
+    if (resultado.status === "vinculado" || resultado.status === "sem_permissao") {
+      setBloqueioExclusao(resultado.status);
+    }
+  }
 
   if (loading) {
     return (
@@ -60,12 +96,22 @@ export default function GrupoRecursoPage({ params }: Props) {
               </p>
             </div>
 
-            <Link
-              href={`/grupos-recursos/${id}/editar`}
-              className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Editar grupo
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleExcluir}
+                disabled={processando}
+                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Excluir grupo
+              </button>
+              <Link
+                href={`/grupos-recursos/${id}/editar`}
+                className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Editar grupo
+              </Link>
+            </div>
           </div>
         </header>
 
@@ -88,6 +134,27 @@ export default function GrupoRecursoPage({ params }: Props) {
               </p>
             </div>
           </Card>
+
+          {bloqueioExclusao === "vinculado" ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span>
+                Não é possível excluir - há vínculos com produção/histórico.
+              </span>
+              <button
+                type="button"
+                onClick={handleInativar}
+                className="h-9 shrink-0 rounded-md border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+              >
+                Desativar em vez disso
+              </button>
+            </div>
+          ) : null}
+
+          {bloqueioExclusao === "sem_permissao" ? (
+            <p className="text-sm font-medium text-red-600">
+              Apenas administradores podem excluir registros.
+            </p>
+          ) : null}
         </section>
       </div>
     </main>

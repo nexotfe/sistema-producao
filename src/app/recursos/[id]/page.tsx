@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
-import { use } from "react";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useRecurso } from "@/modules/recursos/hooks/useRecurso";
 
 type Props = {
@@ -13,7 +14,42 @@ type Props = {
 
 export default function RecursoPage({ params }: Props) {
   const { id } = use(params);
-  const { recurso, loading, erro } = useRecurso(id);
+  const router = useRouter();
+  const { recurso, loading, erro, processando, inativarRecurso, excluirRecurso } =
+    useRecurso(id);
+  const [bloqueioExclusao, setBloqueioExclusao] = useState<
+    "vinculado" | "sem_permissao" | null
+  >(null);
+
+  async function handleInativar() {
+    const sucesso = await inativarRecurso();
+
+    if (sucesso) {
+      router.push("/recursos");
+    }
+  }
+
+  async function handleExcluir() {
+    const confirmado = window.confirm(
+      "Deseja excluir permanentemente este recurso? Essa ação não pode ser desfeita.",
+    );
+
+    if (!confirmado) {
+      return;
+    }
+
+    setBloqueioExclusao(null);
+    const resultado = await excluirRecurso();
+
+    if (resultado.status === "excluido") {
+      router.push("/recursos");
+      return;
+    }
+
+    if (resultado.status === "vinculado" || resultado.status === "sem_permissao") {
+      setBloqueioExclusao(resultado.status);
+    }
+  }
 
   if (loading) {
     return (
@@ -60,12 +96,22 @@ export default function RecursoPage({ params }: Props) {
               </p>
             </div>
 
-            <Link
-              href={`/recursos/${id}/editar`}
-              className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Editar recurso
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleExcluir}
+                disabled={processando}
+                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Excluir recurso
+              </button>
+              <Link
+                href={`/recursos/${id}/editar`}
+                className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Editar recurso
+              </Link>
+            </div>
           </div>
         </header>
 
@@ -87,6 +133,27 @@ export default function RecursoPage({ params }: Props) {
               <Info label="Capacidade" value={formatNumero(recurso.capacidade)} />
             </div>
           </Card>
+
+          {bloqueioExclusao === "vinculado" ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span>
+                Não é possível excluir - há vínculos com produção/histórico.
+              </span>
+              <button
+                type="button"
+                onClick={handleInativar}
+                className="h-9 shrink-0 rounded-md border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+              >
+                Desativar em vez disso
+              </button>
+            </div>
+          ) : null}
+
+          {bloqueioExclusao === "sem_permissao" ? (
+            <p className="text-sm font-medium text-red-600">
+              Apenas administradores podem excluir registros.
+            </p>
+          ) : null}
         </section>
       </div>
     </main>

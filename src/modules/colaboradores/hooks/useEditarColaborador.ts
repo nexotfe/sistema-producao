@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  excluirRegistro,
+  type ResultadoExclusao,
+} from "@/modules/shared/data/excluirRegistro";
 
 export function useEditarColaborador(id: string) {
   const [codigo, setCodigo] = useState("");
@@ -147,6 +151,18 @@ export function useEditarColaborador(id: string) {
     }
   }
 
+  async function excluirColaborador(): Promise<ResultadoExclusao> {
+    if (!id || id === "novo") {
+      return { status: "erro", mensagem: "Colaborador nao informado." };
+    }
+
+    setSalvando(true);
+    const resultado = await excluirRegistro("funcionarios", id);
+    setSalvando(false);
+
+    return resultado;
+  }
+
   return {
     codigo,
     setCodigo,
@@ -175,5 +191,6 @@ export function useEditarColaborador(id: string) {
     erro,
     salvarColaborador,
     inativarColaborador,
+    excluirColaborador,
   };
 }

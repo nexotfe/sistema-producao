@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  excluirRegistro,
+  type ResultadoExclusao,
+} from "@/modules/shared/data/excluirRegistro";
 import type { GrupoRecurso, RecursoProdutivo } from "../types";
 
 type RecursoRow = Omit<RecursoProdutivo, "grupo">;
@@ -10,6 +14,7 @@ export function useRecurso(id: string) {
   const [recurso, setRecurso] = useState<RecursoProdutivo | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [processando, setProcessando] = useState(false);
 
   useEffect(() => {
     async function carregarRecurso() {
@@ -59,9 +64,45 @@ export function useRecurso(id: string) {
     carregarRecurso();
   }, [id]);
 
+  async function inativarRecurso() {
+    if (!id) {
+      setErro("Recurso nao informado.");
+      return false;
+    }
+
+    setProcessando(true);
+    const { error } = await supabase
+      .from("recursos_produtivos")
+      .update({ ativo: false })
+      .eq("id", id);
+    setProcessando(false);
+
+    if (error) {
+      setErro("Nao foi possivel inativar o recurso produtivo.");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function excluirRecurso(): Promise<ResultadoExclusao> {
+    if (!id) {
+      return { status: "erro", mensagem: "Recurso nao informado." };
+    }
+
+    setProcessando(true);
+    const resultado = await excluirRegistro("recursos_produtivos", id);
+    setProcessando(false);
+
+    return resultado;
+  }
+
   return {
     recurso,
     loading,
     erro,
+    processando,
+    inativarRecurso,
+    excluirRecurso,
   };
 }

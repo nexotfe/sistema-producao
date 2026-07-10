@@ -22,6 +22,8 @@ export default function GruposRecursosPage() {
     loading,
     erro,
     usuario,
+    alternarAtivoGrupo,
+    excluirGrupo,
   } = useGruposRecursos();
 
   return (
@@ -42,6 +44,8 @@ export default function GruposRecursosPage() {
           erro={erro}
           busca={busca}
           colunasVisiveis={colunasVisiveis}
+          alternarAtivoGrupo={alternarAtivoGrupo}
+          excluirGrupo={excluirGrupo}
         />
       </div>
     </main>

@@ -25,6 +25,9 @@ export default function ColaboradorPage({ params }: Props) {
   const loading = registroNovo ? novo.loading : edicao.loading;
   const salvando = registroNovo ? novo.loading : edicao.salvando;
   const erro = registroNovo ? novo.erro : edicao.erro;
+  const [bloqueioExclusao, setBloqueioExclusao] = useState<
+    "vinculado" | "sem_permissao" | null
+  >(null);
 
   async function salvarColaborador() {
     const sucesso = await form.salvarColaborador();
@@ -44,16 +47,36 @@ export default function ColaboradorPage({ params }: Props) {
       return;
     }
 
-    const confirmado = window.confirm("Deseja inativar este colaborador?");
+    const sucesso = await edicao.inativarColaborador();
+
+    if (sucesso) {
+      router.push("/colaboradores");
+    }
+  }
+
+  async function excluirColaborador() {
+    if (registroNovo) {
+      return;
+    }
+
+    const confirmado = window.confirm(
+      "Deseja excluir permanentemente este colaborador? Essa ação não pode ser desfeita.",
+    );
 
     if (!confirmado) {
       return;
     }
 
-    const sucesso = await edicao.inativarColaborador();
+    setBloqueioExclusao(null);
+    const resultado = await edicao.excluirColaborador();
 
-    if (sucesso) {
+    if (resultado.status === "excluido") {
       router.push("/colaboradores");
+      return;
+    }
+
+    if (resultado.status === "vinculado" || resultado.status === "sem_permissao") {
+      setBloqueioExclusao(resultado.status);
     }
   }
 
@@ -126,8 +149,9 @@ export default function ColaboradorPage({ params }: Props) {
                     </button>
                     <button
                       type="button"
-                      onClick={inativarColaborador}
-                      className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      onClick={excluirColaborador}
+                      disabled={salvando}
+                      className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Excluir
                     </button>
@@ -238,6 +262,27 @@ export default function ColaboradorPage({ params }: Props) {
           {erro ? (
             <p className="text-sm font-medium text-red-600">
               {erro}
+            </p>
+          ) : null}
+
+          {bloqueioExclusao === "vinculado" ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span>
+                Não é possível excluir - há vínculos com produção/histórico.
+              </span>
+              <button
+                type="button"
+                onClick={inativarColaborador}
+                className="h-9 shrink-0 rounded-md border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+              >
+                Desativar em vez disso
+              </button>
+            </div>
+          ) : null}
+
+          {bloqueioExclusao === "sem_permissao" ? (
+            <p className="text-sm font-medium text-red-600">
+              Apenas administradores podem excluir registros.
             </p>
           ) : null}
         </section>

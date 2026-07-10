@@ -22,6 +22,8 @@ export default function ColaboradoresPage() {
     totais,
     loading,
     erro,
+    alternarAtivoColaborador,
+    excluirColaborador,
   } = useColaboradores();
   const [colunasVisiveis] = useState<ColunasColaboradores>({
     codigo: true,
@@ -113,6 +115,8 @@ export default function ColaboradoresPage() {
           erro={erro}
           busca={busca}
           colunasVisiveis={colunasVisiveis}
+          alternarAtivoColaborador={alternarAtivoColaborador}
+          excluirColaborador={excluirColaborador}
         />
       </div>
     </main>

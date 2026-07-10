@@ -25,6 +25,8 @@ export default function RecursosPage() {
     loading,
     erro,
     usuario,
+    alternarAtivoRecurso,
+    excluirRecurso,
   } = useRecursos();
 
   return (
@@ -45,6 +47,8 @@ export default function RecursosPage() {
           erro={erro}
           busca={busca}
           colunasVisiveis={colunasVisiveis}
+          alternarAtivoRecurso={alternarAtivoRecurso}
+          excluirRecurso={excluirRecurso}
         />
       </div>
     </main>

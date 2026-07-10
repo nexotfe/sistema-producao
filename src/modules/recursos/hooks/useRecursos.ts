@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  excluirRegistro,
+  type ResultadoExclusao,
+} from "@/modules/shared/data/excluirRegistro";
 import type { GrupoRecurso, RecursoProdutivo, SituacaoRecurso } from "../types";
 
 type RecursoRow = Omit<RecursoProdutivo, "grupo">;
@@ -14,55 +18,79 @@ export function useRecursos() {
   const [erro, setErro] = useState<string | null>(null);
   const [usuario, setUsuario] = useState("Usuario");
 
-  useEffect(() => {
-    async function carregarDados() {
-      setLoading(true);
-      setErro(null);
+  const carregarDados = useCallback(async () => {
+    setLoading(true);
+    setErro(null);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (user?.email) {
-        setUsuario(user.email);
-      }
-
-      const [recursosResult, gruposResult] = await Promise.all([
-        supabase
-          .from("recursos_produtivos")
-          .select(
-            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,valor_hora,ativo,created_at",
-          )
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("grupos_recursos")
-          .select("id,codigo,nome,setor")
-          .order("nome", { ascending: true }),
-      ]);
-
-      if (recursosResult.error || gruposResult.error) {
-        setErro("Nao foi possivel carregar os recursos produtivos.");
-        setRecursos([]);
-        setLoading(false);
-        return;
-      }
-
-      const grupos = (gruposResult.data ?? []) as GrupoRecurso[];
-      const gruposPorId = new Map(grupos.map((grupo) => [grupo.id, grupo]));
-
-      setRecursos(
-        ((recursosResult.data ?? []) as RecursoRow[]).map((recurso) => ({
-          ...recurso,
-          grupo: recurso.grupo_id
-            ? gruposPorId.get(recurso.grupo_id) ?? null
-            : null,
-        })),
-      );
-      setLoading(false);
+    if (user?.email) {
+      setUsuario(user.email);
     }
 
-    carregarDados();
+    const [recursosResult, gruposResult] = await Promise.all([
+      supabase
+        .from("recursos_produtivos")
+        .select(
+          "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,valor_hora,ativo,created_at",
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("grupos_recursos")
+        .select("id,codigo,nome,setor")
+        .order("nome", { ascending: true }),
+    ]);
+
+    if (recursosResult.error || gruposResult.error) {
+      setErro("Nao foi possivel carregar os recursos produtivos.");
+      setRecursos([]);
+      setLoading(false);
+      return;
+    }
+
+    const grupos = (gruposResult.data ?? []) as GrupoRecurso[];
+    const gruposPorId = new Map(grupos.map((grupo) => [grupo.id, grupo]));
+
+    setRecursos(
+      ((recursosResult.data ?? []) as RecursoRow[]).map((recurso) => ({
+        ...recurso,
+        grupo: recurso.grupo_id
+          ? gruposPorId.get(recurso.grupo_id) ?? null
+          : null,
+      })),
+    );
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
+
+  async function alternarAtivoRecurso(id: string, ativoAtual: boolean) {
+    const { error } = await supabase
+      .from("recursos_produtivos")
+      .update({ ativo: !ativoAtual })
+      .eq("id", id);
+
+    if (error) {
+      setErro("Nao foi possivel atualizar o status do recurso.");
+      return;
+    }
+
+    await carregarDados();
+  }
+
+  async function excluirRecurso(id: string): Promise<ResultadoExclusao> {
+    const resultado = await excluirRegistro("recursos_produtivos", id);
+
+    if (resultado.status === "excluido") {
+      await carregarDados();
+    }
+
+    return resultado;
+  }
 
   const totais = useMemo(
     () => ({
@@ -118,5 +146,7 @@ export function useRecursos() {
     loading,
     erro,
     usuario,
+    alternarAtivoRecurso,
+    excluirRecurso,
   };
 }
