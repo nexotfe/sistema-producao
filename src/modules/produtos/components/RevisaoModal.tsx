@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { ProductRevision, ProductRevisionStatus } from "../types";
+import type {
+  NovaRevisaoInput,
+  ProductRevisionStatus,
+  ResultadoAdicionarRevisao,
+} from "../types";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onAdd: (revisao: ProductRevision) => void;
+  onAdd: (input: NovaRevisaoInput) => Promise<ResultadoAdicionarRevisao>;
 };
 
 const situacoes: { value: ProductRevisionStatus; label: string }[] = [
@@ -17,8 +21,9 @@ const situacoes: { value: ProductRevisionStatus; label: string }[] = [
 export function RevisaoModal({ open, onClose, onAdd }: Props) {
   const [codigoRevisao, setCodigoRevisao] = useState("");
   const [situacao, setSituacao] = useState<ProductRevisionStatus>("vigente");
-  const [roteiroVinculado, setRoteiroVinculado] = useState("");
   const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   if (!open) {
     return null;
@@ -27,24 +32,31 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
   function limparEFechar() {
     setCodigoRevisao("");
     setSituacao("vigente");
-    setRoteiroVinculado("");
     setNomeArquivo(null);
+    setErro(null);
     onClose();
   }
 
-  function handleAdicionar() {
+  async function handleAdicionar() {
     if (!codigoRevisao.trim()) {
       return;
     }
 
-    onAdd({
-      id: crypto.randomUUID(),
+    setSalvando(true);
+    setErro(null);
+
+    const resultado = await onAdd({
       codigoRevisao: codigoRevisao.trim(),
-      situacao,
-      roteiroVinculado: roteiroVinculado.trim() || "Sem roteiro vinculado",
-      custoCalculado: 0,
-      anexoDesenho: nomeArquivo,
+      aprovarVigente: situacao === "vigente",
+      anexoNomeArquivo: nomeArquivo,
     });
+
+    setSalvando(false);
+
+    if (resultado.status === "erro") {
+      setErro(resultado.mensagem);
+      return;
+    }
 
     limparEFechar();
   }
@@ -76,11 +88,12 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
               }
               options={situacoes}
             />
-            <Field
-              label="Roteiro Vinculado"
-              value={roteiroVinculado}
-              onChange={setRoteiroVinculado}
-            />
+            {situacao === "vigente" ? (
+              <p className="-mt-2 text-xs text-slate-500">
+                Ao aprovar esta revisão como vigente, a revisão vigente
+                atual (se houver) será encerrada automaticamente.
+              </p>
+            ) : null}
             <ReadOnlyField
               label="Custo Calculado"
               value="Calculado automaticamente a partir do roteiro"
@@ -96,10 +109,16 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
                 }
                 className="block w-full text-sm text-slate-600 file:mr-3 file:h-9 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-50"
               />
-              {nomeArquivo && (
-                <p className="mt-1.5 text-xs text-slate-500">{nomeArquivo}</p>
-              )}
+              <p className="mt-1.5 text-xs text-slate-500">
+                {nomeArquivo
+                  ? nomeArquivo
+                  : "O anexo fica vinculado ao produto, não a esta revisão específica."}
+              </p>
             </div>
+
+            {erro ? (
+              <p className="text-sm font-medium text-red-600">{erro}</p>
+            ) : null}
           </div>
         </div>
 
@@ -114,10 +133,10 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
           <button
             type="button"
             onClick={handleAdicionar}
-            disabled={!codigoRevisao.trim()}
+            disabled={!codigoRevisao.trim() || salvando}
             className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Adicionar
+            {salvando ? "Adicionando..." : "Adicionar"}
           </button>
         </div>
       </div>

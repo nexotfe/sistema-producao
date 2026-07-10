@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { use } from "react";
+import { useRouter } from "next/navigation";
 import { ProductForm } from "@/modules/produtos/components/ProductForm";
-import { mockProducts } from "@/modules/produtos/mockProducts";
-import type { ProductFormValues } from "@/modules/produtos/types";
+import { useEditarProduto } from "@/modules/produtos/hooks/useEditarProduto";
 import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
 
 type Props = {
@@ -10,33 +13,79 @@ type Props = {
   }>;
 };
 
-export default async function EditProductPage({ params }: Props) {
-  const { pn } = await params;
-  const product = mockProducts.find((item) => item.code === pn);
+export default function EditProductPage({ params }: Props) {
+  const { pn } = use(params);
+  const router = useRouter();
+  const {
+    values,
+    updateValue,
+    adicionarRevisao,
+    valorCalculado,
+    estoque,
+    ajustarEstoque,
+    loading,
+    salvando,
+    erro,
+    salvarProduto,
+  } = useEditarProduto(decodeURIComponent(pn));
 
-  const initialValues: ProductFormValues = {
-    code: product?.code ?? pn,
-    description: product?.description ?? "",
-    ncm: "",
-    unit: product?.unit ?? "un",
-    active: product?.active ?? true,
-    notes: product?.notes ?? "",
-    revisions: [],
-    roteiroVigente: product ? "Rot 01-001" : "",
-  };
+  async function handleSalvar() {
+    const sucesso = await salvarProduto();
+
+    if (sucesso) {
+      router.push(`/produtos/${encodeURIComponent(values.code)}`);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <Header titulo="Produto" subtitulo="Editar produto" />
+        <Header
+          titulo="Produto"
+          subtitulo="Editar produto"
+          onSalvar={handleSalvar}
+          salvando={salvando}
+        />
 
-        <ProductForm mode="edit" initialValues={initialValues} />
+        {erro ? (
+          <p className="text-sm font-medium text-red-600">{erro}</p>
+        ) : null}
+
+        {loading ? (
+          <p className="text-sm text-slate-500">Carregando produto...</p>
+        ) : (
+          <ProductForm
+            values={values}
+            onChange={updateValue}
+            onAdicionarRevisao={adicionarRevisao}
+            valorFormatado={
+              valorCalculado !== null
+                ? valorCalculado.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })
+                : undefined
+            }
+            estoque={estoque}
+            onAjustarEstoque={ajustarEstoque}
+          />
+        )}
       </div>
     </main>
   );
 }
 
-function Header({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
+function Header({
+  titulo,
+  subtitulo,
+  onSalvar,
+  salvando,
+}: {
+  titulo: string;
+  subtitulo: string;
+  onSalvar: () => void;
+  salvando: boolean;
+}) {
   return (
     <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -73,9 +122,11 @@ function Header({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
             </Link>
             <button
               type="button"
-              className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
+              onClick={onSalvar}
+              disabled={salvando}
+              className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Salvar
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </div>

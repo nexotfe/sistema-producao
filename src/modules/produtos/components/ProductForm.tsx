@@ -3,45 +3,64 @@
 import Link from "next/link";
 import { useState } from "react";
 import { RevisaoModal } from "./RevisaoModal";
-import type { ProductFormValues, ProductRevision } from "../types";
+import { AjustarEstoqueModal } from "./AjustarEstoqueModal";
+import type {
+  EstoqueInfo,
+  NovaRevisaoInput,
+  ProductFormValues,
+  ProductRevision,
+  ResultadoAdicionarRevisao,
+  ResultadoAjusteEstoque,
+} from "../types";
 
 type ProductFormProps = {
-  initialValues?: ProductFormValues;
-  mode: "new" | "edit";
-};
-
-const unidadesProduto = ["un", "kg", "metro", "conjunto", "peça"];
-
-const emptyValues: ProductFormValues = {
-  code: "",
-  description: "",
-  ncm: "",
-  unit: "un",
-  active: true,
-  notes: "",
-  revisions: [],
-  roteiroVigente: "",
-};
-
-export function ProductForm({ initialValues }: ProductFormProps) {
-  const [values, setValues] = useState<ProductFormValues>(
-    initialValues ?? emptyValues,
-  );
-  const [modalRevisaoAberto, setModalRevisaoAberto] = useState(false);
-
-  function updateValue<K extends keyof ProductFormValues>(
+  values: ProductFormValues;
+  onChange: <K extends keyof ProductFormValues>(
     key: K,
     value: ProductFormValues[K],
-  ) {
-    setValues((current) => ({ ...current, [key]: value }));
-  }
+  ) => void;
+  onAdicionarRevisao: (
+    input: NovaRevisaoInput,
+  ) => Promise<ResultadoAdicionarRevisao>;
+  valorFormatado?: string;
+  estoque?: EstoqueInfo | null;
+  onAjustarEstoque?: (
+    saldoReal: number,
+    justificativa: string,
+  ) => Promise<ResultadoAjusteEstoque>;
+};
 
-  function adicionarRevisao(revisao: ProductRevision) {
-    setValues((current) => ({
-      ...current,
-      revisions: [...current.revisions, revisao],
-    }));
-  }
+// Valores exatos do CHECK itens_industriais_tipo_item_check (remoto real).
+const tiposItem = [
+  { value: "produto acabado", label: "Produto Acabado" },
+  { value: "semiacabado", label: "Semiacabado" },
+  { value: "materia-prima", label: "Matéria-Prima" },
+  { value: "material consumo", label: "Material de Consumo" },
+  { value: "ferramenta", label: "Ferramenta" },
+  { value: "servico", label: "Serviço" },
+];
+
+// Valores exatos do CHECK itens_industriais_unidade_check (remoto real).
+const unidadesProduto = [
+  { value: "peca", label: "Peça" },
+  { value: "conjunto", label: "Conjunto" },
+  { value: "kg", label: "Kg" },
+  { value: "metro", label: "Metro" },
+  { value: "unidade", label: "Unidade" },
+  { value: "litro", label: "Litro" },
+  { value: "pacote", label: "Pacote" },
+];
+
+export function ProductForm({
+  values,
+  onChange,
+  onAdicionarRevisao,
+  valorFormatado,
+  estoque,
+  onAjustarEstoque,
+}: ProductFormProps) {
+  const [modalRevisaoAberto, setModalRevisaoAberto] = useState(false);
+  const [modalEstoqueAberto, setModalEstoqueAberto] = useState(false);
 
   return (
     <section className="flex flex-col gap-5">
@@ -50,30 +69,42 @@ export function ProductForm({ initialValues }: ProductFormProps) {
           <Field
             label="Descrição"
             value={values.description}
-            onChange={(value) => updateValue("description", value)}
+            onChange={(value) => onChange("description", value)}
           />
           <Field
             label="Código"
             value={values.code}
-            onChange={(value) => updateValue("code", value)}
+            onChange={(value) => onChange("code", value)}
+          />
+          <SelectField
+            label="Tipo"
+            value={values.tipoItem}
+            onChange={(value) => onChange("tipoItem", value)}
+            options={tiposItem}
           />
           <SelectField
             label="UN"
             value={values.unit}
-            onChange={(value) => updateValue("unit", value)}
+            onChange={(value) => onChange("unit", value)}
             options={unidadesProduto}
           />
-          <ReadOnlyField label="Valor de Venda" value="Aguardando roteiro" />
+          <ReadOnlyField
+            label="Valor de Venda"
+            value={valorFormatado || "Aguardando roteiro"}
+          />
           <Field
             label="NCM"
             value={values.ncm}
-            onChange={(value) => updateValue("ncm", value)}
+            onChange={(value) => onChange("ncm", value)}
           />
           <SelectField
             label="Status"
             value={values.active ? "Ativo" : "Inativo"}
-            onChange={(value) => updateValue("active", value === "Ativo")}
-            options={["Ativo", "Inativo"]}
+            onChange={(value) => onChange("active", value === "Ativo")}
+            options={[
+              { value: "Ativo", label: "Ativo" },
+              { value: "Inativo", label: "Inativo" },
+            ]}
           />
         </div>
       </Card>
@@ -86,19 +117,54 @@ export function ProductForm({ initialValues }: ProductFormProps) {
           />
         </div>
 
-        <Link
-          href={
-            values.roteiroVigente
-              ? `/roteiros/${values.code || values.roteiroVigente}`
-              : `/roteiros/novo${
-                  values.code ? `?pn=${encodeURIComponent(values.code)}` : ""
-                }`
-          }
-          className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
-        >
-          {values.roteiroVigente ? "Abrir Roteiro" : "Criar Roteiro"}
-        </Link>
+        {values.code ? (
+          <Link
+            href={`/roteiros/${encodeURIComponent(values.code)}`}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+          >
+            {values.roteiroVigente ? "Abrir Roteiro" : "Criar Roteiro"}
+          </Link>
+        ) : (
+          <span
+            title="Salve o produto antes de abrir o roteiro"
+            className="inline-flex h-10 cursor-not-allowed items-center justify-center rounded-md bg-slate-200 px-4 text-sm font-semibold text-slate-500"
+          >
+            Criar Roteiro
+          </span>
+        )}
       </div>
+
+      <Card titulo="Estoque">
+        {onAjustarEstoque ? (
+          <div className="flex items-center justify-end border-b border-slate-100 px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setModalEstoqueAberto(true)}
+              className="h-9 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Ajustar Estoque
+            </button>
+          </div>
+        ) : null}
+        <div className="grid gap-4 px-4 py-4 md:grid-cols-2 xl:grid-cols-4">
+          <ReadOnlyField
+            label="Saldo Atual"
+            value={formatarNumero(estoque?.saldoDisponivel)}
+          />
+          <ReadOnlyField
+            label="Reservado"
+            value={formatarNumero(estoque?.saldoReservado)}
+          />
+          <ReadOnlyField
+            label="Disponível"
+            value={formatarNumero(estoque?.saldoLivre)}
+          />
+          <ReadOnlyField
+            label="Última Movimentação"
+            value={formatarUltimaMovimentacao(estoque)}
+          />
+        </div>
+      </Card>
 
       <Card titulo="Revisões">
         <div className="border-b border-slate-100 px-4 py-3">
@@ -121,7 +187,7 @@ export function ProductForm({ initialValues }: ProductFormProps) {
             label="Observações"
             rows={5}
             value={values.notes}
-            onChange={(value) => updateValue("notes", value)}
+            onChange={(value) => onChange("notes", value)}
           />
         </div>
       </Card>
@@ -129,10 +195,44 @@ export function ProductForm({ initialValues }: ProductFormProps) {
       <RevisaoModal
         open={modalRevisaoAberto}
         onClose={() => setModalRevisaoAberto(false)}
-        onAdd={adicionarRevisao}
+        onAdd={onAdicionarRevisao}
       />
+
+      {onAjustarEstoque ? (
+        <AjustarEstoqueModal
+          open={modalEstoqueAberto}
+          onClose={() => setModalEstoqueAberto(false)}
+          onAjustar={onAjustarEstoque}
+          saldoAtual={estoque?.saldoDisponivel ?? 0}
+        />
+      ) : null}
     </section>
   );
+}
+
+function formatarNumero(value: number | undefined) {
+  return (value ?? 0).toLocaleString("pt-BR");
+}
+
+const rotulosMovimento: Record<string, string> = {
+  entrada: "Entrada",
+  saida: "Saída",
+  reserva: "Reserva",
+  liberacao_reserva: "Liberação de reserva",
+  ajuste: "Ajuste",
+  producao: "Produção",
+};
+
+function formatarUltimaMovimentacao(estoque: EstoqueInfo | null | undefined) {
+  if (!estoque?.ultimaMovimentacao) {
+    return "—";
+  }
+
+  const { tipoMovimento, criadaEm } = estoque.ultimaMovimentacao;
+  const rotulo = rotulosMovimento[tipoMovimento] ?? tipoMovimento;
+  const data = new Date(criadaEm).toLocaleString("pt-BR");
+
+  return `${rotulo} em ${data}`;
 }
 
 function RevisoesTable({ revisoes }: { revisoes: ProductRevision[] }) {
@@ -260,7 +360,7 @@ function SelectField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: { value: string; label: string }[];
 }) {
   return (
     <div>
@@ -274,8 +374,8 @@ function SelectField({
         className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
       >
         {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>

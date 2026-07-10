@@ -1,22 +1,59 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ProductForm } from "@/modules/produtos/components/ProductForm";
+import { useNovoProduto } from "@/modules/produtos/hooks/useNovoProduto";
 import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
 
 export default function NewProductPage() {
+  const router = useRouter();
+  const { values, updateValue, adicionarRevisao, salvando, erro, salvarProduto } =
+    useNovoProduto();
+
+  async function handleSalvar() {
+    const sucesso = await salvarProduto();
+
+    if (sucesso) {
+      router.push("/produtos");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <Header titulo="Produto" subtitulo="Novo produto" />
+        <Header
+          titulo="Produto"
+          subtitulo="Novo produto"
+          onSalvar={handleSalvar}
+          salvando={salvando}
+        />
 
-        <ProductForm mode="new" />
+        {erro ? (
+          <p className="text-sm font-medium text-red-600">{erro}</p>
+        ) : null}
+
+        <ProductForm
+          values={values}
+          onChange={updateValue}
+          onAdicionarRevisao={adicionarRevisao}
+        />
       </div>
     </main>
   );
 }
 
-function Header({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
+function Header({
+  titulo,
+  subtitulo,
+  onSalvar,
+  salvando,
+}: {
+  titulo: string;
+  subtitulo: string;
+  onSalvar: () => void;
+  salvando: boolean;
+}) {
   return (
     <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -53,9 +90,11 @@ function Header({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
             </Link>
             <button
               type="button"
-              className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
+              onClick={onSalvar}
+              disabled={salvando}
+              className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Salvar
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </div>
