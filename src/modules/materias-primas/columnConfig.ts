@@ -11,6 +11,7 @@ export const materiasPrimasColunasPadrao: ColumnConfigItem[] = [
   { field: "quantidade", label: "Quantidade", visible: true, order: 6 },
   { field: "endereco", label: "Endereço", visible: true, order: 7 },
   { field: "status", label: "Status", visible: true, order: 8 },
+  { field: "preco", label: "Preço", visible: true, order: 9 },
 ];
 
 type GetColumn = (field: string) => ColumnConfigItem | undefined;

@@ -16,6 +16,7 @@ import type {
   FornecedorMateriaPrima,
   MateriaPrimaForm,
 } from "@/modules/materias-primas/types";
+import { origensCusto } from "@/modules/materias-primas/types";
 
 const familiasMateriais = [
   "Aço carbono",
@@ -60,6 +61,10 @@ export default function NovaMateriaPrimaPage() {
           onSalvar={salvarMateriaPrima}
         />
 
+        {erro ? (
+          <p className="text-sm font-medium text-red-600">{erro}</p>
+        ) : null}
+
         {loading ? (
           <p className="text-sm text-slate-500">Carregando matéria-prima...</p>
         ) : (
@@ -68,7 +73,6 @@ export default function NovaMateriaPrimaPage() {
             atualizarCampo={atualizarCampo}
             fornecedoresAssociados={fornecedoresAssociados}
             abrirModalFornecedores={() => setModalFornecedoresAberto(true)}
-            erro={erro}
             getColumn={getColumn}
           />
         )}
@@ -89,7 +93,6 @@ function FormularioMateriaPrima({
   atualizarCampo,
   fornecedoresAssociados,
   abrirModalFornecedores,
-  erro,
   getColumn,
 }: {
   form: MateriaPrimaForm;
@@ -99,7 +102,6 @@ function FormularioMateriaPrima({
   ) => void;
   fornecedoresAssociados: FornecedorMateriaPrima[];
   abrirModalFornecedores: () => void;
-  erro: string | null;
   getColumn: (field: string) => ColumnConfigItem | undefined;
 }) {
   return (
@@ -197,6 +199,55 @@ function FormularioMateriaPrima({
         </Card>
       </div>
 
+      <Card titulo="Custo">
+        <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
+          <Field
+            label="Custo de Referência (R$)"
+            value={form.custoReferencia}
+            onChange={(value) => atualizarCampo("custoReferencia", value)}
+          />
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              Origem do Custo
+            </label>
+            <select
+              value={form.custoOrigem}
+              onChange={(event) =>
+                atualizarCampo(
+                  "custoOrigem",
+                  event.target.value as MateriaPrimaForm["custoOrigem"],
+                )
+              }
+              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            >
+              {origensCusto.map((opcao) => (
+                <option
+                  key={opcao.value}
+                  value={opcao.value}
+                  disabled={opcao.disabled}
+                >
+                  {opcao.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <TextareaField
+              label="Justificativa"
+              rows={3}
+              value={form.custoJustificativa}
+              onChange={(value) =>
+                atualizarCampo("custoJustificativa", value)
+              }
+            />
+            <p className="mt-1.5 text-xs text-slate-400">
+              Obrigatória quando a origem é Manual e há custo de referência
+              preenchido.
+            </p>
+          </div>
+        </div>
+      </Card>
+
       <Card titulo="Estoque">
         <div className="grid gap-4 px-4 py-4 md:grid-cols-2 xl:grid-cols-4">
           <ReadOnlyField label="Saldo Atual" value="0" />
@@ -231,8 +282,6 @@ function FormularioMateriaPrima({
           />
         </div>
       </Card>
-
-      {erro && <p className="text-sm font-medium text-red-600">{erro}</p>}
     </section>
   );
 }

@@ -16,6 +16,9 @@ export type MateriaPrima = {
   peso_especifico: string | null;
   observacoes_tecnicas: string | null;
   observacoes: string | null;
+  custo_referencia: number | null;
+  custo_origem: "manual" | "nf";
+  custo_justificativa: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -37,8 +40,22 @@ export type MateriaPrimaForm = {
   peso_especifico: string;
   observacoes_tecnicas: string;
   observacoes: string;
+  custoReferencia: string;
+  custoOrigem: "manual" | "nf";
+  custoJustificativa: string;
   ativo: boolean;
 };
+
+// Origem "nf" fica preparada para quando o modulo de Compras/Recebimento
+// existir - hoje so "manual" pode ser selecionado de fato.
+export const origensCusto: {
+  value: "manual" | "nf";
+  label: string;
+  disabled?: boolean;
+}[] = [
+  { value: "manual", label: "Manual" },
+  { value: "nf", label: "NF (indisponível até o módulo de Compras)", disabled: true },
+];
 
 export type MateriaPrimaLista = MateriaPrima & {
   quantidade: number;
@@ -62,6 +79,20 @@ export type FornecedorSelecao = {
   cnpj: string | null;
 };
 
+export type EstoqueInfo = {
+  saldoDisponivel: number;
+  saldoReservado: number;
+  saldoLivre: number;
+  ultimaMovimentacao: {
+    tipoMovimento: string;
+    criadaEm: string;
+  } | null;
+};
+
+export type ResultadoAjusteEstoque =
+  | { status: "ok" }
+  | { status: "erro"; mensagem: string };
+
 export const materiaPrimaInitialForm: MateriaPrimaForm = {
   codigo: "",
   descricao: "",
@@ -78,5 +109,8 @@ export const materiaPrimaInitialForm: MateriaPrimaForm = {
   peso_especifico: "",
   observacoes_tecnicas: "",
   observacoes: "",
+  custoReferencia: "",
+  custoOrigem: "manual",
+  custoJustificativa: "",
   ativo: true,
 };

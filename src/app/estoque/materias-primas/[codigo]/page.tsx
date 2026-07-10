@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { use, useState } from "react";
 import { FornecedorSelectionModal } from "@/modules/materias-primas/components/FornecedorSelectionModal";
+import { AjustarEstoqueModal } from "@/modules/materias-primas/components/AjustarEstoqueModal";
 import { useMateriaPrimaForm } from "@/modules/materias-primas/hooks/useMateriaPrimaForm";
 import { useColumnConfig, type ColumnConfigItem } from "@/hooks/useColumnConfig";
 import {
@@ -13,9 +14,11 @@ import {
   campoVisivel,
 } from "@/modules/materias-primas/columnConfig";
 import type {
+  EstoqueInfo,
   FornecedorMateriaPrima,
   MateriaPrimaForm,
 } from "@/modules/materias-primas/types";
+import { origensCusto } from "@/modules/materias-primas/types";
 
 const familiasMateriais = [
   "Aço carbono",
@@ -41,11 +44,14 @@ export default function CadastroMateriaPrimaPage({ params }: Props) {
   const [modalFornecedoresAberto, setModalFornecedoresAberto] = useState(
     searchParams.get("fornecedorModal") === "1",
   );
+  const [modalEstoqueAberto, setModalEstoqueAberto] = useState(false);
   const {
     form,
     atualizarCampo,
     fornecedoresAssociados,
     adicionarFornecedor,
+    estoque,
+    ajustarEstoque,
     loading,
     salvando,
     erro,
@@ -61,6 +67,10 @@ export default function CadastroMateriaPrimaPage({ params }: Props) {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <Header salvando={salvando} onSalvar={salvarMateriaPrima} />
 
+        {erro ? (
+          <p className="text-sm font-medium text-red-600">{erro}</p>
+        ) : null}
+
         {loading ? (
           <p className="text-sm text-slate-500">Carregando matéria-prima...</p>
         ) : (
@@ -69,7 +79,8 @@ export default function CadastroMateriaPrimaPage({ params }: Props) {
             atualizarCampo={atualizarCampo}
             fornecedoresAssociados={fornecedoresAssociados}
             abrirModalFornecedores={() => setModalFornecedoresAberto(true)}
-            erro={erro}
+            estoque={estoque}
+            abrirModalEstoque={() => setModalEstoqueAberto(true)}
             getColumn={getColumn}
           />
         )}
@@ -81,6 +92,13 @@ export default function CadastroMateriaPrimaPage({ params }: Props) {
         onAdd={adicionarFornecedor}
         returnUrl={`${pathname}?fornecedorModal=1`}
       />
+
+      <AjustarEstoqueModal
+        open={modalEstoqueAberto}
+        onClose={() => setModalEstoqueAberto(false)}
+        onAjustar={ajustarEstoque}
+        saldoAtual={estoque?.saldoDisponivel ?? 0}
+      />
     </main>
   );
 }
@@ -90,7 +108,8 @@ function FormularioMateriaPrima({
   atualizarCampo,
   fornecedoresAssociados,
   abrirModalFornecedores,
-  erro,
+  estoque,
+  abrirModalEstoque,
   getColumn,
 }: {
   form: MateriaPrimaForm;
@@ -100,7 +119,8 @@ function FormularioMateriaPrima({
   ) => void;
   fornecedoresAssociados: FornecedorMateriaPrima[];
   abrirModalFornecedores: () => void;
-  erro: string | null;
+  estoque: EstoqueInfo | null;
+  abrirModalEstoque: () => void;
   getColumn: (field: string) => ColumnConfigItem | undefined;
 }) {
   return (
@@ -220,12 +240,82 @@ function FormularioMateriaPrima({
         </Card>
       </div>
 
+      <Card titulo="Custo">
+        <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
+          <Field
+            label="Custo de Referência (R$)"
+            value={form.custoReferencia}
+            onChange={(value) => atualizarCampo("custoReferencia", value)}
+          />
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              Origem do Custo
+            </label>
+            <select
+              value={form.custoOrigem}
+              onChange={(event) =>
+                atualizarCampo(
+                  "custoOrigem",
+                  event.target.value as MateriaPrimaForm["custoOrigem"],
+                )
+              }
+              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            >
+              {origensCusto.map((opcao) => (
+                <option
+                  key={opcao.value}
+                  value={opcao.value}
+                  disabled={opcao.disabled}
+                >
+                  {opcao.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <TextareaField
+              label="Justificativa"
+              rows={3}
+              value={form.custoJustificativa}
+              onChange={(value) =>
+                atualizarCampo("custoJustificativa", value)
+              }
+            />
+            <p className="mt-1.5 text-xs text-slate-400">
+              Obrigatória quando a origem é Manual e há custo de referência
+              preenchido.
+            </p>
+          </div>
+        </div>
+      </Card>
+
       <Card titulo="Estoque">
+        <div className="flex items-center justify-end border-b border-slate-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={abrirModalEstoque}
+            className="h-9 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            Ajustar Estoque
+          </button>
+        </div>
         <div className="grid gap-4 px-4 py-4 md:grid-cols-2 xl:grid-cols-4">
-          <ReadOnlyField label="Saldo Atual" value="0" />
-          <ReadOnlyField label="Reservado" value="0" />
-          <ReadOnlyField label="Disponível" value="0" />
-          <ReadOnlyField label="Última Movimentação" value="—" />
+          <ReadOnlyField
+            label="Saldo Atual"
+            value={formatarNumero(estoque?.saldoDisponivel)}
+          />
+          <ReadOnlyField
+            label="Reservado"
+            value={formatarNumero(estoque?.saldoReservado)}
+          />
+          <ReadOnlyField
+            label="Disponível"
+            value={formatarNumero(estoque?.saldoLivre)}
+          />
+          <ReadOnlyField
+            label="Última Movimentação"
+            value={formatarUltimaMovimentacao(estoque)}
+          />
         </div>
       </Card>
 
@@ -254,8 +344,6 @@ function FormularioMateriaPrima({
           />
         </div>
       </Card>
-
-      {erro && <p className="text-sm font-medium text-red-600">{erro}</p>}
     </section>
   );
 }
@@ -484,4 +572,28 @@ function TextareaField({
       />
     </div>
   );
+}
+
+function formatarNumero(value: number | undefined) {
+  return (value ?? 0).toLocaleString("pt-BR");
+}
+
+const rotulosMovimento: Record<string, string> = {
+  entrada: "Entrada",
+  saida: "Saída",
+  reserva: "Reserva",
+  liberacao_reserva: "Liberação de reserva",
+  ajuste: "Ajuste",
+};
+
+function formatarUltimaMovimentacao(estoque: EstoqueInfo | null) {
+  if (!estoque?.ultimaMovimentacao) {
+    return "—";
+  }
+
+  const { tipoMovimento, criadaEm } = estoque.ultimaMovimentacao;
+  const rotulo = rotulosMovimento[tipoMovimento] ?? tipoMovimento;
+  const data = new Date(criadaEm).toLocaleString("pt-BR");
+
+  return `${rotulo} em ${data}`;
 }

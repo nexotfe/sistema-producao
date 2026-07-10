@@ -4,18 +4,29 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import {
+  type EstoqueInfo,
   type FornecedorMateriaPrima,
   type FornecedorSelecao,
   materiaPrimaInitialForm,
   type MateriaPrima,
   type MateriaPrimaForm,
+  type ResultadoAjusteEstoque,
 } from "../types";
 
 type SupabaseErrorLike = {
+  code?: string;
   message?: string;
   details?: string;
   hint?: string;
 };
+
+const CODIGO_UNIQUE_VIOLATION = "23505";
+
+// Codigo nao pode ter espacos (evita duplicidade tipo "SAE 1045" vs
+// "SAE1045" sendo tratados como codigos diferentes).
+function normalizarCodigo(valor: string) {
+  return valor.toUpperCase().replace(/\s+/g, "");
+}
 
 type UseMateriaPrimaFormOptions = {
   codigo?: string;
@@ -33,6 +44,8 @@ export function useMateriaPrimaForm({
   const [fornecedoresAssociados, setFornecedoresAssociados] = useState<
     FornecedorMateriaPrima[]
   >([]);
+  const [estoque, setEstoque] = useState<EstoqueInfo | null>(null);
+  const [ajustandoEstoque, setAjustandoEstoque] = useState(false);
   const [loading, setLoading] = useState(Boolean(codigo || duplicar));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -54,7 +67,7 @@ export function useMateriaPrimaForm({
       const { data, error } = await supabase
         .from("materias_primas")
         .select(
-          "id,codigo,descricao,familia,unidade,bitola,dimensao,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,ativo,created_at,updated_at,empresa_id",
+          "id,codigo,descricao,familia,unidade,bitola,dimensao,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,custo_referencia,custo_origem,custo_justificativa,ativo,created_at,updated_at,empresa_id",
         )
         .eq("codigo", codigoReferencia)
         .single();
@@ -84,10 +97,17 @@ export function useMateriaPrimaForm({
         peso_especifico: materiaPrima.peso_especifico ?? "",
         observacoes_tecnicas: materiaPrima.observacoes_tecnicas ?? "",
         observacoes: materiaPrima.observacoes ?? "",
+        custoReferencia:
+          materiaPrima.custo_referencia !== null
+            ? String(materiaPrima.custo_referencia)
+            : "",
+        custoOrigem: materiaPrima.custo_origem ?? "manual",
+        custoJustificativa: materiaPrima.custo_justificativa ?? "",
         ativo: materiaPrima.ativo,
       });
       if (modoEdicao) {
         await carregarFornecedoresAssociados(materiaPrima.id);
+        await carregarEstoque(materiaPrima.id);
       }
       setLoading(false);
     }
@@ -101,7 +121,10 @@ export function useMateriaPrimaForm({
   ) {
     setForm((atual) => ({
       ...atual,
-      [campo]: valor,
+      [campo]:
+        campo === "codigo"
+          ? (normalizarCodigo(valor as string) as MateriaPrimaForm[K])
+          : valor,
     }));
   }
 
@@ -125,8 +148,43 @@ export function useMateriaPrimaForm({
         return false;
       }
 
+      const custoReferenciaTexto = form.custoReferencia.trim();
+      let custoReferenciaNumerica: number | null = null;
+
+      if (custoReferenciaTexto) {
+        custoReferenciaNumerica = Number(custoReferenciaTexto.replace(",", "."));
+
+        if (
+          !Number.isFinite(custoReferenciaNumerica) ||
+          custoReferenciaNumerica < 0
+        ) {
+          setErro("Informe um custo de referência numérico válido.");
+          return false;
+        }
+      }
+
+      if (
+        form.custoOrigem === "manual" &&
+        custoReferenciaNumerica !== null &&
+        !form.custoJustificativa.trim()
+      ) {
+        setErro(
+          "Informe a justificativa do custo (obrigatória quando a origem é Manual e há custo de referência).",
+        );
+        return false;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setErro("Usuário não autenticado.");
+        return false;
+      }
+
       const payload = {
-        codigo: form.codigo.trim(),
+        codigo: normalizarCodigo(form.codigo),
         descricao: form.descricao.trim(),
         familia: emptyToNull(form.familia),
         unidade: form.unidade.trim(),
@@ -141,6 +199,15 @@ export function useMateriaPrimaForm({
         peso_especifico: emptyToNull(form.peso_especifico),
         observacoes_tecnicas: emptyToNull(form.observacoes_tecnicas),
         observacoes: emptyToNull(form.observacoes),
+        custo_referencia: custoReferenciaNumerica,
+        custo_origem: form.custoOrigem,
+        custo_justificativa:
+          custoReferenciaNumerica !== null
+            ? emptyToNull(form.custoJustificativa)
+            : null,
+        custo_atualizado_em:
+          custoReferenciaNumerica !== null ? new Date().toISOString() : null,
+        custo_atualizado_por: custoReferenciaNumerica !== null ? user.id : null,
         ativo: form.ativo,
       };
 
@@ -154,15 +221,6 @@ export function useMateriaPrimaForm({
           throw error;
         }
       } else {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          setErro("Usuário não autenticado.");
-          return false;
-        }
-
         const { data: usuario, error: usuarioError } = await supabase
           .from("usuarios")
           .select("empresa_id")
@@ -213,6 +271,20 @@ export function useMateriaPrimaForm({
       return true;
     } catch (err) {
       const supabaseError = err as SupabaseErrorLike;
+
+      if (supabaseError.code === CODIGO_UNIQUE_VIOLATION) {
+        const texto = `${supabaseError.message ?? ""} ${supabaseError.details ?? ""}`;
+
+        if (texto.includes("materias_primas_codigo_empresa_uniq")) {
+          setErro("Já existe uma matéria-prima com este código.");
+        } else if (texto.includes("materias_primas_descricao_empresa_uniq")) {
+          setErro("Já existe uma matéria-prima com esta descrição.");
+        } else {
+          setErro("Já existe uma matéria-prima com estes dados.");
+        }
+        return false;
+      }
+
       const detalhe =
         supabaseError.message || supabaseError.details || supabaseError.hint;
 
@@ -233,12 +305,73 @@ export function useMateriaPrimaForm({
     registroId,
     fornecedoresAssociados,
     adicionarFornecedor,
+    estoque,
+    ajustandoEstoque,
+    ajustarEstoque,
     loading,
     salvando,
     erro,
     modoEdicao,
     salvarMateriaPrima,
   };
+
+  async function carregarEstoque(materiaPrimaId: string) {
+    const { data: saldo } = await supabase
+      .from("estoque_saldos")
+      .select("saldo_disponivel,saldo_reservado,saldo_livre")
+      .eq("materia_prima_id", materiaPrimaId)
+      .eq("local_estoque", "principal")
+      .maybeSingle();
+
+    const { data: movimentacao } = await supabase
+      .from("estoque_movimentacoes")
+      .select("tipo_movimento,created_at")
+      .eq("materia_prima_id", materiaPrimaId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    setEstoque({
+      saldoDisponivel: Number(saldo?.saldo_disponivel ?? 0),
+      saldoReservado: Number(saldo?.saldo_reservado ?? 0),
+      saldoLivre: Number(saldo?.saldo_livre ?? 0),
+      ultimaMovimentacao: movimentacao
+        ? {
+            tipoMovimento: movimentacao.tipo_movimento,
+            criadaEm: movimentacao.created_at,
+          }
+        : null,
+    });
+  }
+
+  async function ajustarEstoque(
+    saldoReal: number,
+    justificativa: string,
+  ): Promise<ResultadoAjusteEstoque> {
+    if (!registroId) {
+      return { status: "erro", mensagem: "Matéria-prima não encontrada." };
+    }
+
+    setAjustandoEstoque(true);
+
+    const { error } = await supabase.rpc("ajustar_estoque_materia_prima", {
+      p_materia_prima_id: registroId,
+      p_saldo_real: saldoReal,
+      p_justificativa: justificativa,
+    });
+
+    if (error) {
+      setAjustandoEstoque(false);
+      return {
+        status: "erro",
+        mensagem: error.message || "Não foi possível ajustar o estoque.",
+      };
+    }
+
+    await carregarEstoque(registroId);
+    setAjustandoEstoque(false);
+    return { status: "ok" };
+  }
 
   async function carregarFornecedoresAssociados(materiaPrimaId: string) {
     const { data } = await supabase

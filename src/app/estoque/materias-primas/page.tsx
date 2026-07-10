@@ -25,6 +25,7 @@ const colunaClassMap: Record<string, string> = {
   quantidade: "px-4 py-4 font-medium text-slate-950",
   endereco: "truncate px-4 py-4 font-medium text-slate-700",
   status: "px-4 py-4",
+  preco: "px-4 py-4 text-slate-700",
 };
 
 function renderCelulaMaterial(field: string, material: MateriaPrimaLista) {
@@ -43,6 +44,13 @@ function renderCelulaMaterial(field: string, material: MateriaPrimaLista) {
       return formatarQuantidade(material.quantidade);
     case "endereco":
       return material.endereco || "—";
+    case "preco":
+      return material.custo_referencia !== null
+        ? material.custo_referencia.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          })
+        : "Sem custo cadastrado";
     case "status": {
       const statusAtual = material.ativo ? "Ativo" : "Inativo";
       return (

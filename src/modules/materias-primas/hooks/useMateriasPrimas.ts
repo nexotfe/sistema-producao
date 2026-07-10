@@ -23,7 +23,7 @@ export function useMateriasPrimas() {
     const { data, error } = await supabase
       .from("materias_primas")
       .select(
-        "id,empresa_id,codigo,descricao,familia,unidade,bitola,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,ativo,created_at,updated_at",
+        "id,empresa_id,codigo,descricao,familia,unidade,bitola,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,custo_referencia,custo_origem,custo_justificativa,ativo,created_at,updated_at",
       )
       .order("created_at", { ascending: false });
 
