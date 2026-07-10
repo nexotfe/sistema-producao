@@ -14,6 +14,7 @@ export type Project = {
   id: string;
   empresaId: string;
   numeroProjeto: string;
+  nome: string;
   clienteId: string | null;
   tipoProjeto: ProjectType;
   dataObjetivo: string | null;

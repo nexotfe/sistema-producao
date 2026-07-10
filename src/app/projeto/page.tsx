@@ -1,8 +1,24 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import {
+  ClienteSearchInput,
+} from "@/modules/clientes/components/ClienteSearchInput";
+import {
+  ContatoSearchInput,
+  type ContatoSugestao,
+  type PrefixoContatoColuna,
+} from "@/modules/projetos/components/ContatoSearchInput";
+import { ProjetoSearchInput } from "@/modules/projetos/components/ProjetoSearchInput";
+import { useProjeto, type ContatoProjeto } from "@/modules/projetos/hooks/useProjeto";
+import {
+  PROJECT_STATUSES,
+  PROJECT_STATUS_LABELS,
+  PROJECT_TYPES,
+  PROJECT_TYPE_LABELS,
+} from "@/modules/projetos/constants";
 
 const cards = [
   "Identificação do Projeto",
@@ -11,32 +27,115 @@ const cards = [
   "Resumo Operacional",
 ];
 
-type StatusProjeto =
-  | "em_elaboracao"
-  | "em_analise"
-  | "aprovado"
-  | "perdido"
-  | "cancelado";
+function formatarData(iso: string | null) {
+  if (!iso) {
+    return "—";
+  }
 
-const statusOptions: { value: StatusProjeto; label: string }[] = [
-  { value: "em_elaboracao", label: "Em elaboração" },
-  { value: "em_analise", label: "Em análise" },
-  { value: "aprovado", label: "Aprovado" },
-  { value: "perdido", label: "Perdido" },
-  { value: "cancelado", label: "Reprovado" },
-];
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
 
-const resumoOperacionalMock = {
-  produtos: "3",
-  ofs: "2",
-  custoEstimado: "Aguardando roteiro",
-  custoReal: "Aguardando produção",
-};
+function formatarMoeda(valor: number) {
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default function ProjetoPage() {
   const router = useRouter();
-  const [status, setStatus] = useState<StatusProjeto>("em_elaboracao");
+  const searchParams = useSearchParams();
+  const idProjeto = searchParams.get("id");
+  const duplicarDeId = searchParams.get("duplicar");
+
+  const {
+    projetoId,
+    numeroProjeto,
+    nome,
+    setNome,
+    tipoProjeto,
+    setTipoProjeto,
+    status,
+    setStatus,
+    cliente,
+    setCliente,
+    dataObjetivo,
+    setDataObjetivo,
+    observacoes,
+    setObservacoes,
+    responsavelNome,
+    setResponsavelNome,
+    criadoEm,
+    pedidoCompraCliente,
+    setPedidoCompraCliente,
+    documentoCliente,
+    setDocumentoCliente,
+    contatoComercial,
+    setContatoComercial,
+    contatoTecnico,
+    setContatoTecnico,
+    contatoTecnico2,
+    setContatoTecnico2,
+    resumoOperacional,
+    salvando,
+    erro,
+    salvar,
+  } = useProjeto(idProjeto, duplicarDeId);
+
+  const [mensagemSalvar, setMensagemSalvar] = useState<string | null>(null);
+
+  const contatos: {
+    label: string;
+    prefixo: PrefixoContatoColuna;
+    contato: ContatoProjeto;
+    setContato: (contato: ContatoProjeto) => void;
+  }[] = [
+    {
+      label: "Contato Comercial",
+      prefixo: "contato_comercial",
+      contato: contatoComercial,
+      setContato: setContatoComercial,
+    },
+    {
+      label: "Contato Técnico",
+      prefixo: "contato_tecnico",
+      contato: contatoTecnico,
+      setContato: setContatoTecnico,
+    },
+    {
+      label: "Contato Técnico 2",
+      prefixo: "contato_tecnico_2",
+      contato: contatoTecnico2,
+      setContato: setContatoTecnico2,
+    },
+  ];
   const projetoAprovado = status === "aprovado";
+
+  function selecionarContatoSugerido(
+    contatoAtual: ContatoProjeto,
+    setContato: (contato: ContatoProjeto) => void,
+    sugestao: ContatoSugestao,
+  ) {
+    setContato({
+      nome: sugestao.nome,
+      email: sugestao.email || contatoAtual.email,
+      telefone: sugestao.telefone || contatoAtual.telefone,
+      setor: sugestao.setor || contatoAtual.setor,
+    });
+  }
+
+  async function handleSalvar() {
+    setMensagemSalvar(null);
+    const resultado = await salvar();
+
+    if (resultado.status === "erro") {
+      setMensagemSalvar(resultado.mensagem);
+      return;
+    }
+
+    setMensagemSalvar("Projeto salvo com sucesso.");
+
+    if (!idProjeto) {
+      router.replace(`/projeto?id=${resultado.id}`);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
@@ -54,18 +153,7 @@ export default function ProjetoPage() {
             </div>
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <label htmlFor="busca-projeto-global" className="sr-only">
-                Buscar projeto
-              </label>
-              <input
-                id="busca-projeto-global"
-                type="search"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="Buscar projeto, cliente, código, item, OF, NF ou documento..."
-                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
-              />
+              <ProjetoSearchInput />
 
               <span className="whitespace-nowrap text-sm font-medium text-slate-500">
                 Nome do usuário
@@ -85,31 +173,44 @@ export default function ProjetoPage() {
                 >
                   Início
                 </Link>
+                <button
+                  type="button"
+                  onClick={handleSalvar}
+                  disabled={salvando}
+                  className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
+                >
+                  {salvando ? "Salvando..." : "Salvar"}
+                </button>
               </div>
             </div>
           </div>
         </header>
 
         <div className="flex justify-start gap-2">
-          <span
-            aria-current="page"
-            className="inline-flex h-10 items-center rounded-md bg-blue-700 px-3 text-sm font-semibold text-white"
-          >
-            Projeto
-          </span>
-          <Link
-            href="/projetos/novo"
-            className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Orçamento
-          </Link>
-          <Link
-            href="/roteiros/1243-01"
-            className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Roteiro
-          </Link>
+          {projetoId ? (
+            <Link
+              href={`/projetos/novo?id=${projetoId}`}
+              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Orçamento
+            </Link>
+          ) : (
+            <span
+              title="Salve o projeto antes de abrir o orçamento."
+              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-400"
+            >
+              Orçamento
+            </span>
+          )}
         </div>
+
+        {(erro || mensagemSalvar) && (
+          <p
+            className={`text-sm ${erro ? "text-rose-600" : "text-emerald-600"}`}
+          >
+            {erro ?? mensagemSalvar}
+          </p>
+        )}
 
         <section className="grid gap-6 lg:grid-cols-2">
           {cards.map((card, index) => (
@@ -128,7 +229,7 @@ export default function ProjetoPage() {
                         Projeto
                       </label>
                       <input
-                        value="260123"
+                        value={numeroProjeto ?? "Gerado automaticamente"}
                         readOnly
                         className="h-10 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700"
                       />
@@ -139,6 +240,8 @@ export default function ProjetoPage() {
                         Descrição do Projeto
                       </label>
                       <input
+                        value={nome}
+                        onChange={(event) => setNome(event.target.value)}
                         className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                       />
                     </div>
@@ -147,11 +250,20 @@ export default function ProjetoPage() {
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                         Natureza
                       </label>
-                      <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100">
-                        <option>Fabricação</option>
-                        <option>Desenvolvimento</option>
-                        <option>Industrialização</option>
-                        <option>Serviço</option>
+                      <select
+                        value={tipoProjeto}
+                        onChange={(event) =>
+                          setTipoProjeto(
+                            event.target.value as (typeof PROJECT_TYPES)[number],
+                          )
+                        }
+                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      >
+                        {PROJECT_TYPES.map((tipo) => (
+                          <option key={tipo} value={tipo}>
+                            {PROJECT_TYPE_LABELS[tipo]}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -159,9 +271,13 @@ export default function ProjetoPage() {
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                         Responsável
                       </label>
-                      <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100">
-                        <option>Nome do usuário</option>
-                      </select>
+                      <input
+                        value={responsavelNome}
+                        onChange={(event) =>
+                          setResponsavelNome(event.target.value)
+                        }
+                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
                     </div>
                   </div>
 
@@ -170,11 +286,7 @@ export default function ProjetoPage() {
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                         Cliente
                       </label>
-                      <input
-                        type="search"
-                        placeholder="Buscar cliente"
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                      />
+                      <ClienteSearchInput value={cliente} onChange={setCliente} />
                     </div>
 
                     <div>
@@ -184,13 +296,15 @@ export default function ProjetoPage() {
                       <select
                         value={status}
                         onChange={(event) =>
-                          setStatus(event.target.value as StatusProjeto)
+                          setStatus(
+                            event.target.value as (typeof PROJECT_STATUSES)[number],
+                          )
                         }
                         className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                       >
-                        {statusOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
+                        {PROJECT_STATUSES.map((valor) => (
+                          <option key={valor} value={valor}>
+                            {PROJECT_STATUS_LABELS[valor]}
                           </option>
                         ))}
                       </select>
@@ -201,7 +315,7 @@ export default function ProjetoPage() {
                         Data de Inclusão
                       </label>
                       <input
-                        value="02/07/2026"
+                        value={formatarData(criadoEm)}
                         readOnly
                         className="h-10 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700"
                       />
@@ -213,6 +327,8 @@ export default function ProjetoPage() {
                       </label>
                       <input
                         type="date"
+                        value={dataObjetivo}
+                        onChange={(event) => setDataObjetivo(event.target.value)}
                         className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                       />
                     </div>
@@ -226,18 +342,20 @@ export default function ProjetoPage() {
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                         Cliente
                       </label>
-                      <input
-                        type="search"
-                        placeholder="Buscar cliente"
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                      />
+                      <ClienteSearchInput value={cliente} onChange={setCliente} />
                     </div>
 
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                         Pedido de Compra do Cliente
                       </label>
-                      <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
+                      <input
+                        value={pedidoCompraCliente}
+                        onChange={(event) =>
+                          setPedidoCompraCliente(event.target.value)
+                        }
+                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
                     </div>
 
                     <div>
@@ -245,51 +363,85 @@ export default function ProjetoPage() {
                         Documento do Cliente
                       </label>
                       <input
+                        value={documentoCliente}
+                        onChange={(event) =>
+                          setDocumentoCliente(event.target.value)
+                        }
                         placeholder="OM, Escopo, Contrato, RFQ"
                         className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                       />
                     </div>
                   </div>
 
-                  {["Contato Comercial", "Contato Técnico", "Contato Técnico 2"].map(
-                    (contato) => (
-                      <div key={contato} className="grid gap-x-4 gap-y-5 lg:grid-cols-4">
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                            {contato}
-                          </label>
-                          <select className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100">
-                            <option>Selecionar contato</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                            E-mail
-                          </label>
-                          <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
-                        </div>
-
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                            Telefone
-                          </label>
-                          <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
-                        </div>
-
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                            Setor
-                          </label>
-                          <input className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
-                        </div>
+                  {contatos.map(({ label, prefixo, contato, setContato }) => (
+                    <div key={label} className="grid gap-x-4 gap-y-5 lg:grid-cols-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                          {label}
+                        </label>
+                        <ContatoSearchInput
+                          valorNome={contato.nome}
+                          onChangeNome={(nome) =>
+                            setContato({ ...contato, nome })
+                          }
+                          onSelecionar={(sugestao) =>
+                            selecionarContatoSugerido(contato, setContato, sugestao)
+                          }
+                          clienteId={cliente?.id ?? null}
+                          prefixoColuna={prefixo}
+                          projetoIdAtual={idProjeto}
+                        />
                       </div>
-                    ),
-                  )}
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                          E-mail
+                        </label>
+                        <input
+                          value={contato.email}
+                          onChange={(event) =>
+                            setContato({ ...contato, email: event.target.value })
+                          }
+                          className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                          Telefone
+                        </label>
+                        <input
+                          value={contato.telefone}
+                          onChange={(event) =>
+                            setContato({
+                              ...contato,
+                              telefone: event.target.value,
+                            })
+                          }
+                          className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                          Setor
+                        </label>
+                        <input
+                          value={contato.setor}
+                          onChange={(event) =>
+                            setContato({ ...contato, setor: event.target.value })
+                          }
+                          className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               {index === 2 ? (
                 <textarea
+                  value={observacoes}
+                  onChange={(event) => setObservacoes(event.target.value)}
                   placeholder="Informações importantes sobre este projeto..."
                   className="mt-5 h-64 w-full resize-none rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
@@ -297,10 +449,16 @@ export default function ProjetoPage() {
               {index === 3 ? (
                 <div className="mt-5 divide-y divide-slate-200 rounded-md border border-slate-200">
                   {[
-                    ["Nº de Produtos", resumoOperacionalMock.produtos],
-                    ["Nº de OFs", resumoOperacionalMock.ofs],
-                    ["Custo Estimado", resumoOperacionalMock.custoEstimado],
-                    ["Custo Real", resumoOperacionalMock.custoReal],
+                    [
+                      "Nº de Produtos",
+                      String(resumoOperacional?.numProdutos ?? 0),
+                    ],
+                    ["Nº de OFs", String(resumoOperacional?.numOfs ?? 0)],
+                    [
+                      "Custo Estimado",
+                      formatarMoeda(resumoOperacional?.custoEstimado ?? 0),
+                    ],
+                    ["Custo Real", "Aguardando produção"],
                   ].map(([label, value]) => (
                     <div
                       key={label}
