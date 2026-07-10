@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,6 +18,14 @@ export default function LoginPage() {
     setLoading(true);
     setErro(null);
 
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      setErro(
+        "Configuracao do Supabase ausente (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY). Verifique as variaveis de ambiente do deploy.",
+      );
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password: senha,
@@ -26,7 +34,15 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
-      setErro("E-mail ou senha inválidos.");
+      // "Invalid login credentials" e o unico caso de credencial
+      // realmente errada - qualquer outro erro (rede, config, 500 do
+      // Supabase) e um problema de ambiente/infra, nao de senha, e nao
+      // deve ser confundido com um pelo outro no debugging.
+      setErro(
+        error.message === "Invalid login credentials"
+          ? "E-mail ou senha inválidos."
+          : `Erro ao entrar: ${error.message}`,
+      );
       return;
     }
 
