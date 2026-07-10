@@ -4,35 +4,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { StatusBadge } from "@/modules/projetos/StatusBadge";
-import type { ProjectStatus } from "@/modules/projetos/types";
-import { EntityLink } from "@/modules/shared/navigation/EntityLink";
+import { PROJECT_TYPE_LABELS } from "@/modules/projetos/constants";
+import { useProjetosLista } from "@/modules/projetos/hooks/useProjetosLista";
 
-const projectRows = [
-  {
-    project: "260123",
-    client: "Cliente ABC",
-    type: "Desenvolvimento",
-    status: "em_analise" as ProjectStatus,
-    target: "18/06",
-  },
-  {
-    project: "260124",
-    client: "Cliente Delta",
-    type: "Fabricacao",
-    status: "em_elaboracao" as ProjectStatus,
-    target: "21/06",
-  },
-  {
-    project: "260118",
-    client: "Cliente Metal",
-    type: "Fabricacao",
-    status: "aprovado" as ProjectStatus,
-    target: "14/06",
-  },
-];
+function formatarData(iso: string | null) {
+  if (!iso) {
+    return "—";
+  }
+
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { projetos, busca, setBusca, loading } = useProjetosLista();
 
   return (
     <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
@@ -56,7 +41,12 @@ export default function ProjectsPage() {
               <input
                 id="project-search"
                 type="search"
-                placeholder="Buscar projeto, cliente ou PN"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                value={busca}
+                onChange={(event) => setBusca(event.target.value)}
+                placeholder="Buscar projeto por número, descrição ou cliente..."
                 className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
               />
 
@@ -86,7 +76,7 @@ export default function ProjectsPage() {
         <section className="rounded-lg border border-slate-200 bg-white">
           <div className="border-b border-slate-100 px-5 py-4">
             <Link
-              href="/projetos/novo"
+              href="/projeto"
               className="inline-flex items-center text-base font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
             >
               Cadastro de Projetos
@@ -94,7 +84,7 @@ export default function ProjectsPage() {
                 aria-hidden="true"
                 className="ml-2 text-base font-semibold leading-none text-slate-500"
               >
-                {"\u203A"}
+                {"›"}
               </span>
             </Link>
             <p className="mt-2 text-sm text-slate-500">
@@ -114,31 +104,47 @@ export default function ProjectsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {projectRows.map((row) => (
-                  <tr key={row.project} className="transition hover:bg-slate-50">
-                    <td className="px-5 py-4">
-                      {row.project === "260123" ? (
-                        <span className="font-semibold text-slate-950">
-                          {row.project}
-                        </span>
-                      ) : (
-                        <EntityLink
-                          type="projeto"
-                          id={row.project}
+                {loading ? (
+                  <tr>
+                    <td className="px-5 py-4 text-slate-500" colSpan={5}>
+                      Carregando...
+                    </td>
+                  </tr>
+                ) : projetos.length === 0 ? (
+                  <tr>
+                    <td className="px-5 py-4 text-slate-500" colSpan={5}>
+                      Nenhum projeto encontrado.
+                    </td>
+                  </tr>
+                ) : (
+                  projetos.map((projeto) => (
+                    <tr
+                      key={projeto.id}
+                      className="transition hover:bg-slate-50"
+                    >
+                      <td className="px-5 py-4">
+                        <Link
+                          href={`/projeto?id=${projeto.id}`}
                           className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
                         >
-                          {row.project}
-                        </EntityLink>
-                      )}
-                    </td>
-                    <td className="px-5 py-4 text-slate-700">{row.client}</td>
-                    <td className="px-5 py-4 text-slate-700">{row.type}</td>
-                    <td className="px-5 py-4">
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td className="px-5 py-4 text-slate-700">{row.target}</td>
-                  </tr>
-                ))}
+                          {projeto.numeroProjeto}
+                        </Link>
+                      </td>
+                      <td className="px-5 py-4 text-slate-700">
+                        {projeto.clienteNome ?? "—"}
+                      </td>
+                      <td className="px-5 py-4 text-slate-700">
+                        {PROJECT_TYPE_LABELS[projeto.tipoProjeto]}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge status={projeto.status} />
+                      </td>
+                      <td className="px-5 py-4 text-slate-700">
+                        {formatarData(projeto.dataObjetivo)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

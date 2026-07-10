@@ -7,39 +7,33 @@ type StatusColor = {
 };
 
 const STATUS_COLORS: Record<ProjectStatus, StatusColor> = {
+  rascunho: {
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    border: "border-blue-200",
+  },
   em_analise: {
     bg: "bg-amber-50",
     text: "text-amber-700",
     border: "border-amber-200",
   },
-  em_elaboracao: {
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
+  reprovado: {
+    bg: "bg-rose-50",
+    text: "text-rose-700",
+    border: "border-rose-200",
   },
   aprovado: {
     bg: "bg-emerald-50",
     text: "text-emerald-700",
     border: "border-emerald-200",
   },
-  perdido: {
-    bg: "bg-slate-50",
-    text: "text-slate-700",
-    border: "border-slate-200",
-  },
-  cancelado: {
-    bg: "bg-rose-50",
-    text: "text-rose-700",
-    border: "border-rose-200",
-  },
 };
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
+  rascunho: "Em elaboracao",
   em_analise: "Em analise",
-  em_elaboracao: "Em elaboracao",
+  reprovado: "Reprovado",
   aprovado: "Aprovado",
-  perdido: "Perdido",
-  cancelado: "Cancelado",
 };
 
 interface StatusBadgeProps {
