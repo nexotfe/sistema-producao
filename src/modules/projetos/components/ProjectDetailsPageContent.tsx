@@ -2,67 +2,125 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   ProjectStructureItemsTable,
   type ProjectStructureItem,
 } from "@/modules/projetos/components/ProjectStructureItemsTable";
-
-const quoteItems: ProjectStructureItem[] = [
-  {
-    description:
-      "Base soldada estrutural para suporte de conjunto mecânico industrial",
-    pn: "1243-01",
-    revision: "Rev.A",
-    quantity: 1,
-    routeStatus: "Em edição",
-    hours: "Depende do roteiro",
-    destination: "Após aprovação",
-    structureSlug: "conjunto-da-serra",
-    componentCount: 12,
-    situation: "Estrutura criada",
-    cost: "R$ 531,00",
-    taxes: "R$ 76,09",
-    profit: "R$ 106,20",
-    total: "R$ 713,29",
-  },
-  {
-    description: "Eixo usinado",
-    pn: "1244-01",
-    revision: "Rev.B",
-    quantity: 2,
-    routeStatus: "Completo",
-    hours: "5,5h",
-    destination: "Após aprovação",
-    situation: "Roteiro concluído",
-    cost: "R$ 420,00",
-    taxes: "R$ 60,19",
-    profit: "R$ 84,00",
-    total: "R$ 564,19",
-  },
-  {
-    description: "Suporte",
-    pn: "1245-01",
-    revision: "Rev.A",
-    quantity: 4,
-    routeStatus: "Pendente",
-    hours: "Depende do roteiro",
-    destination: "Após aprovação",
-    situation: "Produto cadastrado",
-    cost: "—",
-    taxes: "—",
-    profit: "—",
-    total: "—",
-  },
-];
+import { ProdutoSearchModal } from "@/modules/projetos/components/ProdutoSearchModal";
+import { useOrcamento } from "@/modules/projetos/hooks/useOrcamento";
+import { PROJECT_TYPE_LABELS } from "@/modules/projetos/constants";
 
 type ProjectDetailsPageContentProps = {
-  projectId?: string;
+  projectId?: string | null;
 };
 
+function formatarData(iso: string | null) {
+  if (!iso) {
+    return "—";
+  }
+
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
+
+function formatarMoeda(valor: number) {
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 export function ProjectDetailsPageContent({
-  projectId = "260123",
+  projectId = null,
 }: ProjectDetailsPageContentProps) {
   const router = useRouter();
+
+  const {
+    projetoId,
+    numeroProjeto,
+    nomeProjeto,
+    tipoProjeto,
+    dataObjetivo,
+    criadoEm,
+    responsavelNome,
+    cliente,
+    margemLucroPercent,
+    setMargemLucroPercent,
+    cargaTributariaPercent,
+    setCargaTributariaPercent,
+    cargaTributariaEfetiva,
+    itens,
+    resumoOrcamento,
+    erro,
+    mensagem,
+    formulaErro,
+    salvando,
+    salvar,
+    adicionarItem,
+  } = useOrcamento(projectId);
+
+  const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
+
+  // Inputs de texto (nao type="number"): evita o bug conhecido de inputs
+  // numericos controlados no React, onde um digito residual ("0" deixado
+  // ao limpar o campo) nao e corrigido pelo DOM e vira "020" ao digitar
+  // "20" em seguida. Aqui o texto exibido e o que o usuario digitou; o
+  // valor numerico limpo (sem zero a esquerda) vai para o hook a cada
+  // mudanca, e o texto se resincroniza com o numero quando ele muda por
+  // outra via (ex: carregamento inicial).
+  const [margemTexto, setMargemTexto] = useState(String(margemLucroPercent));
+  const [cargaTexto, setCargaTexto] = useState(
+    String(cargaTributariaPercent ?? cargaTributariaEfetiva),
+  );
+
+  useEffect(() => {
+    setMargemTexto(String(margemLucroPercent));
+  }, [margemLucroPercent]);
+
+  useEffect(() => {
+    setCargaTexto(String(cargaTributariaPercent ?? cargaTributariaEfetiva));
+  }, [cargaTributariaPercent, cargaTributariaEfetiva]);
+
+  if (!projectId) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 text-slate-950">
+        <div className="max-w-md rounded-lg border border-slate-200 bg-white p-6 text-center">
+          <h1 className="text-lg font-bold">Nenhum projeto selecionado</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Um orçamento sempre parte de um projeto existente. Abra um projeto
+            e clique em &quot;Orçamento&quot; para montar o orçamento dele.
+          </p>
+          <Link
+            href="/projeto"
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+          >
+            Ir para Projeto
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const itensParaTabela: ProjectStructureItem[] = itens.map((item) => ({
+    description: item.descricao,
+    pn: item.pn,
+    revision: item.revisao ?? undefined,
+    quantity: item.quantidade,
+    structureSlug: item.temEstrutura
+      ? `${item.pn.toLowerCase()}-estrutura`
+      : undefined,
+    cost: formatarMoeda(item.custo),
+    taxes: formatarMoeda(item.impostos),
+    profit: formatarMoeda(item.lucro),
+    total: formatarMoeda(item.total),
+  }));
+
+  async function handleSalvar() {
+    await salvar();
+  }
+
+  function handleDuplicar() {
+    if (projetoId) {
+      router.push(`/projeto?duplicar=${projetoId}`);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -80,7 +138,7 @@ export function ProjectDetailsPageContent({
                     Orçamento
                   </h1>
                   <p className="mt-1 text-sm text-slate-500">
-                    Novo orçamento
+                    {numeroProjeto ? `Projeto ${numeroProjeto}` : "Novo orçamento"}
                   </p>
                 </div>
               </div>
@@ -112,6 +170,7 @@ export function ProjectDetailsPageContent({
                   </button>
                   <button
                     type="button"
+                    onClick={handleDuplicar}
                     className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Duplicar
@@ -124,9 +183,11 @@ export function ProjectDetailsPageContent({
                   </button>
                   <button
                     type="button"
-                    className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
+                    onClick={handleSalvar}
+                    disabled={salvando}
+                    className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
                   >
-                    Salvar
+                    {salvando ? "Salvando..." : "Salvar"}
                   </button>
                 </div>
               </div>
@@ -136,6 +197,12 @@ export function ProjectDetailsPageContent({
       </header>
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+        {(erro || mensagem) && (
+          <p className={`text-sm ${erro ? "text-rose-600" : "text-emerald-600"}`}>
+            {erro ?? mensagem}
+          </p>
+        )}
+
         <section className="rounded-md border border-slate-200 bg-white p-4">
           <div className="mb-4">
             <h2 className="text-sm font-bold">Resumo do Projeto</h2>
@@ -150,7 +217,7 @@ export function ProjectDetailsPageContent({
                 Projeto
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                260123
+                {numeroProjeto ?? "—"}
               </div>
             </div>
 
@@ -159,7 +226,7 @@ export function ProjectDetailsPageContent({
                 Descrição do Projeto
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                Desenvolvimento de conjunto mecânico
+                {nomeProjeto || "—"}
               </div>
             </div>
 
@@ -168,7 +235,7 @@ export function ProjectDetailsPageContent({
                 Cliente
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                EMBRAER
+                {cliente?.nome ?? "—"}
               </div>
             </div>
 
@@ -177,7 +244,7 @@ export function ProjectDetailsPageContent({
                 Natureza
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                Desenvolvimento
+                {PROJECT_TYPE_LABELS[tipoProjeto]}
               </div>
             </div>
 
@@ -186,7 +253,7 @@ export function ProjectDetailsPageContent({
                 Responsável pelo Projeto
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                Flávio Evangelista
+                {responsavelNome || "—"}
               </div>
             </div>
 
@@ -195,7 +262,7 @@ export function ProjectDetailsPageContent({
                 Data de Inclusão
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                02/07/2026
+                {formatarData(criadoEm)}
               </div>
             </div>
 
@@ -204,20 +271,31 @@ export function ProjectDetailsPageContent({
                 Data de Necessidade
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                30/08/2026
+                {formatarData(dataObjetivo)}
               </div>
             </div>
-
           </div>
         </section>
-
 
         <ProjectStructureItemsTable
           title="Itens do projeto"
           subtitle="Abra o roteiro para definir matéria-prima, operações e horas."
-          items={quoteItems}
+          items={itensParaTabela}
           basePath={`/projetos/${projectId}/estrutura`}
+          onAdicionarItem={() => setModalProdutoAberto(true)}
         />
+
+        <ProdutoSearchModal
+          open={modalProdutoAberto}
+          onClose={() => setModalProdutoAberto(false)}
+          onAdd={({ produtoId, quantidade }) =>
+            adicionarItem(produtoId, quantidade)
+          }
+        />
+
+        {formulaErro && (
+          <p className="text-sm font-medium text-rose-600">{formulaErro}</p>
+        )}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
           <section className="rounded-md border border-slate-200 bg-white p-3">
@@ -232,10 +310,19 @@ export function ProjectDetailsPageContent({
                 </label>
                 <div className="flex">
                   <input
-                    type="number"
-                    defaultValue="20.00"
-                    step="0.01"
-                    min="0"
+                    inputMode="decimal"
+                    value={margemTexto}
+                    onChange={(event) => {
+                      const texto = event.target.value;
+                      setMargemTexto(texto);
+
+                      const numero = Number(texto.replace(",", "."));
+
+                      if (Number.isFinite(numero)) {
+                        setMargemLucroPercent(numero);
+                      }
+                    }}
+                    onBlur={() => setMargemTexto(String(margemLucroPercent))}
                     className="h-10 w-full rounded-l-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                   <span className="inline-flex h-10 items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-600">
@@ -253,20 +340,13 @@ export function ProjectDetailsPageContent({
 
           <section className="rounded-md border border-slate-200 bg-white p-4">
             <h2 className="text-sm font-bold">Resumo do Orçamento</h2>
-            {/*
-              TODO: calcular automaticamente a partir da tabela de itens:
-              Custo Total = soma da coluna "Custo".
-              Impostos Totais = soma da coluna "Impostos".
-              Lucro Total = soma da coluna "Lucro".
-              Valor Total do Orçamento = soma da coluna "Total".
-            */}
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
                 <span className="mb-1 block text-xs font-semibold text-slate-600">
                   Custo Total
                 </span>
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  R$ 951,00
+                  {formatarMoeda(resumoOrcamento.custoTotal)}
                 </div>
               </div>
 
@@ -275,7 +355,7 @@ export function ProjectDetailsPageContent({
                   Impostos Totais
                 </span>
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  R$ 136,28
+                  {formatarMoeda(resumoOrcamento.impostosTotal)}
                 </div>
               </div>
 
@@ -284,7 +364,7 @@ export function ProjectDetailsPageContent({
                   Lucro Total
                 </span>
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  R$ 190,20
+                  {formatarMoeda(resumoOrcamento.lucroTotal)}
                 </div>
               </div>
 
@@ -293,7 +373,7 @@ export function ProjectDetailsPageContent({
                   Valor Total do Orçamento
                 </span>
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  R$ 1.277,48
+                  {formatarMoeda(resumoOrcamento.valorTotal)}
                 </div>
               </div>
             </div>
@@ -309,22 +389,13 @@ export function ProjectDetailsPageContent({
             </div>
           </div>
 
-          <div className="grid gap-3 px-4 py-4 sm:grid-cols-3">
+          <div className="grid gap-3 px-4 py-4 sm:grid-cols-2">
             <div>
               <span className="mb-1 block text-xs font-semibold text-slate-600">
                 Natureza
               </span>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                Desenvolvimento
-              </div>
-            </div>
-
-            <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
-                Carga Tributária Sugerida
-              </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                14,33%
+                {PROJECT_TYPE_LABELS[tipoProjeto]}
               </div>
             </div>
 
@@ -333,16 +404,28 @@ export function ProjectDetailsPageContent({
                 Carga Tributária do Orçamento
               </label>
               <input
-                defaultValue="14,33%"
+                inputMode="decimal"
+                value={cargaTexto}
+                onChange={(event) => {
+                  const texto = event.target.value;
+                  setCargaTexto(texto);
+
+                  const numero = Number(texto.replace(",", "."));
+
+                  if (Number.isFinite(numero)) {
+                    setCargaTributariaPercent(numero);
+                  }
+                }}
+                onBlur={() =>
+                  setCargaTexto(
+                    String(cargaTributariaPercent ?? cargaTributariaEfetiva),
+                  )
+                }
                 className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </div>
 
-          {/*
-            TODO: integrar a Carga Tributária Sugerida com:
-            Configurações > Comercial > Naturezas > Carga Tributária Padrão.
-          */}
           <p className="px-4 pb-1 text-xs leading-5 text-slate-500">
             A Natureza do Projeto determina automaticamente a Carga Tributária
             Sugerida. O percentual sugerido é definido nas Configurações do
@@ -352,13 +435,12 @@ export function ProjectDetailsPageContent({
         </section>
 
         <div className="flex justify-end">
-          {/*
-            TODO: herdar dados do orçamento na Proposta Comercial:
-            Projeto, Orçamento, Cliente, Itens, Quantidades, Custos, Impostos,
-            Lucro, Valor Total, informações de entrega e resumo do orçamento.
-          */}
           <Link
-            href="/proposta-comercial"
+            href={
+              projetoId
+                ? `/proposta-comercial?projeto=${projetoId}`
+                : "/proposta-comercial"
+            }
             className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
           >
             Gerar Proposta Comercial

@@ -9,9 +9,9 @@ export type ProjectStructureItem = {
   pn: string;
   revision?: string;
   quantity: number;
-  routeStatus: string;
-  hours: string;
-  destination: string;
+  routeStatus?: string;
+  hours?: string;
+  destination?: string;
   structureSlug?: string;
   componentCount?: number;
   situation?: string;
@@ -28,6 +28,7 @@ type ProjectStructureItemsTableProps = {
   items: ProjectStructureItem[];
   basePath?: string;
   hierarchyBackHref?: string;
+  onAdicionarItem?: () => void;
 };
 
 export function ProjectStructureItemsTable({
@@ -37,6 +38,7 @@ export function ProjectStructureItemsTable({
   items,
   basePath = "/projetos/260123/estrutura",
   hierarchyBackHref,
+  onAdicionarItem,
 }: ProjectStructureItemsTableProps) {
   const [createdStructures, setCreatedStructures] = useState<
     Record<string, boolean>
@@ -75,13 +77,22 @@ export function ProjectStructureItemsTable({
               Voltar
             </Link>
           ) : null}
-          {/* TODO: usar os parâmetros para retornar automaticamente ao orçamento e inserir o produto selecionado/criado. */}
-          <Link
-            href="/produtos?origem=orcamento&retorno=/projetos/260123"
-            className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Adicionar item
-          </Link>
+          {onAdicionarItem ? (
+            <button
+              type="button"
+              onClick={onAdicionarItem}
+              className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Adicionar item
+            </button>
+          ) : (
+            <Link
+              href="/produtos?origem=orcamento&retorno=/projetos/260123"
+              className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Adicionar item
+            </Link>
+          )}
         </div>
       </div>
 
