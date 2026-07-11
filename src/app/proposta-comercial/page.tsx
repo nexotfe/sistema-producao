@@ -279,7 +279,7 @@ export default function CommercialProposalPage() {
                     <td className="px-6 py-4 font-medium text-slate-800">
                       {item.descricao}
                     </td>
-                    <td className="px-4 py-4 text-slate-700">{item.codigo}</td>
+                    <td className="whitespace-nowrap px-4 py-4 text-slate-700">{item.codigo}</td>
                     <td className="px-4 py-4 text-slate-700">
                       {item.ncm || "—"}
                     </td>

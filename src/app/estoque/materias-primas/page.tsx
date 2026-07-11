@@ -17,7 +17,7 @@ const statusStyles = {
 } as const;
 
 const colunaClassMap: Record<string, string> = {
-  codigo: "px-4 py-4 font-semibold text-slate-950",
+  codigo: "whitespace-nowrap px-4 py-4 font-semibold text-slate-950",
   descricao: "truncate px-4 py-4 text-slate-700",
   bitola: "px-4 py-4 text-slate-700",
   familia: "truncate px-4 py-4 text-slate-700",
@@ -179,7 +179,7 @@ export default function RawMaterialsPage() {
             </p>
           </div>
 
-          <div>
+          <div className="overflow-x-auto">
             <table className="w-full table-auto text-left text-sm">
               <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                 <tr>

@@ -82,7 +82,7 @@ export function ProductsTable({
                   key={product.code}
                   className="border-b border-slate-100 transition last:border-0 hover:bg-slate-50/80"
                 >
-                  <td className="px-5 py-3 text-sm font-semibold text-slate-900">
+                  <td className="whitespace-nowrap px-5 py-3 text-sm font-semibold text-slate-900">
                     {product.code}
                   </td>
                   <td className="px-5 py-3 text-sm text-slate-600">

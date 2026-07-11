@@ -112,7 +112,7 @@ export function GruposRecursosTable({
                 <Fragment key={grupo.id}>
                   <tr className="border-b border-slate-100 transition last:border-0 hover:bg-slate-50/80">
                     {colunasVisiveis.codigo && (
-                      <td className="px-5 py-3 text-sm text-slate-600">
+                      <td className="whitespace-nowrap px-5 py-3 text-sm text-slate-600">
                         {grupo.codigo || "Nao informado"}
                       </td>
                     )}
