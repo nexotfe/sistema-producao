@@ -19,6 +19,8 @@ export type MateriaPrima = {
   custo_referencia: number | null;
   custo_origem: "manual" | "nf";
   custo_justificativa: string | null;
+  estoque_minimo: number | null;
+  estoque_ideal: number | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -43,6 +45,8 @@ export type MateriaPrimaForm = {
   custoReferencia: string;
   custoOrigem: "manual" | "nf";
   custoJustificativa: string;
+  estoqueMinimo: string;
+  estoqueIdeal: string;
   ativo: boolean;
 };
 
@@ -112,5 +116,7 @@ export const materiaPrimaInitialForm: MateriaPrimaForm = {
   custoReferencia: "",
   custoOrigem: "manual",
   custoJustificativa: "",
+  estoqueMinimo: "",
+  estoqueIdeal: "",
   ativo: true,
 };

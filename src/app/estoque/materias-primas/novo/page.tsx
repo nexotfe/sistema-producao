@@ -254,6 +254,16 @@ function FormularioMateriaPrima({
           <ReadOnlyField label="Reservado" value="0" />
           <ReadOnlyField label="Disponível" value="0" />
           <ReadOnlyField label="Última Movimentação" value="—" />
+          <Field
+            label="Estoque Mínimo"
+            value={form.estoqueMinimo}
+            onChange={(value) => atualizarCampo("estoqueMinimo", value)}
+          />
+          <Field
+            label="Estoque Ideal"
+            value={form.estoqueIdeal}
+            onChange={(value) => atualizarCampo("estoqueIdeal", value)}
+          />
         </div>
       </Card>
 

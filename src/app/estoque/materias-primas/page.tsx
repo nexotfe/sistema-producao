@@ -40,8 +40,25 @@ function renderCelulaMaterial(field: string, material: MateriaPrimaLista) {
       return material.familia || "—";
     case "unidade":
       return material.unidade;
-    case "quantidade":
-      return formatarQuantidade(material.quantidade);
+    case "quantidade": {
+      const abaixoDoMinimo =
+        material.estoque_minimo !== null &&
+        material.quantidade < material.estoque_minimo;
+
+      return (
+        <span className="inline-flex items-center gap-2">
+          {formatarQuantidade(material.quantidade)}
+          {abaixoDoMinimo ? (
+            <span
+              title={`Abaixo do estoque mínimo (${formatarQuantidade(material.estoque_minimo as number)})`}
+              className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-red-200"
+            >
+              ⚠ Abaixo do mínimo
+            </span>
+          ) : null}
+        </span>
+      );
+    }
     case "endereco":
       return material.endereco || "—";
     case "preco":

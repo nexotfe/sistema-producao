@@ -316,6 +316,16 @@ function FormularioMateriaPrima({
             label="Última Movimentação"
             value={formatarUltimaMovimentacao(estoque)}
           />
+          <Field
+            label="Estoque Mínimo"
+            value={form.estoqueMinimo}
+            onChange={(value) => atualizarCampo("estoqueMinimo", value)}
+          />
+          <Field
+            label="Estoque Ideal"
+            value={form.estoqueIdeal}
+            onChange={(value) => atualizarCampo("estoqueIdeal", value)}
+          />
         </div>
       </Card>
 

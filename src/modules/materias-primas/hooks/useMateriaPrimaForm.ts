@@ -67,7 +67,7 @@ export function useMateriaPrimaForm({
       const { data, error } = await supabase
         .from("materias_primas")
         .select(
-          "id,codigo,descricao,familia,unidade,bitola,dimensao,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,custo_referencia,custo_origem,custo_justificativa,ativo,created_at,updated_at,empresa_id",
+          "id,codigo,descricao,familia,unidade,bitola,dimensao,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,custo_referencia,custo_origem,custo_justificativa,estoque_minimo,estoque_ideal,ativo,created_at,updated_at,empresa_id",
         )
         .eq("codigo", codigoReferencia)
         .single();
@@ -103,6 +103,14 @@ export function useMateriaPrimaForm({
             : "",
         custoOrigem: materiaPrima.custo_origem ?? "manual",
         custoJustificativa: materiaPrima.custo_justificativa ?? "",
+        estoqueMinimo:
+          materiaPrima.estoque_minimo !== null
+            ? String(materiaPrima.estoque_minimo)
+            : "",
+        estoqueIdeal:
+          materiaPrima.estoque_ideal !== null
+            ? String(materiaPrima.estoque_ideal)
+            : "",
         ativo: materiaPrima.ativo,
       });
       if (modoEdicao) {
@@ -174,6 +182,28 @@ export function useMateriaPrimaForm({
         return false;
       }
 
+      const estoqueMinimoNumerico = parseNumeroOpcional(form.estoqueMinimo);
+      const estoqueIdealNumerico = parseNumeroOpcional(form.estoqueIdeal);
+
+      if (estoqueMinimoNumerico === "invalido") {
+        setErro("Informe um Estoque Mínimo numérico válido.");
+        return false;
+      }
+
+      if (estoqueIdealNumerico === "invalido") {
+        setErro("Informe um Estoque Ideal numérico válido.");
+        return false;
+      }
+
+      if (
+        estoqueMinimoNumerico !== null &&
+        estoqueIdealNumerico !== null &&
+        estoqueIdealNumerico < estoqueMinimoNumerico
+      ) {
+        setErro("O Estoque Ideal não pode ser menor que o Estoque Mínimo.");
+        return false;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -208,6 +238,8 @@ export function useMateriaPrimaForm({
         custo_atualizado_em:
           custoReferenciaNumerica !== null ? new Date().toISOString() : null,
         custo_atualizado_por: custoReferenciaNumerica !== null ? user.id : null,
+        estoque_minimo: estoqueMinimoNumerico,
+        estoque_ideal: estoqueIdealNumerico,
         ativo: form.ativo,
       };
 
@@ -470,4 +502,20 @@ export function useMateriaPrimaForm({
 function emptyToNull(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+function parseNumeroOpcional(value: string): number | null | "invalido" {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const numero = Number(trimmed.replace(",", "."));
+
+  if (!Number.isFinite(numero) || numero < 0) {
+    return "invalido";
+  }
+
+  return numero;
 }
