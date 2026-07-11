@@ -68,11 +68,11 @@ export function ClientesHeader({
           value={busca}
           onChange={(event) => setBusca(event.target.value)}
           placeholder="Buscar por cliente, CNPJ, cidade ou contato"
-          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
+          className="h-11 w-full rounded-lg border border-slate-200 bg-app-card px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
         />
 
         <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:justify-end">
-          <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1">
+          <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
             <SituacaoButton
               label="Todos"
               quantidade={totais.todos}
@@ -95,7 +95,7 @@ export function ClientesHeader({
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+          <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
             <div className="relative">
               <button
                 type="button"
@@ -107,7 +107,7 @@ export function ClientesHeader({
               </button>
 
               {mostrarColunas && (
-                <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
+                <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-app-card p-4 shadow-xl">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Exibir campos

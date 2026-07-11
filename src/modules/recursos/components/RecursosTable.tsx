@@ -56,7 +56,7 @@ export function RecursosTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-app-card">
       <div className="border-b border-slate-100 px-5 py-4">
         <div>
           <Link

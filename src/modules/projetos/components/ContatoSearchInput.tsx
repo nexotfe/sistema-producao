@@ -142,7 +142,7 @@ export function ContatoSearchInput({
       />
 
       {mostrarDropdown ? (
-        <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-app-card py-1 shadow-lg">
           {buscando ? (
             <p className="px-3 py-2 text-sm text-slate-400">Buscando...</p>
           ) : resultados.length === 0 ? (

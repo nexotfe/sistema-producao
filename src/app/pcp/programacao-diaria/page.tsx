@@ -218,7 +218,7 @@ export default function DailySchedulePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 print:bg-white print:px-0 print:py-0 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 print:bg-white print:px-0 print:py-0 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-5 print:hidden">
           <div className="flex items-center gap-3">
@@ -306,7 +306,7 @@ export default function DailySchedulePage() {
           </section>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white print:rounded-none print:border-0">
+        <section className="rounded-lg border border-slate-200 bg-app-card print:rounded-none print:border-0">
           <div className="hidden border-b border-slate-300 px-5 py-4 print:block">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               NEXOTFE - PCP
@@ -420,7 +420,7 @@ export default function DailySchedulePage() {
                             </span>
                           </td>
                           <td className="px-5 py-4 print:px-2 print:py-2">
-                            <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700 print:h-auto print:border-0 print:bg-white print:text-slate-950">
+                            <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700 print:h-auto print:border-0 print:bg-app-card print:text-slate-950">
                               {row.priority}
                             </span>
                           </td>

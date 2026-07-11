@@ -29,14 +29,14 @@ export function RecursosHeader({
 
   return (
     <>
-      <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+      <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
               LOGO
             </div>
 
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
               Recursos
             </h1>
           </div>
@@ -54,10 +54,10 @@ export function RecursosHeader({
               value={busca}
               onChange={(event) => setBusca(event.target.value)}
               placeholder="Buscar por recurso, codigo, grupo ou setor"
-              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+              className="h-10 w-full rounded-md border border-white/[0.15] bg-white/[0.08] px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 lg:w-[min(42vw,520px)]"
             />
 
-            <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+            <span className="whitespace-nowrap text-sm font-medium text-slate-300">
               Nome do Usuário
             </span>
 
@@ -65,13 +65,13 @@ export function RecursosHeader({
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
               >
                 Voltar
               </button>
               <Link
                 href="/central"
-                className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex h-10 items-center rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
               >
                 Início
               </Link>
@@ -83,7 +83,7 @@ export function RecursosHeader({
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex w-full flex-wrap items-center justify-start gap-2">
-            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1">
+            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
               <SituacaoButton
                 label="Todos"
                 quantidade={totais.todos}

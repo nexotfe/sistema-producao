@@ -65,7 +65,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (checkingSession && !isPublicRoute) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f7f8] px-5 text-slate-500">
+      <main className="flex min-h-screen items-center justify-center bg-app-bg px-5 text-slate-500">
         <p className="text-sm font-medium">Verificando acesso...</p>
       </main>
     );

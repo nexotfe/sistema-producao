@@ -248,7 +248,7 @@ export default function PCPPlanningPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-5">
           <div className="flex items-center gap-3">
@@ -311,7 +311,7 @@ export default function PCPPlanningPage() {
           </nav>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white">
+        <section className="rounded-lg border border-slate-200 bg-app-card">
           <div className="border-b border-slate-100 px-5 py-4">
             <h2 className="text-base font-semibold text-slate-950">
               Sequenciamento operacional
@@ -420,7 +420,7 @@ export default function PCPPlanningPage() {
                           )}
                         </span>
 
-                        <span className="pointer-events-none absolute left-0 top-9 z-10 hidden w-48 rounded-md border border-slate-200 bg-white p-3 text-xs font-medium leading-5 text-slate-700 shadow-lg group-hover:block">
+                        <span className="pointer-events-none absolute left-0 top-9 z-10 hidden w-48 rounded-md border border-slate-200 bg-app-card p-3 text-xs font-medium leading-5 text-slate-700 shadow-lg group-hover:block">
                           <span className="flex justify-between gap-3">
                             <span>OF totais</span>
                             <span>{row.operationalState.total}</span>

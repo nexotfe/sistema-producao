@@ -27,7 +27,7 @@ export default function GruposRecursosPage() {
   } = useGruposRecursos();
 
   return (
-    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <GruposRecursosHeader
           usuario={usuario}

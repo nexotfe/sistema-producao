@@ -44,7 +44,7 @@ export function FornecedorSelectionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl">
+      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
         <div className="border-b border-slate-100 px-5 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -103,7 +103,7 @@ export function FornecedorSelectionModal({
                     type="button"
                     onClick={() => setSelecionado(fornecedor)}
                     className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition hover:bg-slate-50 ${
-                      ativo ? "bg-blue-50/60" : "bg-white"
+                      ativo ? "bg-blue-50/60" : "bg-app-card"
                     }`}
                   >
                     <span>

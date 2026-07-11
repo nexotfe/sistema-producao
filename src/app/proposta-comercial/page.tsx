@@ -107,7 +107,7 @@ export default function CommercialProposalPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-6 text-slate-950 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-5xl space-y-5">
         {(erro || loading) && (
           <p className="text-sm text-slate-500">
@@ -115,7 +115,7 @@ export default function CommercialProposalPage() {
           </p>
         )}
 
-        <header className="rounded-lg border border-slate-200 bg-white px-6 py-6">
+        <header className="rounded-lg border border-slate-200 bg-app-card px-6 py-6">
           <div className="flex min-w-0 gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
               LOGO
@@ -187,7 +187,7 @@ export default function CommercialProposalPage() {
           </div>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white px-6 py-5">
+        <section className="rounded-lg border border-slate-200 bg-app-card px-6 py-5">
           <h2 className="text-sm font-bold text-slate-950">
             Informações do Cliente
           </h2>
@@ -227,7 +227,7 @@ export default function CommercialProposalPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white px-6 py-5">
+        <section className="rounded-lg border border-slate-200 bg-app-card px-6 py-5">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-sm font-bold text-slate-950">Considerações</h2>
             <button
@@ -250,7 +250,7 @@ export default function CommercialProposalPage() {
           />
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white">
+        <section className="rounded-lg border border-slate-200 bg-app-card">
           <div className="border-b border-slate-200 px-6 py-4">
             <h2 className="text-sm font-bold text-slate-950">
               Itens da Proposta
@@ -312,7 +312,7 @@ export default function CommercialProposalPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white px-6 py-5">
+        <section className="rounded-lg border border-slate-200 bg-app-card px-6 py-5">
           <h2 className="text-sm font-bold text-slate-950">
             Outras Informações
           </h2>
@@ -367,7 +367,7 @@ export default function CommercialProposalPage() {
           </button>
         </div>
 
-        <footer className="rounded-lg border border-slate-200 bg-white px-6 py-4 text-sm text-slate-600">
+        <footer className="rounded-lg border border-slate-200 bg-app-card px-6 py-4 text-sm text-slate-600">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <span className="font-semibold text-slate-800">Nome da Empresa</span>
             <span>www.nexotfe.com.br</span>
@@ -380,7 +380,7 @@ export default function CommercialProposalPage() {
 
       {isSendModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-          <section className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white shadow-xl">
+          <section className="w-full max-w-2xl rounded-lg border border-slate-200 bg-app-card shadow-xl">
             <div className="border-b border-slate-200 px-6 py-4">
               <h2 className="text-base font-bold text-slate-950">
                 Enviar Proposta Comercial
@@ -488,7 +488,7 @@ Nome da Empresa`}
 
       {isRevisaoModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-          <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-xl">
+          <section className="w-full max-w-md rounded-lg border border-slate-200 bg-app-card shadow-xl">
             <div className="border-b border-slate-200 px-6 py-4">
               <h2 className="text-base font-bold text-slate-950">
                 Confirmar nova revisão

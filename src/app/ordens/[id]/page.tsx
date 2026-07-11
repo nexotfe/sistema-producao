@@ -121,7 +121,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
 
   if (!isSupabaseConfigured) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-8">
+      <main className="min-h-screen bg-app-bg px-4 py-8">
         <div className="mx-auto max-w-4xl rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
           Supabase não está configurado. Defina as variáveis de ambiente e tente novamente.
         </div>
@@ -131,7 +131,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
 
   if (!data || "error" in data) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-8">
+      <main className="min-h-screen bg-app-bg px-4 py-8">
         <div className="mx-auto max-w-4xl rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
           Falha ao carregar os dados da OF. {data?.error ?? ""}
         </div>
@@ -148,7 +148,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
     : 0;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8">
+    <main className="min-h-screen bg-app-bg px-4 py-8">
       <section className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -163,7 +163,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-app-card p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Produção</p>
@@ -194,7 +194,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-app-card p-6 shadow-sm">
             <div className="grid gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Dados da OF</p>
@@ -266,7 +266,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
           </div>
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-app-card p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-slate-950">Materiais da OF</h2>

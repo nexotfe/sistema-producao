@@ -160,7 +160,7 @@ export function RoteiroForm({
     <section className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 xl:grid-cols-[1fr_320px]">
       <div className="space-y-5">
         {operacoesEngenharia.length > 0 ? (
-          <section className="rounded-md border border-slate-200 bg-white">
+          <section className="rounded-md border border-slate-200 bg-app-card">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <h2 className="text-sm font-bold">Engenharia</h2>
               <button
@@ -184,7 +184,7 @@ export function RoteiroForm({
           </section>
         ) : null}
 
-        <section className="rounded-md border border-slate-200 bg-white">
+        <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
               <h2 className="text-sm font-bold">Matérias-primas</h2>
@@ -277,7 +277,7 @@ export function RoteiroForm({
           ) : null}
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white">
+        <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
               <h2 className="text-sm font-bold">Operações</h2>
@@ -306,7 +306,7 @@ export function RoteiroForm({
           ) : null}
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white">
+        <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
               <h2 className="text-sm font-bold">Estrutura / Subconjuntos</h2>
@@ -387,7 +387,7 @@ export function RoteiroForm({
           ) : null}
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white">
+        <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-bold">Serviços de Terceiros</h2>
             <button
@@ -461,7 +461,7 @@ export function RoteiroForm({
           ) : null}
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white">
+        <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-bold">Transportes</h2>
             <button
@@ -531,7 +531,7 @@ export function RoteiroForm({
       </div>
 
       <aside className="space-y-5">
-        <section className="rounded-md border border-slate-200 bg-white p-4">
+        <section className="rounded-md border border-slate-200 bg-app-card p-4">
           <h2 className="text-sm font-bold">Resumo de Custos Industriais</h2>
           <p className="mt-2 text-xs leading-5 text-slate-500">
             Calculado a partir das informações reais deste roteiro.
@@ -582,21 +582,21 @@ export function RoteiroForm({
           </div>
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white p-4">
+        <section className="rounded-md border border-slate-200 bg-app-card p-4">
           <h2 className="text-sm font-bold">PDF técnico</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Fabricar conforme revisão presente no desenho anexado.
           </p>
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white p-4">
+        <section className="rounded-md border border-slate-200 bg-app-card p-4">
           <h2 className="text-sm font-bold">Regra importante</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Roteiro não possui quantidade de produção. A quantidade pertence à OF.
           </p>
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white p-4">
+        <section className="rounded-md border border-slate-200 bg-app-card p-4">
           <h2 className="text-sm font-bold">Versão do roteiro</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Versão {bom.versao} — status {bom.status}.

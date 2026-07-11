@@ -41,7 +41,7 @@ export function RowActionsMenu({
       </button>
 
       {aberto ? (
-        <div className="absolute right-4 top-12 z-20 w-40 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-left shadow-xl">
+        <div className="absolute right-4 top-12 z-20 w-40 overflow-hidden rounded-lg border border-slate-200 bg-app-card py-1 text-left shadow-xl">
           <Link
             href={editarHref}
             className="block px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"

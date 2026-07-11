@@ -53,7 +53,7 @@ export default function GrupoRecursoPage({ params }: Props) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
           <p className="text-sm text-slate-500">Carregando grupo...</p>
         </div>
@@ -63,7 +63,7 @@ export default function GrupoRecursoPage({ params }: Props) {
 
   if (erro || !grupo) {
     return (
-      <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
           <p className="text-sm text-slate-500">
             {erro || "Grupo nao encontrado."}
@@ -74,7 +74,7 @@ export default function GrupoRecursoPage({ params }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <header className="flex flex-col gap-3">
           <ModuleBackLink href="/grupos-recursos" label="Grupo de Recursos" />
@@ -101,7 +101,7 @@ export default function GrupoRecursoPage({ params }: Props) {
                 type="button"
                 onClick={handleExcluir}
                 disabled={processando}
-                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-slate-200 bg-app-card px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Excluir grupo
               </button>
@@ -169,7 +169,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
+    <div className="rounded-lg border border-slate-200 bg-app-card">
       <div className="border-b border-slate-100 px-6 py-5">
         <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
       </div>

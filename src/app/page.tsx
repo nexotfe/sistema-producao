@@ -50,9 +50,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8">
+    <main className="min-h-screen bg-app-bg px-4 py-8">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid w-full overflow-hidden rounded-2xl border border-slate-200 bg-app-card shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
           <div className="hidden bg-slate-800 p-8 text-white lg:flex lg:flex-col lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-300">

@@ -125,7 +125,7 @@ export default function ProjectStructurePage({
   const hierarchyBackHref = getHierarchyBackHref(id, currentPath);
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
+    <main className="min-h-screen bg-app-bg text-slate-950">
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <nav
           aria-label="Hierarquia do projeto"

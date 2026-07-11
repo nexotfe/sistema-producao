@@ -89,7 +89,7 @@ export function AdicionarServicoTerceiroModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl">
+      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">
             Adicionar Serviço de Terceiro

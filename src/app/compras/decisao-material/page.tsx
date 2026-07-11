@@ -58,17 +58,17 @@ export default function MaterialDecisionPage() {
   const [busca, setBusca] = useState("");
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
+    <main className="min-h-screen bg-app-bg text-slate-950">
+      <header className="bg-app-bg">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6">
-          <header className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
                   LOGO
                 </div>
 
-                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
                   Decisão de Material
                 </h1>
               </div>
@@ -86,10 +86,10 @@ export default function MaterialDecisionPage() {
                   value={busca}
                   onChange={(event) => setBusca(event.target.value)}
                   placeholder="Buscar por cliente, CNPJ, cidade ou contato"
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 lg:w-[min(42vw,520px)]"
+                  className="h-10 w-full rounded-md border border-white/[0.15] bg-white/[0.08] px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 lg:w-[min(42vw,520px)]"
                 />
 
-                <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                <span className="whitespace-nowrap text-sm font-medium text-slate-300">
                   Nome do usuário
                 </span>
 
@@ -97,13 +97,13 @@ export default function MaterialDecisionPage() {
                   <button
                     type="button"
                     onClick={() => router.back()}
-                    className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
                   >
                     Voltar
                   </button>
                   <Link
                     href="/central"
-                    className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="inline-flex h-10 items-center rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
                   >
                     Início
                   </Link>
@@ -115,7 +115,7 @@ export default function MaterialDecisionPage() {
       </header>
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <section className="rounded-md border border-slate-200 bg-white">
+        <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-bold">OF x material</h2>

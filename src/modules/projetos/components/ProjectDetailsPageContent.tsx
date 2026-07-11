@@ -80,8 +80,8 @@ export function ProjectDetailsPageContent({
 
   if (!projectId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 text-slate-950">
-        <div className="max-w-md rounded-lg border border-slate-200 bg-white p-6 text-center">
+      <main className="flex min-h-screen items-center justify-center bg-app-bg px-4 text-slate-950">
+        <div className="max-w-md rounded-lg border border-slate-200 bg-app-card p-6 text-center">
           <h1 className="text-lg font-bold">Nenhum projeto selecionado</h1>
           <p className="mt-2 text-sm text-slate-500">
             Um orçamento sempre parte de um projeto existente. Abra um projeto
@@ -123,28 +123,28 @@ export function ProjectDetailsPageContent({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="bg-slate-50 pt-4">
+    <main className="min-h-screen bg-app-bg text-slate-950">
+      <header className="bg-app-bg pt-4">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          <div className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
                   LOGO
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
                     Orçamento
                   </h1>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-slate-300">
                     {numeroProjeto ? `Projeto ${numeroProjeto}` : "Novo orçamento"}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                <span className="whitespace-nowrap text-sm font-medium text-slate-300">
                   Nome do usuário
                 </span>
 
@@ -152,32 +152,32 @@ export function ProjectDetailsPageContent({
                   <button
                     type="button"
                     onClick={() => router.back()}
-                    className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
                   >
                     Voltar
                   </button>
                   <Link
                     href="/central"
-                    className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="inline-flex h-10 items-center rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
                   >
                     Início
                   </Link>
                   <button
                     type="button"
-                    className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
                   >
                     Editar
                   </button>
                   <button
                     type="button"
                     onClick={handleDuplicar}
-                    className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
                   >
                     Duplicar
                   </button>
                   <button
                     type="button"
-                    className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="h-10 rounded-md border border-red-500/40 bg-red-500/10 px-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20"
                   >
                     Excluir
                   </button>
@@ -185,7 +185,7 @@ export function ProjectDetailsPageContent({
                     type="button"
                     onClick={handleSalvar}
                     disabled={salvando}
-                    className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
+                    className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
                   >
                     {salvando ? "Salvando..." : "Salvar"}
                   </button>
@@ -203,7 +203,7 @@ export function ProjectDetailsPageContent({
           </p>
         )}
 
-        <section className="rounded-md border border-slate-200 bg-white p-4">
+        <section className="rounded-md border border-slate-200 bg-app-card p-4">
           <div className="mb-4">
             <h2 className="text-sm font-bold">Resumo do Projeto</h2>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -298,7 +298,7 @@ export function ProjectDetailsPageContent({
         )}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-          <section className="rounded-md border border-slate-200 bg-white p-3">
+          <section className="rounded-md border border-slate-200 bg-app-card p-3">
             <div className="mb-2">
               <h2 className="text-sm font-bold">Margem de Lucro %</h2>
             </div>
@@ -338,7 +338,7 @@ export function ProjectDetailsPageContent({
             </div>
           </section>
 
-          <section className="rounded-md border border-slate-200 bg-white p-4">
+          <section className="rounded-md border border-slate-200 bg-app-card p-4">
             <h2 className="text-sm font-bold">Resumo do Orçamento</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
@@ -379,7 +379,7 @@ export function ProjectDetailsPageContent({
             </div>
           </section>
         </div>
-        <section className="rounded-md border border-slate-200 bg-white">
+        <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
               <h2 className="text-sm font-bold">Carga Tributária</h2>

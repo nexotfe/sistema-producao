@@ -48,7 +48,7 @@ export default function EditarRecursoPage({ params }: Props) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
           <p className="text-sm text-slate-500">Carregando recurso...</p>
         </div>
@@ -57,7 +57,7 @@ export default function EditarRecursoPage({ params }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-col gap-3">
           <ModuleBackLink href="/recursos" label="Recurso" />
@@ -122,7 +122,7 @@ export default function EditarRecursoPage({ params }: Props) {
             <button
               type="button"
               onClick={() => router.push(`/recursos/${id}`)}
-              className="rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="rounded-lg border border-slate-200 bg-app-card px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
               Cancelar
             </button>
@@ -150,7 +150,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
+    <div className="rounded-lg border border-slate-200 bg-app-card">
       <div className="border-b border-slate-100 px-6 py-5">
         <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
       </div>
@@ -204,7 +204,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        className="h-11 w-full rounded-lg border border-slate-200 bg-app-card px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
       >
         <option value="">Selecione</option>
         {options.map((option) => (

@@ -109,7 +109,7 @@ export function ProductForm({
         </div>
       </Card>
 
-      <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-app-card px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="w-full sm:max-w-xs">
           <ReadOnlyField
             label="Roteiro Vigente"
@@ -303,7 +303,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white transition hover:border-blue-700">
+    <div className="rounded-md border border-slate-200 bg-app-card transition hover:border-blue-700">
       <div className="border-b border-slate-100 px-4 py-3">
         <h2 className="text-sm font-bold text-slate-950">{titulo}</h2>
       </div>

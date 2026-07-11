@@ -77,7 +77,7 @@ const totalLinks = navigationGroups.reduce(
 
 export default function CentralNexusPage() {
   return (
-    <main className="min-h-screen bg-[#f6f7f8] px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
@@ -106,7 +106,7 @@ export default function CentralNexusPage() {
           {navigationGroups.map((group) => (
             <section
               key={group.title}
-              className="rounded-lg border border-slate-200 bg-white"
+              className="rounded-lg border border-slate-200 bg-app-card"
             >
               <div className="border-b border-slate-100 px-5 py-4">
                 <h2 className="text-base font-semibold text-slate-900">
