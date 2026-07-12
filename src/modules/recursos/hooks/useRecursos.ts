@@ -34,7 +34,7 @@ export function useRecursos() {
       supabase
         .from("recursos_produtivos")
         .select(
-          "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,valor_hora,ativo,created_at",
+          "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,capacidade_horas_dia,tecnologia_aplicada_id,valor_hora,ativo,created_at",
         )
         .order("created_at", { ascending: false }),
       supabase

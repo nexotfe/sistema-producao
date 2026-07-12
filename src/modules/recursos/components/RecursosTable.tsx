@@ -7,6 +7,7 @@ import { EmptyState } from "@/modules/clientes/components/EmptyState";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { LoadingState } from "@/modules/clientes/components/LoadingState";
 import { StatusBadge } from "@/modules/clientes/components/StatusBadge";
+import { ElegibilidadeBadge } from "./ElegibilidadeBadge";
 import { RowActionsMenu } from "@/modules/shared/components/RowActionsMenu";
 import { ExclusaoBloqueadaBanner } from "@/modules/shared/components/ExclusaoBloqueadaBanner";
 import type { ResultadoExclusao } from "@/modules/shared/data/excluirRegistro";
@@ -103,6 +104,7 @@ export function RecursosTable({
                 {colunasVisiveis.setor && <Th>Setor</Th>}
                 {colunasVisiveis.capacidade && <Th>Capacidade</Th>}
                 {colunasVisiveis.status && <Th>Status</Th>}
+                {colunasVisiveis.elegibilidade && <Th>Simulação</Th>}
                 <Th>{""}</Th>
               </tr>
             </thead>
@@ -164,6 +166,12 @@ export function RecursosTable({
                     {colunasVisiveis.status && (
                       <td className="px-5 py-3">
                         <StatusBadge ativo={Boolean(recurso.ativo)} />
+                      </td>
+                    )}
+
+                    {colunasVisiveis.elegibilidade && (
+                      <td className="px-5 py-3">
+                        <ElegibilidadeBadge recurso={recurso} />
                       </td>
                     )}
 

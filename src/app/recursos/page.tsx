@@ -12,6 +12,7 @@ const colunasVisiveis = {
   setor: false,
   capacidade: true,
   status: true,
+  elegibilidade: true,
 };
 
 export default function RecursosPage() {
