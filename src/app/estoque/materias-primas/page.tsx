@@ -18,12 +18,12 @@ const statusStyles = {
 
 const colunaClassMap: Record<string, string> = {
   codigo: "whitespace-nowrap px-4 py-4 font-semibold text-slate-950",
-  descricao: "truncate px-4 py-4 text-slate-700",
+  descricao: "max-w-[240px] truncate px-4 py-4 text-slate-700",
   bitola: "px-4 py-4 text-slate-700",
-  familia: "truncate px-4 py-4 text-slate-700",
+  familia: "max-w-[140px] truncate px-4 py-4 text-slate-700",
   unidade: "px-4 py-4 text-slate-700",
   quantidade: "px-4 py-4 font-medium text-slate-950",
-  endereco: "truncate px-4 py-4 font-medium text-slate-700",
+  endereco: "max-w-[130px] truncate px-4 py-4 font-medium text-slate-700",
   status: "px-4 py-4",
   preco: "px-4 py-4 text-slate-700",
 };
@@ -188,7 +188,7 @@ export default function RawMaterialsPage() {
                       {coluna.label}
                     </th>
                   ))}
-                  <th className="px-4 py-3"></th>
+                  <th className="sticky right-0 z-10 bg-slate-50 px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -257,7 +257,7 @@ function MaterialRow({
   const codigoUrl = encodeURIComponent(codigo);
 
   return (
-    <tr className="transition hover:bg-slate-50">
+    <tr className="group transition hover:bg-slate-50">
       {colunas.map((coluna) => (
         <td
           key={coluna.field}
@@ -266,7 +266,7 @@ function MaterialRow({
           {renderCelulaMaterial(coluna.field, material)}
         </td>
       ))}
-      <td className="relative px-4 py-4 text-right">
+      <td className="sticky right-0 z-10 border-l border-slate-100 bg-app-card px-4 py-4 text-right group-hover:bg-slate-50">
         <button
           type="button"
           aria-label={`Abrir ações de ${material.descricao}`}
