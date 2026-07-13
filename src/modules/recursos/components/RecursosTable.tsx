@@ -174,7 +174,7 @@ export function RecursosTable({
                         onFechar={() => setMenuAbertoId(null)}
                         ariaLabel={`Abrir ações de ${recurso.nome}`}
                         editarHref={`/recursos/${recurso.id}/editar`}
-                        duplicarHref="/recursos/novo"
+                        duplicarHref={`/recursos/novo?duplicar=${recurso.id}`}
                         ativo={Boolean(recurso.ativo)}
                         onToggleAtivo={() => {
                           setMenuAbertoId(null);

@@ -10,7 +10,7 @@ type SupabaseErrorLike = {
   hint?: string;
 };
 
-export function useNovoRecurso() {
+export function useNovoRecurso(duplicarId?: string | null) {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
   const [grupoId, setGrupoId] = useState("");
@@ -22,6 +22,7 @@ export function useNovoRecurso() {
   const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingGrupos, setLoadingGrupos] = useState(true);
+  const [loadingDuplicado, setLoadingDuplicado] = useState(Boolean(duplicarId));
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +40,45 @@ export function useNovoRecurso() {
 
     carregarGrupos();
   }, []);
+
+  useEffect(() => {
+    async function carregarRecursoParaDuplicar() {
+      if (!duplicarId) {
+        setLoadingDuplicado(false);
+        return;
+      }
+
+      setLoadingDuplicado(true);
+
+      const { data, error } = await supabase
+        .from("recursos_produtivos")
+        .select("grupo_id,nome,fabricante,modelo,setor,capacidade,valor_hora")
+        .eq("id", duplicarId)
+        .single();
+
+      if (!error && data) {
+        setNome(data.nome ?? "");
+        setGrupoId(data.grupo_id ?? "");
+        setFabricante(data.fabricante ?? "");
+        setModelo(data.modelo ?? "");
+        setSetor(data.setor ?? "");
+        setCapacidade(
+          data.capacidade !== null && data.capacidade !== undefined
+            ? String(data.capacidade)
+            : "",
+        );
+        setValorHora(
+          data.valor_hora !== null && data.valor_hora !== undefined
+            ? String(data.valor_hora)
+            : "0",
+        );
+      }
+
+      setLoadingDuplicado(false);
+    }
+
+    carregarRecursoParaDuplicar();
+  }, [duplicarId]);
 
   async function salvarRecurso() {
     try {
@@ -147,6 +187,7 @@ export function useNovoRecurso() {
     setValorHora,
     grupos,
     loadingGrupos,
+    loadingDuplicado,
     loading,
     erro,
     salvarRecurso,

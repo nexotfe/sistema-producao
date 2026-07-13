@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useNovoRecurso } from "@/modules/recursos/hooks/useNovoRecurso";
 
 export default function NovoRecursoPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const duplicarId = searchParams.get("duplicar");
   const {
     codigo,
     setCodigo,
@@ -23,10 +25,11 @@ export default function NovoRecursoPage() {
     setValorHora,
     grupos,
     loadingGrupos,
+    loadingDuplicado,
     loading,
     erro,
     salvarRecurso,
-  } = useNovoRecurso();
+  } = useNovoRecurso(duplicarId);
 
   async function handleSalvar() {
     const sucesso = await salvarRecurso();
@@ -96,7 +99,7 @@ export default function NovoRecursoPage() {
                 <button
                   type="button"
                   onClick={handleSalvar}
-                  disabled={loading}
+                  disabled={loading || loadingDuplicado}
                   className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? "Salvando..." : "Salvar"}
@@ -107,46 +110,59 @@ export default function NovoRecursoPage() {
         </header>
 
         <section className="flex flex-col gap-5">
-          <Card titulo="Informações do recurso">
-            <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
-              <Field label="Código" value={codigo} onChange={setCodigo} />
-              <Field label="Nome do recurso" value={nome} onChange={setNome} />
-              <SelectField
-                label="Grupo / Centro de trabalho"
-                value={grupoId}
-                onChange={setGrupoId}
-                disabled={loadingGrupos}
-                options={grupos.map((grupo) => ({
-                  value: grupo.id,
-                  label: [grupo.codigo, grupo.nome].filter(Boolean).join(" - "),
-                }))}
-              />
-              <CurrencyField
-                label="Valor Hora"
-                value={valorHora}
-                onChange={setValorHora}
-              />
-            </div>
-          </Card>
+          {loadingDuplicado ? (
+            <p className="text-sm text-slate-500">Carregando recurso...</p>
+          ) : (
+            <>
+              <Card titulo="Informações do recurso">
+                <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
+                  <Field label="Código" value={codigo} onChange={setCodigo} />
+                  <Field
+                    label="Nome do recurso"
+                    value={nome}
+                    onChange={setNome}
+                  />
+                  <SelectField
+                    label="Grupo / Centro de trabalho"
+                    value={grupoId}
+                    onChange={setGrupoId}
+                    disabled={loadingGrupos}
+                    options={grupos.map((grupo) => ({
+                      value: grupo.id,
+                      label: [grupo.codigo, grupo.nome]
+                        .filter(Boolean)
+                        .join(" - "),
+                    }))}
+                  />
+                  <CurrencyField
+                    label="Valor Hora"
+                    value={valorHora}
+                    onChange={setValorHora}
+                  />
+                </div>
+              </Card>
 
-          <Card titulo="Características">
-            <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
-              <Field
-                label="Fabricante"
-                value={fabricante}
-                onChange={setFabricante}
-              />
-              <Field label="Modelo" value={modelo} onChange={setModelo} />
-              <Field
-                label="Capacidade"
-                value={capacidade}
-                onChange={setCapacidade}
-              />
-            </div>
-          </Card>
+              <Card titulo="Características">
+                <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
+                  <Field
+                    label="Fabricante"
+                    value={fabricante}
+                    onChange={setFabricante}
+                  />
+                  <Field label="Modelo" value={modelo} onChange={setModelo} />
+                  <Field
+                    label="Capacidade"
+                    value={capacidade}
+                    onChange={setCapacidade}
+                  />
+                </div>
+              </Card>
 
-          {erro && <p className="text-sm font-medium text-red-600">{erro}</p>}
-
+              {erro && (
+                <p className="text-sm font-medium text-red-600">{erro}</p>
+              )}
+            </>
+          )}
         </section>
       </div>
     </main>
