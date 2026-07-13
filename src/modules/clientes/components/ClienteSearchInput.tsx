@@ -11,6 +11,8 @@ export type ClienteResumo = {
 type ClienteRow = {
   id: string;
   nome: string | null;
+  nome_fantasia: string | null;
+  cnpj: string | null;
 };
 
 type ClienteSearchInputProps = {
@@ -56,10 +58,15 @@ export function ClienteSearchInput({
     setBuscando(true);
 
     const timeoutId = setTimeout(async () => {
+      const termoEscapado = termoBusca.replace(/"/g, '\\"');
+      const filtro = ["nome", "nome_fantasia", "cnpj"]
+        .map((coluna) => `${coluna}.ilike."%${termoEscapado}%"`)
+        .join(",");
+
       const { data } = await supabase
         .from("clientes")
-        .select("id,nome")
-        .ilike("nome", `%${termoBusca}%`)
+        .select("id,nome,nome_fantasia,cnpj")
+        .or(filtro)
         .eq("ativo", true)
         .order("nome", { ascending: true })
         .limit(8);
@@ -115,6 +122,14 @@ export function ClienteSearchInput({
                 className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
               >
                 {cliente.nome}
+                {[cliente.nome_fantasia, cliente.cnpj].filter(Boolean).length >
+                0 ? (
+                  <span className="block text-xs text-slate-400">
+                    {[cliente.nome_fantasia, cliente.cnpj]
+                      .filter(Boolean)
+                      .join(" / ")}
+                  </span>
+                ) : null}
               </button>
             ))
           )}
