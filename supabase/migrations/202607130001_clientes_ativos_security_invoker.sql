@@ -1,0 +1,19 @@
+-- Reforco preventivo (nao correcao de vazamento confirmado): a view
+-- public.clientes_ativos nao tinha security_invoker = true (default
+-- false no Postgres, roda como Security Definer com os privilegios
+-- do dono da view, hoje "postgres").
+--
+-- Investigacao (2026-07-13) confirmou que NAO ha vazamento entre
+-- empresas hoje: a propria view ja filtra "where empresa_id =
+-- empresa_atual_id()" no WHERE, e a tabela base public.clientes
+-- tambem tem RLS correta (policy clientes_select com o mesmo
+-- filtro). Testado simulando sessao RLS real de dois usuarios de
+-- empresas diferentes (NEXOTFE Demo e Enifer) contra a view: cada um
+-- viu apenas os clientes da propria empresa. Diferente do caso de
+-- recursos_produtivos (202607120005), onde a policy era "using (true)"
+-- sem filtro nenhum.
+--
+-- Ainda assim, ligamos security_invoker = true como camada extra:
+-- garante que a view sempre respeite a RLS de quem está consultando,
+-- mesmo que uma edicao futura remova o filtro explicito do WHERE.
+alter view public.clientes_ativos set (security_invoker = true);
