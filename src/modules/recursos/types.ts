@@ -32,5 +32,4 @@ export type ColunasRecursos = {
   setor: boolean;
   capacidade: boolean;
   status: boolean;
-  elegibilidade: boolean;
 };
