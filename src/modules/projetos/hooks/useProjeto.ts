@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { ClienteResumo } from "@/modules/clientes/components/ClienteSearchInput";
 import type { ProjectStatus, ProjectType } from "../types";
@@ -126,6 +126,7 @@ export function useProjeto(
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const salvandoRef = useRef(false);
 
   const carregarResumoOperacional = useCallback(
     async (idProjeto: string, tipoAtual: ProjectType) => {
@@ -351,117 +352,124 @@ export function useProjeto(
       return { status: "erro", mensagem: "Informe a descrição do projeto." };
     }
 
+    if (!cliente) {
+      return { status: "erro", mensagem: "Selecione o cliente." };
+    }
+
+    if (salvandoRef.current) {
+      return { status: "erro", mensagem: "Salvamento já em andamento." };
+    }
+
+    salvandoRef.current = true;
     setSalvando(true);
     setErro(null);
 
-    const payload = {
-      nome: nome.trim(),
-      tipo_projeto: tipoProjeto,
-      status,
-      cliente_id: cliente?.id ?? null,
-      data_objetivo: dataObjetivo || null,
-      observacoes: observacoes.trim() || null,
-      pedido_compra_cliente: pedidoCompraCliente.trim() || null,
-      documento_cliente: documentoCliente.trim() || null,
-      contato_comercial_nome: contatoComercial.nome.trim() || null,
-      contato_comercial_email: contatoComercial.email.trim() || null,
-      contato_comercial_telefone: contatoComercial.telefone.trim() || null,
-      contato_comercial_setor: contatoComercial.setor.trim() || null,
-      contato_tecnico_nome: contatoTecnico.nome.trim() || null,
-      contato_tecnico_email: contatoTecnico.email.trim() || null,
-      contato_tecnico_telefone: contatoTecnico.telefone.trim() || null,
-      contato_tecnico_setor: contatoTecnico.setor.trim() || null,
-      contato_tecnico_2_nome: contatoTecnico2.nome.trim() || null,
-      contato_tecnico_2_email: contatoTecnico2.email.trim() || null,
-      contato_tecnico_2_telefone: contatoTecnico2.telefone.trim() || null,
-      contato_tecnico_2_setor: contatoTecnico2.setor.trim() || null,
-    };
+    try {
+      const payload = {
+        nome: nome.trim(),
+        tipo_projeto: tipoProjeto,
+        status,
+        cliente_id: cliente.id,
+        data_objetivo: dataObjetivo || null,
+        observacoes: observacoes.trim() || null,
+        pedido_compra_cliente: pedidoCompraCliente.trim() || null,
+        documento_cliente: documentoCliente.trim() || null,
+        contato_comercial_nome: contatoComercial.nome.trim() || null,
+        contato_comercial_email: contatoComercial.email.trim() || null,
+        contato_comercial_telefone: contatoComercial.telefone.trim() || null,
+        contato_comercial_setor: contatoComercial.setor.trim() || null,
+        contato_tecnico_nome: contatoTecnico.nome.trim() || null,
+        contato_tecnico_email: contatoTecnico.email.trim() || null,
+        contato_tecnico_telefone: contatoTecnico.telefone.trim() || null,
+        contato_tecnico_setor: contatoTecnico.setor.trim() || null,
+        contato_tecnico_2_nome: contatoTecnico2.nome.trim() || null,
+        contato_tecnico_2_email: contatoTecnico2.email.trim() || null,
+        contato_tecnico_2_telefone: contatoTecnico2.telefone.trim() || null,
+        contato_tecnico_2_setor: contatoTecnico2.setor.trim() || null,
+      };
 
-    if (projetoId) {
-      const { error } = await supabase
+      if (projetoId) {
+        const { error } = await supabase
+          .from("projetos")
+          .update(payload)
+          .eq("id", projetoId);
+
+        if (error) {
+          setErro("Não foi possível salvar o projeto.");
+          return { status: "erro", mensagem: error.message };
+        }
+
+        return { status: "ok", id: projetoId };
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+
+      if (!userData.user) {
+        return { status: "erro", mensagem: "Usuário não autenticado." };
+      }
+
+      const { data: usuario, error: usuarioError } = await supabase
+        .from("usuarios")
+        .select("empresa_id")
+        .eq("id", userData.user.id)
+        .single();
+
+      if (usuarioError || !usuario?.empresa_id) {
+        return { status: "erro", mensagem: "Empresa do usuário não encontrada." };
+      }
+
+      const { data, error } = await supabase
         .from("projetos")
-        .update(payload)
-        .eq("id", projetoId);
+        .insert({
+          ...payload,
+          ...(margemLucroPercentDuplicado !== null
+            ? { margem_lucro_percent: margemLucroPercentDuplicado }
+            : {}),
+          ...(cargaTributariaPercentDuplicado !== null
+            ? { carga_tributaria_percent: cargaTributariaPercentDuplicado }
+            : {}),
+          empresa_id: usuario.empresa_id,
+          created_by: userData.user.id,
+        })
+        .select("id,numero_projeto")
+        .single();
 
-      setSalvando(false);
-
-      if (error) {
-        setErro("Não foi possível salvar o projeto.");
-        return { status: "erro", mensagem: error.message };
+      if (error || !data) {
+        setErro("Não foi possível criar o projeto.");
+        return { status: "erro", mensagem: error?.message ?? "Erro desconhecido." };
       }
 
-      return { status: "ok", id: projetoId };
-    }
+      if (itensParaDuplicar.length > 0) {
+        const novosItens = itensParaDuplicar.map((item) => ({
+          ...item,
+          projeto_id: data.id,
+          empresa_id: usuario.empresa_id,
+          created_by: userData.user.id,
+        }));
 
-    const { data: userData } = await supabase.auth.getUser();
+        const { error: itensError } = await supabase
+          .from("projeto_itens")
+          .insert(novosItens);
 
-    if (!userData.user) {
-      setSalvando(false);
-      return { status: "erro", mensagem: "Usuário não autenticado." };
-    }
-
-    const { data: usuario, error: usuarioError } = await supabase
-      .from("usuarios")
-      .select("empresa_id")
-      .eq("id", userData.user.id)
-      .single();
-
-    if (usuarioError || !usuario?.empresa_id) {
-      setSalvando(false);
-      return { status: "erro", mensagem: "Empresa do usuário não encontrada." };
-    }
-
-    const { data, error } = await supabase
-      .from("projetos")
-      .insert({
-        ...payload,
-        ...(margemLucroPercentDuplicado !== null
-          ? { margem_lucro_percent: margemLucroPercentDuplicado }
-          : {}),
-        ...(cargaTributariaPercentDuplicado !== null
-          ? { carga_tributaria_percent: cargaTributariaPercentDuplicado }
-          : {}),
-        empresa_id: usuario.empresa_id,
-        created_by: userData.user.id,
-      })
-      .select("id,numero_projeto")
-      .single();
-
-    if (error || !data) {
-      setSalvando(false);
-      setErro("Não foi possível criar o projeto.");
-      return { status: "erro", mensagem: error?.message ?? "Erro desconhecido." };
-    }
-
-    if (itensParaDuplicar.length > 0) {
-      const novosItens = itensParaDuplicar.map((item) => ({
-        ...item,
-        projeto_id: data.id,
-        empresa_id: usuario.empresa_id,
-        created_by: userData.user.id,
-      }));
-
-      const { error: itensError } = await supabase
-        .from("projeto_itens")
-        .insert(novosItens);
-
-      if (itensError) {
-        setSalvando(false);
-        setErro(
-          `Projeto ${data.numero_projeto} criado, mas falha ao copiar os itens: ${itensError.message}`,
-        );
-        return {
-          status: "erro",
-          mensagem: `Projeto ${data.numero_projeto} criado, mas falha ao copiar os itens: ${itensError.message}`,
-        };
+        if (itensError) {
+          setErro(
+            `Projeto ${data.numero_projeto} criado, mas falha ao copiar os itens: ${itensError.message}`,
+          );
+          return {
+            status: "erro",
+            mensagem: `Projeto ${data.numero_projeto} criado, mas falha ao copiar os itens: ${itensError.message}`,
+          };
+        }
       }
+
+      setProjetoId(data.id);
+      setNumeroProjeto(data.numero_projeto);
+
+      return { status: "ok", id: data.id };
+    } finally {
+      salvandoRef.current = false;
+      setSalvando(false);
     }
-
-    setSalvando(false);
-    setProjetoId(data.id);
-    setNumeroProjeto(data.numero_projeto);
-
-    return { status: "ok", id: data.id };
   }
 
   return {
