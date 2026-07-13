@@ -80,24 +80,6 @@ export default function NovoRecursoPage() {
                 </Link>
                 <button
                   type="button"
-                  className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
-                >
-                  Duplicar
-                </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md border border-red-500/40 bg-red-500/10 px-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20"
-                >
-                  Excluir
-                </button>
-                <button
-                  type="button"
                   onClick={handleSalvar}
                   disabled={loading || loadingDuplicado}
                   className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
