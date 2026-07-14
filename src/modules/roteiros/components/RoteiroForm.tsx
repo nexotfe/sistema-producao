@@ -44,7 +44,7 @@ type RoteiroFormProps = {
 
   operacoesEngenharia: BomOperacao[];
   operacoesProducao: BomOperacao[];
-  tecnologiasDisponiveis: (OpcaoSelect & { tipo: string })[];
+  recursosDisponiveis: OpcaoSelect[];
   onAdicionarOperacao: (
     input: NovaOperacaoInput,
   ) => Promise<ResultadoOperacaoRoteiro>;
@@ -96,7 +96,7 @@ export function RoteiroForm({
   onRemoverSubconjunto,
   operacoesEngenharia,
   operacoesProducao,
-  tecnologiasDisponiveis,
+  recursosDisponiveis,
   onAdicionarOperacao,
   onRemoverOperacao,
   proximaOrdemOperacoes,
@@ -622,7 +622,7 @@ export function RoteiroForm({
         open={modalOperacaoAberto}
         onClose={() => setModalOperacaoAberto(false)}
         onAdd={onAdicionarOperacao}
-        tecnologiasDisponiveis={tecnologiasDisponiveis}
+        recursosDisponiveis={recursosDisponiveis}
         proximaOrdem={proximaOrdemOperacoes()}
       />
 
@@ -657,7 +657,7 @@ function OperacoesTable({
           <tr>
             <th className="px-4 py-2 font-semibold">OP</th>
             <th className="px-4 py-2 font-semibold">Descrição</th>
-            <th className="px-4 py-2 font-semibold">Tecnologia</th>
+            <th className="px-4 py-2 font-semibold">Recurso</th>
             <th className="px-4 py-2 font-semibold">Tempo (min)</th>
             <th className="px-4 py-2 font-semibold">Observações</th>
             <th className="px-4 py-2 font-semibold" />
@@ -676,7 +676,7 @@ function OperacoesTable({
                 <td className="px-4 py-3 font-bold">OP{operacao.ordem}</td>
                 <td className="px-4 py-3 text-slate-700">{operacao.descricao}</td>
                 <td className="px-4 py-3 text-slate-700">
-                  {operacao.tecnologiaNome}
+                  {operacao.recursoNome}
                 </td>
                 <td className="px-4 py-3 text-slate-700">
                   {operacao.tempoEstimadoMinutos.toLocaleString("pt-BR")}

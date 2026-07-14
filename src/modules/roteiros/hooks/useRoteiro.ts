@@ -103,16 +103,16 @@ type BomOperacaoRow = {
   id: string;
   ordem: number;
   descricao: string;
-  tecnologia_aplicada_id: string;
+  recurso_produtivo_id: string | null;
+  tipo: "engenharia" | "producao";
   tempo_estimado_minutos: number;
   observacoes: string | null;
 };
 
-type TecnologiaRow = {
+type RecursoProdutivoRow = {
   id: string;
-  nome: string;
-  tipo: string;
-  valor_hora: number;
+  codigo: string | null;
+  nome: string | null;
 };
 
 type BomServicoRow = {
@@ -174,8 +174,8 @@ export function useRoteiro(pn: string) {
   const [produtosDisponiveis, setProdutosDisponiveis] = useState<OpcaoSelect[]>(
     [],
   );
-  const [tecnologiasDisponiveis, setTecnologiasDisponiveis] = useState<
-    (OpcaoSelect & { tipo: string })[]
+  const [recursosDisponiveis, setRecursosDisponiveis] = useState<
+    OpcaoSelect[]
   >([]);
   const [fornecedoresDisponiveis, setFornecedoresDisponiveis] = useState<
     OpcaoSelect[]
@@ -283,7 +283,7 @@ export function useRoteiro(pn: string) {
     const { data, error } = await supabase
       .from("bom_operacoes")
       .select(
-        "id,ordem,descricao,tecnologia_aplicada_id,tempo_estimado_minutos,observacoes",
+        "id,ordem,descricao,recurso_produtivo_id,tipo,tempo_estimado_minutos,observacoes",
       )
       .eq("bom_id", bomId)
       .is("deleted_at", null)
@@ -294,38 +294,43 @@ export function useRoteiro(pn: string) {
     }
 
     const linhas = (data ?? []) as BomOperacaoRow[];
-    const ids = linhas.map((linha) => linha.tecnologia_aplicada_id);
-    const porId = new Map<string, { nome: string; tipo: string }>();
+    const ids = linhas
+      .map((linha) => linha.recurso_produtivo_id)
+      .filter((id): id is string => Boolean(id));
+    const porId = new Map<string, string>();
 
     if (ids.length > 0) {
-      const { data: tecData } = await supabase
-        .from("tecnologias_aplicadas")
-        .select("id,nome,tipo")
+      const { data: recData } = await supabase
+        .from("recursos_produtivos")
+        .select("id,codigo,nome")
         .in("id", ids);
 
-      ((tecData ?? []) as Pick<TecnologiaRow, "id" | "nome" | "tipo">[]).forEach(
-        (tec) => {
-          porId.set(tec.id, { nome: tec.nome, tipo: tec.tipo });
-        },
-      );
+      ((recData ?? []) as RecursoProdutivoRow[]).forEach((recurso) => {
+        porId.set(
+          recurso.id,
+          [recurso.codigo, recurso.nome].filter(Boolean).join(" — ") || "—",
+        );
+      });
     }
 
     const mapeadas: BomOperacao[] = linhas.map((linha) => ({
       id: linha.id,
       ordem: linha.ordem,
       descricao: linha.descricao,
-      tecnologiaAplicadaId: linha.tecnologia_aplicada_id,
-      tecnologiaNome: porId.get(linha.tecnologia_aplicada_id)?.nome ?? "—",
-      tecnologiaTipo: porId.get(linha.tecnologia_aplicada_id)?.tipo ?? "",
+      recursoProdutivoId: linha.recurso_produtivo_id,
+      recursoNome: linha.recurso_produtivo_id
+        ? porId.get(linha.recurso_produtivo_id) ?? "—"
+        : "Sem recurso vinculado",
+      tipo: linha.tipo,
       tempoEstimadoMinutos: Number(linha.tempo_estimado_minutos),
       observacoes: linha.observacoes,
     }));
 
     setOperacoesEngenharia(
-      mapeadas.filter((op) => op.tecnologiaTipo === "engenharia"),
+      mapeadas.filter((op) => op.tipo === "engenharia"),
     );
     setOperacoesProducao(
-      mapeadas.filter((op) => op.tecnologiaTipo !== "engenharia"),
+      mapeadas.filter((op) => op.tipo !== "engenharia"),
     );
   }, []);
 
@@ -524,7 +529,7 @@ export function useRoteiro(pn: string) {
       setLoading(true);
       setErro(null);
 
-      const [produtoResult, materiasResult, itensResult, tecResult, fornResult] =
+      const [produtoResult, materiasResult, itensResult, recResult, fornResult] =
         await Promise.all([
           supabase
             .from("itens_industriais")
@@ -540,8 +545,9 @@ export function useRoteiro(pn: string) {
             .select("id,codigo,descricao")
             .order("descricao", { ascending: true }),
           supabase
-            .from("tecnologias_aplicadas")
-            .select("id,nome,tipo")
+            .from("recursos_produtivos")
+            .select("id,codigo,nome")
+            .eq("ativo", true)
             .order("nome", { ascending: true }),
           supabase
             .from("fornecedores")
@@ -559,10 +565,12 @@ export function useRoteiro(pn: string) {
         ),
       );
 
-      setTecnologiasDisponiveis(
-        (
-          (tecResult.data ?? []) as Pick<TecnologiaRow, "id" | "nome" | "tipo">[]
-        ).map((tec) => ({ id: tec.id, label: tec.nome, tipo: tec.tipo })),
+      setRecursosDisponiveis(
+        ((recResult.data ?? []) as RecursoProdutivoRow[]).map((recurso) => ({
+          id: recurso.id,
+          label:
+            [recurso.codigo, recurso.nome].filter(Boolean).join(" — ") || "—",
+        })),
       );
 
       setFornecedoresDisponiveis(
@@ -784,7 +792,8 @@ export function useRoteiro(pn: string) {
       bom_id: bom.id,
       ordem: input.ordem,
       descricao: input.descricao.trim(),
-      tecnologia_aplicada_id: input.tecnologiaAplicadaId,
+      recurso_produtivo_id: input.recursoProdutivoId,
+      tipo: input.tipo,
       tempo_estimado_minutos: input.tempoEstimadoMinutos,
       observacoes: input.observacoes.trim() || null,
       created_by: userId,
@@ -922,7 +931,7 @@ export function useRoteiro(pn: string) {
 
     operacoesEngenharia,
     operacoesProducao,
-    tecnologiasDisponiveis,
+    recursosDisponiveis,
     adicionarOperacao,
     removerOperacao,
     proximaOrdemOperacoes,

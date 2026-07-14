@@ -11,7 +11,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onAdd: (input: NovaOperacaoInput) => Promise<ResultadoOperacaoRoteiro>;
-  tecnologiasDisponiveis: (OpcaoSelect & { tipo: string })[];
+  recursosDisponiveis: OpcaoSelect[];
   proximaOrdem: number;
 };
 
@@ -19,12 +19,13 @@ export function AdicionarOperacaoModal({
   open,
   onClose,
   onAdd,
-  tecnologiasDisponiveis,
+  recursosDisponiveis,
   proximaOrdem,
 }: Props) {
   const [ordem, setOrdem] = useState(String(proximaOrdem));
   const [descricao, setDescricao] = useState("");
-  const [tecnologiaAplicadaId, setTecnologiaAplicadaId] = useState("");
+  const [recursoProdutivoId, setRecursoProdutivoId] = useState("");
+  const [tipo, setTipo] = useState<"engenharia" | "producao">("producao");
   const [tempoEstimadoMinutos, setTempoEstimadoMinutos] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -42,7 +43,8 @@ export function AdicionarOperacaoModal({
 
   function limparEFechar() {
     setDescricao("");
-    setTecnologiaAplicadaId("");
+    setRecursoProdutivoId("");
+    setTipo("producao");
     setTempoEstimadoMinutos("");
     setObservacoes("");
     setErro(null);
@@ -62,8 +64,8 @@ export function AdicionarOperacaoModal({
       return;
     }
 
-    if (!tecnologiaAplicadaId) {
-      setErro("Selecione a tecnologia aplicada.");
+    if (!recursoProdutivoId) {
+      setErro("Selecione o recurso aplicado.");
       return;
     }
 
@@ -80,7 +82,8 @@ export function AdicionarOperacaoModal({
     const resultado = await onAdd({
       ordem: ordemNumerica,
       descricao,
-      tecnologiaAplicadaId,
+      recursoProdutivoId,
+      tipo,
       tempoEstimadoMinutos: tempoNumerico,
       observacoes,
     });
@@ -147,23 +150,40 @@ export function AdicionarOperacaoModal({
               />
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                Tecnologia aplicada
-              </label>
-              <select
-                value={tecnologiaAplicadaId}
-                onChange={(event) => setTecnologiaAplicadaId(event.target.value)}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Selecione</option>
-                {tecnologiasDisponiveis.map((tecnologia) => (
-                  <option key={tecnologia.id} value={tecnologia.id}>
-                    {tecnologia.label}
-                    {tecnologia.tipo === "engenharia" ? " (Engenharia)" : ""}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                  Recurso aplicado
+                </label>
+                <select
+                  value={recursoProdutivoId}
+                  onChange={(event) => setRecursoProdutivoId(event.target.value)}
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Selecione</option>
+                  {recursosDisponiveis.map((recurso) => (
+                    <option key={recurso.id} value={recurso.id}>
+                      {recurso.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                  Tipo
+                </label>
+                <select
+                  value={tipo}
+                  onChange={(event) =>
+                    setTipo(event.target.value as "engenharia" | "producao")
+                  }
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="producao">Produção / Mão de obra</option>
+                  <option value="engenharia">Engenharia</option>
+                </select>
+              </div>
             </div>
 
             <div>

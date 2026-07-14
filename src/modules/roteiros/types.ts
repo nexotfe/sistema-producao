@@ -52,16 +52,17 @@ export type NovoSubconjuntoInput = {
 };
 
 // --- Engenharia / Operacoes (bom_operacoes) ---
-// Classificacao Engenharia vs Operacoes vem de tecnologias_aplicadas.tipo
-// (tipo='engenharia' -> bloco Engenharia; qualquer outro tipo -> Operacoes).
+// Classificacao Engenharia vs Operacoes vem do proprio campo bo.tipo
+// (tipo='engenharia' -> bloco Engenharia; tipo='producao' -> Operacoes) -
+// escolhido pelo usuario ao criar a OP, independente do recurso vinculado.
 
 export type BomOperacao = {
   id: string;
   ordem: number;
   descricao: string;
-  tecnologiaAplicadaId: string;
-  tecnologiaNome: string;
-  tecnologiaTipo: string;
+  recursoProdutivoId: string | null;
+  recursoNome: string;
+  tipo: "engenharia" | "producao";
   tempoEstimadoMinutos: number;
   observacoes: string | null;
 };
@@ -69,7 +70,8 @@ export type BomOperacao = {
 export type NovaOperacaoInput = {
   ordem: number;
   descricao: string;
-  tecnologiaAplicadaId: string;
+  recursoProdutivoId: string;
+  tipo: "engenharia" | "producao";
   tempoEstimadoMinutos: number;
   observacoes: string;
 };

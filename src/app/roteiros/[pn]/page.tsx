@@ -30,7 +30,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
     removerSubconjunto,
     operacoesEngenharia,
     operacoesProducao,
-    tecnologiasDisponiveis,
+    recursosDisponiveis,
     adicionarOperacao,
     removerOperacao,
     proximaOrdemOperacoes,
@@ -153,7 +153,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
           onRemoverSubconjunto={removerSubconjunto}
           operacoesEngenharia={operacoesEngenharia}
           operacoesProducao={operacoesProducao}
-          tecnologiasDisponiveis={tecnologiasDisponiveis}
+          recursosDisponiveis={recursosDisponiveis}
           onAdicionarOperacao={adicionarOperacao}
           onRemoverOperacao={removerOperacao}
           proximaOrdemOperacoes={proximaOrdemOperacoes}
