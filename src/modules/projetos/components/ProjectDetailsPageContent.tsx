@@ -48,6 +48,7 @@ export function ProjectDetailsPageContent({
     cargaTributariaEfetiva,
     itens,
     resumoOrcamento,
+    resumoProdutivo,
     erro,
     mensagem,
     formulaErro,
@@ -398,6 +399,54 @@ export function ProjectDetailsPageContent({
             </div>
           </section>
         </div>
+
+        <section className="rounded-md border border-slate-200 bg-app-card p-4">
+          <h2 className="text-sm font-bold">Resumo Produtivo</h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Tempo estimado das operações do roteiro, somado por Recurso
+            Produtivo.
+          </p>
+
+          <div className="mt-3 flex flex-col gap-2">
+            {resumoProdutivo.linhas.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Nenhuma operação de roteiro cadastrada nos itens do projeto.
+              </p>
+            ) : (
+              resumoProdutivo.linhas.map((linha) => (
+                <div
+                  key={linha.recursoId ?? "sem-recurso"}
+                  className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                >
+                  <span
+                    className={
+                      linha.recursoId
+                        ? "text-slate-800"
+                        : "font-medium text-amber-700"
+                    }
+                  >
+                    {linha.recursoId
+                      ? `${linha.codigo ?? "—"} — ${linha.nome ?? "—"}`
+                      : "Sem recurso definido"}
+                  </span>
+                  <span className="font-medium text-slate-800">
+                    {linha.minutos.toLocaleString("pt-BR")} min total
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+
+          {resumoProdutivo.linhas.length > 0 ? (
+            <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-sm font-semibold text-slate-900">
+              <span>Total das operações</span>
+              <span>
+                {resumoProdutivo.totalMinutos.toLocaleString("pt-BR")} min
+              </span>
+            </div>
+          ) : null}
+        </section>
+
         <section className="rounded-md border border-slate-200 bg-app-card">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>

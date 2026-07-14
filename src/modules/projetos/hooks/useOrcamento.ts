@@ -27,7 +27,21 @@ export type ItemOrcamento = {
 
 type ItemBase = Omit<ItemOrcamento, "impostos" | "lucro" | "total">;
 
+export type LinhaResumoProdutivo = {
+  recursoId: string | null;
+  codigo: string | null;
+  nome: string | null;
+  minutos: number;
+};
+
 type BomEscolhaRow = { id: string; status: string; created_at: string };
+type BomOperacaoTempoRow = {
+  tempo_estimado_minutos: number;
+  recurso_produtivo_id: string | null;
+};
+type RecursoProdutivoRow = { id: string; codigo: string | null; nome: string | null };
+
+const SEM_RECURSO_CHAVE = "__sem_recurso__";
 
 const CARGA_TRIBUTARIA_CHAVE = "carga_tributaria_por_natureza";
 
@@ -89,6 +103,9 @@ export function useOrcamento(idProjeto: string | null) {
   const [formulaErro, setFormulaErro] = useState<string | null>(null);
 
   const [itensBase, setItensBase] = useState<ItemBase[]>([]);
+  const [resumoProdutivoLinhas, setResumoProdutivoLinhas] = useState<
+    LinhaResumoProdutivo[]
+  >([]);
 
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -193,6 +210,7 @@ export function useOrcamento(idProjeto: string | null) {
 
     const excluirMateriaPrima = projeto.tipo_projeto === "industrializacao";
     const itensCalculados: ItemBase[] = [];
+    const minutosPorRecurso = new Map<string, number>();
 
     for (const item of linhas) {
       const { data: boms } = await supabase
@@ -219,6 +237,22 @@ export function useOrcamento(idProjeto: string | null) {
         )?.valor;
 
         custoUnitario = Number(total ?? 0);
+
+        const { data: operacoes } = await supabase
+          .from("bom_operacoes")
+          .select("tempo_estimado_minutos,recurso_produtivo_id")
+          .eq("bom_id", bomEscolhido.id)
+          .eq("ativo", true)
+          .is("deleted_at", null);
+
+        for (const operacao of (operacoes ?? []) as BomOperacaoTempoRow[]) {
+          const chave = operacao.recurso_produtivo_id ?? SEM_RECURSO_CHAVE;
+          const atual = minutosPorRecurso.get(chave) ?? 0;
+          minutosPorRecurso.set(
+            chave,
+            atual + Number(operacao.tempo_estimado_minutos),
+          );
+        }
       }
 
       itensCalculados.push({
@@ -233,7 +267,46 @@ export function useOrcamento(idProjeto: string | null) {
       });
     }
 
+    const recursoIds = [...minutosPorRecurso.keys()].filter(
+      (chave) => chave !== SEM_RECURSO_CHAVE,
+    );
+    const recursosPorId = new Map<string, RecursoProdutivoRow>();
+
+    if (recursoIds.length > 0) {
+      const { data: recursos } = await supabase
+        .from("recursos_produtivos")
+        .select("id,codigo,nome")
+        .in("id", recursoIds);
+
+      for (const recurso of (recursos ?? []) as RecursoProdutivoRow[]) {
+        recursosPorId.set(recurso.id, recurso);
+      }
+    }
+
+    const linhasResumoProdutivo: LinhaResumoProdutivo[] = [
+      ...minutosPorRecurso.entries(),
+    ]
+      .map(([chave, minutos]) => {
+        if (chave === SEM_RECURSO_CHAVE) {
+          return { recursoId: null, codigo: null, nome: null, minutos };
+        }
+
+        const recurso = recursosPorId.get(chave);
+        return {
+          recursoId: chave,
+          codigo: recurso?.codigo ?? null,
+          nome: recurso?.nome ?? null,
+          minutos,
+        };
+      })
+      .sort((a, b) => {
+        if (a.recursoId === null) return 1;
+        if (b.recursoId === null) return -1;
+        return (a.codigo ?? "").localeCompare(b.codigo ?? "");
+      });
+
     setItensBase(itensCalculados);
+    setResumoProdutivoLinhas(linhasResumoProdutivo);
     setLoading(false);
   }, [idProjeto]);
 
@@ -294,6 +367,15 @@ export function useOrcamento(idProjeto: string | null) {
       valorTotal: total,
     };
   }, [itensBase, margemLucroPercent, cargaTributariaEfetiva]);
+
+  const resumoProdutivo = useMemo(() => {
+    const totalMinutos = resumoProdutivoLinhas.reduce(
+      (acc, linha) => acc + linha.minutos,
+      0,
+    );
+
+    return { linhas: resumoProdutivoLinhas, totalMinutos };
+  }, [resumoProdutivoLinhas]);
 
   async function salvar() {
     if (!projetoId) {
@@ -405,6 +487,7 @@ export function useOrcamento(idProjeto: string | null) {
 
     itens,
     resumoOrcamento,
+    resumoProdutivo,
 
     salvando,
     salvar,
