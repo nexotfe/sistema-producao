@@ -152,7 +152,7 @@ export function ProjectStructureItemsTable({
                   <td className="px-4 py-4 text-center align-middle text-slate-700">{item.quantity}</td>
                   <td className="px-4 py-4 align-middle">
                     <Link
-                      href={`/roteiros/${item.pn}`}
+                      href={`/roteiros/${encodeURIComponent(item.pn)}`}
                       className="inline-flex h-8 items-center rounded-md border border-slate-300 px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                       Abrir roteiro
