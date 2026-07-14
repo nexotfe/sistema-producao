@@ -48,6 +48,10 @@ type RoteiroFormProps = {
   onAdicionarOperacao: (
     input: NovaOperacaoInput,
   ) => Promise<ResultadoOperacaoRoteiro>;
+  onEditarOperacao: (
+    id: string,
+    input: NovaOperacaoInput,
+  ) => Promise<ResultadoOperacaoRoteiro>;
   onRemoverOperacao: (id: string) => Promise<ResultadoExclusao>;
   proximaOrdemOperacoes: () => number;
 
@@ -98,6 +102,7 @@ export function RoteiroForm({
   operacoesProducao,
   recursosDisponiveis,
   onAdicionarOperacao,
+  onEditarOperacao,
   onRemoverOperacao,
   proximaOrdemOperacoes,
   servicosTerceiros,
@@ -112,6 +117,9 @@ export function RoteiroForm({
   const [modalMaterialAberto, setModalMaterialAberto] = useState(false);
   const [modalSubconjuntoAberto, setModalSubconjuntoAberto] = useState(false);
   const [modalOperacaoAberto, setModalOperacaoAberto] = useState(false);
+  const [operacaoEditando, setOperacaoEditando] = useState<BomOperacao | null>(
+    null,
+  );
   const [modalServicoAberto, setModalServicoAberto] = useState(false);
   const [modalTransporteAberto, setModalTransporteAberto] = useState(false);
 
@@ -133,6 +141,21 @@ export function RoteiroForm({
     setErroSubconjunto(null);
     const resultado = await onRemoverSubconjunto(id);
     setErroSubconjunto(mensagemErroExclusao(resultado));
+  }
+
+  function handleEditarOperacao(operacao: BomOperacao) {
+    setOperacaoEditando(operacao);
+    setModalOperacaoAberto(true);
+  }
+
+  function handleAbrirModalOperacao() {
+    setOperacaoEditando(null);
+    setModalOperacaoAberto(true);
+  }
+
+  function handleFecharModalOperacao() {
+    setModalOperacaoAberto(false);
+    setOperacaoEditando(null);
   }
 
   async function handleRemoverOperacao(id: string) {
@@ -165,7 +188,7 @@ export function RoteiroForm({
               <h2 className="text-sm font-bold">Engenharia</h2>
               <button
                 type="button"
-                onClick={() => setModalOperacaoAberto(true)}
+                onClick={handleAbrirModalOperacao}
                 className="h-9 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Adicionar OP
@@ -174,6 +197,7 @@ export function RoteiroForm({
 
             <OperacoesTable
               operacoes={operacoesEngenharia}
+              onEditar={handleEditarOperacao}
               onRemover={handleRemoverOperacao}
             />
             {erroOperacao ? (
@@ -288,7 +312,7 @@ export function RoteiroForm({
 
             <button
               type="button"
-              onClick={() => setModalOperacaoAberto(true)}
+              onClick={handleAbrirModalOperacao}
               className="h-9 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Adicionar OP
@@ -297,6 +321,7 @@ export function RoteiroForm({
 
           <OperacoesTable
             operacoes={operacoesProducao}
+            onEditar={handleEditarOperacao}
             onRemover={handleRemoverOperacao}
           />
           {erroOperacao ? (
@@ -620,10 +645,12 @@ export function RoteiroForm({
 
       <AdicionarOperacaoModal
         open={modalOperacaoAberto}
-        onClose={() => setModalOperacaoAberto(false)}
+        onClose={handleFecharModalOperacao}
         onAdd={onAdicionarOperacao}
+        onEdit={onEditarOperacao}
         recursosDisponiveis={recursosDisponiveis}
         proximaOrdem={proximaOrdemOperacoes()}
+        operacaoEditando={operacaoEditando}
       />
 
       <AdicionarServicoTerceiroModal
@@ -645,9 +672,11 @@ export function RoteiroForm({
 
 function OperacoesTable({
   operacoes,
+  onEditar,
   onRemover,
 }: {
   operacoes: BomOperacao[];
+  onEditar: (operacao: BomOperacao) => void;
   onRemover: (id: string) => void;
 }) {
   return (
@@ -685,6 +714,13 @@ function OperacoesTable({
                   {operacao.observacoes || "—"}
                 </td>
                 <td className="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => onEditar(operacao)}
+                    className="mr-3 text-xs font-semibold text-slate-700 hover:underline"
+                  >
+                    Editar
+                  </button>
                   <button
                     type="button"
                     onClick={() => onRemover(operacao.id)}

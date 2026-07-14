@@ -759,9 +759,9 @@ export function useRoteiro(pn: string) {
     return resultado;
   }
 
-  function ordemOperacaoJaExiste(ordemNumero: number) {
+  function ordemOperacaoJaExiste(ordemNumero: number, idIgnorar?: string) {
     return [...operacoesEngenharia, ...operacoesProducao].some(
-      (op) => op.ordem === ordemNumero,
+      (op) => op.ordem === ordemNumero && op.id !== idIgnorar,
     );
   }
 
@@ -802,6 +802,46 @@ export function useRoteiro(pn: string) {
     if (error) {
       setProcessando(false);
       return resultadoErro(error, "Não foi possível adicionar a operação.");
+    }
+
+    await Promise.all([carregarOperacoes(bom.id), carregarCusto(bom.id)]);
+    setProcessando(false);
+    return { status: "ok" };
+  }
+
+  async function editarOperacao(
+    id: string,
+    input: NovaOperacaoInput,
+  ): Promise<ResultadoOperacaoRoteiro> {
+    if (!bom) {
+      return { status: "erro", mensagem: "Roteiro não encontrado." };
+    }
+
+    if (ordemOperacaoJaExiste(input.ordem, id)) {
+      return {
+        status: "erro",
+        mensagem:
+          "Essa ordem já está em uso neste roteiro (Engenharia e Operações compartilham a mesma numeração).",
+      };
+    }
+
+    setProcessando(true);
+
+    const { error } = await supabase
+      .from("bom_operacoes")
+      .update({
+        ordem: input.ordem,
+        descricao: input.descricao.trim(),
+        recurso_produtivo_id: input.recursoProdutivoId,
+        tipo: input.tipo,
+        tempo_estimado_minutos: input.tempoEstimadoMinutos,
+        observacoes: input.observacoes.trim() || null,
+      })
+      .eq("id", id);
+
+    if (error) {
+      setProcessando(false);
+      return resultadoErro(error, "Não foi possível atualizar a operação.");
     }
 
     await Promise.all([carregarOperacoes(bom.id), carregarCusto(bom.id)]);
@@ -933,6 +973,7 @@ export function useRoteiro(pn: string) {
     operacoesProducao,
     recursosDisponiveis,
     adicionarOperacao,
+    editarOperacao,
     removerOperacao,
     proximaOrdemOperacoes,
 

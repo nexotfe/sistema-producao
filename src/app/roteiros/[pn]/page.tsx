@@ -32,6 +32,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
     operacoesProducao,
     recursosDisponiveis,
     adicionarOperacao,
+    editarOperacao,
     removerOperacao,
     proximaOrdemOperacoes,
     servicosTerceiros,
@@ -155,6 +156,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
           operacoesProducao={operacoesProducao}
           recursosDisponiveis={recursosDisponiveis}
           onAdicionarOperacao={adicionarOperacao}
+          onEditarOperacao={editarOperacao}
           onRemoverOperacao={removerOperacao}
           proximaOrdemOperacoes={proximaOrdemOperacoes}
           servicosTerceiros={servicosTerceiros}

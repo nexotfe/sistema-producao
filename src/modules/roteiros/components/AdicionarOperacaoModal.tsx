@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type {
+  BomOperacao,
   NovaOperacaoInput,
   OpcaoSelect,
   ResultadoOperacaoRoteiro,
@@ -11,16 +12,23 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onAdd: (input: NovaOperacaoInput) => Promise<ResultadoOperacaoRoteiro>;
+  onEdit: (
+    id: string,
+    input: NovaOperacaoInput,
+  ) => Promise<ResultadoOperacaoRoteiro>;
   recursosDisponiveis: OpcaoSelect[];
   proximaOrdem: number;
+  operacaoEditando: BomOperacao | null;
 };
 
 export function AdicionarOperacaoModal({
   open,
   onClose,
   onAdd,
+  onEdit,
   recursosDisponiveis,
   proximaOrdem,
+  operacaoEditando,
 }: Props) {
   const [ordem, setOrdem] = useState(String(proximaOrdem));
   const [descricao, setDescricao] = useState("");
@@ -32,10 +40,27 @@ export function AdicionarOperacaoModal({
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setOrdem(String(proximaOrdem));
+    if (!open) {
+      return;
     }
-  }, [open, proximaOrdem]);
+
+    if (operacaoEditando) {
+      setOrdem(String(operacaoEditando.ordem));
+      setDescricao(operacaoEditando.descricao);
+      setRecursoProdutivoId(operacaoEditando.recursoProdutivoId ?? "");
+      setTipo(operacaoEditando.tipo);
+      setTempoEstimadoMinutos(String(operacaoEditando.tempoEstimadoMinutos));
+      setObservacoes(operacaoEditando.observacoes ?? "");
+      return;
+    }
+
+    setOrdem(String(proximaOrdem));
+    setDescricao("");
+    setRecursoProdutivoId("");
+    setTipo("producao");
+    setTempoEstimadoMinutos("");
+    setObservacoes("");
+  }, [open, proximaOrdem, operacaoEditando]);
 
   if (!open) {
     return null;
@@ -51,7 +76,7 @@ export function AdicionarOperacaoModal({
     onClose();
   }
 
-  async function handleAdicionar() {
+  async function handleSalvar() {
     const ordemNumerica = Number(ordem);
 
     if (!Number.isInteger(ordemNumerica) || ordemNumerica <= 0) {
@@ -79,14 +104,18 @@ export function AdicionarOperacaoModal({
     setSalvando(true);
     setErro(null);
 
-    const resultado = await onAdd({
+    const input: NovaOperacaoInput = {
       ordem: ordemNumerica,
       descricao,
       recursoProdutivoId,
       tipo,
       tempoEstimadoMinutos: tempoNumerico,
       observacoes,
-    });
+    };
+
+    const resultado = operacaoEditando
+      ? await onEdit(operacaoEditando.id, input)
+      : await onAdd(input);
 
     setSalvando(false);
 
@@ -103,7 +132,7 @@ export function AdicionarOperacaoModal({
       <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">
-            Adicionar OP
+            {operacaoEditando ? "Editar OP" : "Adicionar OP"}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             A ordem é única dentro de todo o roteiro (Engenharia e Operações
@@ -214,11 +243,17 @@ export function AdicionarOperacaoModal({
           </button>
           <button
             type="button"
-            onClick={handleAdicionar}
+            onClick={handleSalvar}
             disabled={salvando}
             className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {salvando ? "Adicionando..." : "Adicionar"}
+            {operacaoEditando
+              ? salvando
+                ? "Salvando..."
+                : "Salvar"
+              : salvando
+                ? "Adicionando..."
+                : "Adicionar"}
           </button>
         </div>
       </div>
