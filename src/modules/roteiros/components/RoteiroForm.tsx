@@ -320,7 +320,7 @@ export function RoteiroForm({
               onClick={() => setModalSubconjuntoAberto(true)}
               className="h-9 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
             >
-              Adicionar subconjunto
+              Montar subconjunto
             </button>
           </div>
 

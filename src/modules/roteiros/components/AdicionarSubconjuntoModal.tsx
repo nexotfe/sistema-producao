@@ -79,7 +79,7 @@ export function AdicionarSubconjuntoModal({
       <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">
-            Adicionar Subconjunto
+            Montar Subconjunto
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             Vincule um produto já cadastrado como subconjunto deste roteiro.
