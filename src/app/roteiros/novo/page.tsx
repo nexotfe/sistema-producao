@@ -24,7 +24,7 @@ export default function NewManufacturingRoutePage() {
                     Novo Roteiro de Fabricação
                   </h1>
                   <p className="mt-1 text-sm text-slate-300">
-                    {pn ? `PN ${pn}` : "Produto ainda não salvo"}
+                    {pn ? `Código ${pn}` : "Produto ainda não salvo"}
                   </p>
                 </div>
               </div>

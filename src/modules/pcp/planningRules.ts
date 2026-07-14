@@ -491,7 +491,7 @@ export function buildDailyScheduleRows(
     })
     .map((order) => {
       const project = projectsById.get(order.projeto_id);
-      const pn = order.produto_id ? itemPNs.get(order.produto_id) ?? "Sem PN" : "Sem PN";
+      const pn = order.produto_id ? itemPNs.get(order.produto_id) ?? "Sem Código" : "Sem Código";
       const orderOperations = [...(operationsByOrder.get(order.id) ?? [])].sort(
         (first, second) => (first.sequencia_snapshot ?? 0) - (second.sequencia_snapshot ?? 0),
       );
@@ -518,7 +518,7 @@ export function buildDailyScheduleRows(
         projectId: order.projeto_id,
         project: project?.numero_projeto ?? order.projeto_id,
         client,
-        pnId: pn !== "Sem PN" ? pn : null,
+        pnId: pn !== "Sem Código" ? pn : null,
         pn,
         estimatedTime: formatPlannedTime(orderOperations),
         reportedTime: formatReportedTime(orderAppointments),

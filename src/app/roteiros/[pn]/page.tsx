@@ -59,7 +59,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
                   <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
                     Roteiro de Fabricação
                   </h1>
-                  <p className="mt-1 text-sm text-slate-300">PN {pn}</p>
+                  <p className="mt-1 text-sm text-slate-300">Código {pn}</p>
                 </div>
               </div>
 

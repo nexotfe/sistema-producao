@@ -243,7 +243,7 @@ export default function DailySchedulePage() {
               <input
                 id="daily-search"
                 type="search"
-                placeholder="Buscar recurso, OF, projeto ou PN"
+                placeholder="Buscar recurso, OF, projeto ou Código"
                 className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               />
               <button className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
@@ -352,7 +352,7 @@ export default function DailySchedulePage() {
                   <th className="px-5 py-3 print:px-2 print:py-2">OF</th>
                   <th className="px-5 py-3 print:px-2 print:py-2">Projeto</th>
                   <th className="px-5 py-3 print:px-2 print:py-2">Cliente</th>
-                  <th className="px-5 py-3 print:px-2 print:py-2">PN</th>
+                  <th className="px-5 py-3 print:px-2 print:py-2">Código</th>
                   <th className="px-5 py-3 print:px-2 print:py-2">Tempo Previsto</th>
                   <th className="px-5 py-3 print:px-2 print:py-2">Prioridade</th>
                   <th className="px-5 py-3 print:px-2 print:py-2">Situacao</th>

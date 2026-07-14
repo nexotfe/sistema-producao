@@ -27,7 +27,7 @@ export const entityLabels: Record<EntityType, string> = {
   projeto: "Projeto",
   of: "OF",
   req: "REQ",
-  item: "PN",
+  item: "Código",
   cliente: "Cliente",
   fornecedor: "Fornecedor",
   colaborador: "Colaborador",
