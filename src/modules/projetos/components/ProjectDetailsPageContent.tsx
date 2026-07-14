@@ -122,6 +122,18 @@ export function ProjectDetailsPageContent({
     }
   }
 
+  function handleNovoProjeto() {
+    const confirmado = window.confirm(
+      "Iniciar novo projeto? Alterações não salvas nesta tela serão perdidas.",
+    );
+
+    if (!confirmado) {
+      return;
+    }
+
+    router.push("/projeto");
+  }
+
   return (
     <main className="min-h-screen bg-app-bg text-slate-950">
       <header className="bg-app-bg pt-4">
@@ -162,6 +174,13 @@ export function ProjectDetailsPageContent({
                   >
                     Início
                   </Link>
+                  <button
+                    type="button"
+                    onClick={handleNovoProjeto}
+                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
+                  >
+                    Novo Projeto
+                  </button>
                   <button
                     type="button"
                     className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
