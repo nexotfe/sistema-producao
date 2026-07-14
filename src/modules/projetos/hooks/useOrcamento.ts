@@ -250,7 +250,7 @@ export function useOrcamento(idProjeto: string | null) {
           const atual = minutosPorRecurso.get(chave) ?? 0;
           minutosPorRecurso.set(
             chave,
-            atual + Number(operacao.tempo_estimado_minutos),
+            atual + Number(operacao.tempo_estimado_minutos) * item.quantidade,
           );
         }
       }
@@ -462,6 +462,31 @@ export function useOrcamento(idProjeto: string | null) {
     return { status: "ok" };
   }
 
+  async function editarQuantidadeItem(
+    id: string,
+    quantidade: number,
+  ): Promise<ResultadoAdicionarItem> {
+    if (!Number.isFinite(quantidade) || quantidade <= 0) {
+      return {
+        status: "erro",
+        mensagem: "Informe uma quantidade numérica maior que zero.",
+      };
+    }
+
+    const { error } = await supabase
+      .from("projeto_itens")
+      .update({ quantidade })
+      .eq("id", id);
+
+    if (error) {
+      return { status: "erro", mensagem: error.message };
+    }
+
+    await carregar();
+
+    return { status: "ok" };
+  }
+
   return {
     loading,
     erro,
@@ -492,5 +517,6 @@ export function useOrcamento(idProjeto: string | null) {
     salvando,
     salvar,
     adicionarItem,
+    editarQuantidadeItem,
   };
 }

@@ -8,6 +8,10 @@ import {
   type ProjectStructureItem,
 } from "@/modules/projetos/components/ProjectStructureItemsTable";
 import { ProdutoSearchModal } from "@/modules/projetos/components/ProdutoSearchModal";
+import {
+  EditarQuantidadeItemModal,
+  type ItemParaEditar,
+} from "@/modules/projetos/components/EditarQuantidadeItemModal";
 import { useOrcamento } from "@/modules/projetos/hooks/useOrcamento";
 import { PROJECT_TYPE_LABELS } from "@/modules/projetos/constants";
 
@@ -55,9 +59,13 @@ export function ProjectDetailsPageContent({
     salvando,
     salvar,
     adicionarItem,
+    editarQuantidadeItem,
   } = useOrcamento(projectId);
 
   const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
+  const [itemEditando, setItemEditando] = useState<ItemParaEditar | null>(
+    null,
+  );
 
   // Inputs de texto (nao type="number"): evita o bug conhecido de inputs
   // numericos controlados no React, onde um digito residual ("0" deixado
@@ -100,6 +108,7 @@ export function ProjectDetailsPageContent({
   }
 
   const itensParaTabela: ProjectStructureItem[] = itens.map((item) => ({
+    id: item.id,
     description: item.descricao,
     pn: item.pn,
     revision: item.revisao ?? undefined,
@@ -115,6 +124,19 @@ export function ProjectDetailsPageContent({
 
   async function handleSalvar() {
     await salvar();
+  }
+
+  function handleEditarItem(item: ProjectStructureItem) {
+    if (!item.id) {
+      return;
+    }
+
+    setItemEditando({
+      id: item.id,
+      pn: item.pn,
+      descricao: item.description,
+      quantidade: item.quantity,
+    });
   }
 
   function handleDuplicar() {
@@ -194,12 +216,6 @@ export function ProjectDetailsPageContent({
                     className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
                   >
                     Duplicar
-                  </button>
-                  <button
-                    type="button"
-                    className="h-10 rounded-md border border-red-500/40 bg-red-500/10 px-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20"
-                  >
-                    Excluir
                   </button>
                   <button
                     type="button"
@@ -303,6 +319,7 @@ export function ProjectDetailsPageContent({
           items={itensParaTabela}
           basePath={`/projetos/${projectId}/estrutura`}
           onAdicionarItem={() => setModalProdutoAberto(true)}
+          onEditarItem={handleEditarItem}
         />
 
         <ProdutoSearchModal
@@ -311,6 +328,12 @@ export function ProjectDetailsPageContent({
           onAdd={({ produtoId, quantidade }) =>
             adicionarItem(produtoId, quantidade)
           }
+        />
+
+        <EditarQuantidadeItemModal
+          item={itemEditando}
+          onClose={() => setItemEditando(null)}
+          onSave={editarQuantidadeItem}
         />
 
         {formulaErro && (

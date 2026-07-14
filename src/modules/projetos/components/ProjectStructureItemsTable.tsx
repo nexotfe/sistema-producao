@@ -5,6 +5,7 @@ import { useState } from "react";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 
 export type ProjectStructureItem = {
+  id?: string;
   description: string;
   pn: string;
   revision?: string;
@@ -29,6 +30,7 @@ type ProjectStructureItemsTableProps = {
   basePath?: string;
   hierarchyBackHref?: string;
   onAdicionarItem?: () => void;
+  onEditarItem?: (item: ProjectStructureItem) => void;
 };
 
 export function ProjectStructureItemsTable({
@@ -39,6 +41,7 @@ export function ProjectStructureItemsTable({
   basePath = "/projetos/260123/estrutura",
   hierarchyBackHref,
   onAdicionarItem,
+  onEditarItem,
 }: ProjectStructureItemsTableProps) {
   const [createdStructures, setCreatedStructures] = useState<
     Record<string, boolean>
@@ -149,7 +152,19 @@ export function ProjectStructureItemsTable({
                   <td className="px-4 py-4 text-center align-middle text-slate-700">
                     {item.revision ?? "—"}
                   </td>
-                  <td className="px-4 py-4 text-center align-middle text-slate-700">{item.quantity}</td>
+                  <td className="px-4 py-4 text-center align-middle text-slate-700">
+                    {item.quantity}
+                    {onEditarItem && item.id ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditarItem(item)}
+                        aria-label={`Editar quantidade de ${item.description}`}
+                        className="ml-1.5 text-xs font-semibold text-blue-700 hover:underline"
+                      >
+                        ✎
+                      </button>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-4 align-middle">
                     <Link
                       href={`/roteiros/${encodeURIComponent(item.pn)}`}
