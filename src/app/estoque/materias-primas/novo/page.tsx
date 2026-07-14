@@ -27,7 +27,14 @@ const familiasMateriais = [
   "Consumíveis",
 ];
 
-const unidadesMateriais = ["kg", "metro", "barra", "chapa", "peça", "litro"];
+const unidadesMateriais = [
+  { value: "kg", label: "Kg" },
+  { value: "metro", label: "Metro" },
+  { value: "barra", label: "Barra" },
+  { value: "chapa", label: "Chapa" },
+  { value: "peca", label: "Peça" },
+  { value: "litro", label: "Litro" },
+];
 
 export default function NovaMateriaPrimaPage() {
   const pathname = usePathname();
@@ -473,7 +480,7 @@ function SelectField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: Array<string | { value: string; label: string }>;
 }) {
   return (
     <div>
@@ -487,11 +494,18 @@ function SelectField({
         className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
       >
         <option value="">Selecione</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {options.map((option) => {
+          const optionValue =
+            typeof option === "string" ? option : option.value;
+          const optionLabel =
+            typeof option === "string" ? option : option.label;
+
+          return (
+            <option key={optionValue} value={optionValue}>
+              {optionLabel}
+            </option>
+          );
+        })}
       </select>
     </div>
   );
