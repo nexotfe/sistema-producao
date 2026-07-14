@@ -87,12 +87,6 @@ type MateriaPrimaRow = {
   custo_referencia: number | null;
 };
 
-type MateriaPrimaDisponivelRow = {
-  id: string;
-  descricao: string;
-  unidade: string;
-};
-
 type ItemIndustrialRow = {
   id: string;
   codigo: string;
@@ -168,9 +162,6 @@ export function useRoteiro(pn: string) {
   const [transportes, setTransportes] = useState<BomTransporte[]>([]);
   const [custo, setCusto] = useState<CustoBom>(custoVazio);
 
-  const [materiasPrimasDisponiveis, setMateriasPrimasDisponiveis] = useState<
-    (OpcaoSelect & { unidade: string })[]
-  >([]);
   const [produtosDisponiveis, setProdutosDisponiveis] = useState<OpcaoSelect[]>(
     [],
   );
@@ -529,17 +520,13 @@ export function useRoteiro(pn: string) {
       setLoading(true);
       setErro(null);
 
-      const [produtoResult, materiasResult, itensResult, recResult, fornResult] =
+      const [produtoResult, itensResult, recResult, fornResult] =
         await Promise.all([
           supabase
             .from("itens_industriais")
             .select("id,codigo,descricao")
             .eq("codigo", pn)
             .single(),
-          supabase
-            .from("materias_primas")
-            .select("id,descricao,unidade")
-            .order("descricao", { ascending: true }),
           supabase
             .from("itens_industriais")
             .select("id,codigo,descricao")
@@ -554,16 +541,6 @@ export function useRoteiro(pn: string) {
             .select("id,nome_fantasia,nome")
             .order("nome_fantasia", { ascending: true }),
         ]);
-
-      setMateriasPrimasDisponiveis(
-        ((materiasResult.data ?? []) as MateriaPrimaDisponivelRow[]).map(
-          (materia) => ({
-            id: materia.id,
-            label: materia.descricao,
-            unidade: materia.unidade,
-          }),
-        ),
-      );
 
       setRecursosDisponiveis(
         ((recResult.data ?? []) as RecursoProdutivoRow[]).map((recurso) => ({
@@ -960,7 +937,6 @@ export function useRoteiro(pn: string) {
     criarPrimeiroRoteiro,
 
     materiais,
-    materiasPrimasDisponiveis,
     adicionarMaterial,
     removerMaterial,
 

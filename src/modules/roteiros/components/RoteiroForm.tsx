@@ -29,7 +29,6 @@ type RoteiroFormProps = {
   bom: Bom;
 
   materiais: BomItemMateriaPrima[];
-  materiasPrimasDisponiveis: (OpcaoSelect & { unidade: string })[];
   onAdicionarMaterial: (
     input: NovoBomItemInput,
   ) => Promise<ResultadoOperacaoRoteiro>;
@@ -91,7 +90,6 @@ function mensagemErroExclusao(resultado: ResultadoExclusao): string | null {
 export function RoteiroForm({
   bom,
   materiais,
-  materiasPrimasDisponiveis,
   onAdicionarMaterial,
   onRemoverMaterial,
   subconjuntos,
@@ -633,7 +631,6 @@ export function RoteiroForm({
         open={modalMaterialAberto}
         onClose={() => setModalMaterialAberto(false)}
         onAdd={onAdicionarMaterial}
-        materiasPrimasDisponiveis={materiasPrimasDisponiveis}
       />
 
       <AdicionarSubconjuntoModal

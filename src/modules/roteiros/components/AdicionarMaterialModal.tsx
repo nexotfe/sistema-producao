@@ -2,26 +2,22 @@
 
 import { useState } from "react";
 import { unidadesBomItem } from "../types";
-import type {
-  NovoBomItemInput,
-  OpcaoSelect,
-  ResultadoOperacaoRoteiro,
-} from "../types";
+import type { NovoBomItemInput, ResultadoOperacaoRoteiro } from "../types";
+import {
+  MateriaPrimaSearchInput,
+  type MateriaPrimaResumo,
+} from "./MateriaPrimaSearchInput";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onAdd: (input: NovoBomItemInput) => Promise<ResultadoOperacaoRoteiro>;
-  materiasPrimasDisponiveis: (OpcaoSelect & { unidade: string })[];
 };
 
-export function AdicionarMaterialModal({
-  open,
-  onClose,
-  onAdd,
-  materiasPrimasDisponiveis,
-}: Props) {
-  const [materiaPrimaId, setMateriaPrimaId] = useState("");
+export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
+  const [materiaPrima, setMateriaPrima] = useState<MateriaPrimaResumo | null>(
+    null,
+  );
   const [quantidade, setQuantidade] = useState("");
   const [dimensoes, setDimensoes] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -32,16 +28,13 @@ export function AdicionarMaterialModal({
     return null;
   }
 
-  const materiaPrimaSelecionada = materiasPrimasDisponiveis.find(
-    (materia) => materia.id === materiaPrimaId,
-  );
-  const unidade = materiaPrimaSelecionada?.unidade ?? "";
+  const unidade = materiaPrima?.unidade ?? "";
   const unidadeLabel =
     unidadesBomItem.find((opcao) => opcao.value === unidade)?.label ??
     unidade;
 
   function limparEFechar() {
-    setMateriaPrimaId("");
+    setMateriaPrima(null);
     setQuantidade("");
     setDimensoes("");
     setObservacoes("");
@@ -50,7 +43,7 @@ export function AdicionarMaterialModal({
   }
 
   async function handleAdicionar() {
-    if (!materiaPrimaId) {
+    if (!materiaPrima) {
       setErro("Selecione a matéria-prima.");
       return;
     }
@@ -66,7 +59,7 @@ export function AdicionarMaterialModal({
     setErro(null);
 
     const resultado = await onAdd({
-      materiaPrimaId,
+      materiaPrimaId: materiaPrima.id,
       quantidade: quantidadeNumerica,
       unidade,
       dimensoes,
@@ -101,18 +94,10 @@ export function AdicionarMaterialModal({
               <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                 Matéria-prima
               </label>
-              <select
-                value={materiaPrimaId}
-                onChange={(event) => setMateriaPrimaId(event.target.value)}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Selecione</option>
-                {materiasPrimasDisponiveis.map((materia) => (
-                  <option key={materia.id} value={materia.id}>
-                    {materia.label}
-                  </option>
-                ))}
-              </select>
+              <MateriaPrimaSearchInput
+                value={materiaPrima}
+                onChange={setMateriaPrima}
+              />
             </div>
 
             <div>
