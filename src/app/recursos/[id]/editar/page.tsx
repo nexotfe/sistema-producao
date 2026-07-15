@@ -29,6 +29,11 @@ export default function EditarRecursoPage({ params }: Props) {
     setSetor,
     capacidade,
     setCapacidade,
+    cargaHorariaSemanal,
+    setCargaHorariaSemanal,
+    diasTrabalhadosSemana,
+    setDiasTrabalhadosSemana,
+    capacidadeHorasDiaCalculada,
     valorHora,
     setValorHora,
     grupos,
@@ -113,6 +118,30 @@ export default function EditarRecursoPage({ params }: Props) {
                 value={capacidade}
                 onChange={setCapacidade}
               />
+              <Field
+                label="Carga Horária Semanal (h)"
+                value={cargaHorariaSemanal}
+                onChange={setCargaHorariaSemanal}
+              />
+              <Field
+                label="Dias Trabalhados por Semana"
+                value={diasTrabalhadosSemana}
+                onChange={setDiasTrabalhadosSemana}
+              />
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Capacidade Diária (calculada)
+                </label>
+                <input
+                  value={
+                    capacidadeHorasDiaCalculada !== null
+                      ? `${capacidadeHorasDiaCalculada} h/dia`
+                      : ""
+                  }
+                  readOnly
+                  className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
+                />
+              </div>
             </div>
           </Card>
 

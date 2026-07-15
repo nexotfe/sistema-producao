@@ -18,11 +18,33 @@ export function useEditarRecurso(id: string) {
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
   const [capacidade, setCapacidade] = useState("");
+  const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
+  const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
   const [valorHora, setValorHora] = useState("0");
   const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  const cargaPreenchida = cargaHorariaSemanal.trim() !== "";
+  const diasPreenchido = diasTrabalhadosSemana.trim() !== "";
+  const cargaHorariaSemanalNumerica = cargaPreenchida
+    ? Number(cargaHorariaSemanal.replace(",", "."))
+    : null;
+  const diasTrabalhadosSemanaNumerico = diasPreenchido
+    ? Number(diasTrabalhadosSemana.replace(",", "."))
+    : null;
+  const capacidadeHorasDiaCalculada =
+    cargaPreenchida &&
+    diasPreenchido &&
+    Number.isFinite(cargaHorariaSemanalNumerica) &&
+    Number.isFinite(diasTrabalhadosSemanaNumerico) &&
+    (diasTrabalhadosSemanaNumerico as number) > 0
+      ? Math.round(
+          (cargaHorariaSemanalNumerica! / diasTrabalhadosSemanaNumerico!) *
+            100,
+        ) / 100
+      : null;
 
   useEffect(() => {
     async function carregarDados() {
@@ -38,7 +60,9 @@ export function useEditarRecurso(id: string) {
       const [recursoResult, gruposResult] = await Promise.all([
         supabase
           .from("recursos_produtivos")
-          .select("id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,valor_hora")
+          .select(
+            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,carga_horaria_semanal,dias_trabalhados_semana,valor_hora",
+          )
           .eq("id", id)
           .single(),
         supabase
@@ -65,6 +89,18 @@ export function useEditarRecurso(id: string) {
       setCapacidade(
         recurso.capacidade !== null && recurso.capacidade !== undefined
           ? String(recurso.capacidade)
+          : "",
+      );
+      setCargaHorariaSemanal(
+        recurso.carga_horaria_semanal !== null &&
+          recurso.carga_horaria_semanal !== undefined
+          ? String(recurso.carga_horaria_semanal)
+          : "",
+      );
+      setDiasTrabalhadosSemana(
+        recurso.dias_trabalhados_semana !== null &&
+          recurso.dias_trabalhados_semana !== undefined
+          ? String(recurso.dias_trabalhados_semana)
           : "",
       );
       setValorHora(
@@ -116,6 +152,32 @@ export function useEditarRecurso(id: string) {
         return false;
       }
 
+      if (cargaPreenchida !== diasPreenchido) {
+        setErro(
+          "Preencha Carga Horaria Semanal e Dias Trabalhados por Semana juntos para calcular a capacidade diaria.",
+        );
+        return false;
+      }
+
+      if (
+        cargaPreenchida &&
+        (!Number.isFinite(cargaHorariaSemanalNumerica) ||
+          (cargaHorariaSemanalNumerica as number) < 0)
+      ) {
+        setErro("Carga Horaria Semanal deve ser numerica e maior ou igual a zero.");
+        return false;
+      }
+
+      if (
+        diasPreenchido &&
+        (!Number.isFinite(diasTrabalhadosSemanaNumerico) ||
+          (diasTrabalhadosSemanaNumerico as number) < 1 ||
+          (diasTrabalhadosSemanaNumerico as number) > 7)
+      ) {
+        setErro("Dias Trabalhados por Semana deve ser um numero entre 1 e 7.");
+        return false;
+      }
+
       const { error } = await supabase
         .from("recursos_produtivos")
         .update({
@@ -126,6 +188,11 @@ export function useEditarRecurso(id: string) {
           modelo,
           setor,
           capacidade: capacidadeNumerica,
+          carga_horaria_semanal: cargaHorariaSemanalNumerica,
+          dias_trabalhados_semana: diasTrabalhadosSemanaNumerico,
+          ...(capacidadeHorasDiaCalculada !== null
+            ? { capacidade_horas_dia: capacidadeHorasDiaCalculada }
+            : {}),
           valor_hora: valorHoraNumerico,
         })
         .eq("id", id);
@@ -166,6 +233,11 @@ export function useEditarRecurso(id: string) {
     setSetor,
     capacidade,
     setCapacidade,
+    cargaHorariaSemanal,
+    setCargaHorariaSemanal,
+    diasTrabalhadosSemana,
+    setDiasTrabalhadosSemana,
+    capacidadeHorasDiaCalculada,
     valorHora,
     setValorHora,
     grupos,

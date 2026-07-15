@@ -21,6 +21,11 @@ export default function NovoRecursoPage() {
     setModelo,
     capacidade,
     setCapacidade,
+    cargaHorariaSemanal,
+    setCargaHorariaSemanal,
+    diasTrabalhadosSemana,
+    setDiasTrabalhadosSemana,
+    capacidadeHorasDiaCalculada,
     valorHora,
     setValorHora,
     grupos,
@@ -137,6 +142,30 @@ export default function NovoRecursoPage() {
                     value={capacidade}
                     onChange={setCapacidade}
                   />
+                  <Field
+                    label="Carga Horária Semanal (h)"
+                    value={cargaHorariaSemanal}
+                    onChange={setCargaHorariaSemanal}
+                  />
+                  <Field
+                    label="Dias Trabalhados por Semana"
+                    value={diasTrabalhadosSemana}
+                    onChange={setDiasTrabalhadosSemana}
+                  />
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      Capacidade Diária (calculada)
+                    </label>
+                    <input
+                      value={
+                        capacidadeHorasDiaCalculada !== null
+                          ? `${capacidadeHorasDiaCalculada} h/dia`
+                          : ""
+                      }
+                      readOnly
+                      className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none"
+                    />
+                  </div>
                 </div>
               </Card>
 
