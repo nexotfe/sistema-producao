@@ -93,6 +93,7 @@ novos cadastros.
 | Calendário Oficial | SISARE |
 | Eventos internos | Empresa |
 | Capacidade | Recursos |
+| Produtividade | Recursos |
 | Quantidade | Orçamento |
 | Tempos | Roteiro |
 
@@ -222,7 +223,7 @@ independentes:
 
 1. Calendário Operacional (dias produtivos da janela);
 2. Capacidade diária do recurso;
-3. Premissas do Modo de Produção (seção 8).
+3. Premissas do Modo de Produção (seção 9).
 
 **Cálculo da Capacidade Bruta:** capacidade diária do recurso × dias
 produtivos da janela.
@@ -232,7 +233,32 @@ disponíveis.
 
 ---
 
-## 8. Modo de Produção
+## 8. Produtividade do Recurso
+
+A empresa define uma **Produtividade Padrão** por categoria de recurso,
+usada para reduzir a Capacidade Bruta (seção 7) ao valor efetivamente
+esperado:
+
+| Categoria de Recurso | Produtividade Padrão |
+| --- | --- |
+| Projeto / Engenharia | 75% |
+| Montagem | 75% |
+| Demais Recursos | 85% |
+
+Cada recurso individual pode sobrescrever esse padrão quando necessário
+(ex.: Torno CNC 02 configurado a 80% em vez do padrão de 85% da sua
+categoria). É um novo campo no cadastro do Recurso Produtivo, análogo à
+Capacidade e ao Valor/Hora.
+
+A Produtividade do Recurso não é exclusiva da Simulação Comercial — o
+futuro módulo de PCP também vai utilizá-la para controle de produção.
+Mesmo princípio da Responsabilidade Única (seção 3): a Produtividade
+pertence ao Recurso; Simulação e PCP apenas consultam, nenhum dos dois
+duplica ou mantém sua própria cópia.
+
+---
+
+## 9. Modo de Produção
 
 O Modo de Produção (também chamado de Cenário de Produção) representa
 hipóteses temporárias utilizadas durante a simulação. Não altera
@@ -248,9 +274,15 @@ Exemplo: Torno CNC, capacidade padrão 9h/dia. Cenário "Hora Extra":
 +2h/dia durante 5 dias, +5h no sábado → 45h normais + 10h extra + 5h
 sábado = 60 horas utilizadas apenas nesta simulação.
 
+Na Simulação Comercial, as horas adicionais previstas no Modo de
+Produção são consideradas integralmente. O fator de produtividade
+aplica-se apenas à capacidade padrão do recurso. Eventuais perdas
+específicas de jornadas extraordinárias pertencem ao controle
+operacional da Produção e não fazem parte deste cálculo.
+
 ---
 
-## 9. Demanda
+## 10. Demanda
 
 A demanda pode ser analisada sob três visões independentes (terminologia
 "Demanda" — antes chamada "Visão"):
@@ -266,7 +298,7 @@ eixos ortogonais da simulação (ex.: é possível rodar "Demanda Provável"
 
 ---
 
-## 10. Cenários
+## 11. Cenários
 
 Os cenários existem **apenas durante a análise**, para apoiar a decisão
 do Orçamentista. Diversos cenários podem ser comparados ao mesmo tempo
@@ -283,14 +315,29 @@ base de dados.
 
 ---
 
-## 11. Cálculo
+## 12. Margem de Segurança
+
+Campo configurável diretamente na tela de Simulação, ajustável pelo
+orçamentista a cada rodada de simulação — em **dias produtivos** (pode
+ser 0; pode ser 5-6 dias, conforme a complexidade percebida do
+projeto).
+
+A Margem de Segurança reduz a Data de Necessidade informada pelo
+cliente **internamente**, gerando uma **Data Alvo** mais apertada,
+usada apenas no cálculo de viabilidade da Simulação (seção 13). Não
+altera a data real prometida ao cliente.
+
+---
+
+## 13. Cálculo
 
 Para cada recurso:
 
 ```
 Necessário            = Tempo do roteiro × Quantidade
-Capacidade Bruta      = Dias produtivos × Capacidade diária
-Capacidade Disponível = Capacidade Bruta + Premissas do Modo de Produção
+Capacidade Bruta      = Dias Produtivos × Capacidade Diária
+Capacidade Efetiva    = Capacidade Bruta × Produtividade
+Capacidade Disponível = Capacidade Efetiva + Horas Adicionais (Modo de Produção)
 Comprometido          = Demanda existente conforme a visão escolhida
 Livre                 = Capacidade Disponível − Comprometido
 Déficit               = Necessário − Livre
@@ -301,7 +348,7 @@ Possível.
 
 ---
 
-## 12. Roteiro em Projetos de Desenvolvimento
+## 14. Roteiro em Projetos de Desenvolvimento
 
 Em projetos de Desenvolvimento — fabricação sob encomenda cujo Produto
 Final ainda não tem desenho detalhado no momento da venda —, o Roteiro
@@ -311,7 +358,7 @@ sem exigir nenhuma estrutura de dados paralela à já existente (Produto,
 Roteiro, Subconjunto). Detalhamento completo em
 `knowledge/arquitetura-tecnica/2026-07-15-arquitetura-roteiro-desenvolvimento-v2.md`.
 
-### 12.1 Terminologia
+### 14.1 Terminologia
 
 - **Roteiro Inicial**: termo oficial para o Roteiro agregado/estimado
   do Produto Final, criado no momento da venda, antes de o desenho
@@ -322,18 +369,18 @@ Roteiro, Subconjunto). Detalhamento completo em
 - **Roteiro Detalhado**: o Roteiro de cada produto/peça/subconjunto
   real, criado pela Engenharia após a liberação dos desenhos.
 - **Horas Reais Apontadas**: os apontamentos de produção real (Ordem
-  de Fabricação), usados nas comparações de precisão (seção 12.5).
+  de Fabricação), usados nas comparações de precisão (seção 14.5).
 
-### 12.2 Produto Final na Venda
+### 14.2 Produto Final na Venda
 
 O Produto Final (ex.: "Máquina de Clipe") é criado a partir da própria
 solicitação do cliente, no momento da venda — não é um placeholder
 genérico nem um cadastro fictício: é o produto real que o cliente está
 comprando, cadastrado como qualquer outro Produto do sistema.
 
-### 12.3 Do Roteiro Inicial ao Roteiro Detalhado
+### 14.3 Do Roteiro Inicial ao Roteiro Detalhado
 
-Esse Produto Final recebe um Roteiro Inicial (seção 12.4). Quando a
+Esse Produto Final recebe um Roteiro Inicial (seção 14.4). Quando a
 Engenharia libera os desenhos — o que pode acontecer bem depois da
 venda —, nascem os produtos/peças/subconjuntos reais (podem ser dezenas
 ou centenas), cada um com seu próprio Roteiro Detalhado. Esses produtos
@@ -342,7 +389,7 @@ se vinculam ao Produto Final através do mecanismo já existente de
 qualquer outro produto do sistema, sem nenhuma adaptação especial para
 projetos de Desenvolvimento.
 
-### 12.4 Roteiro Inicial do Produto Final
+### 14.4 Roteiro Inicial do Produto Final
 
 O Roteiro Inicial usa o mesmo mecanismo de Roteiro já existente na
 plataforma (Operações → Recurso → Tempo) — só que agregado e estimado,
@@ -352,14 +399,14 @@ venda.
 O valor estimado dos materiais utilizado no Roteiro Inicial integra a
 estimativa comercial do projeto e deve permanecer preservado através
 do mesmo mecanismo de congelamento utilizado pela Proposta Comercial
-(seção 12.7). Alterações posteriores nos preços de catálogo não
+(seção 14.7). Alterações posteriores nos preços de catálogo não
 modificam a estimativa originalmente apresentada ao cliente.
 
 O material previsto do Roteiro Inicial deverá utilizar o mesmo
 mecanismo de gestão de materiais adotado pela plataforma, evitando
 conceitos paralelos exclusivamente para projetos de Desenvolvimento.
 
-### 12.5 As Três Comparações de Precisão
+### 14.5 As Três Comparações de Precisão
 
 Com o Roteiro Inicial, os Roteiros Detalhados dos subconjuntos e as
 Horas Reais Apontadas na produção, a plataforma pode calcular três
@@ -383,17 +430,17 @@ registro histórico da estimativa comercial original, mesmo depois que
 os subconjuntos detalhados existirem e tiverem seus próprios Roteiros
 Detalhados.
 
-### 12.6 Continuidade da Arquitetura
+### 14.6 Continuidade da Arquitetura
 
 Não existe pendência estrutural de schema para viabilizar este fluxo:
 Produto, Roteiro, Subconjunto (Estrutura) e o Congelamento de Custo
-(`custo_congelado`, seção 12.7) já cobrem integralmente o que esta
+(`custo_congelado`, seção 14.7) já cobrem integralmente o que esta
 seção descreve. A única peça que falta implementar é a tela/lógica de
 comparação (Roteiro Inicial × Roteiros Detalhados × Horas Reais
 Apontadas) — não há necessidade de nenhuma estrutura de dados paralela
 exclusiva para projetos de Desenvolvimento.
 
-### 12.7 Congelamento do Roteiro Inicial na Aprovação Comercial
+### 14.7 Congelamento do Roteiro Inicial na Aprovação Comercial
 
 Enquanto o Projeto estiver em elaboração, orçamento ou negociação, o
 Roteiro Inicial pode ser alterado livremente. No momento em que o
@@ -409,7 +456,7 @@ comparações.
 
 ---
 
-## 13. Situação da Base (registro histórico da aprovação desta versão)
+## 15. Situação da Base (registro histórico da aprovação desta versão)
 
 No momento da aprovação desta versão (2026-07-15), já haviam sido
 consolidados: estrutura dos Recursos Produtivos; capacidade diária
@@ -431,7 +478,7 @@ auditorias mais recentes em `knowledge/`.
 
 ---
 
-## 14. Evolução Futura (fora do escopo da versão 1.0)
+## 16. Evolução Futura (fora do escopo da versão 1.0)
 
 Registrado apenas para preservar a direção arquitetural do produto —
 nenhum destes itens faz parte da implementação da versão 1.0:
