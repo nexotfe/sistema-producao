@@ -3,7 +3,7 @@
 **Data:** 2026-07-15
 **Versão:** 1.0
 **Status:** Vigente — referência oficial única
-**Natureza do documento:** consolidação que substitui os 3 documentos de origem
+**Natureza do documento:** consolidação que substitui os 4 documentos de origem
 
 ---
 
@@ -11,7 +11,7 @@
 
 Este documento é a **referência arquitetural única e vigente** da
 Simulação Comercial de Capacidade da NEXOTFE. Ele substitui, como
-referência de uso corrente, os 3 documentos abaixo — que **não foram
+referência de uso corrente, os 4 documentos abaixo — que **não foram
 apagados** e permanecem no repositório apenas como histórico do processo
 de decisão:
 
@@ -21,8 +21,13 @@ de decisão:
   ("Arquitetura do Calendário Operacional para a Simulação Comercial", v1.0)
 - `knowledge/arquitetura-tecnica/2026-07-15-Resumo das decisoes.md`
   ("Decisão final sobre a arquitetura do Calendário Operacional")
+- `knowledge/arquitetura-tecnica/2026-07-15-arquitetura-roteiro-desenvolvimento-v2.md`
+  ("Arquitetura do Roteiro em Projetos de Desenvolvimento", v2.0) —
+  supera a descrição conceitual anterior deste tema ("v1.0"), discutida
+  em conversa mas nunca persistida como arquivo separado no
+  repositório.
 
-Onde os 3 documentos acima divergem entre si, ou de decisões já
+Onde os 4 documentos acima divergem entre si, ou de decisões já
 registradas em `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md`, prevalece o
 texto deste documento. Em particular, o modelo de calendário "seed +
 cópia" descrito no Documento 1 (seção 4) e sugerido no Documento 2 foi
@@ -296,7 +301,115 @@ Possível.
 
 ---
 
-## 12. Situação da Base (registro histórico da aprovação desta versão)
+## 12. Roteiro em Projetos de Desenvolvimento
+
+Em projetos de Desenvolvimento — fabricação sob encomenda cujo Produto
+Final ainda não tem desenho detalhado no momento da venda —, o Roteiro
+nasce agregado e estimado junto com a venda, e evolui para Roteiros
+Detalhados por subconjunto conforme a Engenharia libera os desenhos,
+sem exigir nenhuma estrutura de dados paralela à já existente (Produto,
+Roteiro, Subconjunto). Detalhamento completo em
+`knowledge/arquitetura-tecnica/2026-07-15-arquitetura-roteiro-desenvolvimento-v2.md`.
+
+### 12.1 Terminologia
+
+- **Roteiro Inicial**: termo oficial para o Roteiro agregado/estimado
+  do Produto Final, criado no momento da venda, antes de o desenho
+  detalhado existir. Substitui definitivamente os termos
+  anteriormente cogitados "Roteiro Macro", "Estimativa Macro" e
+  "Roteiro do Projeto" — nenhum dos três deve ser usado daqui em
+  diante.
+- **Roteiro Detalhado**: o Roteiro de cada produto/peça/subconjunto
+  real, criado pela Engenharia após a liberação dos desenhos.
+- **Horas Reais Apontadas**: os apontamentos de produção real (Ordem
+  de Fabricação), usados nas comparações de precisão (seção 12.5).
+
+### 12.2 Produto Final na Venda
+
+O Produto Final (ex.: "Máquina de Clipe") é criado a partir da própria
+solicitação do cliente, no momento da venda — não é um placeholder
+genérico nem um cadastro fictício: é o produto real que o cliente está
+comprando, cadastrado como qualquer outro Produto do sistema.
+
+### 12.3 Do Roteiro Inicial ao Roteiro Detalhado
+
+Esse Produto Final recebe um Roteiro Inicial (seção 12.4). Quando a
+Engenharia libera os desenhos — o que pode acontecer bem depois da
+venda —, nascem os produtos/peças/subconjuntos reais (podem ser dezenas
+ou centenas), cada um com seu próprio Roteiro Detalhado. Esses produtos
+se vinculam ao Produto Final através do mecanismo já existente de
+"Montar Subconjunto" (Estrutura/Subconjuntos) — o mesmo usado em
+qualquer outro produto do sistema, sem nenhuma adaptação especial para
+projetos de Desenvolvimento.
+
+### 12.4 Roteiro Inicial do Produto Final
+
+O Roteiro Inicial usa o mesmo mecanismo de Roteiro já existente na
+plataforma (Operações → Recurso → Tempo) — só que agregado e estimado,
+porque o desenho detalhado do produto ainda não existe no momento da
+venda.
+
+O valor estimado dos materiais utilizado no Roteiro Inicial integra a
+estimativa comercial do projeto e deve permanecer preservado através
+do mesmo mecanismo de congelamento utilizado pela Proposta Comercial
+(seção 12.7). Alterações posteriores nos preços de catálogo não
+modificam a estimativa originalmente apresentada ao cliente.
+
+O material previsto do Roteiro Inicial deverá utilizar o mesmo
+mecanismo de gestão de materiais adotado pela plataforma, evitando
+conceitos paralelos exclusivamente para projetos de Desenvolvimento.
+
+### 12.5 As Três Comparações de Precisão
+
+Com o Roteiro Inicial, os Roteiros Detalhados dos subconjuntos e as
+Horas Reais Apontadas na produção, a plataforma pode calcular três
+comparações de precisão, cada uma medindo uma etapa diferente do
+processo:
+
+- **Precisão da Estimativa Comercial:** Roteiro Inicial (do Produto
+  Final) × soma dos Roteiros Detalhados de todos os subconjuntos
+  vinculados a ele. Mede o quão perto a estimativa comercial original
+  chegou do que a Engenharia efetivamente detalhou.
+- **Precisão do Planejamento Técnico:** soma dos Roteiros Detalhados ×
+  Horas Reais Apontadas (produção). Mede o quão perto o planejamento
+  técnico da Engenharia chegou do que realmente aconteceu no chão de
+  fábrica.
+- **Precisão Global do Processo:** Roteiro Inicial × Horas Reais
+  Apontadas. Mede o quão perto a estimativa comercial original chegou
+  do resultado final real, de ponta a ponta.
+
+O Roteiro Inicial nunca é descartado nem substituído — permanece como
+registro histórico da estimativa comercial original, mesmo depois que
+os subconjuntos detalhados existirem e tiverem seus próprios Roteiros
+Detalhados.
+
+### 12.6 Continuidade da Arquitetura
+
+Não existe pendência estrutural de schema para viabilizar este fluxo:
+Produto, Roteiro, Subconjunto (Estrutura) e o Congelamento de Custo
+(`custo_congelado`, seção 12.7) já cobrem integralmente o que esta
+seção descreve. A única peça que falta implementar é a tela/lógica de
+comparação (Roteiro Inicial × Roteiros Detalhados × Horas Reais
+Apontadas) — não há necessidade de nenhuma estrutura de dados paralela
+exclusiva para projetos de Desenvolvimento.
+
+### 12.7 Congelamento do Roteiro Inicial na Aprovação Comercial
+
+Enquanto o Projeto estiver em elaboração, orçamento ou negociação, o
+Roteiro Inicial pode ser alterado livremente. No momento em que o
+cliente aprova o pedido: (1) o Roteiro Inicial é congelado como
+referência histórica; (2) a Engenharia passa a desenvolver os produtos
+detalhados.
+
+Após a aprovação comercial do projeto, o Roteiro Inicial passa a
+representar oficialmente a estimativa comercial utilizada na venda e
+torna-se um registro histórico. Alterações posteriores deverão ocorrer
+nos roteiros detalhados dos produtos, preservando a rastreabilidade das
+comparações.
+
+---
+
+## 13. Situação da Base (registro histórico da aprovação desta versão)
 
 No momento da aprovação desta versão (2026-07-15), já haviam sido
 consolidados: estrutura dos Recursos Produtivos; capacidade diária
@@ -318,7 +431,7 @@ auditorias mais recentes em `knowledge/`.
 
 ---
 
-## 13. Evolução Futura (fora do escopo da versão 1.0)
+## 14. Evolução Futura (fora do escopo da versão 1.0)
 
 Registrado apenas para preservar a direção arquitetural do produto —
 nenhum destes itens faz parte da implementação da versão 1.0:
