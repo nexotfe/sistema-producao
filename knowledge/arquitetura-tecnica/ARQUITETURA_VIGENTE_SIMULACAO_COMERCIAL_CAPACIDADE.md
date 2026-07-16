@@ -93,7 +93,7 @@ novos cadastros.
 | Calendário Oficial | SISARE |
 | Eventos internos | Empresa |
 | Capacidade | Recursos |
-| Produtividade | Recursos |
+| Produtividade Padrão | Grupo de Recursos (sobrescrita no Recurso) |
 | Quantidade | Orçamento |
 | Tempos | Roteiro |
 
@@ -235,20 +235,23 @@ disponíveis.
 
 ## 8. Produtividade do Recurso
 
-A empresa define uma **Produtividade Padrão** por categoria de recurso,
-usada para reduzir a Capacidade Bruta (seção 7) ao valor efetivamente
-esperado:
+A **Produtividade Padrão** é configurável por Grupo de Recursos —
+decisão livre de cada empresa, que nomeia e organiza seus próprios
+Grupos (ex.: a ENIFER tem 13 grupos hoje, como "Tornos CN" e
+"Caldeiraria/Soldagem"); cada Grupo recebe sua própria Produtividade
+Padrão, usada para reduzir a Capacidade Bruta (seção 7) ao valor
+efetivamente esperado.
 
-| Categoria de Recurso | Produtividade Padrão |
-| --- | --- |
-| Projeto / Engenharia | 75% |
-| Montagem | 75% |
-| Demais Recursos | 85% |
+O Recurso individual herda a Produtividade Padrão do seu Grupo, podendo
+sobrescrever quando necessário (ex.: Torno CNC 02 configurado a 80%
+mesmo que o Grupo "Tornos CN" tenha Produtividade Padrão de 85%). É um
+novo campo no cadastro do Grupo de Recursos, e um novo campo — opcional,
+para o caso de sobrescrita — no cadastro do Recurso Produtivo, análogo
+à Capacidade e ao Valor/Hora.
 
-Cada recurso individual pode sobrescrever esse padrão quando necessário
-(ex.: Torno CNC 02 configurado a 80% em vez do padrão de 85% da sua
-categoria). É um novo campo no cadastro do Recurso Produtivo, análogo à
-Capacidade e ao Valor/Hora.
+Não há categorias fixas definidas pelo sistema. Percentuais como 75% ou
+85%, eventualmente citados como referência, são apenas valores de
+exemplo/sugestão — nunca uma classificação obrigatória.
 
 A Produtividade nunca altera o conteúdo técnico do Roteiro nem o custo
 das Operações. Ela influencia exclusivamente o cálculo da Capacidade
