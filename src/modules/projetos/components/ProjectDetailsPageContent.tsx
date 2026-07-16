@@ -12,6 +12,10 @@ import {
   EditarQuantidadeItemModal,
   type ItemParaEditar,
 } from "@/modules/projetos/components/EditarQuantidadeItemModal";
+import {
+  EditarCustoItemModal,
+  type ItemCustoParaEditar,
+} from "@/modules/projetos/components/EditarCustoItemModal";
 import { useOrcamento } from "@/modules/projetos/hooks/useOrcamento";
 import { PROJECT_TYPE_LABELS } from "@/modules/projetos/constants";
 
@@ -60,12 +64,15 @@ export function ProjectDetailsPageContent({
     salvar,
     adicionarItem,
     editarQuantidadeItem,
+    editarCustoItem,
   } = useOrcamento(projectId);
 
   const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
   const [itemEditando, setItemEditando] = useState<ItemParaEditar | null>(
     null,
   );
+  const [itemCustoEditando, setItemCustoEditando] =
+    useState<ItemCustoParaEditar | null>(null);
 
   // Inputs de texto (nao type="number"): evita o bug conhecido de inputs
   // numericos controlados no React, onde um digito residual ("0" deixado
@@ -120,6 +127,7 @@ export function ProjectDetailsPageContent({
     taxes: formatarMoeda(item.impostos),
     profit: formatarMoeda(item.lucro),
     total: formatarMoeda(item.total),
+    custoCongelado: item.custoCongelado,
   }));
 
   async function handleSalvar() {
@@ -136,6 +144,30 @@ export function ProjectDetailsPageContent({
       pn: item.pn,
       descricao: item.description,
       quantidade: item.quantity,
+    });
+  }
+
+  function handleEditarCusto(item: ProjectStructureItem) {
+    if (!item.id) {
+      return;
+    }
+
+    const itemOrcamento = itens.find((atual) => atual.id === item.id);
+
+    if (!itemOrcamento) {
+      return;
+    }
+
+    const custoUnitario =
+      itemOrcamento.quantidade > 0
+        ? itemOrcamento.custo / itemOrcamento.quantidade
+        : 0;
+
+    setItemCustoEditando({
+      id: itemOrcamento.id,
+      pn: itemOrcamento.pn,
+      descricao: itemOrcamento.descricao,
+      custoUnitario,
     });
   }
 
@@ -320,6 +352,7 @@ export function ProjectDetailsPageContent({
           basePath={`/projetos/${projectId}/estrutura`}
           onAdicionarItem={() => setModalProdutoAberto(true)}
           onEditarItem={handleEditarItem}
+          onEditarCusto={handleEditarCusto}
         />
 
         <ProdutoSearchModal
@@ -334,6 +367,12 @@ export function ProjectDetailsPageContent({
           item={itemEditando}
           onClose={() => setItemEditando(null)}
           onSave={editarQuantidadeItem}
+        />
+
+        <EditarCustoItemModal
+          item={itemCustoEditando}
+          onClose={() => setItemCustoEditando(null)}
+          onSave={editarCustoItem}
         />
 
         {formulaErro && (

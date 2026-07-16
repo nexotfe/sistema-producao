@@ -133,7 +133,7 @@ export function useProjeto(
       const [{ data: itens }, { count: numOfs }] = await Promise.all([
         supabase
           .from("projeto_itens")
-          .select("produto_id,quantidade")
+          .select("produto_id,quantidade,custo_congelado")
           .eq("projeto_id", idProjeto),
         supabase
           .from("ordens_fabricacao")
@@ -144,12 +144,18 @@ export function useProjeto(
       const linhas = (itens ?? []) as {
         produto_id: string;
         quantidade: number;
+        custo_congelado: number | null;
       }[];
 
       const excluirMateriaPrima = tipoAtual === "industrializacao";
       let custoEstimado = 0;
 
       for (const item of linhas) {
+        if (item.custo_congelado !== null) {
+          custoEstimado += Number(item.custo_congelado) * item.quantidade;
+          continue;
+        }
+
         const { data: boms } = await supabase
           .from("boms")
           .select("id,status,created_at")

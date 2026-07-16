@@ -159,7 +159,7 @@ export function useProposta(idProjeto: string | null) {
       // nunca Custo/Impostos/Lucro internos.
       const { data: itensProjeto } = await supabase
         .from("projeto_itens")
-        .select("id,produto_id,pn,descricao,quantidade")
+        .select("id,produto_id,pn,descricao,quantidade,custo_congelado")
         .eq("projeto_id", projeto.id)
         .order("created_at", { ascending: true });
 
@@ -169,6 +169,7 @@ export function useProposta(idProjeto: string | null) {
         pn: string;
         descricao: string;
         quantidade: number;
+        custo_congelado: number | null;
       }[];
 
       const excluirMateriaPrima = projeto.tipo_projeto === "industrializacao";
@@ -197,30 +198,33 @@ export function useProposta(idProjeto: string | null) {
           .eq("id", item.produto_id)
           .single();
 
-        const { data: boms } = await supabase
-          .from("boms")
-          .select("id,status,created_at")
-          .eq("produto_id", item.produto_id)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+        let custoUnitario =
+          item.custo_congelado !== null ? Number(item.custo_congelado) : 0;
 
-        const bomsLista = (boms ?? []) as BomEscolhaRow[];
-        const bomEscolhido =
-          bomsLista.find((bom) => bom.status === "ativo") ?? bomsLista[0];
+        if (item.custo_congelado === null) {
+          const { data: boms } = await supabase
+            .from("boms")
+            .select("id,status,created_at")
+            .eq("produto_id", item.produto_id)
+            .is("deleted_at", null)
+            .order("created_at", { ascending: false });
 
-        let custoUnitario = 0;
+          const bomsLista = (boms ?? []) as BomEscolhaRow[];
+          const bomEscolhido =
+            bomsLista.find((bom) => bom.status === "ativo") ?? bomsLista[0];
 
-        if (bomEscolhido) {
-          const { data: custo } = await supabase.rpc("calcular_custo_bom", {
-            p_bom_id: bomEscolhido.id,
-            p_excluir_materia_prima: excluirMateriaPrima,
-          });
+          if (bomEscolhido) {
+            const { data: custo } = await supabase.rpc("calcular_custo_bom", {
+              p_bom_id: bomEscolhido.id,
+              p_excluir_materia_prima: excluirMateriaPrima,
+            });
 
-          const totalCategoria = (
-            (custo ?? []) as { categoria: string; valor: number }[]
-          ).find((linha) => linha.categoria === "total")?.valor;
+            const totalCategoria = (
+              (custo ?? []) as { categoria: string; valor: number }[]
+            ).find((linha) => linha.categoria === "total")?.valor;
 
-          custoUnitario = Number(totalCategoria ?? 0);
+            custoUnitario = Number(totalCategoria ?? 0);
+          }
         }
 
         const custoItem = custoUnitario * item.quantidade;

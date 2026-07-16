@@ -20,6 +20,7 @@ export type ItemOrcamento = {
   quantidade: number;
   temEstrutura: boolean;
   custo: number;
+  custoCongelado: boolean;
   impostos: number;
   lucro: number;
   total: number;
@@ -195,7 +196,7 @@ export function useOrcamento(idProjeto: string | null) {
 
     const { data: itens } = await supabase
       .from("projeto_itens")
-      .select("id,produto_id,pn,descricao,revisao,quantidade")
+      .select("id,produto_id,pn,descricao,revisao,quantidade,custo_congelado")
       .eq("projeto_id", projeto.id)
       .order("created_at", { ascending: true });
 
@@ -206,6 +207,7 @@ export function useOrcamento(idProjeto: string | null) {
       descricao: string;
       revisao: string | null;
       quantidade: number;
+      custo_congelado: number | null;
     }[];
 
     const excluirMateriaPrima = projeto.tipo_projeto === "industrializacao";
@@ -224,19 +226,22 @@ export function useOrcamento(idProjeto: string | null) {
       const bomEscolhido =
         bomsLista.find((bom) => bom.status === "ativo") ?? bomsLista[0];
 
-      let custoUnitario = 0;
+      let custoUnitario =
+        item.custo_congelado !== null ? Number(item.custo_congelado) : 0;
 
       if (bomEscolhido) {
-        const { data: custo } = await supabase.rpc("calcular_custo_bom", {
-          p_bom_id: bomEscolhido.id,
-          p_excluir_materia_prima: excluirMateriaPrima,
-        });
+        if (item.custo_congelado === null) {
+          const { data: custo } = await supabase.rpc("calcular_custo_bom", {
+            p_bom_id: bomEscolhido.id,
+            p_excluir_materia_prima: excluirMateriaPrima,
+          });
 
-        const total = ((custo ?? []) as { categoria: string; valor: number }[]).find(
-          (linha) => linha.categoria === "total",
-        )?.valor;
+          const total = ((custo ?? []) as { categoria: string; valor: number }[]).find(
+            (linha) => linha.categoria === "total",
+          )?.valor;
 
-        custoUnitario = Number(total ?? 0);
+          custoUnitario = Number(total ?? 0);
+        }
 
         const { data: operacoes } = await supabase
           .from("bom_operacoes")
@@ -264,6 +269,7 @@ export function useOrcamento(idProjeto: string | null) {
         quantidade: item.quantidade,
         temEstrutura: Boolean(bomEscolhido),
         custo: custoUnitario * item.quantidade,
+        custoCongelado: item.custo_congelado !== null,
       });
     }
 
@@ -487,6 +493,36 @@ export function useOrcamento(idProjeto: string | null) {
     return { status: "ok" };
   }
 
+  async function editarCustoItem(
+    id: string,
+    custo: number,
+  ): Promise<ResultadoAdicionarItem> {
+    if (!Number.isFinite(custo) || custo < 0) {
+      return {
+        status: "erro",
+        mensagem: "Informe um custo numérico maior ou igual a zero.",
+      };
+    }
+
+    const { error } = await supabase
+      .from("projeto_itens")
+      .update({
+        custo_congelado: custo,
+        custo_congelado_em: new Date().toISOString(),
+        custo_editado_manualmente: true,
+      })
+      .eq("id", id)
+      .not("custo_congelado", "is", null);
+
+    if (error) {
+      return { status: "erro", mensagem: error.message };
+    }
+
+    await carregar();
+
+    return { status: "ok" };
+  }
+
   return {
     loading,
     erro,
@@ -518,5 +554,6 @@ export function useOrcamento(idProjeto: string | null) {
     salvar,
     adicionarItem,
     editarQuantidadeItem,
+    editarCustoItem,
   };
 }

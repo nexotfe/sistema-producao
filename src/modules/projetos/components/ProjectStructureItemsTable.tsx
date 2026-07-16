@@ -20,6 +20,7 @@ export type ProjectStructureItem = {
   taxes?: string;
   profit?: string;
   total?: string;
+  custoCongelado?: boolean;
 };
 
 type ProjectStructureItemsTableProps = {
@@ -31,6 +32,7 @@ type ProjectStructureItemsTableProps = {
   hierarchyBackHref?: string;
   onAdicionarItem?: () => void;
   onEditarItem?: (item: ProjectStructureItem) => void;
+  onEditarCusto?: (item: ProjectStructureItem) => void;
 };
 
 export function ProjectStructureItemsTable({
@@ -42,6 +44,7 @@ export function ProjectStructureItemsTable({
   hierarchyBackHref,
   onAdicionarItem,
   onEditarItem,
+  onEditarCusto,
 }: ProjectStructureItemsTableProps) {
   const [createdStructures, setCreatedStructures] = useState<
     Record<string, boolean>
@@ -175,6 +178,17 @@ export function ProjectStructureItemsTable({
                   </td>
                   <td className="px-4 py-4 text-center align-middle text-slate-700">
                     {item.cost ?? "—"}
+                    {onEditarCusto && item.id && item.custoCongelado ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditarCusto(item)}
+                        aria-label={`Editar custo congelado de ${item.description}`}
+                        title="Valor congelado — editável manualmente"
+                        className="ml-1.5 text-xs font-semibold text-blue-700 hover:underline"
+                      >
+                        ✎
+                      </button>
+                    ) : null}
                   </td>
                   <td className="px-4 py-4 text-center align-middle text-slate-700">
                     {item.taxes ?? "—"}
