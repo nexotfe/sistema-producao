@@ -250,6 +250,12 @@ Cada recurso individual pode sobrescrever esse padrão quando necessário
 categoria). É um novo campo no cadastro do Recurso Produtivo, análogo à
 Capacidade e ao Valor/Hora.
 
+A Produtividade nunca altera o conteúdo técnico do Roteiro nem o custo
+das Operações. Ela influencia exclusivamente o cálculo da Capacidade
+Disponível do recurso, afetando o prazo necessário para absorver a
+carga de trabalho — nunca o volume de horas ou o custo do trabalho em
+si.
+
 A Produtividade do Recurso não é exclusiva da Simulação Comercial — o
 futuro módulo de PCP também vai utilizá-la para controle de produção.
 Mesmo princípio da Responsabilidade Única (seção 3): a Produtividade
