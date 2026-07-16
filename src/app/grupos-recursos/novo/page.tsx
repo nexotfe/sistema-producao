@@ -15,6 +15,8 @@ export default function NovoGrupoRecursoPage() {
     setDescricao,
     unidadeCapacidade,
     setUnidadeCapacidade,
+    produtividadePadrao,
+    setProdutividadePadrao,
     loading,
     erro,
     salvarGrupo,
@@ -89,6 +91,11 @@ export default function NovoGrupoRecursoPage() {
                 label="Unidade de capacidade"
                 value={unidadeCapacidade}
                 onChange={setUnidadeCapacidade}
+              />
+              <Field
+                label="Produtividade Padrão (%)"
+                value={produtividadePadrao}
+                onChange={setProdutividadePadrao}
               />
             </div>
           </Card>

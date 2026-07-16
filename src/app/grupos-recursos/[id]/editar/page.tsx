@@ -23,6 +23,8 @@ export default function EditarGrupoRecursoPage({ params }: Props) {
     setDescricao,
     unidadeCapacidade,
     setUnidadeCapacidade,
+    produtividadePadrao,
+    setProdutividadePadrao,
     loading,
     salvando,
     erro,
@@ -73,6 +75,11 @@ export default function EditarGrupoRecursoPage({ params }: Props) {
                 label="Unidade de capacidade"
                 value={unidadeCapacidade}
                 onChange={setUnidadeCapacidade}
+              />
+              <Field
+                label="Produtividade Padrão (%)"
+                value={produtividadePadrao}
+                onChange={setProdutividadePadrao}
               />
             </div>
           </Card>

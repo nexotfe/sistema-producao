@@ -14,6 +14,7 @@ export function useEditarGrupoRecurso(id: string) {
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [unidadeCapacidade, setUnidadeCapacidade] = useState("");
+  const [produtividadePadrao, setProdutividadePadrao] = useState("");
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -31,7 +32,9 @@ export function useEditarGrupoRecurso(id: string) {
 
       const { data, error } = await supabase
         .from("grupos_recursos")
-        .select("id,codigo,nome,descricao,unidade_capacidade")
+        .select(
+          "id,codigo,nome,descricao,unidade_capacidade,produtividade_padrao",
+        )
         .eq("id", id)
         .single();
 
@@ -45,6 +48,12 @@ export function useEditarGrupoRecurso(id: string) {
       setNome(data.nome ?? "");
       setDescricao(data.descricao ?? "");
       setUnidadeCapacidade(data.unidade_capacidade ?? "");
+      setProdutividadePadrao(
+        data.produtividade_padrao !== null &&
+          data.produtividade_padrao !== undefined
+          ? String(Number(data.produtividade_padrao) * 100)
+          : "",
+      );
       setLoading(false);
     }
 
@@ -71,6 +80,25 @@ export function useEditarGrupoRecurso(id: string) {
         return false;
       }
 
+      const produtividadePreenchida = produtividadePadrao.trim() !== "";
+      const produtividadePercentual = produtividadePreenchida
+        ? Number(produtividadePadrao.replace(",", "."))
+        : null;
+
+      if (
+        produtividadePreenchida &&
+        (!Number.isFinite(produtividadePercentual) ||
+          (produtividadePercentual as number) <= 0 ||
+          (produtividadePercentual as number) > 100)
+      ) {
+        setErro("Produtividade Padrão deve ser um número entre 0 e 100.");
+        return false;
+      }
+
+      const produtividadeFracao = produtividadePreenchida
+        ? (produtividadePercentual as number) / 100
+        : null;
+
       const { error } = await supabase
         .from("grupos_recursos")
         .update({
@@ -78,6 +106,7 @@ export function useEditarGrupoRecurso(id: string) {
           nome,
           descricao,
           unidade_capacidade: unidadeCapacidade || "h/dia",
+          produtividade_padrao: produtividadeFracao,
         })
         .eq("id", id);
 
@@ -111,6 +140,8 @@ export function useEditarGrupoRecurso(id: string) {
     setDescricao,
     unidadeCapacidade,
     setUnidadeCapacidade,
+    produtividadePadrao,
+    setProdutividadePadrao,
     loading,
     salvando,
     erro,

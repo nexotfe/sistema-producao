@@ -20,6 +20,7 @@ export function useEditarRecurso(id: string) {
   const [capacidade, setCapacidade] = useState("");
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
+  const [produtividade, setProdutividade] = useState("");
   const [valorHora, setValorHora] = useState("0");
   const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,10 @@ export function useEditarRecurso(id: string) {
         ) / 100
       : null;
 
+  const produtividadeHerdada =
+    grupos.find((grupo) => grupo.id === grupoId)?.produtividade_padrao ??
+    null;
+
   useEffect(() => {
     async function carregarDados() {
       if (!id) {
@@ -61,13 +66,13 @@ export function useEditarRecurso(id: string) {
         supabase
           .from("recursos_produtivos")
           .select(
-            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,carga_horaria_semanal,dias_trabalhados_semana,valor_hora",
+            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
           )
           .eq("id", id)
           .single(),
         supabase
           .from("grupos_recursos")
-          .select("id,codigo,nome,setor")
+          .select("id,codigo,nome,setor,produtividade_padrao")
           .order("nome", { ascending: true }),
       ]);
 
@@ -101,6 +106,11 @@ export function useEditarRecurso(id: string) {
         recurso.dias_trabalhados_semana !== null &&
           recurso.dias_trabalhados_semana !== undefined
           ? String(recurso.dias_trabalhados_semana)
+          : "",
+      );
+      setProdutividade(
+        recurso.produtividade !== null && recurso.produtividade !== undefined
+          ? String(Number(recurso.produtividade) * 100)
           : "",
       );
       setValorHora(
@@ -178,6 +188,25 @@ export function useEditarRecurso(id: string) {
         return false;
       }
 
+      const produtividadePreenchida = produtividade.trim() !== "";
+      const produtividadePercentual = produtividadePreenchida
+        ? Number(produtividade.replace(",", "."))
+        : null;
+
+      if (
+        produtividadePreenchida &&
+        (!Number.isFinite(produtividadePercentual) ||
+          (produtividadePercentual as number) <= 0 ||
+          (produtividadePercentual as number) > 100)
+      ) {
+        setErro("Produtividade deve ser um número entre 0 e 100.");
+        return false;
+      }
+
+      const produtividadeFracao = produtividadePreenchida
+        ? (produtividadePercentual as number) / 100
+        : null;
+
       const { error } = await supabase
         .from("recursos_produtivos")
         .update({
@@ -190,6 +219,7 @@ export function useEditarRecurso(id: string) {
           capacidade: capacidadeNumerica,
           carga_horaria_semanal: cargaHorariaSemanalNumerica,
           dias_trabalhados_semana: diasTrabalhadosSemanaNumerico,
+          produtividade: produtividadeFracao,
           ...(capacidadeHorasDiaCalculada !== null
             ? { capacidade_horas_dia: capacidadeHorasDiaCalculada }
             : {}),
@@ -238,6 +268,9 @@ export function useEditarRecurso(id: string) {
     diasTrabalhadosSemana,
     setDiasTrabalhadosSemana,
     capacidadeHorasDiaCalculada,
+    produtividade,
+    setProdutividade,
+    produtividadeHerdada,
     valorHora,
     setValorHora,
     grupos,

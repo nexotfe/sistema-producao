@@ -14,6 +14,7 @@ export function useNovoGrupoRecurso() {
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [unidadeCapacidade, setUnidadeCapacidade] = useState("h/dia");
+  const [produtividadePadrao, setProdutividadePadrao] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -31,6 +32,25 @@ export function useNovoGrupoRecurso() {
         setErro("Informe o nome do grupo.");
         return false;
       }
+
+      const produtividadePreenchida = produtividadePadrao.trim() !== "";
+      const produtividadePercentual = produtividadePreenchida
+        ? Number(produtividadePadrao.replace(",", "."))
+        : null;
+
+      if (
+        produtividadePreenchida &&
+        (!Number.isFinite(produtividadePercentual) ||
+          (produtividadePercentual as number) <= 0 ||
+          (produtividadePercentual as number) > 100)
+      ) {
+        setErro("Produtividade Padrão deve ser um número entre 0 e 100.");
+        return false;
+      }
+
+      const produtividadeFracao = produtividadePreenchida
+        ? (produtividadePercentual as number) / 100
+        : null;
 
       const {
         data: { user },
@@ -59,6 +79,7 @@ export function useNovoGrupoRecurso() {
         nome,
         descricao,
         unidade_capacidade: unidadeCapacidade || "h/dia",
+        produtividade_padrao: produtividadeFracao,
         ativo: true,
       });
 
@@ -92,6 +113,8 @@ export function useNovoGrupoRecurso() {
     setDescricao,
     unidadeCapacidade,
     setUnidadeCapacidade,
+    produtividadePadrao,
+    setProdutividadePadrao,
     loading,
     erro,
     salvarGrupo,

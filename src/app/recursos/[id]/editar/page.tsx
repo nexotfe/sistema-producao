@@ -34,6 +34,9 @@ export default function EditarRecursoPage({ params }: Props) {
     diasTrabalhadosSemana,
     setDiasTrabalhadosSemana,
     capacidadeHorasDiaCalculada,
+    produtividade,
+    setProdutividade,
+    produtividadeHerdada,
     valorHora,
     setValorHora,
     grupos,
@@ -142,6 +145,27 @@ export default function EditarRecursoPage({ params }: Props) {
                   className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
                 />
               </div>
+              <Field
+                label="Produtividade (%)"
+                value={produtividade}
+                onChange={setProdutividade}
+              />
+              {produtividade.trim() === "" && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    Produtividade herdada do Grupo
+                  </label>
+                  <input
+                    value={
+                      produtividadeHerdada !== null
+                        ? `${Math.round(produtividadeHerdada * 10000) / 100}%`
+                        : "Grupo sem Produtividade Padrão definida"
+                    }
+                    readOnly
+                    className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
+                  />
+                </div>
+              )}
             </div>
           </Card>
 

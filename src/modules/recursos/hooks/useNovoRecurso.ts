@@ -20,6 +20,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
   const [capacidade, setCapacidade] = useState("");
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
+  const [produtividade, setProdutividade] = useState("");
   const [valorHora, setValorHora] = useState("0");
   const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,13 +48,17 @@ export function useNovoRecurso(duplicarId?: string | null) {
         ) / 100
       : null;
 
+  const produtividadeHerdada =
+    grupos.find((grupo) => grupo.id === grupoId)?.produtividade_padrao ??
+    null;
+
   useEffect(() => {
     async function carregarGrupos() {
       setLoadingGrupos(true);
 
       const { data } = await supabase
         .from("grupos_recursos")
-        .select("id,codigo,nome,setor")
+        .select("id,codigo,nome,setor,produtividade_padrao")
         .order("nome", { ascending: true });
 
       setGrupos((data ?? []) as GrupoRecurso[]);
@@ -75,7 +80,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
       const { data, error } = await supabase
         .from("recursos_produtivos")
         .select(
-          "grupo_id,nome,fabricante,modelo,setor,capacidade,carga_horaria_semanal,dias_trabalhados_semana,valor_hora",
+          "grupo_id,nome,fabricante,modelo,setor,capacidade,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
         )
         .eq("id", duplicarId)
         .single();
@@ -101,6 +106,11 @@ export function useNovoRecurso(duplicarId?: string | null) {
           data.dias_trabalhados_semana !== null &&
             data.dias_trabalhados_semana !== undefined
             ? String(data.dias_trabalhados_semana)
+            : "",
+        );
+        setProdutividade(
+          data.produtividade !== null && data.produtividade !== undefined
+            ? String(Number(data.produtividade) * 100)
             : "",
         );
         setValorHora(
@@ -175,6 +185,25 @@ export function useNovoRecurso(duplicarId?: string | null) {
         return false;
       }
 
+      const produtividadePreenchida = produtividade.trim() !== "";
+      const produtividadePercentual = produtividadePreenchida
+        ? Number(produtividade.replace(",", "."))
+        : null;
+
+      if (
+        produtividadePreenchida &&
+        (!Number.isFinite(produtividadePercentual) ||
+          (produtividadePercentual as number) <= 0 ||
+          (produtividadePercentual as number) > 100)
+      ) {
+        setErro("Produtividade deve ser um número entre 0 e 100.");
+        return false;
+      }
+
+      const produtividadeFracao = produtividadePreenchida
+        ? (produtividadePercentual as number) / 100
+        : null;
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -208,6 +237,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
         carga_horaria_semanal: cargaHorariaSemanalNumerica,
         dias_trabalhados_semana: diasTrabalhadosSemanaNumerico,
         capacidade_horas_dia: capacidadeHorasDiaCalculada,
+        produtividade: produtividadeFracao,
         valor_hora: valorHoraNumerico,
         ativo: true,
       });
@@ -253,6 +283,9 @@ export function useNovoRecurso(duplicarId?: string | null) {
     diasTrabalhadosSemana,
     setDiasTrabalhadosSemana,
     capacidadeHorasDiaCalculada,
+    produtividade,
+    setProdutividade,
+    produtividadeHerdada,
     valorHora,
     setValorHora,
     grupos,

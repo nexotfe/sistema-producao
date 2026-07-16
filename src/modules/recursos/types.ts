@@ -5,6 +5,7 @@ export type GrupoRecurso = {
   codigo: string | null;
   nome: string | null;
   setor: string | null;
+  produtividade_padrao?: number | null;
 };
 
 export type RecursoProdutivo = {
