@@ -19,8 +19,6 @@ export default function NovoRecursoPage() {
     setFabricante,
     modelo,
     setModelo,
-    capacidade,
-    setCapacidade,
     cargaHorariaSemanal,
     setCargaHorariaSemanal,
     diasTrabalhadosSemana,
@@ -142,11 +140,6 @@ export default function NovoRecursoPage() {
                     onChange={setFabricante}
                   />
                   <Field label="Modelo" value={modelo} onChange={setModelo} />
-                  <Field
-                    label="Capacidade"
-                    value={capacidade}
-                    onChange={setCapacidade}
-                  />
                   <Field
                     label="Carga Horária Semanal (h)"
                     value={cargaHorariaSemanal}

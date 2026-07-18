@@ -27,13 +27,11 @@ export default function EditarRecursoPage({ params }: Props) {
     setModelo,
     setor,
     setSetor,
-    capacidade,
-    setCapacidade,
     cargaHorariaSemanal,
     setCargaHorariaSemanal,
     diasTrabalhadosSemana,
     setDiasTrabalhadosSemana,
-    capacidadeHorasDiaCalculada,
+    capacidadeHorasDiaExibida,
     produtividade,
     setProdutividade,
     produtividadeModo,
@@ -119,11 +117,6 @@ export default function EditarRecursoPage({ params }: Props) {
               />
               <Field label="Modelo" value={modelo} onChange={setModelo} />
               <Field
-                label="Capacidade"
-                value={capacidade}
-                onChange={setCapacidade}
-              />
-              <Field
                 label="Carga Horária Semanal (h)"
                 value={cargaHorariaSemanal}
                 onChange={setCargaHorariaSemanal}
@@ -135,12 +128,12 @@ export default function EditarRecursoPage({ params }: Props) {
               />
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Capacidade Diária (calculada)
+                  Capacidade Diária
                 </label>
                 <input
                   value={
-                    capacidadeHorasDiaCalculada !== null
-                      ? `${capacidadeHorasDiaCalculada} h/dia`
+                    capacidadeHorasDiaExibida !== null
+                      ? `${capacidadeHorasDiaExibida} h/dia`
                       : ""
                   }
                   readOnly

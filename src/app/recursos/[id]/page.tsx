@@ -130,7 +130,15 @@ export default function RecursoPage({ params }: Props) {
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2 xl:grid-cols-3">
               <Info label="Fabricante" value={recurso.fabricante} />
               <Info label="Modelo" value={recurso.modelo} />
-              <Info label="Capacidade" value={formatNumero(recurso.capacidade)} />
+              <Info
+                label="Capacidade Diária"
+                value={
+                  recurso.capacidade_horas_dia !== null &&
+                  recurso.capacidade_horas_dia !== undefined
+                    ? `${formatNumero(recurso.capacidade_horas_dia)} h/dia`
+                    : null
+                }
+              />
             </div>
           </Card>
 

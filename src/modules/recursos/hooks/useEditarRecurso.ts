@@ -17,7 +17,9 @@ export function useEditarRecurso(id: string) {
   const [fabricante, setFabricante] = useState("");
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
-  const [capacidade, setCapacidade] = useState("");
+  const [capacidadeHorasDiaSalva, setCapacidadeHorasDiaSalva] = useState<
+    number | null
+  >(null);
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
   const [produtividade, setProdutividade] = useState("");
@@ -50,6 +52,9 @@ export function useEditarRecurso(id: string) {
         ) / 100
       : null;
 
+  const capacidadeHorasDiaExibida =
+    capacidadeHorasDiaCalculada ?? capacidadeHorasDiaSalva;
+
   const produtividadeHerdada =
     grupos.find((grupo) => grupo.id === grupoId)?.produtividade_padrao ??
     null;
@@ -77,7 +82,7 @@ export function useEditarRecurso(id: string) {
         supabase
           .from("recursos_produtivos")
           .select(
-            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
+            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade_horas_dia,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
           )
           .eq("id", id)
           .single(),
@@ -102,10 +107,11 @@ export function useEditarRecurso(id: string) {
       setFabricante(recurso.fabricante ?? "");
       setModelo(recurso.modelo ?? "");
       setSetor(recurso.setor ?? "");
-      setCapacidade(
-        recurso.capacidade !== null && recurso.capacidade !== undefined
-          ? String(recurso.capacidade)
-          : "",
+      setCapacidadeHorasDiaSalva(
+        recurso.capacidade_horas_dia !== null &&
+          recurso.capacidade_horas_dia !== undefined
+          ? Number(recurso.capacidade_horas_dia)
+          : null,
       );
       setCargaHorariaSemanal(
         recurso.carga_horaria_semanal !== null &&
@@ -165,13 +171,7 @@ export function useEditarRecurso(id: string) {
         return false;
       }
 
-      const capacidadeNumerica = capacidade ? Number(capacidade) : null;
       const valorHoraNumerico = parseValorHora(valorHora);
-
-      if (capacidade && !Number.isFinite(capacidadeNumerica)) {
-        setErro("Capacidade deve ser numerica. Medidas podem ficar em modelo.");
-        return false;
-      }
 
       if (!Number.isFinite(valorHoraNumerico) || valorHoraNumerico < 0) {
         setErro("Valor Hora deve ser numerico e maior ou igual a zero.");
@@ -235,7 +235,6 @@ export function useEditarRecurso(id: string) {
           fabricante,
           modelo,
           setor,
-          capacidade: capacidadeNumerica,
           carga_horaria_semanal: cargaHorariaSemanalNumerica,
           dias_trabalhados_semana: diasTrabalhadosSemanaNumerico,
           produtividade: produtividadeFracao,
@@ -280,13 +279,11 @@ export function useEditarRecurso(id: string) {
     setModelo,
     setor,
     setSetor,
-    capacidade,
-    setCapacidade,
     cargaHorariaSemanal,
     setCargaHorariaSemanal,
     diasTrabalhadosSemana,
     setDiasTrabalhadosSemana,
-    capacidadeHorasDiaCalculada,
+    capacidadeHorasDiaExibida,
     produtividade,
     setProdutividade,
     produtividadeModo,

@@ -30,7 +30,7 @@ export function useRecurso(id: string) {
       const { data, error } = await supabase
         .from("recursos_produtivos")
         .select(
-          "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,valor_hora,ativo,created_at",
+          "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade_horas_dia,valor_hora,ativo,created_at",
         )
         .eq("id", id)
         .single();

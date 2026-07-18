@@ -157,7 +157,10 @@ export function RecursosTable({
 
                     {colunasVisiveis.capacidade && (
                       <td className="px-5 py-3 text-sm text-slate-600">
-                        {formatNumero(recurso.capacidade)}
+                        {recurso.capacidade_horas_dia !== null &&
+                        recurso.capacidade_horas_dia !== undefined
+                          ? `${formatNumero(recurso.capacidade_horas_dia)} h/dia`
+                          : "Nao informada"}
                       </td>
                     )}
 

@@ -17,7 +17,6 @@ export function useNovoRecurso(duplicarId?: string | null) {
   const [fabricante, setFabricante] = useState("");
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
-  const [capacidade, setCapacidade] = useState("");
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
   const [produtividade, setProdutividade] = useState("");
@@ -91,7 +90,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
       const { data, error } = await supabase
         .from("recursos_produtivos")
         .select(
-          "grupo_id,nome,fabricante,modelo,setor,capacidade,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
+          "grupo_id,nome,fabricante,modelo,setor,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
         )
         .eq("id", duplicarId)
         .single();
@@ -102,11 +101,6 @@ export function useNovoRecurso(duplicarId?: string | null) {
         setFabricante(data.fabricante ?? "");
         setModelo(data.modelo ?? "");
         setSetor(data.setor ?? "");
-        setCapacidade(
-          data.capacidade !== null && data.capacidade !== undefined
-            ? String(data.capacidade)
-            : "",
-        );
         setCargaHorariaSemanal(
           data.carga_horaria_semanal !== null &&
             data.carga_horaria_semanal !== undefined
@@ -162,13 +156,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
         return false;
       }
 
-      const capacidadeNumerica = capacidade ? Number(capacidade) : null;
       const valorHoraNumerico = parseValorHora(valorHora);
-
-      if (capacidade && !Number.isFinite(capacidadeNumerica)) {
-        setErro("Capacidade deve ser numerica. Medidas podem ficar em modelo.");
-        return false;
-      }
 
       if (!Number.isFinite(valorHoraNumerico) || valorHoraNumerico < 0) {
         setErro("Valor Hora deve ser numerico e maior ou igual a zero.");
@@ -252,7 +240,6 @@ export function useNovoRecurso(duplicarId?: string | null) {
         fabricante,
         modelo,
         setor,
-        capacidade: capacidadeNumerica,
         carga_horaria_semanal: cargaHorariaSemanalNumerica,
         dias_trabalhados_semana: diasTrabalhadosSemanaNumerico,
         capacidade_horas_dia: capacidadeHorasDiaCalculada,
@@ -295,8 +282,6 @@ export function useNovoRecurso(duplicarId?: string | null) {
     setModelo,
     setor,
     setSetor,
-    capacidade,
-    setCapacidade,
     cargaHorariaSemanal,
     setCargaHorariaSemanal,
     diasTrabalhadosSemana,
