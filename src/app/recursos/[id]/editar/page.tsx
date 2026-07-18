@@ -36,6 +36,8 @@ export default function EditarRecursoPage({ params }: Props) {
     capacidadeHorasDiaCalculada,
     produtividade,
     setProdutividade,
+    produtividadeModo,
+    setProdutividadeModo,
     produtividadeHerdada,
     valorHora,
     setValorHora,
@@ -145,12 +147,36 @@ export default function EditarRecursoPage({ params }: Props) {
                   className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
                 />
               </div>
-              <Field
-                label="Produtividade (%)"
-                value={produtividade}
-                onChange={setProdutividade}
-              />
-              {produtividade.trim() === "" && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Produtividade
+                </label>
+                <div className="flex overflow-hidden rounded-lg border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setProdutividadeModo("herdar")}
+                    className={`h-11 flex-1 text-sm font-medium transition ${
+                      produtividadeModo === "herdar"
+                        ? "bg-slate-950 text-white"
+                        : "bg-app-card text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    Herdar do Grupo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProdutividadeModo("especifico")}
+                    className={`h-11 flex-1 border-l border-slate-200 text-sm font-medium transition ${
+                      produtividadeModo === "especifico"
+                        ? "bg-slate-950 text-white"
+                        : "bg-app-card text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    Usar valor específico
+                  </button>
+                </div>
+              </div>
+              {produtividadeModo === "herdar" ? (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Produtividade herdada do Grupo
@@ -165,6 +191,12 @@ export default function EditarRecursoPage({ params }: Props) {
                     className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
                   />
                 </div>
+              ) : (
+                <Field
+                  label="Produtividade (%)"
+                  value={produtividade}
+                  onChange={setProdutividade}
+                />
               )}
             </div>
           </Card>

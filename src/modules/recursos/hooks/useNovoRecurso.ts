@@ -21,6 +21,9 @@ export function useNovoRecurso(duplicarId?: string | null) {
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
   const [produtividade, setProdutividade] = useState("");
+  const [produtividadeModo, setProdutividadeModoState] = useState<
+    "herdar" | "especifico"
+  >("herdar");
   const [valorHora, setValorHora] = useState("0");
   const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,6 +54,14 @@ export function useNovoRecurso(duplicarId?: string | null) {
   const produtividadeHerdada =
     grupos.find((grupo) => grupo.id === grupoId)?.produtividade_padrao ??
     null;
+
+  function setProdutividadeModo(modo: "herdar" | "especifico") {
+    setProdutividadeModoState(modo);
+
+    if (modo === "herdar") {
+      setProdutividade("");
+    }
+  }
 
   useEffect(() => {
     async function carregarGrupos() {
@@ -112,6 +123,11 @@ export function useNovoRecurso(duplicarId?: string | null) {
           data.produtividade !== null && data.produtividade !== undefined
             ? String(Number(data.produtividade) * 100)
             : "",
+        );
+        setProdutividadeModoState(
+          data.produtividade !== null && data.produtividade !== undefined
+            ? "especifico"
+            : "herdar",
         );
         setValorHora(
           data.valor_hora !== null && data.valor_hora !== undefined
@@ -185,24 +201,27 @@ export function useNovoRecurso(duplicarId?: string | null) {
         return false;
       }
 
-      const produtividadePreenchida = produtividade.trim() !== "";
-      const produtividadePercentual = produtividadePreenchida
-        ? Number(produtividade.replace(",", "."))
-        : null;
+      const produtividadePercentual =
+        produtividadeModo === "especifico"
+          ? Number(produtividade.replace(",", "."))
+          : null;
 
       if (
-        produtividadePreenchida &&
+        produtividadeModo === "especifico" &&
         (!Number.isFinite(produtividadePercentual) ||
           (produtividadePercentual as number) <= 0 ||
           (produtividadePercentual as number) > 100)
       ) {
-        setErro("Produtividade deve ser um número entre 0 e 100.");
+        setErro(
+          "Produtividade deve ser um número entre 0 e 100 quando \"Usar valor específico\" está selecionado.",
+        );
         return false;
       }
 
-      const produtividadeFracao = produtividadePreenchida
-        ? (produtividadePercentual as number) / 100
-        : null;
+      const produtividadeFracao =
+        produtividadeModo === "especifico"
+          ? (produtividadePercentual as number) / 100
+          : null;
 
       const {
         data: { user },
@@ -285,6 +304,8 @@ export function useNovoRecurso(duplicarId?: string | null) {
     capacidadeHorasDiaCalculada,
     produtividade,
     setProdutividade,
+    produtividadeModo,
+    setProdutividadeModo,
     produtividadeHerdada,
     valorHora,
     setValorHora,

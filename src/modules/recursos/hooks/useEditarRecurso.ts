@@ -21,6 +21,9 @@ export function useEditarRecurso(id: string) {
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
   const [produtividade, setProdutividade] = useState("");
+  const [produtividadeModo, setProdutividadeModoState] = useState<
+    "herdar" | "especifico"
+  >("herdar");
   const [valorHora, setValorHora] = useState("0");
   const [grupos, setGrupos] = useState<GrupoRecurso[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +53,14 @@ export function useEditarRecurso(id: string) {
   const produtividadeHerdada =
     grupos.find((grupo) => grupo.id === grupoId)?.produtividade_padrao ??
     null;
+
+  function setProdutividadeModo(modo: "herdar" | "especifico") {
+    setProdutividadeModoState(modo);
+
+    if (modo === "herdar") {
+      setProdutividade("");
+    }
+  }
 
   useEffect(() => {
     async function carregarDados() {
@@ -112,6 +123,11 @@ export function useEditarRecurso(id: string) {
         recurso.produtividade !== null && recurso.produtividade !== undefined
           ? String(Number(recurso.produtividade) * 100)
           : "",
+      );
+      setProdutividadeModoState(
+        recurso.produtividade !== null && recurso.produtividade !== undefined
+          ? "especifico"
+          : "herdar",
       );
       setValorHora(
         recurso.valor_hora !== null && recurso.valor_hora !== undefined
@@ -188,24 +204,27 @@ export function useEditarRecurso(id: string) {
         return false;
       }
 
-      const produtividadePreenchida = produtividade.trim() !== "";
-      const produtividadePercentual = produtividadePreenchida
-        ? Number(produtividade.replace(",", "."))
-        : null;
+      const produtividadePercentual =
+        produtividadeModo === "especifico"
+          ? Number(produtividade.replace(",", "."))
+          : null;
 
       if (
-        produtividadePreenchida &&
+        produtividadeModo === "especifico" &&
         (!Number.isFinite(produtividadePercentual) ||
           (produtividadePercentual as number) <= 0 ||
           (produtividadePercentual as number) > 100)
       ) {
-        setErro("Produtividade deve ser um número entre 0 e 100.");
+        setErro(
+          "Produtividade deve ser um número entre 0 e 100 quando \"Usar valor específico\" está selecionado.",
+        );
         return false;
       }
 
-      const produtividadeFracao = produtividadePreenchida
-        ? (produtividadePercentual as number) / 100
-        : null;
+      const produtividadeFracao =
+        produtividadeModo === "especifico"
+          ? (produtividadePercentual as number) / 100
+          : null;
 
       const { error } = await supabase
         .from("recursos_produtivos")
@@ -270,6 +289,8 @@ export function useEditarRecurso(id: string) {
     capacidadeHorasDiaCalculada,
     produtividade,
     setProdutividade,
+    produtividadeModo,
+    setProdutividadeModo,
     produtividadeHerdada,
     valorHora,
     setValorHora,

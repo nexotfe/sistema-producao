@@ -28,6 +28,8 @@ export default function NovoRecursoPage() {
     capacidadeHorasDiaCalculada,
     produtividade,
     setProdutividade,
+    produtividadeModo,
+    setProdutividadeModo,
     produtividadeHerdada,
     valorHora,
     setValorHora,
@@ -169,12 +171,36 @@ export default function NovoRecursoPage() {
                       className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none"
                     />
                   </div>
-                  <Field
-                    label="Produtividade (%)"
-                    value={produtividade}
-                    onChange={setProdutividade}
-                  />
-                  {produtividade.trim() === "" && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      Produtividade
+                    </label>
+                    <div className="flex overflow-hidden rounded-md border border-slate-300">
+                      <button
+                        type="button"
+                        onClick={() => setProdutividadeModo("herdar")}
+                        className={`h-10 flex-1 text-xs font-semibold transition ${
+                          produtividadeModo === "herdar"
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        Herdar do Grupo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProdutividadeModo("especifico")}
+                        className={`h-10 flex-1 border-l border-slate-300 text-xs font-semibold transition ${
+                          produtividadeModo === "especifico"
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        Usar valor específico
+                      </button>
+                    </div>
+                  </div>
+                  {produtividadeModo === "herdar" ? (
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                         Produtividade herdada do Grupo
@@ -189,6 +215,12 @@ export default function NovoRecursoPage() {
                         className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none"
                       />
                     </div>
+                  ) : (
+                    <Field
+                      label="Produtividade (%)"
+                      value={produtividade}
+                      onChange={setProdutividade}
+                    />
                   )}
                 </div>
               </Card>
