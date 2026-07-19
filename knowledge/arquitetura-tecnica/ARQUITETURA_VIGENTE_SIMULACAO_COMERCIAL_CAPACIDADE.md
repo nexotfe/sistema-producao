@@ -96,6 +96,8 @@ novos cadastros.
 | Produtividade Padrão | Grupo de Recursos (sobrescrita no Recurso) |
 | Quantidade | Orçamento |
 | Tempos | Roteiro |
+| Situação Comercial | Projeto (fato registrado pelo vendedor) |
+| Cenário de Demanda | Configuração da Empresa (decide quais fases contam) |
 
 ---
 
@@ -291,19 +293,76 @@ operacional da Produção e não fazem parte deste cálculo.
 
 ---
 
-## 10. Demanda
+## 10. Situação Comercial e Cenário de Demanda
 
-A demanda pode ser analisada sob três visões independentes (terminologia
-"Demanda" — antes chamada "Visão"):
+Substitui integralmente o modelo anterior de "Demanda: Confirmada /
+Provável / Potencial", com definições fixas do sistema.
 
-- **Confirmada:** somente projetos efetivamente aprovados.
-- **Provável:** projetos aprovados mais oportunidades com alta
-  probabilidade.
-- **Potencial:** todos os orçamentos, exceto os reprovados.
+### 10.1 Situação Comercial
 
-A visão de Demanda é **independente** do Modo de Produção — são dois
-eixos ortogonais da simulação (ex.: é possível rodar "Demanda Provável"
-+ "Produção Hora Extra" ao mesmo tempo).
+Novo campo em `projetos` — `situacao_comercial`. Representa fatos
+observáveis da negociação com o cliente, evoluindo em fases: **Consulta
+→ Proposta Enviada → Negociação → Compromisso Verbal → Pedido
+Recebido**.
+
+É um eixo **independente** do `status` (o workflow interno do projeto:
+Rascunho / Em Análise / Aprovado / Reprovado). Situação Comercial
+descreve onde a negociação está com o cliente; `status` descreve onde o
+projeto está no fluxo interno da empresa. Os dois evoluem de forma
+desacoplada.
+
+### 10.2 Relação com o Status do Projeto
+
+Existe uma relação de **limite lógico**, não automática, entre os dois
+eixos: ao registrar um Pedido de Compra do cliente (número + data) na
+Situação Comercial, o sistema **sugere** a aprovação do `status` — nunca
+força automaticamente. A decisão de aprovar continua sendo do usuário.
+
+### 10.3 Histórico da Situação Comercial
+
+Toda mudança de Situação Comercial é registrada na nova tabela
+`historico_situacao_comercial` — uma linha por mudança, com:
+`projeto_id`, situação anterior, situação nova, `usuario_id`,
+data/hora, e origem (Manual / Automática / Importação / Integração).
+
+Esse histórico é **obrigatório desde a primeira versão**, não uma
+evolução futura — diferente de outros dados da Simulação, que têm ao
+menos um valor de referência atual e podem ser reconstruídos, mudanças
+de negociação comercial não podem ser reconstruídas retroativamente se
+não forem capturadas no momento em que acontecem.
+
+### 10.4 Cenário de Demanda
+
+"Cenário de Demanda" substitui os nomes fixos "Confirmada / Provável /
+Potencial". A Simulação não pergunta mais *"qual é a demanda
+provável?"* — pergunta *"quais Situações Comerciais devem ser
+consideradas neste cenário?"*.
+
+Cada empresa configura livremente, nas Configurações da Empresa, quais
+fases da Situação Comercial entram em cada Cenário de Demanda (ex.:
+"Somente Pedidos Recebidos"; "Pedidos + Compromissos Verbais"). Não há
+mais uma lista fixa de visões definida pelo sistema — é uma
+configuração por empresa, decidida por ela, sobre o mesmo fato objetivo
+(Situação Comercial) já registrado no Projeto.
+
+O Cenário de Demanda continua **independente** do Modo de Produção —
+são dois eixos ortogonais da simulação (ex.: é possível rodar um
+Cenário de Demanda "Pedidos + Compromissos Verbais" + "Produção Hora
+Extra" ao mesmo tempo).
+
+### 10.5 Princípio: Preferir Gatilhos por Dado Objetivo
+
+Onde for possível, a arquitetura prefere gatilhos baseados em dado
+objetivo observável, não em escolha manual de uma lista. Precedentes já
+aplicados nesta base:
+
+- **Custo congelado** — disparado pela mudança real de `status` do
+  projeto, não por um botão separado de "congelar".
+- **Produtividade por Grupo** (seção 8) — herdada do dado já cadastrado
+  no Grupo, não escolhida numa lista de categorias fixas do sistema.
+- **Sugestão de aprovação de status** (seção 10.2) — disparada pelo
+  registro do Número do Pedido de Compra, um fato objetivo, não pela
+  simples seleção de "Pedido Recebido" numa lista.
 
 ---
 
@@ -317,7 +376,7 @@ Ao concluir a análise:
 - **apenas o cenário aprovado é registrado** no orçamento;
 - os demais cenários **não são persistidos**.
 
-O orçamento passa a armazenar somente: visão de demanda utilizada; modo
+O orçamento passa a armazenar somente: Cenário de Demanda utilizado; modo
 de produção escolhido; premissas utilizadas; resultado da simulação.
 Isso preserva a decisão tomada sem gerar crescimento desnecessário da
 base de dados.
@@ -347,7 +406,7 @@ Necessário            = Tempo do roteiro × Quantidade
 Capacidade Bruta      = Dias Produtivos × Capacidade Diária
 Capacidade Efetiva    = Capacidade Bruta × Produtividade
 Capacidade Disponível = Capacidade Efetiva + Horas Adicionais (Modo de Produção)
-Comprometido          = Demanda existente conforme a visão escolhida
+Comprometido          = Demanda existente conforme o Cenário de Demanda escolhido
 Livre                 = Capacidade Disponível − Comprometido
 Déficit               = Necessário − Livre
 ```
@@ -500,7 +559,14 @@ nenhum destes itens faz parte da implementação da versão 1.0:
 - Calendários específicos por recurso;
 - Turnos;
 - Recursos alternativos;
-- Manutenção.
+- Manutenção;
+- Justificativa obrigatória em retrocessos/cancelamentos de Situação
+  Comercial (seção 10) — não implementada agora, prevista como
+  configuração futura por empresa;
+- Situação Comercial no nível do Item do Projeto, não só do Projeto
+  inteiro — para casos de venda parcial (ex.: projeto com 10 itens,
+  cliente fecha 3 agora e adia os demais). Registrado aqui apenas como
+  possibilidade, sem implementação prevista nesta versão.
 
 ---
 
