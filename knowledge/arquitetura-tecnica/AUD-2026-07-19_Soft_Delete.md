@@ -109,7 +109,8 @@ da futura correção de RLS de cada uma:
 
 - [x] Clientes — queries da aplicação adequadas ao PAD-004 (seção 3).
       Pronto para futura correção da RLS.
-- [ ] Fornecedores
+- [x] Fornecedores — queries da aplicação adequadas ao PAD-004 (seção 3).
+      Pronto para futura correção da RLS.
 - [ ] Projetos
 - [ ] Item de Projeto
 - [ ] Matérias-primas

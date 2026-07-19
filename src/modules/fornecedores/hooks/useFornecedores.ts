@@ -46,6 +46,7 @@ export function useFornecedores() {
         .select(
           "id,nome,nome_fantasia,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,ativo,created_at",
         )
+        .is("deleted_at", null)
         .order("created_at", {
           ascending: false,
         });

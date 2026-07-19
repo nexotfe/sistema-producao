@@ -18,6 +18,7 @@ export function useFornecedorSelection() {
       .from("fornecedores")
       .select("id,nome,nome_fantasia,cnpj")
       .eq("ativo", true)
+      .is("deleted_at", null)
       .order("nome_fantasia", { ascending: true });
 
     if (error) {
