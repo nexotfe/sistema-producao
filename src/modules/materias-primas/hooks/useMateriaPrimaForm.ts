@@ -412,6 +412,7 @@ export function useMateriaPrimaForm({
         "id,fornecedor_id,codigo_fornecedor,moeda,preferencial,fornecedores(nome,nome_fantasia,cnpj)",
       )
       .eq("materia_prima_id", materiaPrimaId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: true });
 
     setFornecedoresAssociados(

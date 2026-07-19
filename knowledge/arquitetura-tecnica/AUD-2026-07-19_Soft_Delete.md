@@ -121,5 +121,6 @@ da futura correção de RLS de cada uma:
 - [x] Matérias-primas — queries da aplicação adequadas ao PAD-004
       (seção 3): listagem principal e busca/seletor no Roteiro. Pronto
       para futura correção da RLS.
-- [ ] Matérias-primas × Fornecedores
+- [x] Matérias-primas × Fornecedores — query da aplicação adequada ao
+      PAD-004 (seção 3). Pronto para futura correção da RLS.
 - [ ] Ordens de Fabricação
