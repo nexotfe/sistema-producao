@@ -50,6 +50,7 @@ export function useFornecedor(id: string) {
           "id,nome,nome_fantasia,telefone,email,telefone_comercial,email_comercial,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,site,cep,estado,bairro,endereco,numero,complemento,ativo,created_at",
         )
         .eq("id", id)
+        .is("deleted_at", null)
         .single();
 
       if (error) {

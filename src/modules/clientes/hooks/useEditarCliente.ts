@@ -48,6 +48,7 @@ export function useEditarCliente(id: string) {
           "id,nome,nome_fantasia,telefone,email,cnpj,cidade,observacoes,inscricao_estadual,inscricao_municipal,segmento,telefone_fiscal,email_fiscal,site,cep,estado,bairro,endereco,numero,complemento",
         )
         .eq("id", id)
+        .is("deleted_at", null)
         .single();
 
       if (error || !data) {
