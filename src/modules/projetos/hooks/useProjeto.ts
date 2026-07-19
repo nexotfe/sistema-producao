@@ -139,7 +139,8 @@ export function useProjeto(
         supabase
           .from("ordens_fabricacao")
           .select("id", { count: "exact", head: true })
-          .eq("projeto_id", idProjeto),
+          .eq("projeto_id", idProjeto)
+          .is("deleted_at", null),
       ]);
 
       const linhas = (itens ?? []) as {

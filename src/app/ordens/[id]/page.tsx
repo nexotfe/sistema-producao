@@ -52,6 +52,7 @@ async function getOFOperationalData(ofId: string) {
         "id,numero_of,projeto_id,produto_id,bom_id,status,tipo,quantidade_planejada,quantidade_produzida,unidade,data_inicio_planejada,data_conclusao_planejada"
       )
       .eq("id", ofId)
+      .is("deleted_at", null)
       .single(),
     supabase
       .from("vw_of_fluxo_operacional")
