@@ -197,7 +197,8 @@ export function useRoteiro(pn: string) {
       const { data: materiasData } = await supabase
         .from("materias_primas")
         .select("id,descricao,custo_referencia")
-        .in("id", ids);
+        .in("id", ids)
+        .is("deleted_at", null);
 
       ((materiasData ?? []) as MateriaPrimaRow[]).forEach((materia) => {
         porId.set(materia.id, {

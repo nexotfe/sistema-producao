@@ -70,6 +70,7 @@ export function useMateriaPrimaForm({
           "id,codigo,descricao,familia,unidade,bitola,dimensao,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,custo_referencia,custo_origem,custo_justificativa,estoque_minimo,estoque_ideal,ativo,created_at,updated_at,empresa_id",
         )
         .eq("codigo", codigoReferencia)
+        .is("deleted_at", null)
         .single();
 
       if (error || !data) {
