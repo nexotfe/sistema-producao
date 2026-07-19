@@ -155,10 +155,13 @@ conforme o padrão descrito em `PAD-004_Politica_Exclusao_Registros.md`
 seção 2. Dois pontos ficam registrados, não como pendência de correção,
 mas como decisões conscientes:
 
-- **Filtro `ativo = true`** — mantido nas policies das tabelas que já o
-  tinham. Dívida técnica registrada em `PAD-004_Politica_Exclusao_Registros.md`
-  seção 2, remoção pendente de auditoria própria das queries de
-  aplicação, análoga a esta.
+- **Filtro `ativo = true`** — decisão provisória registrada em
+  `PAD-004_Politica_Exclusao_Registros.md` seção 2: mantido nas
+  policies das tabelas que já o tinham, para minimizar risco durante
+  esta remediação. Em uma iniciativa futura de simplificação da RLS,
+  será avaliada sua remoção, após auditoria dos consumidores da
+  aplicação — seguindo o mesmo padrão desta iniciativa (auditoria →
+  correção de queries → migration → testes → documentação).
 - **`propostas` sem policy de `UPDATE`** — decisão arquitetural fechada.
   A tabela `propostas` não possui UPDATE POLICY porque não existe fluxo
   de Soft Delete definido para essa entidade — não há tela, não há
