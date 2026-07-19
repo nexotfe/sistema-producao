@@ -32,7 +32,8 @@ registradas em `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md`, prevalece o
 texto deste documento. Em particular, o modelo de calendário "seed +
 cópia" descrito no Documento 1 (seção 4) e sugerido no Documento 2 foi
 **abandonado** e está integralmente substituído pela arquitetura de
-Calendário Oficial / Calendário da Empresa descrita na seção 4 abaixo.
+Calendário Oficial / Calendário Operacional da Empresa / Calendário de
+Eventos da Empresa descrita na seção 7 abaixo.
 
 Este documento passa a ser a referência oficial para: auditoria do
 banco, desenho do schema, implementação de Front-End, implementação de
@@ -110,7 +111,20 @@ alteração é temporária e existe apenas durante a análise.
 
 ---
 
-## 5. Arquitetura Geral
+## 5. Uma Exceção Sempre Prevalece Sobre uma Regra Permanente
+
+Princípio válido em toda a Simulação Comercial: quando uma regra
+permanente (como o Calendário Operacional da Empresa, seção 7.2) e uma
+exceção pontual registrada individualmente (como um evento do
+Calendário de Eventos da Empresa, seção 7.3) entram em conflito sobre o
+mesmo dia, **a exceção sempre prevalece**. A regra permanente descreve
+o padrão; a exceção descreve um fato real que, para aquele caso
+específico, substitui o padrão. Aplicação concreta na ordem de
+precedência do Calendário Operacional (seção 7.4).
+
+---
+
+## 6. Arquitetura Geral
 
 A simulação é composta por componentes independentes, calculados nesta
 ordem:
@@ -138,80 +152,121 @@ depois compara essa capacidade com a demanda selecionada.
 
 ---
 
-## 6. Calendário Operacional
+## 7. Calendário Operacional
 
 O Calendário Operacional existe para determinar quais dias são
 produtivos durante a janela de produção utilizada pela Simulação
 Comercial. Ele **não define a capacidade dos recursos** — a capacidade
-pertence exclusivamente ao cadastro dos Recursos Produtivos (seção 7).
+pertence exclusivamente ao cadastro dos Recursos Produtivos (seção 8).
 
 O calendário responde apenas: *"Este dia é produtivo para esta
 empresa?"* Ele nunca define horas de produção.
 
-### 6.1 Calendário Oficial
+Três estruturas compõem o Calendário Operacional, cada uma com seu
+domínio exclusivo — nenhuma delas duplica dado que já exista nas
+outras.
 
-- Responsabilidade da **SISARE** (fornecedora do sistema) — funciona
-  como um "banco de CEP" ou tabela NCM/IBGE: um dado de referência
-  mantido centralmente.
+### 7.1 Calendário Oficial
+
+- **Global, sem `empresa_id`** — dado de referência mantido
+  centralmente pela **SISARE** (fornecedora do sistema), funcionando
+  como um "banco de CEP" ou tabela NCM/IBGE.
+- **Somente leitura** pelo ERP — nenhuma empresa altera este
+  calendário; distribuído via migration/seed, não por tela.
 - **Compartilhado** por todas as empresas clientes.
-- **Somente leitura** para as empresas — a empresa nunca altera esse
-  calendário.
-- **Versionado anualmente** (ex.: Calendário Oficial 2027, 2028...).
-- Contém **exclusivamente** feriados nacionais, estaduais e municipais.
-- **Sem `empresa_id`** — é dado global do sistema.
-- A versão 1.0 assume Brasil: o filtro considera apenas Estado/Município
-  da empresa, sem lógica de País ainda, mesmo que o campo País já exista
-  no cadastro da empresa (seção 6.4).
-- A simulação consulta este calendário **em tempo real**, filtrando por
-  Estado/Município da empresa — **nunca copia** os dados para dentro da
-  empresa.
+- Colunas: `id`, `data`, `abrangencia` (`nacional` / `estadual` /
+  `municipal`), `pais_codigo` (ISO), `uf_codigo` (IBGE),
+  `municipio_codigo` (IBGE), `descricao`.
+- A simulação consulta este calendário **em tempo real**, filtrando
+  por `uf_codigo`/`municipio_codigo` da empresa (seção 7.5) — **nunca
+  copia** os dados para dentro da empresa.
 
-### 6.2 Calendário da Empresa
+### 7.2 Calendário Operacional da Empresa
 
-- Pertence à empresa (`empresa_id`).
-- Contém **exclusivamente** eventos internos: recesso coletivo,
-  inventário, paralisações, dias excepcionalmente trabalhados.
-- **Não cadastra feriados oficiais** — não existe, por exemplo, um
-  "Natal" duplicado dentro do calendário de cada empresa.
-- Políticas de RLS devem filtrar por `empresa_id` **desde a criação da
-  tabela**, sem exceção — seguindo o mesmo padrão já corrigido em
-  `recursos_produtivos` e `clientes` (ver
-  `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md`, item 4).
+- **Regra permanente**, uma linha por empresa (`empresa_id` único).
+- Colunas: `empresa_id`, e um booleano para cada dia da semana —
+  `segunda`, `terca`, `quarta`, `quinta`, `sexta`, `sabado`, `domingo`.
+- Representa o **padrão semanal normal de trabalho** da empresa (ex.:
+  segunda a sexta produtivos, sábado e domingo não produtivos).
 
-### 6.3 Feriado Local Temporário
+### 7.3 Calendário de Eventos da Empresa
 
-Mecanismo de exceção, registrado aqui apenas como **diretriz
-arquitetural** — a estratégia técnica de reconciliação ainda não está
-definida.
+- **Exceções pontuais**, `empresa_id`.
+- Colunas: `id`, `empresa_id`, `data`, `tipo` (`recesso_coletivo` /
+  `inventario` / `paralisacao` / `dia_trabalhado_excepcional` /
+  `feriado_local_temporario`), `descricao`, `ativo`,
+  `reconciliado_em`, e auditoria completa (`created_at`, `created_by`,
+  `deleted_at`, `deleted_by` — soft delete, sem `DELETE` real).
+- O campo **produtivo é derivado do `tipo`**, não armazenado:
+  `dia_trabalhado_excepcional` torna o dia produtivo; os demais tipos
+  (`recesso_coletivo`, `inventario`, `paralisacao`,
+  `feriado_local_temporario`) tornam o dia não produtivo.
+- `feriado_local_temporario` é o mecanismo que permite a uma empresa
+  continuar operando corretamente mesmo quando exista um feriado
+  municipal ainda não presente no Calendário Oficial — uso excepcional
+  e provisório. `reconciliado_em` marca quando a exceção foi
+  reconciliada com o Calendário Oficial depois que a SISARE o
+  atualizar; **a estratégia técnica de reconciliação ainda não está
+  definida nesta versão.**
 
-- Objetivo: permitir que uma empresa continue operando corretamente
-  mesmo quando exista um feriado municipal ainda não presente na base
-  oficial.
-- Uso excepcional, claramente identificado como provisório — não é a
-  regra geral.
-- Quando a SISARE atualizar o Calendário Oficial e o feriado passar a
-  existir oficialmente, a exceção deve ser reconciliada (removida ou
-  consolidada). **Como isso será feito tecnicamente não está definido
-  nesta versão.**
+### 7.4 Ordem de Precedência
 
-### 6.4 Cadastro da Empresa
+A produtividade de um dia é resolvida nesta ordem:
+
+```
+Calendário Operacional da Empresa (base)
+    ↓
+Calendário Oficial (subtrai)
+    ↓
+Calendário de Eventos da Empresa (prevalece sobre os dois anteriores)
+```
+
+1. **Base** — o Calendário Operacional da Empresa (seção 7.2) define o
+   padrão semanal.
+2. **Calendário Oficial subtrai** — um feriado nacional/estadual/
+   municipal na data torna o dia não produtivo, mesmo que a Empresa o
+   considere um dia normal de trabalho na base.
+3. **Calendário de Eventos da Empresa prevalece sobre os dois
+   anteriores** (seção 5) — pode tanto subtrair um dia que seria
+   produtivo quanto devolver como produtivo um dia que não seria:
+   - **Sábado trabalhado virando recesso:** o Calendário Operacional
+     da Empresa marca sábado como produtivo, mas a empresa registra um
+     `recesso_coletivo` nesse sábado específico — o dia vira não
+     produtivo.
+   - **Domingo não-útil virando dia trabalhado excepcional:** o
+     Calendário Operacional da Empresa marca domingo como não
+     produtivo, mas a empresa registra `dia_trabalhado_excepcional`
+     nesse domingo — o dia vira produtivo.
+   - **Feriado transferido onde a empresa decide trabalhar:** o
+     Calendário Oficial marca o dia como feriado (não produtivo), mas
+     a empresa registra `dia_trabalhado_excepcional` nesse mesmo dia —
+     o dia vira produtivo, mesmo sendo feriado oficial.
+
+### 7.5 Localização da Empresa
 
 País, Estado e Município são informações **obrigatórias** do cadastro
-da empresa. Esses dados **não existem por causa da Simulação
-Comercial** — são informações cadastrais básicas, reutilizadas por
-diversos módulos: Calendário Operacional, Fiscal, Endereços, Relatórios.
+da empresa — mas ainda não existem na tabela `empresas` hoje. Plano:
+adicionar `pais_codigo`, `uf_codigo`, `municipio_codigo` (os mesmos
+códigos usados no Calendário Oficial, seção 7.1) como colunas
+**nullable inicialmente**, com backfill das duas empresas reais
+existentes (ENIFER, NEXOTFE Demo) antes de eventualmente evoluir para
+`not null`.
+
+Esses dados **não existem por causa da Simulação Comercial** — são
+informações cadastrais básicas, reutilizadas por diversos módulos:
+Calendário Operacional, Fiscal, Endereços, Relatórios.
 
 ### Motivação da arquitetura de calendário
 
 Pensando em um ERP vendido para centenas de empresas, duplicar feriados
 oficiais por empresa geraria inconsistência e retrabalho de manutenção
 (ex.: "500 natais" em vez de um único Natal). Centralizar o dado oficial
-na SISARE e deixar a empresa responsável apenas pelas suas exceções
-internas é a arquitetura mais limpa e escalável.
+na SISARE e deixar a empresa responsável apenas pelo seu padrão semanal
+e suas exceções internas é a arquitetura mais limpa e escalável.
 
 ---
 
-## 7. Recursos Produtivos e Capacidade Disponível
+## 8. Recursos Produtivos e Capacidade Disponível
 
 Cada recurso possui sua capacidade diária padrão, pertencente
 exclusivamente ao cadastro do recurso — nunca alterada pelo calendário
@@ -225,7 +280,7 @@ independentes:
 
 1. Calendário Operacional (dias produtivos da janela);
 2. Capacidade diária do recurso;
-3. Premissas do Modo de Produção (seção 9).
+3. Premissas do Modo de Produção (seção 10).
 
 **Cálculo da Capacidade Bruta:** capacidade diária do recurso × dias
 produtivos da janela.
@@ -235,13 +290,13 @@ disponíveis.
 
 ---
 
-## 8. Produtividade do Recurso
+## 9. Produtividade do Recurso
 
 A **Produtividade Padrão** é configurável por Grupo de Recursos —
 decisão livre de cada empresa, que nomeia e organiza seus próprios
 Grupos (ex.: a ENIFER tem 13 grupos hoje, como "Tornos CN" e
 "Caldeiraria/Soldagem"); cada Grupo recebe sua própria Produtividade
-Padrão, usada para reduzir a Capacidade Bruta (seção 7) ao valor
+Padrão, usada para reduzir a Capacidade Bruta (seção 8) ao valor
 efetivamente esperado.
 
 O Recurso individual herda a Produtividade Padrão do seu Grupo, podendo
@@ -269,7 +324,7 @@ duplica ou mantém sua própria cópia.
 
 ---
 
-## 9. Modo de Produção
+## 10. Modo de Produção
 
 O Modo de Produção (também chamado de Cenário de Produção) representa
 hipóteses temporárias utilizadas durante a simulação. Não altera
@@ -293,12 +348,12 @@ operacional da Produção e não fazem parte deste cálculo.
 
 ---
 
-## 10. Situação Comercial e Cenário de Demanda
+## 11. Situação Comercial e Cenário de Demanda
 
 Substitui integralmente o modelo anterior de "Demanda: Confirmada /
 Provável / Potencial", com definições fixas do sistema.
 
-### 10.1 Situação Comercial
+### 11.1 Situação Comercial
 
 Novo campo em `projetos` — `situacao_comercial`. Representa fatos
 observáveis da negociação com o cliente, evoluindo em fases: **Consulta
@@ -311,14 +366,14 @@ descreve onde a negociação está com o cliente; `status` descreve onde o
 projeto está no fluxo interno da empresa. Os dois evoluem de forma
 desacoplada.
 
-### 10.2 Relação com o Status do Projeto
+### 11.2 Relação com o Status do Projeto
 
 Existe uma relação de **limite lógico**, não automática, entre os dois
 eixos: ao registrar um Pedido de Compra do cliente (número + data) na
 Situação Comercial, o sistema **sugere** a aprovação do `status` — nunca
 força automaticamente. A decisão de aprovar continua sendo do usuário.
 
-### 10.3 Histórico da Situação Comercial
+### 11.3 Histórico da Situação Comercial
 
 Toda mudança de Situação Comercial é registrada na nova tabela
 `historico_situacao_comercial` — uma linha por mudança, com:
@@ -331,7 +386,7 @@ menos um valor de referência atual e podem ser reconstruídos, mudanças
 de negociação comercial não podem ser reconstruídas retroativamente se
 não forem capturadas no momento em que acontecem.
 
-### 10.4 Cenário de Demanda
+### 11.4 Cenário de Demanda
 
 "Cenário de Demanda" substitui os nomes fixos "Confirmada / Provável /
 Potencial". A Simulação não pergunta mais *"qual é a demanda
@@ -350,7 +405,7 @@ são dois eixos ortogonais da simulação (ex.: é possível rodar um
 Cenário de Demanda "Pedidos + Compromissos Verbais" + "Produção Hora
 Extra" ao mesmo tempo).
 
-### 10.5 Princípio: Preferir Gatilhos por Dado Objetivo
+### 11.5 Princípio: Preferir Gatilhos por Dado Objetivo
 
 Onde for possível, a arquitetura prefere gatilhos baseados em dado
 objetivo observável, não em escolha manual de uma lista. Precedentes já
@@ -358,15 +413,15 @@ aplicados nesta base:
 
 - **Custo congelado** — disparado pela mudança real de `status` do
   projeto, não por um botão separado de "congelar".
-- **Produtividade por Grupo** (seção 8) — herdada do dado já cadastrado
+- **Produtividade por Grupo** (seção 9) — herdada do dado já cadastrado
   no Grupo, não escolhida numa lista de categorias fixas do sistema.
-- **Sugestão de aprovação de status** (seção 10.2) — disparada pelo
+- **Sugestão de aprovação de status** (seção 11.2) — disparada pelo
   registro do Número do Pedido de Compra, um fato objetivo, não pela
   simples seleção de "Pedido Recebido" numa lista.
 
 ---
 
-## 11. Cenários
+## 12. Cenários
 
 Os cenários existem **apenas durante a análise**, para apoiar a decisão
 do Orçamentista. Diversos cenários podem ser comparados ao mesmo tempo
@@ -383,7 +438,7 @@ base de dados.
 
 ---
 
-## 12. Margem de Segurança
+## 13. Margem de Segurança
 
 Campo configurável diretamente na tela de Simulação, ajustável pelo
 orçamentista a cada rodada de simulação — em **dias produtivos** (pode
@@ -392,12 +447,12 @@ projeto).
 
 A Margem de Segurança reduz a Data de Necessidade informada pelo
 cliente **internamente**, gerando uma **Data Alvo** mais apertada,
-usada apenas no cálculo de viabilidade da Simulação (seção 13). Não
+usada apenas no cálculo de viabilidade da Simulação (seção 14). Não
 altera a data real prometida ao cliente.
 
 ---
 
-## 13. Cálculo
+## 14. Cálculo
 
 Para cada recurso:
 
@@ -416,7 +471,7 @@ Possível.
 
 ---
 
-## 14. Roteiro em Projetos de Desenvolvimento
+## 15. Roteiro em Projetos de Desenvolvimento
 
 Em projetos de Desenvolvimento — fabricação sob encomenda cujo Produto
 Final ainda não tem desenho detalhado no momento da venda —, o Roteiro
@@ -426,7 +481,7 @@ sem exigir nenhuma estrutura de dados paralela à já existente (Produto,
 Roteiro, Subconjunto). Detalhamento completo em
 `knowledge/arquitetura-tecnica/2026-07-15-arquitetura-roteiro-desenvolvimento-v2.md`.
 
-### 14.1 Terminologia
+### 15.1 Terminologia
 
 - **Roteiro Inicial**: termo oficial para o Roteiro agregado/estimado
   do Produto Final, criado no momento da venda, antes de o desenho
@@ -437,18 +492,18 @@ Roteiro, Subconjunto). Detalhamento completo em
 - **Roteiro Detalhado**: o Roteiro de cada produto/peça/subconjunto
   real, criado pela Engenharia após a liberação dos desenhos.
 - **Horas Reais Apontadas**: os apontamentos de produção real (Ordem
-  de Fabricação), usados nas comparações de precisão (seção 14.5).
+  de Fabricação), usados nas comparações de precisão (seção 15.5).
 
-### 14.2 Produto Final na Venda
+### 15.2 Produto Final na Venda
 
 O Produto Final (ex.: "Máquina de Clipe") é criado a partir da própria
 solicitação do cliente, no momento da venda — não é um placeholder
 genérico nem um cadastro fictício: é o produto real que o cliente está
 comprando, cadastrado como qualquer outro Produto do sistema.
 
-### 14.3 Do Roteiro Inicial ao Roteiro Detalhado
+### 15.3 Do Roteiro Inicial ao Roteiro Detalhado
 
-Esse Produto Final recebe um Roteiro Inicial (seção 14.4). Quando a
+Esse Produto Final recebe um Roteiro Inicial (seção 15.4). Quando a
 Engenharia libera os desenhos — o que pode acontecer bem depois da
 venda —, nascem os produtos/peças/subconjuntos reais (podem ser dezenas
 ou centenas), cada um com seu próprio Roteiro Detalhado. Esses produtos
@@ -457,7 +512,7 @@ se vinculam ao Produto Final através do mecanismo já existente de
 qualquer outro produto do sistema, sem nenhuma adaptação especial para
 projetos de Desenvolvimento.
 
-### 14.4 Roteiro Inicial do Produto Final
+### 15.4 Roteiro Inicial do Produto Final
 
 O Roteiro Inicial usa o mesmo mecanismo de Roteiro já existente na
 plataforma (Operações → Recurso → Tempo) — só que agregado e estimado,
@@ -467,14 +522,14 @@ venda.
 O valor estimado dos materiais utilizado no Roteiro Inicial integra a
 estimativa comercial do projeto e deve permanecer preservado através
 do mesmo mecanismo de congelamento utilizado pela Proposta Comercial
-(seção 14.7). Alterações posteriores nos preços de catálogo não
+(seção 15.7). Alterações posteriores nos preços de catálogo não
 modificam a estimativa originalmente apresentada ao cliente.
 
 O material previsto do Roteiro Inicial deverá utilizar o mesmo
 mecanismo de gestão de materiais adotado pela plataforma, evitando
 conceitos paralelos exclusivamente para projetos de Desenvolvimento.
 
-### 14.5 As Três Comparações de Precisão
+### 15.5 As Três Comparações de Precisão
 
 Com o Roteiro Inicial, os Roteiros Detalhados dos subconjuntos e as
 Horas Reais Apontadas na produção, a plataforma pode calcular três
@@ -498,17 +553,17 @@ registro histórico da estimativa comercial original, mesmo depois que
 os subconjuntos detalhados existirem e tiverem seus próprios Roteiros
 Detalhados.
 
-### 14.6 Continuidade da Arquitetura
+### 15.6 Continuidade da Arquitetura
 
 Não existe pendência estrutural de schema para viabilizar este fluxo:
 Produto, Roteiro, Subconjunto (Estrutura) e o Congelamento de Custo
-(`custo_congelado`, seção 14.7) já cobrem integralmente o que esta
+(`custo_congelado`, seção 15.7) já cobrem integralmente o que esta
 seção descreve. A única peça que falta implementar é a tela/lógica de
 comparação (Roteiro Inicial × Roteiros Detalhados × Horas Reais
 Apontadas) — não há necessidade de nenhuma estrutura de dados paralela
 exclusiva para projetos de Desenvolvimento.
 
-### 14.7 Congelamento do Roteiro Inicial na Aprovação Comercial
+### 15.7 Congelamento do Roteiro Inicial na Aprovação Comercial
 
 Enquanto o Projeto estiver em elaboração, orçamento ou negociação, o
 Roteiro Inicial pode ser alterado livremente. No momento em que o
@@ -524,7 +579,7 @@ comparações.
 
 ---
 
-## 15. Situação da Base (registro histórico da aprovação desta versão)
+## 16. Situação da Base (registro histórico da aprovação desta versão)
 
 No momento da aprovação desta versão (2026-07-15), já haviam sido
 consolidados: estrutura dos Recursos Produtivos; capacidade diária
@@ -546,7 +601,7 @@ auditorias mais recentes em `knowledge/`.
 
 ---
 
-## 16. Evolução Futura (fora do escopo da versão 1.0)
+## 17. Evolução Futura (fora do escopo da versão 1.0)
 
 Registrado apenas para preservar a direção arquitetural do produto —
 nenhum destes itens faz parte da implementação da versão 1.0:
@@ -556,12 +611,18 @@ nenhum destes itens faz parte da implementação da versão 1.0:
 - Sequenciamento de operações;
 - APS (Advanced Planning and Scheduling) completo;
 - Balanceamento automático de recursos;
-- Calendários específicos por recurso;
+- **Calendário por Recurso:** indisponibilidade individual (Manutenção
+  Preventiva/Corretiva, Calibração, Upgrade, Troca de Layout, Parada
+  Técnica), com prioridade sobre a capacidade daquele recurso
+  específico, sem afetar os demais. O Calendário da Empresa (seção 7)
+  representa eventos que afetam a capacidade global da empresa.
+  Eventos que afetam apenas um recurso produtivo pertencem ao
+  Calendário do Recurso e não fazem parte da primeira versão;
 - Turnos;
 - Recursos alternativos;
 - Manutenção;
 - Justificativa obrigatória em retrocessos/cancelamentos de Situação
-  Comercial (seção 10) — não implementada agora, prevista como
+  Comercial (seção 11) — não implementada agora, prevista como
   configuração futura por empresa;
 - Situação Comercial no nível do Item do Projeto, não só do Projeto
   inteiro — para casos de venda parcial (ex.: projeto com 10 itens,
