@@ -118,6 +118,8 @@ da futura correção de RLS de cada uma:
 - [x] Item de Projeto — queries da aplicação adequadas ao PAD-004
       (seção 3): Orçamento, Proposta e Resumo Operacional. Pronto para
       futura correção da RLS.
-- [ ] Matérias-primas
+- [x] Matérias-primas — queries da aplicação adequadas ao PAD-004
+      (seção 3): listagem principal e busca/seletor no Roteiro. Pronto
+      para futura correção da RLS.
 - [ ] Matérias-primas × Fornecedores
 - [ ] Ordens de Fabricação

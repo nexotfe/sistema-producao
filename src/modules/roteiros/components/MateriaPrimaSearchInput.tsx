@@ -70,6 +70,7 @@ export function MateriaPrimaSearchInput({
         .select("id,codigo,descricao,unidade")
         .or(filtro)
         .eq("ativo", true)
+        .is("deleted_at", null)
         .order("descricao", { ascending: true })
         .limit(8);
 

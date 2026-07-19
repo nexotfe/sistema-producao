@@ -25,6 +25,7 @@ export function useMateriasPrimas() {
       .select(
         "id,empresa_id,codigo,descricao,familia,unidade,bitola,ncm,endereco,fabricante,marca,material_especificacao,norma,peso_especifico,observacoes_tecnicas,observacoes,custo_referencia,custo_origem,custo_justificativa,estoque_minimo,estoque_ideal,ativo,created_at,updated_at",
       )
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (error) {
