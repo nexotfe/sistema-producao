@@ -162,6 +162,7 @@ export function useProposta(idProjeto: string | null) {
         .from("projeto_itens")
         .select("id,produto_id,pn,descricao,quantidade,custo_congelado")
         .eq("projeto_id", projeto.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: true });
 
       const linhas = (itensProjeto ?? []) as {

@@ -134,7 +134,8 @@ export function useProjeto(
         supabase
           .from("projeto_itens")
           .select("produto_id,quantidade,custo_congelado")
-          .eq("projeto_id", idProjeto),
+          .eq("projeto_id", idProjeto)
+          .is("deleted_at", null),
         supabase
           .from("ordens_fabricacao")
           .select("id", { count: "exact", head: true })

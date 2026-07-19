@@ -115,7 +115,9 @@ da futura correção de RLS de cada uma:
       incluindo todos os consumidores transversais (listagem, carregar,
       duplicar, Orçamento, Proposta, busca de contato). Pronto para
       futura correção da RLS.
-- [ ] Item de Projeto
+- [x] Item de Projeto — queries da aplicação adequadas ao PAD-004
+      (seção 3): Orçamento, Proposta e Resumo Operacional. Pronto para
+      futura correção da RLS.
 - [ ] Matérias-primas
 - [ ] Matérias-primas × Fornecedores
 - [ ] Ordens de Fabricação
