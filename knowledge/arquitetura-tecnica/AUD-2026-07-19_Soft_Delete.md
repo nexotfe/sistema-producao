@@ -133,3 +133,35 @@ As 7 entidades desta checklist estão concluídas. A pré-condição da
 seção 3 está satisfeita para as 15 tabelas listadas na seção 2 — a
 futura correção de RLS (seção 2) pode ser tratada como tarefa separada,
 quando solicitada.
+
+## 5. Conclusão — correção da RLS (PAD-004 seção 2)
+
+A correção de RLS das 15 tabelas foi concluída em três lotes, em
+2026-07-19:
+
+- **Lote A** — `clientes`, `fornecedores`, `projetos`, `projeto_itens`
+  (commits `397283d`, `9d7827b`).
+- **Lote B** — `materias_primas`, `materias_primas_fornecedores`
+  (commits `bfc583a`, `db94a4d`). Duas lacunas novas de query de
+  aplicação foram encontradas e corrigidas nesta rodada (hooks de
+  detalhe/edição/resolução-por-id que não filtravam `deleted_at`).
+- **Lote C** — as 9 tabelas restantes: `requisicoes_compra`,
+  `pedidos_compra`, `planejamentos_compra`, `numeracao_configuracoes`,
+  `producao_configuracoes`, `consumos_internos`, `propostas`,
+  `requisicao_compra_itens`, `ordens_fabricacao` (commit `6f8d01b`).
+
+Com isso, **as 15 tabelas listadas na seção 2 têm a RLS corrigida**
+conforme o padrão descrito em `PAD-004_Politica_Exclusao_Registros.md`
+seção 2. Dois pontos ficam registrados, não como pendência de correção,
+mas como decisões conscientes:
+
+- **Filtro `ativo = true`** — mantido nas policies das tabelas que já o
+  tinham. Dívida técnica registrada em `PAD-004_Politica_Exclusao_Registros.md`
+  seção 2, remoção pendente de auditoria própria das queries de
+  aplicação, análoga a esta.
+- **`propostas` sem policy de `UPDATE`** — decisão arquitetural fechada.
+  A tabela `propostas` não possui UPDATE POLICY porque não existe fluxo
+  de Soft Delete definido para essa entidade — não há tela, não há
+  requisito de negócio para excluir propostas hoje. Caso o negócio
+  passe a exigir exclusão lógica de propostas no futuro, uma nova
+  decisão arquitetural deverá ser tomada antes da criação dessa policy.
