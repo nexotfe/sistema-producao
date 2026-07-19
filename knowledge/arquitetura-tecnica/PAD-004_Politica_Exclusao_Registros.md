@@ -89,6 +89,13 @@ create policy <tabela>_update_tenant
 Nenhuma referência a `deleted_at` nem a `ativo` em nenhuma das duas. O
 filtro de visibilidade é feito pela query da aplicação.
 
+> **Dívida técnica registrada (Lote A, 2026-07-19):** a policy de RLS
+> ainda filtra `ativo = true` em algumas tabelas, por transição — isso
+> não é o modelo ideal (RLS deveria cuidar só de isolamento/autorização,
+> conforme este mesmo documento define para `deleted_at`). Remoção
+> pendente de auditoria própria das queries de aplicação, análoga à
+> `AUD-2026-07-19_Soft_Delete.md`.
+
 ---
 
 ## 3. Permissões de Exclusão
