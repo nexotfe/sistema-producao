@@ -128,6 +128,7 @@ export function useOrcamento(idProjeto: string | null) {
         "id,numero_projeto,nome,tipo_projeto,status,cliente_id,data_objetivo,created_at,margem_lucro_percent,carga_tributaria_percent",
       )
       .eq("id", idProjeto)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (error || !projeto) {

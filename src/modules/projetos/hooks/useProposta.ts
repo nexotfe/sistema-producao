@@ -107,6 +107,7 @@ export function useProposta(idProjeto: string | null) {
           "id,numero_projeto,tipo_projeto,cliente_id,margem_lucro_percent,carga_tributaria_percent,contato_comercial_nome,created_at,proposta_revisao,proposta_consideracoes",
         )
         .eq("id", idProjeto)
+        .is("deleted_at", null)
         .maybeSingle();
 
       if (error || !projeto) {

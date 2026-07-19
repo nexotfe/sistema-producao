@@ -27,6 +27,7 @@ export function useProjetosLista() {
         supabase
           .from("projetos")
           .select("id,numero_projeto,nome,tipo_projeto,status,data_objetivo,cliente_id")
+          .is("deleted_at", null)
           .order("created_at", { ascending: false }),
         supabase.from("clientes").select("id,nome"),
       ]);

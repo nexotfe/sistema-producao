@@ -223,6 +223,7 @@ export function useProjeto(
             contato_tecnico_2_nome,contato_tecnico_2_email,contato_tecnico_2_telefone,contato_tecnico_2_setor`,
           )
           .eq("id", duplicarDeId)
+          .is("deleted_at", null)
           .maybeSingle();
 
         if (origemError || !origem) {
@@ -293,6 +294,7 @@ export function useProjeto(
           contato_tecnico_2_nome,contato_tecnico_2_email,contato_tecnico_2_telefone,contato_tecnico_2_setor`,
         )
         .eq("id", idInicial)
+        .is("deleted_at", null)
         .single();
 
       if (error || !data) {

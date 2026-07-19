@@ -73,6 +73,7 @@ export function ContatoSearchInput({
         .from("projetos")
         .select(`${colNome},${colEmail},${colTelefone},${colSetor},created_at`)
         .eq("cliente_id", clienteId)
+        .is("deleted_at", null)
         .not(colNome, "is", null)
         .ilike(colNome, `%${termo}%`)
         .order(colNome, { ascending: true })
