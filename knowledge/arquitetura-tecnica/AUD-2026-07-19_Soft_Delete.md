@@ -123,4 +123,13 @@ da futura correção de RLS de cada uma:
       para futura correção da RLS.
 - [x] Matérias-primas × Fornecedores — query da aplicação adequada ao
       PAD-004 (seção 3). Pronto para futura correção da RLS.
-- [ ] Ordens de Fabricação
+- [x] Ordens de Fabricação — queries da aplicação adequadas ao PAD-004
+      (seção 3): detalhe da OF (`app/ordens/[id]/page.tsx`) e contagem
+      no Resumo Operacional (`useProjeto.ts`). Os 2 consumidores do
+      PCP já filtravam corretamente antes desta correção. Pronto para
+      futura correção da RLS.
+
+As 7 entidades desta checklist estão concluídas. A pré-condição da
+seção 3 está satisfeita para as 15 tabelas listadas na seção 2 — a
+futura correção de RLS (seção 2) pode ser tratada como tarefa separada,
+quando solicitada.
