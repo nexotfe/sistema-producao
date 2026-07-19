@@ -1,6 +1,7 @@
 # IMP — Implementação de Referência: Soft Delete
 
 **Data:** 2026-07-19
+**Status:** Vigente
 **Natureza do documento:** implementação de referência — aponta para
 arquivos, hooks e componentes reais do código. **Pode ficar
 desatualizado com o tempo — isso é esperado e aceitável neste

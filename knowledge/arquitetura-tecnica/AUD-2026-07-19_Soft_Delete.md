@@ -1,6 +1,7 @@
 # AUD-2026-07-19 — Auditoria: Bug de RLS em Soft Delete
 
 **Data:** 2026-07-19
+**Status:** Concluído — em produção
 **Natureza do documento:** relatório de auditoria — retrato do momento,
 com data de validade natural. Não precisa ser atualizado depois que as
 15 tabelas listadas abaixo forem corrigidas; a regra permanente está em
