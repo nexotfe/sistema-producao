@@ -92,5 +92,26 @@ risco prático imediato dessa lacuna é zero — mas a checagem e o ajuste
 das queries (onde faltar) continuam sendo pré-requisito da correção,
 não um "nice to have".
 
-**Esta checagem tabela-por-tabela ainda não foi feita** — é o próximo
-passo antes de implementar a correção de RLS nas 15 tabelas.
+Essa checagem tabela-por-tabela foi feita em 2026-07-19 (ver seção 4
+para o progresso da correção das queries identificadas como
+pendentes). 8 das 15 tabelas não têm hoje nenhuma query de listagem no
+frontend (`requisicoes_compra`, `pedidos_compra`, `planejamentos_compra`,
+`numeracao_configuracoes`, `producao_configuracoes`,
+`consumos_internos`, `propostas`, `requisicao_compra_itens`) — para
+essas, a correção de RLS pode ser feita diretamente, sem ajuste de
+query antes.
+
+## 4. Progresso da correção — queries da aplicação (PAD-004 seção 3)
+
+Checklist das 7 tabelas que tinham queries de listagem sem
+`.is("deleted_at", null)` explícito, corrigidas uma de cada vez antes
+da futura correção de RLS de cada uma:
+
+- [x] Clientes — queries da aplicação adequadas ao PAD-004 (seção 3).
+      Pronto para futura correção da RLS.
+- [ ] Fornecedores
+- [ ] Projetos
+- [ ] Item de Projeto
+- [ ] Matérias-primas
+- [ ] Matérias-primas × Fornecedores
+- [ ] Ordens de Fabricação

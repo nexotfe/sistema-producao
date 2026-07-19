@@ -68,6 +68,7 @@ export function ClienteSearchInput({
         .select("id,nome,nome_fantasia,cnpj")
         .or(filtro)
         .eq("ativo", true)
+        .is("deleted_at", null)
         .order("nome", { ascending: true })
         .limit(8);
 

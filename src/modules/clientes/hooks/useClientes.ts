@@ -42,6 +42,7 @@ export function useClientes() {
       const { data, error } = await supabase
         .from("clientes")
         .select("id,nome,nome_fantasia,telefone,email,cnpj,cidade,ativo,created_at")
+        .is("deleted_at", null)
         .order("created_at", {
           ascending: false,
         });
