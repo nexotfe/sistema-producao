@@ -631,6 +631,258 @@ nenhum destes itens faz parte da implementação da versão 1.0:
 
 ---
 
+## 18. Compatibilidade entre Recursos Produtivos e Motor de Avaliação Sequencial de Capacidade
+
+Etapa 4 do motor de Simulação Comercial. Consome a fórmula da seção 14,
+decidindo — para cada operação do roteiro — qual recurso é considerado
+na análise de capacidade, quando o recurso originalmente previsto não
+comporta a operação inteira.
+
+**Princípio de fundo:** a Simulação Comercial verifica cenários
+possíveis, sem assumir o papel do PCP. O orçamentista define o roteiro
+de referência; a empresa configura quais substituições são aceitáveis;
+a Simulação apenas avalia capacidade dentro desses limites, sem
+executar sequenciamento ou distribuição de produção.
+
+### 18.1 Compatibilidade entre Recursos Produtivos
+
+> *"A Compatibilidade entre Recursos Produtivos não altera o roteiro,
+> não altera o tempo da operação e não altera o recurso originalmente
+> planejado. Ela apenas informa à Simulação Comercial quais recursos
+> poderão ser considerados como alternativas caso o recurso
+> originalmente previsto não possua capacidade disponível."*
+
+Decisões:
+
+1. **Direcional** — A pode substituir B sem que B substitua A. Não
+   simétrica, não necessariamente transitiva (o Motor só consulta
+   compatibilidades diretas do recurso original — nunca encadeia).
+2. **Tempo de execução no substituto é o mesmo da operação**, vindo do
+   roteiro — nenhum fator de conversão por par de recursos.
+3. **Separação de responsabilidades**: Compatibilidade responde só
+   "quais recursos PODEM substituir este?" (dado estático, sem
+   conhecimento de capacidade). A Simulação decide se há capacidade —
+   mecanismos independentes. Termo "recurso considerado pela Simulação
+   Comercial para análise de capacidade" — nunca "alocação" (linguagem
+   de PCP).
+4. **Operação indivisível** — cada operação é avaliada inteira em um
+   único recurso; a Simulação não divide carga entre recursos. Divisão
+   de carga é decisão futura do PCP.
+5. **Ordem de processamento das operações**: sequência do roteiro de
+   fabricação (`bom_operacoes.ordem`) — representa a ordem técnica
+   planejada pela engenharia, não um critério entre vários igualmente
+   válidos.
+6. **Reprodutibilidade obrigatória**: mesmas entradas produzem
+   exatamente o mesmo resultado sempre. Proíbe estruturas sem ordem
+   garantida, dependência de ordem natural de retorno do banco sem
+   `ORDER BY` explícito, paralelismo não determinístico.
+
+Modelagem: tabela dedicada `recurso_produtivo_compatibilidades`
+(relação N:N direcional com atributo próprio — prioridade). FK composta
+`(recurso_id, empresa_id) → recursos_produtivos(id, empresa_id)`
+garante, a nível de banco, que origem e destino pertencem sempre à
+mesma empresa. Configuração editável (`ativo`/`deleted_at`, PAD-004),
+não log de auditoria.
+
+### 18.2 Motor de Avaliação Sequencial de Capacidade
+
+**Determinístico, porém não persistente** — seu estado interno
+(capacidade remanescente por recurso, durante a avaliação) existe
+apenas durante a execução da simulação e jamais representa um estado
+oficial do sistema.
+
+**Fronteira — Capacidade Disponível Inicial**: o Motor *recebe* o
+resultado já pronto de Calendário → Dias Produtivos → Capacidade Diária
+→ Produtividade → Horas Adicionais (quando existir) como entrada. O
+Motor não recalcula calendário nem produtividade — só consome.
+
+**Comprometido é dado de entrada consultado durante toda a execução**,
+não uma fase que "termina antes" do Motor rodar — a capacidade
+remanescente de um recurso, a qualquer momento da avaliação, é sempre
+`Capacidade Disponível Inicial − Comprometido por outros projetos −
+já consumido por operações anteriores desta mesma simulação`.
+
+Algoritmo:
+
+```
+ENTRADAS (preparadas antes do laço, consultadas durante toda a execução)
+├── Operações do Roteiro, na ordem do roteiro (bom_operacoes.ordem)
+├── Compatibilidades diretas do recurso original, por prioridade
+├── Capacidade Disponível Inicial por recurso (pronta, ver acima)
+└── Comprometido por recurso (calcular_comprometido_v1, ver 18.3)
+
+estado inicial: capacidadeRemanescente[recurso] =
+    CapacidadeDisponivelInicial[recurso] − Comprometido[recurso]
+
+para cada OPERAÇÃO, na ordem do roteiro:
+  candidatos := [recurso original] + compatíveis diretos, por prioridade
+  para cada candidato, em ordem:
+    se capacidadeRemanescente[candidato] >= tempo da operação:
+        recursoConsiderado := candidato
+        capacidadeRemanescente[candidato] -= tempo da operação
+        → próxima operação
+  se nenhum candidato comportou a operação inteira:
+        registra DÉFICIT para esta operação
+        → próxima operação (o Motor NÃO para no primeiro déficit)
+
+RESULTADO (só depois de todas as operações processadas)
+└── 1 linha por OPERAÇÃO, com os 7 valores da fórmula (seção 14)
+    referentes ao recurso considerado daquela operação → persistida
+    nessa granularidade por aprovar_projeto_com_simulacao (ver 18.5 —
+    NÃO há consolidação por recurso na persistência)
+```
+
+### 18.3 Comprometido V1 — decisão de escopo isolada
+
+*"Nesta versão da Simulação Comercial, o comprometimento de capacidade
+é calculado por recurso, considerando todos os projetos aprovados. A
+distribuição temporal da carga entre projetos ainda não faz parte do
+modelo e será tratada em uma evolução futura da arquitetura."*
+
+O comprometimento (V1) é a soma de `necessario`, por recurso, de todos
+os projetos aprovados (`simulacao_comercial_itens`, `vigente=true`) que
+consideraram aquele recurso, excluindo o projeto sendo simulado. **Não
+considera sobreposição temporal entre janelas de projetos diferentes**
+— limitação conhecida e documentada, não comportamento definitivo.
+
+Operações em déficit total não participam deste cálculo, pois não
+possuem `recurso_considerado_id` (ver 18.5) — a query (`WHERE
+recurso_considerado_id = p_recurso_produtivo_id`) já as exclui
+naturalmente, sem necessidade de filtro adicional.
+
+Essa simplificação é isolada num componente próprio e substituível
+(`calcular_comprometido_v1(recurso_produtivo_id, projeto_excluido_id)
+returns numeric`) — o Motor consome o resultado sem conhecer a
+implementação interna. Uma V2 (com distribuição temporal real) pode
+substituir **apenas** esse componente, sem alterar o Motor, a
+Compatibilidade, ou qualquer outra peça.
+
+> **Princípio geral:** não simplifique a arquitetura para simplificar a
+> implementação. Simplifique apenas a parte que será substituída no
+> futuro.
+
+### 18.4 Camada de execução do Motor: TypeScript, não SQL
+
+O Motor de Avaliação Sequencial de Capacidade é implementado na camada
+de aplicação (TypeScript), não em PL/pgSQL — decisão explícita,
+diferente do restante da persistência desta etapa (tabelas, RLS,
+`calcular_comprometido_v1`, `aprovar_projeto_com_simulacao`, que
+continuam em SQL).
+
+**Justificativa**: a arquitetura já possui regra de negócio consolidada
+em TypeScript — `resolverDiaProdutivo()` (seção 7, Etapa 1).
+Reimplementar a lógica de precedência de calendário em PL/pgSQL criaria
+duas implementações da mesma regra de negócio, com risco real de
+divergência ao longo do tempo. O banco permanece responsável por
+persistência, integridade, RLS e funções de apoio pontuais (consultas
+agregadas, cálculos que já são naturalmente SQL); o Motor concentra a
+lógica procedural/algorítmica — que tem estado interno, processamento
+sequencial, e depende de reutilizar `resolverDiaProdutivo` diretamente.
+
+```
+Frontend/Server Action
+  → Motor de Avaliação Sequencial (TypeScript,
+    src/modules/simulacao-comercial/lib/)
+      → resolverDiaProdutivo() [Etapa 1, TS, chamado diretamente]
+      → calcular_produtividade_efetiva() [SQL, via supabase.rpc()]
+      → calcular_comprometido_v1() [SQL, via supabase.rpc()]
+      → SELECT recurso_produtivo_compatibilidades [supabase-js, RLS normal]
+  → aprovar_projeto_com_simulacao() [SQL, RPC final, persiste
+    atomicamente o resultado já calculado]
+```
+
+O banco nunca orquestra a simulação — só persiste o resultado final e
+oferece funções de apoio pontuais que o Motor consome via RPC/`SELECT`.
+
+> **Princípio geral** (candidato a padrão formal quando uma segunda
+> instância aparecer — ex.: APS, PCP — não é convenção com uma única
+> ocorrência): todo algoritmo que possua estado interno, processamento
+> sequencial, ou dependa de reutilização de regras de negócio já
+> implementadas em TypeScript deverá ser implementado na camada de
+> aplicação, salvo justificativa técnica documentada em contrário.
+
+### 18.5 Persistência do snapshot: granularidade por operação
+
+> **Princípio de Persistência da Simulação Comercial:** O Motor de
+> Avaliação Sequencial de Capacidade decide operação por operação.
+> Portanto, o snapshot deve persistir cada decisão na mesma
+> granularidade. Qualquer consolidação é apenas uma visão derivada dos
+> dados, nunca a fonte primária da informação.
+
+`simulacao_comercial_itens` tem **1 linha por operação do roteiro**
+(`bom_operacao_id`), não 1 linha agregada por `recurso_considerado_id`.
+Motivo concreto: se duas operações de recursos originais **diferentes**
+convergirem para o mesmo recurso considerado (ex.: CNC 500 e CNC 800
+ambas substituídas por CNC 1000, via Compatibilidade), uma linha
+agregada só consegue registrar 1 `recurso_original_id` — a segunda
+operação perderia rastreabilidade. Como o Motor já decide nessa
+granularidade, o snapshot só precisa espelhar a decisão, não
+reinterpretá-la.
+
+Colunas `necessario` e `deficit` são **por operação** (o tempo daquela
+operação especificamente) e sempre `NOT NULL` — são propriedades da
+operação em si, conhecidas independentemente do resultado da avaliação.
+Colunas `capacidade_bruta`, `capacidade_efetiva`,
+`capacidade_disponivel`, `comprometido` e `livre` são do **recurso
+considerado** no momento da simulação — denormalizadas deliberadamente
+(repetidas em toda linha que compartilhar o mesmo recurso considerado).
+Normalizar essas colunas em tabela separada é otimização prematura; só
+deve ser considerada se houver gargalo real de desempenho no futuro,
+não como parte desta entrega.
+
+Qualquer visão "por recurso" (ex.: dashboard de capacidade agregada) é
+uma consulta derivada (`GROUP BY recurso_considerado_id`) sobre esses
+dados — nunca uma segunda forma de persistência.
+
+**Déficit total — `recurso_considerado_id`, `motivo_consideracao` e os
+5 campos de capacidade/comprometido/livre são NULLABLE, todos juntos.**
+Quando NENHUM recurso (nem o original, nem nenhum compatível) comporta
+a operação inteira, não existe um "recurso considerado" real — gravar
+ali o recurso original, ou a capacidade dele, só para preencher as
+colunas seria uma informação falsa: o original foi **tentado e
+recusado**, não aceito. A linha representa isso honestamente com as 7
+colunas (`recurso_considerado_id`, `motivo_consideracao`,
+`capacidade_bruta`, `capacidade_efetiva`, `capacidade_disponivel`,
+`comprometido`, `livre`) todas `NULL`; `deficit` (sempre igual ao
+`necessario` da operação nesse caso) é a única fonte de verdade sobre o
+problema, sem exigir cruzar com nenhuma outra coluna para interpretar.
+
+`simulacao_comercial_itens_motivo_consistente_chk` aceita exatamente 3
+estados, mutuamente exclusivos:
+
+| Estado | `recurso_considerado_id` | `motivo_consideracao` | capacidade/comprometido/livre (5 campos) | `deficit` |
+|---|---|---|---|---|
+| Déficit total | `NULL` | `NULL` | todos `NULL` | `= necessario` (e `> 0`) |
+| Original coube | `= recurso_original_id` | `'ORIGINAL'` | todos `NOT NULL` | `= 0` |
+| Compatível coube | `<> recurso_original_id` (e `NOT NULL`) | `'COMPATIBILIDADE'` | todos `NOT NULL` | `= 0` |
+
+`recurso_original_id` permanece sempre `NOT NULL` — a operação sempre
+tem um recurso previsto no roteiro, isso nunca muda, independentemente
+do resultado da avaliação.
+
+### 18.6 Camada client-side: pendência de infraestrutura
+
+`resolverDiaProdutivo()` (Etapa 1) já rodava como `"use client"` por
+falta de um cliente Supabase server-safe no projeto (sem
+`@supabase/ssr`, sem `createServerClient`, sem Route Handler/Server
+Action usando um client autenticado fora do browser — confirmado por
+inspeção do projeto). O Motor e seus módulos de apoio
+(`prepararEntradasMotor.ts`, `executarSimulacao.ts`,
+`agregarDiasProdutivos.ts`) herdam a mesma limitação: apesar de
+executarem múltiplas consultas, percorrerem a estrutura inteira do BOM
+e chamarem RPCs — trabalho tipicamente de servidor — permanecem
+`"use client"` porque não há alternativa disponível hoje.
+
+**Pendência de infraestrutura registrada, não resolvida nesta etapa**:
+criar um cliente Supabase server-safe (via `@supabase/ssr` ou
+equivalente) é pré-requisito para mover `resolverDiaProdutivo`, o Motor
+e módulos correlatos para Server Actions/Route Handlers. Até lá, toda
+essa camada roda no browser, autenticada pela sessão do usuário
+logado — funcionalmente correta (RLS de `authenticated` se aplica
+normalmente), só não otimizada para servidor.
+
+---
+
 ## Princípio Final
 
 A Simulação Comercial não substitui o PCP. Ela calcula a capacidade
