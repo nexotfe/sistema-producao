@@ -48,6 +48,8 @@ export default function CommercialProposalPage() {
     nomeSolicitante,
     responsavelNome,
     itens,
+    valorTecnicoProposta,
+    valorDescontoProposta,
     valorTotalProposta,
     revisao,
     salvandoRevisao,
@@ -299,12 +301,32 @@ export default function CommercialProposalPage() {
           </div>
 
           <div className="flex justify-end border-t border-slate-200 px-6 py-4">
-            <div className="w-full max-w-sm rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-bold text-slate-700">
+            <div className="w-full max-w-sm space-y-2">
+              <div className="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  Subtotal
+                </span>
+                <span className="text-sm font-semibold text-slate-900">
+                  {formatarMoeda(valorTecnicoProposta)}
+                </span>
+              </div>
+
+              {valorDescontoProposta > 0 ? (
+                <div className="flex items-center justify-between gap-4 rounded-md border border-status-danger-border bg-status-danger-bg px-4 py-2">
+                  <span className="text-sm font-semibold text-status-danger-text">
+                    Desconto
+                  </span>
+                  <span className="text-sm font-semibold text-status-danger-text">
+                    - {formatarMoeda(valorDescontoProposta)}
+                  </span>
+                </div>
+              ) : null}
+
+              <div className="flex items-center justify-between gap-4 rounded-md border border-status-info-border bg-status-info-bg px-4 py-3">
+                <span className="text-sm font-bold text-status-info-text">
                   Valor Total da Proposta
                 </span>
-                <span className="text-lg font-bold text-slate-950">
+                <span className="text-lg font-bold text-status-info-text">
                   {formatarMoeda(valorTotalProposta)}
                 </span>
               </div>

@@ -55,11 +55,27 @@ export function calcularResumoOrcamento({
   const valorDesconto = valorTecnico * (desconto / 100);
   const valorComercial = valorTecnico - valorDesconto;
 
+  // Margem Tecnica e so a margem de lucro configurada (input, nao um
+  // calculo derivado). Margem Efetiva e indicador gerencial: recalcula
+  // o imposto proporcionalmente sobre o Valor Comercial so para medir o
+  // lucro real apos desconto - nao afeta valorComercial em si, que
+  // continua sendo valorTecnico - desconto, sem recalculo de imposto
+  // real (DEC-001).
+  const margemTecnica = margemLucroPercent;
+  const margemEfetiva =
+    custoTotal > 0
+      ? ((valorComercial - valorComercial * carga - custoTotal) /
+          custoTotal) *
+        100
+      : undefined;
+
   return {
     valorTecnico,
     valorDesconto,
     valorComercial,
     impostos,
     lucro,
+    margemTecnica,
+    margemEfetiva,
   };
 }

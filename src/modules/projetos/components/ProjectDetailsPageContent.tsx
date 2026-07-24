@@ -18,6 +18,16 @@ import {
 } from "@/modules/projetos/components/EditarCustoItemModal";
 import { useOrcamento } from "@/modules/projetos/hooks/useOrcamento";
 import { PROJECT_TYPE_LABELS } from "@/modules/projetos/constants";
+import { Field } from "@/modules/shared/ui/Field";
+import { Card } from "@/modules/shared/ui/Card";
+
+// Esta tela ainda NAO foi migrada ao Design System (PAD-006/007) - o
+// cabecalho, "Itens do projeto", "Resumo Produtivo" e "Carga
+// Tributaria" continuam em classes fixas antigas (slate-*, app-card).
+// Migracao completa desta tela e pendencia futura separada. Os blocos
+// "Margem de Lucro %", "Negociacao Comercial" e "Resumo do Orcamento"
+// sao a excecao: usam Card/Field do Design System especificamente para
+// a funcionalidade de Desconto Comercial (DEC-001).
 
 type ProjectDetailsPageContentProps = {
   projectId?: string | null;
@@ -54,6 +64,10 @@ export function ProjectDetailsPageContent({
     cargaTributariaPercent,
     setCargaTributariaPercent,
     cargaTributariaEfetiva,
+    descontoPercentual,
+    setDescontoPercentual,
+    descontoMotivo,
+    setDescontoMotivo,
     itens,
     resumoOrcamento,
     resumoProdutivo,
@@ -93,6 +107,16 @@ export function ProjectDetailsPageContent({
   useEffect(() => {
     setCargaTexto(String(cargaTributariaPercent ?? cargaTributariaEfetiva));
   }, [cargaTributariaPercent, cargaTributariaEfetiva]);
+
+  const [descontoTexto, setDescontoTexto] = useState(
+    descontoPercentual !== null ? String(descontoPercentual) : "",
+  );
+
+  useEffect(() => {
+    setDescontoTexto(
+      descontoPercentual !== null ? String(descontoPercentual) : "",
+    );
+  }, [descontoPercentual]);
 
   if (!projectId) {
     return (
@@ -379,12 +403,8 @@ export function ProjectDetailsPageContent({
           <p className="text-sm font-medium text-rose-600">{formulaErro}</p>
         )}
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-          <section className="rounded-md border border-slate-200 bg-app-card p-3">
-            <div className="mb-2">
-              <h2 className="text-sm font-bold">Margem de Lucro %</h2>
-            </div>
-
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Card title="Margem de Lucro %">
             <div className="flex items-center gap-4">
               <div className="w-60 shrink-0">
                 <label className="mb-1 block text-xs font-semibold text-slate-600">
@@ -418,49 +438,136 @@ export function ProjectDetailsPageContent({
                 orçamentista poderá alterar este percentual conforme a necessidade.
               </p>
             </div>
-          </section>
+          </Card>
 
-          <section className="rounded-md border border-slate-200 bg-app-card p-4">
-            <h2 className="text-sm font-bold">Resumo do Orçamento</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div>
-                <span className="mb-1 block text-xs font-semibold text-slate-600">
-                  Custo Total
-                </span>
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  {formatarMoeda(resumoOrcamento.custoTotal)}
-                </div>
-              </div>
+          <Card title="Negociação Comercial">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Desconto (%)"
+                inputMode="decimal"
+                placeholder="0"
+                value={descontoTexto}
+                onChange={(event) => {
+                  const texto = event.target.value;
+                  setDescontoTexto(texto);
 
-              <div>
-                <span className="mb-1 block text-xs font-semibold text-slate-600">
-                  Impostos Totais
-                </span>
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  {formatarMoeda(resumoOrcamento.impostosTotal)}
-                </div>
-              </div>
+                  if (texto.trim() === "") {
+                    setDescontoPercentual(null);
+                    return;
+                  }
 
-              <div>
-                <span className="mb-1 block text-xs font-semibold text-slate-600">
-                  Lucro Total
-                </span>
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  {formatarMoeda(resumoOrcamento.lucroTotal)}
-                </div>
-              </div>
+                  const numero = Number(texto.replace(",", "."));
 
-              <div>
-                <span className="mb-1 block text-xs font-semibold text-slate-600">
-                  Valor Total do Orçamento
-                </span>
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                  {formatarMoeda(resumoOrcamento.valorTotal)}
-                </div>
+                  if (Number.isFinite(numero)) {
+                    setDescontoPercentual(numero);
+                  }
+                }}
+                onBlur={() =>
+                  setDescontoTexto(
+                    descontoPercentual !== null
+                      ? String(descontoPercentual)
+                      : "",
+                  )
+                }
+              />
+
+              <Field
+                label="Motivo do desconto (opcional)"
+                placeholder="Ex: Negociação Comercial"
+                value={descontoMotivo ?? ""}
+                onChange={(event) => setDescontoMotivo(event.target.value)}
+              />
+            </div>
+          </Card>
+        </div>
+
+        <Card title="Resumo do Orçamento">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-slate-600">
+                Custo Total
+              </span>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                {formatarMoeda(resumoOrcamento.custoTotal)}
               </div>
             </div>
-          </section>
-        </div>
+
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-slate-600">
+                Impostos Totais
+              </span>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                {formatarMoeda(resumoOrcamento.impostosTotal)}
+              </div>
+            </div>
+
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-slate-600">
+                Lucro Total
+              </span>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                {formatarMoeda(resumoOrcamento.lucroTotal)}
+              </div>
+            </div>
+
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-slate-600">
+                Valor Técnico
+              </span>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                {formatarMoeda(resumoOrcamento.valorTecnico)}
+              </div>
+            </div>
+
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-status-danger-text">
+                Desconto
+              </span>
+              <div className="rounded-md border border-status-danger-border bg-status-danger-bg px-3 py-2 text-sm font-semibold text-status-danger-text">
+                - {formatarMoeda(resumoOrcamento.valorDesconto)}
+              </div>
+            </div>
+
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-status-info-text">
+                Valor Comercial
+              </span>
+              <div className="rounded-md border border-status-info-border bg-status-info-bg px-3 py-2 text-sm font-bold text-status-info-text">
+                {formatarMoeda(resumoOrcamento.valorComercial)}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 border-t border-slate-200 pt-3 sm:grid-cols-2">
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-slate-600">
+                Margem Técnica
+              </span>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                {resumoOrcamento.margemTecnica !== undefined
+                  ? `${resumoOrcamento.margemTecnica.toFixed(2)}%`
+                  : "—"}
+              </div>
+            </div>
+
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-slate-600">
+                Margem Efetiva
+              </span>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                {resumoOrcamento.margemEfetiva !== undefined
+                  ? `${resumoOrcamento.margemEfetiva.toFixed(2)}%`
+                  : "—"}
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            Margem Efetiva é só indicador gerencial — recalcula o imposto
+            proporcionalmente para mostrar o lucro real após desconto. Não
+            altera o valor cobrado do cliente nem o imposto declarado.
+          </p>
+        </Card>
 
         <section className="rounded-md border border-slate-200 bg-app-card p-4">
           <h2 className="text-sm font-bold">Resumo Produtivo</h2>

@@ -343,7 +343,15 @@ export function useOrcamento(idProjeto: string | null) {
   // Valor Tecnico agregado - nunca no breakdown por item acima.
   const resumoOrcamento = useMemo(() => {
     const custoTotal = itensBase.reduce((acc, item) => acc + item.custo, 0);
-    const { impostos, lucro, valorComercial } = calcularResumoOrcamento({
+    const {
+      valorTecnico,
+      valorDesconto,
+      valorComercial,
+      impostos,
+      lucro,
+      margemTecnica,
+      margemEfetiva,
+    } = calcularResumoOrcamento({
       custoTotal,
       margemLucroPercent,
       cargaTributariaPercent: cargaTributariaEfetiva,
@@ -354,7 +362,11 @@ export function useOrcamento(idProjeto: string | null) {
       custoTotal,
       impostosTotal: impostos,
       lucroTotal: lucro,
-      valorTotal: valorComercial,
+      valorTecnico,
+      valorDesconto,
+      valorComercial,
+      margemTecnica,
+      margemEfetiva,
     };
   }, [itensBase, margemLucroPercent, cargaTributariaEfetiva, descontoPercentual]);
 
@@ -386,7 +398,10 @@ export function useOrcamento(idProjeto: string | null) {
         margem_lucro_percent: margemLucroPercent,
         carga_tributaria_percent: cargaTributariaPercent,
         desconto_percentual: descontoPercentual,
-        desconto_motivo: descontoMotivo,
+        desconto_motivo:
+          descontoMotivo && descontoMotivo.trim() !== ""
+            ? descontoMotivo
+            : null,
       })
       .eq("id", projetoId);
 

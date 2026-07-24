@@ -57,6 +57,8 @@ export function useProposta(idProjeto: string | null) {
   const [nomeSolicitante, setNomeSolicitante] = useState<string | null>(null);
   const [responsavelNome, setResponsavelNome] = useState("");
   const [itens, setItens] = useState<ItemProposta[]>([]);
+  const [valorTecnicoProposta, setValorTecnicoProposta] = useState(0);
+  const [valorDescontoProposta, setValorDescontoProposta] = useState(0);
   const [valorTotalProposta, setValorTotalProposta] = useState(0);
 
   const [loading, setLoading] = useState(true);
@@ -232,14 +234,17 @@ export function useProposta(idProjeto: string | null) {
       // somado (nao item a item), para os dois "Valor Total" baterem. O
       // desconto comercial tambem so entra aqui, nunca no breakdown por
       // item acima (mesmo criterio de useOrcamento.ts).
-      const { valorComercial: totalProposta } = calcularResumoOrcamento({
-        custoTotal: custoTotalSoma,
-        margemLucroPercent: margem,
-        cargaTributariaPercent: cargaEfetiva,
-        descontoPercent: descontoPercentual,
-      });
+      const { valorTecnico, valorDesconto, valorComercial: totalProposta } =
+        calcularResumoOrcamento({
+          custoTotal: custoTotalSoma,
+          margemLucroPercent: margem,
+          cargaTributariaPercent: cargaEfetiva,
+          descontoPercent: descontoPercentual,
+        });
 
       setItens(itensCalculados);
+      setValorTecnicoProposta(valorTecnico);
+      setValorDescontoProposta(valorDesconto);
       setValorTotalProposta(totalProposta);
       setLoading(false);
     }
@@ -306,6 +311,8 @@ export function useProposta(idProjeto: string | null) {
     nomeSolicitante,
     responsavelNome,
     itens,
+    valorTecnicoProposta,
+    valorDescontoProposta,
     valorTotalProposta,
     revisao,
     salvandoRevisao,
