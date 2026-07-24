@@ -84,3 +84,30 @@ aprovada/em produção, salvo quando a alteração visual fizer parte
 explícita e autorizada do escopo da tarefa. Substituição de
 implementação e redesenho visual são tarefas diferentes e não devem
 ser combinadas sem autorização explícita para a segunda.
+
+## 9. Checkpoint humano obrigatório para qualquer escrita em produção
+
+Qualquer via técnica capaz de ESCREVER em produção (banco, arquivo, ou
+qualquer outro estado persistente) — seja SQL Editor, CLI, ou qualquer
+outra ferramenta — exige o mesmo checkpoint humano, independente do
+mecanismo usado:
+
+1. Antes de CADA execução de escrita (nunca em lote, nunca duas
+   seguidas sem nova confirmação), mostrar o comando/SQL exato que será
+   rodado. Se a tabela/linha afetada tiver `empresa_id` (ou equivalente
+   multi-tenant), incluir explicitamente qual empresa é no próprio
+   pedido de confirmação — nunca deixar implícito ou presumido pelo
+   nome do projeto/recurso.
+2. Aguardar confirmação explícita do usuário para aquela execução
+   específica — não vale autorização de uma tarefa anterior, não vale
+   "você já disse que eu tinha acesso" citado fora de contexto.
+3. Só depois da confirmação, executar.
+4. Rodar uma leitura de verificação (antes e depois, quando fizer
+   sentido) para confirmar o estado real, nunca presumir que a escrita
+   funcionou só porque o comando não retornou erro.
+
+Isso vale tanto para vias como `supabase db query --linked` quanto
+para SQL Editor manual (que continua sendo a opção padrão quando a
+leitura de verificação for mais simples de o próprio usuário conferir
+visualmente) — a escolha da via técnica é secundária; a autorização
+explícita por ação é o que não pode ser inferida.
