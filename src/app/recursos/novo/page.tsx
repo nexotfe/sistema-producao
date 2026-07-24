@@ -24,6 +24,11 @@ export default function NovoRecursoPage() {
     setFabricante,
     modelo,
     setModelo,
+    setor,
+    setSetor,
+    setorModo,
+    setSetorModo,
+    setorHerdado,
     cargaHorariaSemanal,
     setCargaHorariaSemanal,
     diasTrabalhadosSemana,
@@ -123,6 +128,53 @@ export default function NovoRecursoPage() {
                         .join(" - "),
                     }))}
                   />
+                  <div className="flex flex-col gap-[7px]">
+                    <label className="text-[12.5px] font-semibold text-text-primary">
+                      Setor
+                    </label>
+                    <div className="flex h-[42px] overflow-hidden rounded-[10px] border border-border">
+                      <button
+                        type="button"
+                        onClick={() => setSetorModo("herdar")}
+                        className={`h-full flex-1 text-[12.5px] font-semibold transition ${
+                          setorModo === "herdar"
+                            ? "bg-action-primary text-action-primary-text"
+                            : "bg-surface-elevated text-text-secondary hover:bg-border-subtle"
+                        }`}
+                      >
+                        Herdar do Grupo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSetorModo("especifico")}
+                        className={`h-full flex-1 border-l border-border text-[12.5px] font-semibold transition ${
+                          setorModo === "especifico"
+                            ? "bg-action-primary text-action-primary-text"
+                            : "bg-surface-elevated text-text-secondary hover:bg-border-subtle"
+                        }`}
+                      >
+                        Usar valor específico
+                      </button>
+                    </div>
+                  </div>
+                  {setorModo === "herdar" ? (
+                    <div className="flex flex-col gap-[7px]">
+                      <label className="text-[12.5px] font-semibold text-text-primary">
+                        Setor herdado do Grupo
+                      </label>
+                      <input
+                        value={setorHerdado || "Grupo sem Setor definido"}
+                        readOnly
+                        className="h-[42px] w-full rounded-[10px] border border-border-subtle bg-border-subtle px-[13px] text-[13.5px] text-text-disabled outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <Field
+                      label="Setor"
+                      value={setor}
+                      onChange={(event) => setSetor(event.target.value)}
+                    />
+                  )}
                   <CurrencyField
                     label="Valor Hora"
                     value={valorHora}

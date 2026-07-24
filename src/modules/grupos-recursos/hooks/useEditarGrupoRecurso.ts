@@ -12,6 +12,7 @@ type SupabaseErrorLike = {
 export function useEditarGrupoRecurso(id: string) {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
+  const [setor, setSetor] = useState("");
   const [descricao, setDescricao] = useState("");
   const [unidadeCapacidade, setUnidadeCapacidade] = useState("");
   const [produtividadePadrao, setProdutividadePadrao] = useState("");
@@ -33,7 +34,7 @@ export function useEditarGrupoRecurso(id: string) {
       const { data, error } = await supabase
         .from("grupos_recursos")
         .select(
-          "id,codigo,nome,descricao,unidade_capacidade,produtividade_padrao",
+          "id,codigo,nome,setor,descricao,unidade_capacidade,produtividade_padrao",
         )
         .eq("id", id)
         .single();
@@ -46,6 +47,7 @@ export function useEditarGrupoRecurso(id: string) {
 
       setCodigo(data.codigo ?? "");
       setNome(data.nome ?? "");
+      setSetor(data.setor ?? "");
       setDescricao(data.descricao ?? "");
       setUnidadeCapacidade(data.unidade_capacidade ?? "");
       setProdutividadePadrao(
@@ -104,6 +106,7 @@ export function useEditarGrupoRecurso(id: string) {
         .update({
           codigo,
           nome,
+          setor,
           descricao,
           unidade_capacidade: unidadeCapacidade || "h/dia",
           produtividade_padrao: produtividadeFracao,
@@ -136,6 +139,8 @@ export function useEditarGrupoRecurso(id: string) {
     setCodigo,
     nome,
     setNome,
+    setor,
+    setSetor,
     descricao,
     setDescricao,
     unidadeCapacidade,

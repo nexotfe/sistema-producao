@@ -19,6 +19,8 @@ export default function EditarGrupoRecursoPage({ params }: Props) {
     setCodigo,
     nome,
     setNome,
+    setor,
+    setSetor,
     descricao,
     setDescricao,
     unidadeCapacidade,
@@ -71,6 +73,7 @@ export default function EditarGrupoRecursoPage({ params }: Props) {
             <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
               <Field label="Codigo" value={codigo} onChange={setCodigo} />
               <Field label="Nome do grupo" value={nome} onChange={setNome} />
+              <Field label="Setor" value={setor} onChange={setSetor} />
               <Field
                 label="Unidade de capacidade"
                 value={unidadeCapacidade}

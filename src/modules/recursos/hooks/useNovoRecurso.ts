@@ -17,6 +17,9 @@ export function useNovoRecurso(duplicarId?: string | null) {
   const [fabricante, setFabricante] = useState("");
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
+  const [setorModo, setSetorModoState] = useState<"herdar" | "especifico">(
+    "herdar",
+  );
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
   const [produtividade, setProdutividade] = useState("");
@@ -54,11 +57,22 @@ export function useNovoRecurso(duplicarId?: string | null) {
     grupos.find((grupo) => grupo.id === grupoId)?.produtividade_padrao ??
     null;
 
+  const setorHerdado =
+    grupos.find((grupo) => grupo.id === grupoId)?.setor ?? null;
+
   function setProdutividadeModo(modo: "herdar" | "especifico") {
     setProdutividadeModoState(modo);
 
     if (modo === "herdar") {
       setProdutividade("");
+    }
+  }
+
+  function setSetorModo(modo: "herdar" | "especifico") {
+    setSetorModoState(modo);
+
+    if (modo === "herdar") {
+      setSetor("");
     }
   }
 
@@ -101,6 +115,9 @@ export function useNovoRecurso(duplicarId?: string | null) {
         setFabricante(data.fabricante ?? "");
         setModelo(data.modelo ?? "");
         setSetor(data.setor ?? "");
+        setSetorModoState(
+          data.setor && data.setor.trim() !== "" ? "especifico" : "herdar",
+        );
         setCargaHorariaSemanal(
           data.carga_horaria_semanal !== null &&
             data.carga_horaria_semanal !== undefined
@@ -231,6 +248,8 @@ export function useNovoRecurso(duplicarId?: string | null) {
         return false;
       }
 
+      const setorFinal = setorModo === "especifico" ? setor : null;
+
       const { error } = await supabase.from("recursos_produtivos").insert({
         empresa_id: usuario.empresa_id,
         created_by: user.id,
@@ -239,7 +258,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
         nome,
         fabricante,
         modelo,
-        setor,
+        setor: setorFinal,
         carga_horaria_semanal: cargaHorariaSemanalNumerica,
         dias_trabalhados_semana: diasTrabalhadosSemanaNumerico,
         capacidade_horas_dia: capacidadeHorasDiaCalculada,
@@ -282,6 +301,9 @@ export function useNovoRecurso(duplicarId?: string | null) {
     setModelo,
     setor,
     setSetor,
+    setorModo,
+    setSetorModo,
+    setorHerdado,
     cargaHorariaSemanal,
     setCargaHorariaSemanal,
     diasTrabalhadosSemana,

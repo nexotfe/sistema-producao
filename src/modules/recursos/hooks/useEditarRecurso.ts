@@ -17,6 +17,9 @@ export function useEditarRecurso(id: string) {
   const [fabricante, setFabricante] = useState("");
   const [modelo, setModelo] = useState("");
   const [setor, setSetor] = useState("");
+  const [setorModo, setSetorModoState] = useState<"herdar" | "especifico">(
+    "herdar",
+  );
   const [capacidadeHorasDiaSalva, setCapacidadeHorasDiaSalva] = useState<
     number | null
   >(null);
@@ -59,11 +62,22 @@ export function useEditarRecurso(id: string) {
     grupos.find((grupo) => grupo.id === grupoId)?.produtividade_padrao ??
     null;
 
+  const setorHerdado =
+    grupos.find((grupo) => grupo.id === grupoId)?.setor ?? null;
+
   function setProdutividadeModo(modo: "herdar" | "especifico") {
     setProdutividadeModoState(modo);
 
     if (modo === "herdar") {
       setProdutividade("");
+    }
+  }
+
+  function setSetorModo(modo: "herdar" | "especifico") {
+    setSetorModoState(modo);
+
+    if (modo === "herdar") {
+      setSetor("");
     }
   }
 
@@ -107,6 +121,9 @@ export function useEditarRecurso(id: string) {
       setFabricante(recurso.fabricante ?? "");
       setModelo(recurso.modelo ?? "");
       setSetor(recurso.setor ?? "");
+      setSetorModoState(
+        recurso.setor && recurso.setor.trim() !== "" ? "especifico" : "herdar",
+      );
       setCapacidadeHorasDiaSalva(
         recurso.capacidade_horas_dia !== null &&
           recurso.capacidade_horas_dia !== undefined
@@ -226,6 +243,8 @@ export function useEditarRecurso(id: string) {
           ? (produtividadePercentual as number) / 100
           : null;
 
+      const setorFinal = setorModo === "especifico" ? setor : null;
+
       const { error } = await supabase
         .from("recursos_produtivos")
         .update({
@@ -234,7 +253,7 @@ export function useEditarRecurso(id: string) {
           nome,
           fabricante,
           modelo,
-          setor,
+          setor: setorFinal,
           carga_horaria_semanal: cargaHorariaSemanalNumerica,
           dias_trabalhados_semana: diasTrabalhadosSemanaNumerico,
           produtividade: produtividadeFracao,
@@ -279,6 +298,9 @@ export function useEditarRecurso(id: string) {
     setModelo,
     setor,
     setSetor,
+    setorModo,
+    setSetorModo,
+    setorHerdado,
     cargaHorariaSemanal,
     setCargaHorariaSemanal,
     diasTrabalhadosSemana,
