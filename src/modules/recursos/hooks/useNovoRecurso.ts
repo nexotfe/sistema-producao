@@ -20,6 +20,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
   const [setorModo, setSetorModoState] = useState<"herdar" | "especifico">(
     "herdar",
   );
+  const [observacoes, setObservacoes] = useState("");
   const [cargaHorariaSemanal, setCargaHorariaSemanal] = useState("");
   const [diasTrabalhadosSemana, setDiasTrabalhadosSemana] = useState("");
   const [produtividade, setProdutividade] = useState("");
@@ -104,7 +105,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
       const { data, error } = await supabase
         .from("recursos_produtivos")
         .select(
-          "grupo_id,nome,fabricante,modelo,setor,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
+          "grupo_id,nome,fabricante,modelo,setor,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora,observacoes",
         )
         .eq("id", duplicarId)
         .single();
@@ -145,6 +146,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
             ? String(data.valor_hora)
             : "0",
         );
+        setObservacoes(data.observacoes ?? "");
       }
 
       setLoadingDuplicado(false);
@@ -264,6 +266,7 @@ export function useNovoRecurso(duplicarId?: string | null) {
         capacidade_horas_dia: capacidadeHorasDiaCalculada,
         produtividade: produtividadeFracao,
         valor_hora: valorHoraNumerico,
+        observacoes: observacoes.trim() !== "" ? observacoes : null,
         ativo: true,
       });
 
@@ -316,6 +319,8 @@ export function useNovoRecurso(duplicarId?: string | null) {
     produtividadeHerdada,
     valorHora,
     setValorHora,
+    observacoes,
+    setObservacoes,
     grupos,
     loadingGrupos,
     loadingDuplicado,

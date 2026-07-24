@@ -20,6 +20,7 @@ export function useEditarRecurso(id: string) {
   const [setorModo, setSetorModoState] = useState<"herdar" | "especifico">(
     "herdar",
   );
+  const [observacoes, setObservacoes] = useState("");
   const [capacidadeHorasDiaSalva, setCapacidadeHorasDiaSalva] = useState<
     number | null
   >(null);
@@ -96,7 +97,7 @@ export function useEditarRecurso(id: string) {
         supabase
           .from("recursos_produtivos")
           .select(
-            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade_horas_dia,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora",
+            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade_horas_dia,carga_horaria_semanal,dias_trabalhados_semana,produtividade,valor_hora,observacoes",
           )
           .eq("id", id)
           .single(),
@@ -157,6 +158,7 @@ export function useEditarRecurso(id: string) {
           ? String(recurso.valor_hora)
           : "0",
       );
+      setObservacoes(recurso.observacoes ?? "");
       setLoading(false);
     }
 
@@ -261,6 +263,7 @@ export function useEditarRecurso(id: string) {
             ? { capacidade_horas_dia: capacidadeHorasDiaCalculada }
             : {}),
           valor_hora: valorHoraNumerico,
+          observacoes: observacoes.trim() !== "" ? observacoes : null,
         })
         .eq("id", id);
 
@@ -313,6 +316,8 @@ export function useEditarRecurso(id: string) {
     produtividadeHerdada,
     valorHora,
     setValorHora,
+    observacoes,
+    setObservacoes,
     grupos,
     loading,
     salvando,

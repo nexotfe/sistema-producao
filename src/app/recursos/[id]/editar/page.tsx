@@ -48,6 +48,8 @@ export default function EditarRecursoPage({ params }: Props) {
     produtividadeHerdada,
     valorHora,
     setValorHora,
+    observacoes,
+    setObservacoes,
     grupos,
     loading,
     salvando,
@@ -256,6 +258,20 @@ export default function EditarRecursoPage({ params }: Props) {
           </Card>
 
           <CompatibilidadeRecursos recursoOrigemId={id} />
+
+          <Card title="Observações">
+            <div className="flex flex-col gap-[7px]">
+              <label className="text-[12.5px] font-semibold text-text-primary">
+                Observações
+              </label>
+              <textarea
+                value={observacoes}
+                onChange={(event) => setObservacoes(event.target.value)}
+                rows={6}
+                className="w-full rounded-[10px] border border-border bg-surface-elevated px-[13px] py-[10px] text-[13.5px] text-text-primary outline-none transition placeholder:text-text-disabled focus-visible:border-action-primary focus-visible:ring-[3px] focus-visible:ring-focus-ring"
+              />
+            </div>
+          </Card>
 
           {erro && (
             <p className="text-sm font-medium text-status-danger-text">
