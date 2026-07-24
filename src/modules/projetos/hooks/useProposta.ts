@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { calcularResumoOrcamento } from "../lib/calcularResumoOrcamento";
 
 export type ClienteProposta = {
   nome: string;
@@ -43,34 +44,6 @@ export function proximaRevisao(atual: string): string {
   return "A" + letras.join("");
 }
 
-// Mesma formula hibrida de useOrcamento.ts: Margem "por fora" (% do
-// custo), Carga Tributaria "por dentro" (% do proprio preco de venda,
-// incidindo sobre Custo + Lucro). Precisa ficar identica para o Valor
-// Total da Proposta bater com o Valor Total do Orcamento.
-function calcularPrecoVenda(
-  custo: number,
-  margemPercent: number,
-  cargaPercent: number,
-) {
-  const margem = margemPercent / 100;
-  const carga = cargaPercent / 100;
-  const lucro = custo * margem;
-  const subtotal = custo + lucro;
-  const denominador = 1 - carga;
-
-  if (denominador <= 0) {
-    return { impostos: 0, lucro, total: subtotal };
-  }
-
-  const precoVenda = subtotal / denominador;
-
-  return {
-    impostos: precoVenda * carga,
-    lucro,
-    total: precoVenda,
-  };
-}
-
 export function useProposta(idProjeto: string | null) {
   const [criadoEm, setCriadoEm] = useState<string | null>(null);
   const [numeroProjetoCarregado, setNumeroProjetoCarregado] = useState<
@@ -104,7 +77,7 @@ export function useProposta(idProjeto: string | null) {
       const { data: projeto, error } = await supabase
         .from("projetos")
         .select(
-          "id,numero_projeto,tipo_projeto,cliente_id,margem_lucro_percent,carga_tributaria_percent,contato_comercial_nome,created_at,proposta_revisao,proposta_consideracoes",
+          "id,numero_projeto,tipo_projeto,cliente_id,margem_lucro_percent,carga_tributaria_percent,desconto_percentual,contato_comercial_nome,created_at,proposta_revisao,proposta_consideracoes",
         )
         .eq("id", idProjeto)
         .is("deleted_at", null)
@@ -176,6 +149,11 @@ export function useProposta(idProjeto: string | null) {
 
       const excluirMateriaPrima = projeto.tipo_projeto === "industrializacao";
       const margem = Number(projeto.margem_lucro_percent);
+      const descontoPercentual =
+        projeto.desconto_percentual !== null &&
+        projeto.desconto_percentual !== undefined
+          ? Number(projeto.desconto_percentual)
+          : null;
 
       let cargaEfetiva = Number(projeto.carga_tributaria_percent ?? 0);
 
@@ -191,7 +169,7 @@ export function useProposta(idProjeto: string | null) {
       }
 
       const itensCalculados: ItemProposta[] = [];
-      let somaTotal = 0;
+      let custoTotalSoma = 0;
 
       for (const item of linhas) {
         const { data: produto } = await supabase
@@ -230,13 +208,13 @@ export function useProposta(idProjeto: string | null) {
         }
 
         const custoItem = custoUnitario * item.quantidade;
-        const { total: totalItem } = calcularPrecoVenda(
-          custoItem,
-          margem,
-          cargaEfetiva,
-        );
+        custoTotalSoma += custoItem;
 
-        somaTotal += totalItem;
+        const { valorComercial: totalItem } = calcularResumoOrcamento({
+          custoTotal: custoItem,
+          margemLucroPercent: margem,
+          cargaTributariaPercent: cargaEfetiva,
+        });
 
         itensCalculados.push({
           id: item.id,
@@ -249,8 +227,20 @@ export function useProposta(idProjeto: string | null) {
         });
       }
 
+      // Total: regra oficial do DEC-001 - mesma formula do
+      // useOrcamento.ts, aplicada uma UNICA VEZ sobre o custo total
+      // somado (nao item a item), para os dois "Valor Total" baterem. O
+      // desconto comercial tambem so entra aqui, nunca no breakdown por
+      // item acima (mesmo criterio de useOrcamento.ts).
+      const { valorComercial: totalProposta } = calcularResumoOrcamento({
+        custoTotal: custoTotalSoma,
+        margemLucroPercent: margem,
+        cargaTributariaPercent: cargaEfetiva,
+        descontoPercent: descontoPercentual,
+      });
+
       setItens(itensCalculados);
-      setValorTotalProposta(somaTotal);
+      setValorTotalProposta(totalProposta);
       setLoading(false);
     }
 

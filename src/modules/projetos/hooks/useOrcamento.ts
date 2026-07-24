@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { ProjectStatus, ProjectType } from "../types";
+import { calcularResumoOrcamento } from "../lib/calcularResumoOrcamento";
 
 export type ClienteOrcamento = {
   id: string;
@@ -53,38 +54,6 @@ type ResultadoAdicionarItem =
 const MENSAGEM_CARGA_INVALIDA =
   "Carga Tributária não pode ser 100% ou mais.";
 
-/**
- * Formula hibrida: Margem e "por fora" (% direto do custo, como antes);
- * Carga Tributaria e "por dentro", incidindo sobre Custo + Lucro (o
- * valor final da nota), nao sobre o custo isolado. Com carga >= 100 o
- * denominador zera ou fica negativo - por isso e bloqueada antes de
- * chegar aqui (ver setCargaTributariaPercent); o fallback abaixo e so
- * uma rede de seguranca para nao gerar NaN/Infinity na tela.
- */
-function calcularPrecoVenda(
-  custo: number,
-  margemPercent: number,
-  cargaPercent: number,
-) {
-  const margem = margemPercent / 100;
-  const carga = cargaPercent / 100;
-  const lucro = custo * margem;
-  const subtotal = custo + lucro;
-  const denominador = 1 - carga;
-
-  if (denominador <= 0) {
-    return { impostos: 0, lucro, total: subtotal };
-  }
-
-  const precoVenda = subtotal / denominador;
-
-  return {
-    impostos: precoVenda * carga,
-    lucro,
-    total: precoVenda,
-  };
-}
-
 export function useOrcamento(idProjeto: string | null) {
   const [projetoId, setProjetoId] = useState<string | null>(null);
   const [numero, setNumero] = useState<string | null>(null);
@@ -102,6 +71,10 @@ export function useOrcamento(idProjeto: string | null) {
   >(null);
   const [cargaTributariaSugerida, setCargaTributariaSugerida] = useState(0);
   const [formulaErro, setFormulaErro] = useState<string | null>(null);
+  const [descontoPercentual, setDescontoPercentual] = useState<number | null>(
+    null,
+  );
+  const [descontoMotivo, setDescontoMotivo] = useState<string | null>(null);
 
   const [itensBase, setItensBase] = useState<ItemBase[]>([]);
   const [resumoProdutivoLinhas, setResumoProdutivoLinhas] = useState<
@@ -125,7 +98,7 @@ export function useOrcamento(idProjeto: string | null) {
     const { data: projeto, error } = await supabase
       .from("projetos")
       .select(
-        "id,numero_projeto,nome,tipo_projeto,status,cliente_id,data_objetivo,created_at,margem_lucro_percent,carga_tributaria_percent",
+        "id,numero_projeto,nome,tipo_projeto,status,cliente_id,data_objetivo,created_at,margem_lucro_percent,carga_tributaria_percent,desconto_percentual,desconto_motivo",
       )
       .eq("id", idProjeto)
       .is("deleted_at", null)
@@ -150,6 +123,12 @@ export function useOrcamento(idProjeto: string | null) {
         ? Number(projeto.carga_tributaria_percent)
         : null,
     );
+    setDescontoPercentual(
+      projeto.desconto_percentual !== null
+        ? Number(projeto.desconto_percentual)
+        : null,
+    );
+    setDescontoMotivo(projeto.desconto_motivo ?? null);
 
     // Responsavel: nao existe coluna persistida em projetos (mesmo limite
     // de useProjeto) - usa o usuario logado como aproximacao.
@@ -340,41 +319,44 @@ export function useOrcamento(idProjeto: string | null) {
     setCargaTributariaPercentState(valor);
   }
 
-  // Imposto e margem sao "por dentro" (% do proprio preco de venda, nao
-  // do custo). margem/carga sao os mesmos para todo o orcamento (nao por
-  // item), entao aplicar a formula uma vez sobre o custo total e somar o
-  // preco de venda de cada item dao o mesmo resultado matematicamente -
-  // optamos por aplicar uma vez sobre o total no Resumo (mais simples,
-  // sem depender do array `itens` nem repetir a divisao por item).
+  // Breakdown por item: cada linha aplica a formula individualmente
+  // sobre o proprio custo (exibicao da tabela de itens).
   const itens: ItemOrcamento[] = useMemo(
     () =>
       itensBase.map((item) => {
-        const { impostos, lucro, total } = calcularPrecoVenda(
-          item.custo,
+        const { impostos, lucro, valorComercial } = calcularResumoOrcamento({
+          custoTotal: item.custo,
           margemLucroPercent,
-          cargaTributariaEfetiva,
-        );
+          cargaTributariaPercent: cargaTributariaEfetiva,
+        });
 
-        return { ...item, impostos, lucro, total };
+        return { ...item, impostos, lucro, total: valorComercial };
       }),
     [itensBase, cargaTributariaEfetiva, margemLucroPercent],
   );
 
+  // Resumo/Total: regra oficial do DEC-001 - a formacao de preco e
+  // aplicada uma UNICA VEZ sobre o custo total do orcamento, nao item a
+  // item. useProposta.ts segue exatamente o mesmo padrao via
+  // calcularResumoOrcamento, para os dois "Valor Total" baterem sempre.
+  // O desconto comercial (DEC-001) tambem e aplicado so aqui, sobre o
+  // Valor Tecnico agregado - nunca no breakdown por item acima.
   const resumoOrcamento = useMemo(() => {
     const custoTotal = itensBase.reduce((acc, item) => acc + item.custo, 0);
-    const { impostos, lucro, total } = calcularPrecoVenda(
+    const { impostos, lucro, valorComercial } = calcularResumoOrcamento({
       custoTotal,
       margemLucroPercent,
-      cargaTributariaEfetiva,
-    );
+      cargaTributariaPercent: cargaTributariaEfetiva,
+      descontoPercent: descontoPercentual,
+    });
 
     return {
       custoTotal,
       impostosTotal: impostos,
       lucroTotal: lucro,
-      valorTotal: total,
+      valorTotal: valorComercial,
     };
-  }, [itensBase, margemLucroPercent, cargaTributariaEfetiva]);
+  }, [itensBase, margemLucroPercent, cargaTributariaEfetiva, descontoPercentual]);
 
   const resumoProdutivo = useMemo(() => {
     const totalMinutos = resumoProdutivoLinhas.reduce(
@@ -403,6 +385,8 @@ export function useOrcamento(idProjeto: string | null) {
       .update({
         margem_lucro_percent: margemLucroPercent,
         carga_tributaria_percent: cargaTributariaPercent,
+        desconto_percentual: descontoPercentual,
+        desconto_motivo: descontoMotivo,
       })
       .eq("id", projetoId);
 
@@ -547,6 +531,10 @@ export function useOrcamento(idProjeto: string | null) {
     cargaTributariaSugerida,
     cargaTributariaEfetiva,
     formulaErro,
+    descontoPercentual,
+    setDescontoPercentual,
+    descontoMotivo,
+    setDescontoMotivo,
 
     itens,
     resumoOrcamento,
