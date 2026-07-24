@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { useEditarRecurso } from "@/modules/recursos/hooks/useEditarRecurso";
 import { ModuleHeader } from "@/modules/shared/ui/ModuleHeader";
 import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
+import { Card } from "@/modules/shared/ui/Card";
+import { Field } from "@/modules/shared/ui/Field";
+import { Select } from "@/modules/shared/ui/Select";
 
 type Props = {
   params: Promise<{
@@ -58,16 +61,16 @@ export default function EditarRecursoPage({ params }: Props) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-          <p className="text-sm text-slate-500">Carregando recurso...</p>
+          <p className="text-sm text-text-secondary">Carregando recurso...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <ModuleHeader
           backButton={<ModuleBackLink href="/recursos" label="Recurso" />}
@@ -77,14 +80,23 @@ export default function EditarRecursoPage({ params }: Props) {
         />
 
         <section className="flex flex-col gap-5">
-          <Card titulo="Informacoes do recurso">
-            <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
-              <Field label="Codigo" value={codigo} onChange={setCodigo} />
-              <Field label="Nome do recurso" value={nome} onChange={setNome} />
-              <SelectField
+          <Card title="Informacoes do recurso">
+            <div className="grid gap-5 md:grid-cols-2">
+              <Field
+                label="Codigo"
+                value={codigo}
+                onChange={(event) => setCodigo(event.target.value)}
+              />
+              <Field
+                label="Nome do recurso"
+                value={nome}
+                onChange={(event) => setNome(event.target.value)}
+              />
+              <Select
                 label="Grupo / Centro de trabalho"
                 value={grupoId}
-                onChange={setGrupoId}
+                onChange={(event) => setGrupoId(event.target.value)}
+                placeholder="Selecione"
                 options={grupos.map((grupo) => ({
                   value: grupo.id,
                   label: [grupo.codigo, grupo.nome].filter(Boolean).join(" - "),
@@ -93,7 +105,7 @@ export default function EditarRecursoPage({ params }: Props) {
               <Field
                 label="Setor / Centro de trabalho"
                 value={setor}
-                onChange={setSetor}
+                onChange={(event) => setSetor(event.target.value)}
               />
               <CurrencyField
                 label="Valor Hora"
@@ -103,26 +115,34 @@ export default function EditarRecursoPage({ params }: Props) {
             </div>
           </Card>
 
-          <Card titulo="Caracteristicas">
-            <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
+          <Card title="Caracteristicas">
+            <div className="grid gap-5 md:grid-cols-2">
               <Field
                 label="Fabricante"
                 value={fabricante}
-                onChange={setFabricante}
+                onChange={(event) => setFabricante(event.target.value)}
               />
-              <Field label="Modelo" value={modelo} onChange={setModelo} />
+              <Field
+                label="Modelo"
+                value={modelo}
+                onChange={(event) => setModelo(event.target.value)}
+              />
               <Field
                 label="Carga Horária Semanal (h)"
                 value={cargaHorariaSemanal}
-                onChange={setCargaHorariaSemanal}
+                onChange={(event) =>
+                  setCargaHorariaSemanal(event.target.value)
+                }
               />
               <Field
                 label="Dias Trabalhados por Semana"
                 value={diasTrabalhadosSemana}
-                onChange={setDiasTrabalhadosSemana}
+                onChange={(event) =>
+                  setDiasTrabalhadosSemana(event.target.value)
+                }
               />
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+              <div className="flex flex-col gap-[7px]">
+                <label className="text-[12.5px] font-semibold text-text-primary">
                   Capacidade Diária
                 </label>
                 <input
@@ -132,21 +152,21 @@ export default function EditarRecursoPage({ params }: Props) {
                       : ""
                   }
                   readOnly
-                  className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
+                  className="h-[42px] w-full rounded-[10px] border border-border-subtle bg-border-subtle px-[13px] text-[13.5px] text-text-disabled outline-none"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+              <div className="flex flex-col gap-[7px]">
+                <label className="text-[12.5px] font-semibold text-text-primary">
                   Produtividade
                 </label>
-                <div className="flex overflow-hidden rounded-lg border border-slate-200">
+                <div className="flex h-[42px] overflow-hidden rounded-[10px] border border-border">
                   <button
                     type="button"
                     onClick={() => setProdutividadeModo("herdar")}
-                    className={`h-11 flex-1 text-sm font-medium transition ${
+                    className={`h-full flex-1 text-[12.5px] font-semibold transition ${
                       produtividadeModo === "herdar"
-                        ? "bg-slate-950 text-white"
-                        : "bg-app-card text-slate-700 hover:bg-slate-50"
+                        ? "bg-action-primary text-action-primary-text"
+                        : "bg-surface-elevated text-text-secondary hover:bg-border-subtle"
                     }`}
                   >
                     Herdar do Grupo
@@ -154,10 +174,10 @@ export default function EditarRecursoPage({ params }: Props) {
                   <button
                     type="button"
                     onClick={() => setProdutividadeModo("especifico")}
-                    className={`h-11 flex-1 border-l border-slate-200 text-sm font-medium transition ${
+                    className={`h-full flex-1 border-l border-border text-[12.5px] font-semibold transition ${
                       produtividadeModo === "especifico"
-                        ? "bg-slate-950 text-white"
-                        : "bg-app-card text-slate-700 hover:bg-slate-50"
+                        ? "bg-action-primary text-action-primary-text"
+                        : "bg-surface-elevated text-text-secondary hover:bg-border-subtle"
                     }`}
                   >
                     Usar valor específico
@@ -165,8 +185,8 @@ export default function EditarRecursoPage({ params }: Props) {
                 </div>
               </div>
               {produtividadeModo === "herdar" ? (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                <div className="flex flex-col gap-[7px]">
+                  <label className="text-[12.5px] font-semibold text-text-primary">
                     Produtividade herdada do Grupo
                   </label>
                   <input
@@ -176,26 +196,30 @@ export default function EditarRecursoPage({ params }: Props) {
                         : "Grupo sem Produtividade Padrão definida"
                     }
                     readOnly
-                    className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
+                    className="h-[42px] w-full rounded-[10px] border border-border-subtle bg-border-subtle px-[13px] text-[13.5px] text-text-disabled outline-none"
                   />
                 </div>
               ) : (
                 <Field
                   label="Produtividade (%)"
                   value={produtividade}
-                  onChange={setProdutividade}
+                  onChange={(event) => setProdutividade(event.target.value)}
                 />
               )}
             </div>
           </Card>
 
-          {erro && <p className="text-sm font-medium text-red-600">{erro}</p>}
+          {erro && (
+            <p className="text-sm font-medium text-status-danger-text">
+              {erro}
+            </p>
+          )}
 
           <div className="flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => router.push(`/recursos/${id}`)}
-              className="rounded-lg border border-slate-200 bg-app-card px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="rounded-lg border border-border bg-surface px-5 py-3 text-sm font-medium text-text-secondary transition hover:bg-border-subtle"
             >
               Cancelar
             </button>
@@ -204,7 +228,7 @@ export default function EditarRecursoPage({ params }: Props) {
               type="button"
               onClick={handleSalvar}
               disabled={salvando}
-              className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-action-primary px-5 py-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {salvando ? "Salvando..." : "Salvar"}
             </button>
@@ -212,81 +236,6 @@ export default function EditarRecursoPage({ params }: Props) {
         </section>
       </div>
     </main>
-  );
-}
-
-function Card({
-  titulo,
-  children,
-}: {
-  titulo: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-app-card">
-      <div className="border-b border-slate-100 px-6 py-5">
-        <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
-      </div>
-
-      {children}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
-      />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-slate-200 bg-app-card px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
-      >
-        <option value="">Selecione</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }
 
@@ -300,8 +249,8 @@ function CurrencyField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+    <div className="flex flex-col gap-[7px]">
+      <label className="text-[12.5px] font-semibold text-text-primary">
         {label}
       </label>
 
@@ -310,7 +259,7 @@ function CurrencyField({
         onChange={(event) => onChange(event.target.value)}
         inputMode="decimal"
         placeholder="R$ 0,00/h"
-        className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+        className="h-[42px] w-full rounded-[10px] border border-border bg-surface-elevated px-[13px] text-[13.5px] text-text-primary outline-none transition placeholder:text-text-disabled focus-visible:border-action-primary focus-visible:ring-[3px] focus-visible:ring-focus-ring"
       />
     </div>
   );
