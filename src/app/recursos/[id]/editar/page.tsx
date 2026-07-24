@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
 import { Card } from "@/modules/shared/ui/Card";
 import { Field } from "@/modules/shared/ui/Field";
 import { Select } from "@/modules/shared/ui/Select";
+import { CompatibilidadeRecursos } from "@/modules/recursos/components/CompatibilidadeRecursos";
 
 type Props = {
   params: Promise<{
@@ -208,6 +209,8 @@ export default function EditarRecursoPage({ params }: Props) {
               )}
             </div>
           </Card>
+
+          <CompatibilidadeRecursos recursoOrigemId={id} />
 
           {erro && (
             <p className="text-sm font-medium text-status-danger-text">
