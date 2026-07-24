@@ -114,6 +114,29 @@ Nomes semânticos, nunca ligados diretamente à cor: `background`,
 nome semântico do token, nunca um valor de paleta Tailwind literal
 (`slate-900`) nem um hex direto.
 
+### 3.1 Duas categorias de token — reativo vs. fixo
+
+Todos os tokens listados acima são **reativos**: têm uma entrada em
+cada uma das 3 camadas da cascata (seção 4) e trocam de valor
+deliberadamente entre claro e escuro. É o comportamento padrão, e é o
+que qualquer token novo deve ter, salvo justificativa em contrário.
+
+Existe uma segunda categoria, **fixa**, para casos onde a cor precisa
+representar uma identidade de marca ou estrutural que **não deve
+mudar** com o tema — hoje só um caso: `brand-header-fixed` (`#0B1B2B`,
+o cabeçalho escuro que já existe em produção). Um token fixo tem
+entrada **só em `:root`**, sem entrada correspondente em `@media
+(prefers-color-scheme: dark)` nem em `[data-theme]` — por isso nunca
+muda de valor, em nenhum tema.
+
+**Não confundir os dois tipos.** Se um token novo aparecer sem entrada
+nas 3 camadas da cascata, isso não é um esquecimento a corrigir — pode
+ser um token fixo, de propósito. Antes de "completar" a cascata de um
+token que parece faltando, verificar se ele está documentado aqui como
+fixo. Não criar tokens fixos novos sem a mesma justificativa que
+motivou `brand-header-fixed`: uma cor que representa identidade visual
+permanente, não conteúdo que deveria reagir ao tema.
+
 ---
 
 ## 4. Mecanismo técnico
@@ -230,9 +253,23 @@ equivalente) — hoje não há CSP configurada, confirmado em
   (não persiste no banco). Evolução futura possível: preferência por
   usuário/empresa no banco, cookie como cache local — não decidido
   aqui, exigiria um PAD próprio quando for necessário.
-- **Onde vive o controle de alternância:** não decidido neste
-  documento — depende do primitivo `Button`/toggle de PAD-007. Ver
-  PAD-007 seção 4.
+- **Onde vive o controle de alternância:** `ThemeToggle`
+  (`src/modules/shared/ui/ThemeToggle.tsx`), componente composto criado
+  na Fase 3 do PAD-007 — usa `Button` como referência de linguagem
+  visual, mas não é uma variante de `Button`. Consumido via o slot
+  `themeToggle` do `ModuleHeader`.
+- **Interação do `ThemeToggle`:** é um botão único (ícone sol/lua) que
+  alterna só entre Claro e Escuro a cada clique — não expõe "Sistema"
+  como opção na interface principal. O modo Sistema continua suportado
+  pela infraestrutura desta seção (ausência de cookie → segue o SO),
+  só não é alcançável por este controle.
+- **Limitação temporária conhecida:** uma vez que o usuário clica no
+  `ThemeToggle` do cabeçalho, o modo Sistema deixa de ser aplicado para
+  essa sessão/dispositivo (o cookie explícito passa a ter prioridade).
+  Não há, ainda, forma de o usuário voltar para "Seguir sistema" pela
+  interface — essa opção só existirá quando a tela de Configurações for
+  implementada. Até lá, isso é uma limitação temporária conhecida, não
+  um defeito.
 
 ---
 

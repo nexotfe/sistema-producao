@@ -49,3 +49,38 @@ tarefa.
   `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md` já trata do tema — esse
   arquivo tem precedência sobre documentação mais antiga que o
   contradiga.
+
+## 7. Auditorias durante o desenvolvimento — ausência de consumidor não é abandono
+- Durante fases de construção ativa do NEXOTFE, a ausência de
+  consumidores de código não deve ser utilizada como evidência
+  principal para remover, descontinuar ou abandonar um campo, tabela
+  ou conceito funcional. A ausência de consumidores demonstra apenas
+  que determinada funcionalidade ainda não foi implementada ou
+  integrada ao restante do sistema.
+- A permanência, alteração ou remoção de qualquer conceito deve ser
+  decidida prioritariamente pelo modelo de negócio e pela arquitetura
+  funcional, respondendo, entre outras, às seguintes perguntas:
+  - O campo representa uma informação real da operação industrial?
+  - Algum usuário precisará informar esse dado?
+  - Esse dado influencia decisões, cálculos ou rastreabilidade do ERP?
+  - O conceito pertence ao domínio do negócio independentemente da
+    implementação atual?
+- Somente em segundo plano o estado atual da implementação poderá ser
+  utilizado como evidência complementar.
+- **Exceção:** quando existir documentação arquitetural explícita
+  registrando que determinado conceito foi conscientemente substituído
+  por outro (migration, ADR, PAD ou decisão formal equivalente), essa
+  decisão passa a ser a evidência principal. Nesse caso, a ausência de
+  consumidores deixa de ser relevante, pois a substituição decorre de
+  uma decisão arquitetural documentada, e não da falta de
+  implementação.
+
+## 8. Substituição de implementação não é redesenho
+
+Quando uma tarefa consistir em substituir código por um componente
+compartilhado (ex: extrair um cabeçalho duplicado para um componente
+único), a aparência visual deve permanecer EQUIVALENTE à versão
+aprovada/em produção, salvo quando a alteração visual fizer parte
+explícita e autorizada do escopo da tarefa. Substituição de
+implementação e redesenho visual são tarefas diferentes e não devem
+ser combinadas sem autorização explícita para a segunda.

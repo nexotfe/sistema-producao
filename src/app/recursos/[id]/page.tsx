@@ -5,6 +5,8 @@ import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRecurso } from "@/modules/recursos/hooks/useRecurso";
+import { ModuleHeader } from "@/modules/shared/ui/ModuleHeader";
+import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
 
 type Props = {
   params: Promise<{
@@ -76,27 +78,23 @@ export default function RecursoPage({ params }: Props) {
   return (
     <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <header className="flex flex-col gap-3">
-          <ModuleBackLink href="/recursos" label="Recurso" />
+        <ModuleHeader
+          backButton={<ModuleBackLink href="/recursos" label="Recurso" />}
+          themeToggle={<ThemeToggle />}
+          title={
+            <>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                {recurso.nome || "Recurso sem nome"}
+              </h1>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-                  {recurso.nome || "Recurso sem nome"}
-                </h1>
-
-                <span className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {recurso.ativo ? "Ativo" : "Inativo"}
-                </span>
-              </div>
-
-              <p className="mt-2 text-sm text-slate-500">
-                Codigo {recurso.codigo || "nao informado"}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
+              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                {recurso.ativo ? "Ativo" : "Inativo"}
+              </span>
+            </>
+          }
+          subtitle={`Codigo ${recurso.codigo || "nao informado"}`}
+          actions={
+            <>
               <button
                 type="button"
                 onClick={handleExcluir}
@@ -111,9 +109,9 @@ export default function RecursoPage({ params }: Props) {
               >
                 Editar recurso
               </Link>
-            </div>
-          </div>
-        </header>
+            </>
+          }
+        />
 
         <section className="flex flex-col gap-5">
           <Card titulo="Informacoes do recurso">

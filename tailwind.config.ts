@@ -41,6 +41,9 @@ const config: Config = {
         "status-info-text": "var(--color-info-text)",
         "status-info-bg": "var(--color-info-bg)",
         "status-info-border": "var(--color-info-border)",
+
+        // Token FIXO (nao reativo) — ver PAD-006 secao 3.1.
+        "brand-header-fixed": "var(--color-brand-header-fixed)",
       },
     },
   },

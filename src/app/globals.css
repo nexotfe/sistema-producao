@@ -29,6 +29,15 @@
   --color-info-text: #1D4ED8;
   --color-info-bg: #EFF6FF;
   --color-info-border: #BFDBFE;
+
+  /*
+   * Este token e intencionalmente FIXO - nao participa da troca
+   * claro/escuro. Usado apenas para a identidade de marca do
+   * cabecalho, que permanece escura nos dois temas. Nao reutilizar
+   * este padrao para outros elementos sem justificativa equivalente.
+   * Ver PAD-006 secao 3.1 (tokens fixos vs. reativos).
+   */
+  --color-brand-header-fixed: #0B1B2B;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -61,7 +70,15 @@
 }
 
 :root[data-theme="dark"] {
-  color-scheme: dark;
+  /*
+   * color-scheme NAO varia aqui de proposito. A maioria dos campos
+   * nativos do sistema ainda nao foi migrada para os primitivos com
+   * fundo explicito - "color-scheme: dark" faria o navegador desenhar
+   * esses campos com aparencia nativa escura, ilegveis sobre uma
+   * pagina que continua clara. Mesmo motivo que ja levou a manter
+   * color-scheme: light fixo no body (Fase 1). Revisar só quando os
+   * campos nativos estiverem de fato migrados.
+   */
   --color-background: #0A1420;
   --color-surface: #0B1B2B;
   --color-surface-elevated: #16273D;
@@ -89,7 +106,6 @@
 }
 
 :root[data-theme="light"] {
-  color-scheme: light;
   --color-background: #EDF1F5;
   --color-surface: #FAFBFC;
   --color-surface-elevated: #FFFFFF;

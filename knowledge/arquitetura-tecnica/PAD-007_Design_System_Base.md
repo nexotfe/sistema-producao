@@ -197,7 +197,29 @@ como pendência a resolver no piloto, não aqui.
    os primitivos + tokens de tema.
 6. Migração gradual dos demais módulos — fora de qualquer escopo atual.
 
-## 9. Escopo desta rodada
+## 9. Nota de processo — critério de captura durante a migração de telas (Lista/Novo/Detalhe/Editar)
+
+Enquanto só parte de uma tela estiver migrada para os tokens (ex.: o
+cabeçalho migrado, o corpo da tela ainda nos tokens antigos), o modo
+Escuro produz uma tela visualmente inconsistente por definição — os
+elementos migrados reagem ao tema, os não migrados não. Isso não é
+regressão, é o estado esperado de uma migração parcial e incremental.
+
+Por isso, durante os itens de migração de tela (Lista, Novo, Detalhe,
+Editar): **captura completa em modo Claro é obrigatória para aprovar
+cada item individualmente**. O modo Escuro só é usado como checagem de
+não-regressão depois que as 4 telas estiverem todas migradas — nesse
+ponto a página inteira volta a reagir de forma coerente ao tema, e o
+Escuro passa a ser um critério de aprovação de verdade, não só um
+registro de uma inconsistência já esperada.
+
+Isso está registrado aqui explicitamente para não parecer, mais tarde,
+que o modo Escuro foi esquecido ou pulado sem motivo durante os itens
+individuais — foi uma decisão deliberada, não uma omissão.
+
+---
+
+## 10. Escopo desta rodada
 
 Este documento é investigação e arquitetura aprovada. Não inclui
 código, componente novo, dependência nova ou alteração de tela.

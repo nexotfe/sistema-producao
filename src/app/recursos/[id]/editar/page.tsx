@@ -4,6 +4,8 @@ import { use } from "react";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { useRouter } from "next/navigation";
 import { useEditarRecurso } from "@/modules/recursos/hooks/useEditarRecurso";
+import { ModuleHeader } from "@/modules/shared/ui/ModuleHeader";
+import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
 
 type Props = {
   params: Promise<{
@@ -67,19 +69,12 @@ export default function EditarRecursoPage({ params }: Props) {
   return (
     <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-3">
-          <ModuleBackLink href="/recursos" label="Recurso" />
-
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Editar recurso produtivo
-            </h1>
-
-            <p className="mt-2 text-sm text-slate-500">
-              Atualizacao dos dados cadastrais do recurso.
-            </p>
-          </div>
-        </header>
+        <ModuleHeader
+          backButton={<ModuleBackLink href="/recursos" label="Recurso" />}
+          themeToggle={<ThemeToggle />}
+          title="Editar recurso produtivo"
+          subtitle="Atualizacao dos dados cadastrais do recurso."
+        />
 
         <section className="flex flex-col gap-5">
           <Card titulo="Informacoes do recurso">
