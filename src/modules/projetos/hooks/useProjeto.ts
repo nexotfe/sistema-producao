@@ -71,7 +71,11 @@ type BomEscolhaRow = {
 
 type ResultadoSalvar =
   | { status: "ok"; id: string }
-  | { status: "erro"; mensagem: string };
+  | {
+      status: "erro";
+      mensagem: string;
+      motivo?: "aprovacao_requer_simulacao";
+    };
 
 type ItemParaDuplicar = {
   produto_id: string;
@@ -92,6 +96,14 @@ export function useProjeto(
   const [nome, setNome] = useState("");
   const [tipoProjeto, setTipoProjeto] = useState<ProjectType>("fabricacao");
   const [status, setStatus] = useState<ProjectStatus>("rascunho");
+  // Status realmente persistido, carregado do banco - fonte de verdade
+  // para decidir se o campo Status pode ser editado (DEC-003: uma vez
+  // aprovado, permanece somente leitura nesta tela; reverter aprovacao
+  // e assunto separado). Diferente de `status`, que reflete o valor
+  // selecionado na tela (pode ainda nao ter sido salvo).
+  const [statusCarregado, setStatusCarregado] = useState<ProjectStatus | null>(
+    null,
+  );
   const [cliente, setCliente] = useState<ClienteResumo | null>(null);
   const [dataObjetivo, setDataObjetivo] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -312,6 +324,7 @@ export function useProjeto(
       setNome(projeto.nome);
       setTipoProjeto(projeto.tipo_projeto);
       setStatus(projeto.status);
+      setStatusCarregado(projeto.status as ProjectStatus);
       setDataObjetivo(projeto.data_objetivo ?? "");
       setObservacoes(projeto.observacoes ?? "");
       setCriadoEm(projeto.created_at);
@@ -364,6 +377,19 @@ export function useProjeto(
 
     if (!cliente) {
       return { status: "erro", mensagem: "Selecione o cliente." };
+    }
+
+    // DEC-003: aprovação só é válida via aprovar_projeto_com_simulacao
+    // (trigger projetos_bloquear_aprovacao_direta já bloqueia isso no
+    // banco). Interrompe ANTES de qualquer chamada ao Supabase - o
+    // usuário nunca deveria ver o erro cru da trigger.
+    if (projetoId && status === "aprovado" && statusCarregado !== "aprovado") {
+      return {
+        status: "erro",
+        mensagem:
+          "A aprovação de um Projeto exige uma Simulação Comercial válida. Acesse a tela de Simulação Comercial para aprovar este Projeto.",
+        motivo: "aprovacao_requer_simulacao",
+      };
     }
 
     if (salvandoRef.current) {
@@ -494,6 +520,7 @@ export function useProjeto(
 
     status,
     setStatus,
+    statusCarregado,
 
     cliente,
     setCliente,

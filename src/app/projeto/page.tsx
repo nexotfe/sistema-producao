@@ -54,6 +54,7 @@ export default function ProjetoPage() {
     setTipoProjeto,
     status,
     setStatus,
+    statusCarregado,
     cliente,
     setCliente,
     dataObjetivo,
@@ -80,6 +81,8 @@ export default function ProjetoPage() {
   } = useProjeto(idProjeto, duplicarDeId);
 
   const [mensagemSalvar, setMensagemSalvar] = useState<string | null>(null);
+  const [precisaSimulacaoParaAprovar, setPrecisaSimulacaoParaAprovar] =
+    useState(false);
 
   const contatos: {
     label: string;
@@ -123,9 +126,15 @@ export default function ProjetoPage() {
 
   async function handleSalvar() {
     setMensagemSalvar(null);
+    setPrecisaSimulacaoParaAprovar(false);
     const resultado = await salvar();
 
     if (resultado.status === "erro") {
+      if (resultado.motivo === "aprovacao_requer_simulacao") {
+        setPrecisaSimulacaoParaAprovar(true);
+        return;
+      }
+
       setMensagemSalvar(resultado.mensagem);
       return;
     }
@@ -211,6 +220,21 @@ export default function ProjetoPage() {
             {erro ?? mensagemSalvar}
           </p>
         )}
+
+        {precisaSimulacaoParaAprovar && projetoId ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>
+              A aprovação de um Projeto exige uma Simulação Comercial válida.
+              Acesse a tela de Simulação Comercial para aprovar este Projeto.
+            </span>
+            <Link
+              href={`/projetos/${projetoId}/simulacao`}
+              className="inline-flex h-9 shrink-0 items-center rounded-md bg-amber-700 px-3 text-sm font-semibold text-white transition hover:bg-amber-800"
+            >
+              Abrir Simulação Comercial
+            </Link>
+          </div>
+        ) : null}
 
         <section className="grid gap-6 lg:grid-cols-2">
           {cards.map((card, index) => (
@@ -300,7 +324,8 @@ export default function ProjetoPage() {
                             event.target.value as (typeof PROJECT_STATUSES)[number],
                           )
                         }
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        disabled={statusCarregado === "aprovado"}
+                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
                       >
                         {PROJECT_STATUSES.map((valor) => (
                           <option key={valor} value={valor}>
