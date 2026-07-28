@@ -628,6 +628,55 @@ nenhum destes itens faz parte da implementação da versão 1.0:
   inteiro — para casos de venda parcial (ex.: projeto com 10 itens,
   cliente fecha 3 agora e adia os demais). Registrado aqui apenas como
   possibilidade, sem implementação prevista nesta versão.
+- **Simulação de Viabilidade Comercial (visão de produto, decisão de
+  2026-07-25):** o módulo evolui para um espaço de exploração de
+  cenários, permitindo ao orçamentista avaliar alternativas para
+  atender o cliente — por exemplo horas extras, terceirização, troca
+  de prioridade entre projetos e outros cenários operacionais. Visão
+  arquitetural registrada aqui; não implementada nesta sessão, sem
+  modelagem de dados, regra de negócio ou interface própria ainda
+  definidas.
+- **Motor de Engenharia Reversa / Motor V2 (decisão de 2026-07-25):**
+  o Motor passa a calcular a **Data Inicial Necessária** por
+  engenharia reversa, partindo da data de entrega e considerando
+  margem de segurança, roteiro, produtividade, calendário, capacidade,
+  carga existente e compatibilidade — substituindo a janela de
+  produção hoje informada manualmente (`janelaInicio`/`janelaFim`) na
+  V1.0/V1.1 da Simulação de Capacidade. Fecha a lacuna entre o texto da
+  seção 13 (Margem de Segurança reduzindo a Data de Necessidade para
+  gerar uma Data Alvo) e a implementação atual, que ainda não deriva a
+  janela a partir desses campos. Registrado como a próxima grande
+  evolução do Motor, a ser tratada em ciclo próprio — não faz parte da
+  V1.1 (Aprovação da Simulação), que continua usando a janela manual
+  como está hoje.
+
+  Importante: Compatibilidade entre Recursos Produtivos já é parte do
+  Motor atual (Etapa 4, implementada), não uma capacidade nova a
+  construir. O Motor V2 deve PRESERVAR essa lógica ao trabalhar de
+  trás para frente — para cada operação, se o recurso original não
+  tiver capacidade disponível na data sendo avaliada, o cálculo
+  reverso deve consultar a lista de recursos compatíveis (por
+  prioridade), exatamente como o Motor V1 já faz na avaliação para
+  frente. A ordem de fatores considerados por operação continua: horas
+  da operação → produtividade do recurso → calendário produtivo →
+  capacidade disponível → recursos compatíveis (se necessário) → carga
+  já comprometida — e essa mesma sequência deve valer tanto para
+  frente (V1) quanto para trás (V2). Compatibilidade não é uma
+  otimização futura opcional: ela muda diretamente o resultado de
+  viabilidade (mesmo roteiro, mesma capacidade do recurso principal,
+  pode ter datas de entrega completamente diferentes dependendo de
+  haver ou não recurso compatível livre) — por isso é tratada como
+  pilar do Motor, não acessório.
+
+  Disponibilidade de matéria-prima como fator adicional: no futuro, a
+  data de início possível de uma operação deve considerar não só
+  capacidade produtiva, mas também quando o material necessário estará
+  disponível. Fonte ideal: módulo Compras (ainda não existente).
+  Enquanto isso, premissas configuráveis poderiam servir de
+  aproximação (estoque = imediato; material comum = lead time padrão;
+  material especial = lead time cadastrado). Quando Compras existir,
+  essas premissas são substituídas por datas reais de pedido, sem
+  alterar a arquitetura do Motor.
 
 ---
 

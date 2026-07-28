@@ -108,27 +108,25 @@ export async function simularCapacidadeProjeto(
 }
 
 /**
- * Roda a simulação e aprova o projeto atomicamente (chama
- * aprovar_projeto_com_simulacao). Uso: botão "Aprovar" da tela de
- * Simulação Comercial.
+ * Wrapper fino sobre aprovar_projeto_com_simulacao - so mapeia
+ * camelCase -> snake_case e chama a RPC. NAO roda o Motor: recebe
+ * `resultado` ja calculado (o mesmo que o usuario revisou na tela, via
+ * simularCapacidadeProjeto na acao de "Simular"). DEC-002: a aprovacao
+ * persiste exatamente o resultado exibido, nunca um recalculo feito
+ * silenciosamente aqui dentro - a revalidacao (rodar o Motor de novo
+ * para comparar) e responsabilidade de quem chama esta funcao, nao
+ * dela.
  */
 export async function aprovarSimulacaoComercial(params: {
-  empresaId: string;
   projetoId: string;
+  resultado: ResultadoSimulacao;
   cenarioDemanda: string;
   modoProducao: string;
   dataNecessidade: string;
   margemSegurancaDias: number;
   janelaInicio: string;
   janelaFim: string;
-}): Promise<{ resultado: ResultadoSimulacao; simulacaoComercialId: string }> {
-  const resultado = await simularCapacidadeProjeto(
-    params.empresaId,
-    params.projetoId,
-    params.janelaInicio,
-    params.janelaFim,
-  );
-
+}): Promise<{ simulacaoComercialId: string }> {
   const { data, error } = await supabase.rpc("aprovar_projeto_com_simulacao", {
     p_projeto_id: params.projetoId,
     p_cenario_demanda: params.cenarioDemanda,
@@ -137,7 +135,7 @@ export async function aprovarSimulacaoComercial(params: {
     p_margem_seguranca_dias: params.margemSegurancaDias,
     p_janela_inicio: params.janelaInicio,
     p_janela_fim: params.janelaFim,
-    p_itens: resultado.itensPorOperacao.map((item) => ({
+    p_itens: params.resultado.itensPorOperacao.map((item) => ({
       bom_operacao_id: item.bomOperacaoId,
       recurso_original_id: item.recursoOriginalId,
       recurso_considerado_id: item.recursoConsideradoId,
@@ -156,5 +154,5 @@ export async function aprovarSimulacaoComercial(params: {
     throw new Error(`Erro ao aprovar projeto com simulação: ${error.message}`);
   }
 
-  return { resultado, simulacaoComercialId: data as string };
+  return { simulacaoComercialId: data as string };
 }
