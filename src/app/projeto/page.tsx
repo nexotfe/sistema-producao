@@ -211,6 +211,22 @@ export default function ProjetoPage() {
               Orçamento
             </span>
           )}
+
+          {projetoId ? (
+            <Link
+              href={`/projetos/${projetoId}/simulacao`}
+              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Simulação
+            </Link>
+          ) : (
+            <span
+              title="Salve o projeto antes de simular capacidade."
+              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-400"
+            >
+              Simulação
+            </span>
+          )}
         </div>
 
         {(erro || mensagemSalvar) && (
