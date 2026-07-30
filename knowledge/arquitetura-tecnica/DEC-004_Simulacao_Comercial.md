@@ -8,8 +8,9 @@ série `DEC-` (ver `DEC-001_Desconto_Comercial_Orcamento.md` para a
 convenção completa). Consolida, em nível funcional e de negócio, o
 objetivo, os papéis e os limites da Simulação Comercial — a arquitetura
 técnica que sustenta este comportamento está documentada em
-`ARQUITETURA_VIGENTE_SIMULACAO_COMERCIAL_CAPACIDADE.md` e no PAD-008
-(Motor de Capacidade); este documento não repete esse conteúdo.
+`ARQUITETURA_VIGENTE_SIMULACAO_COMERCIAL_CAPACIDADE.md`; sua
+consolidação como decisão arquitetural cabe ao PAD-008 (Motor de
+Capacidade). Este documento não repete esse conteúdo.
 
 ---
 
@@ -54,7 +55,7 @@ decisão do orçamentista.
 O Motor apenas avalia viabilidade de capacidade — ele não sequencia
 operações, não distribui produção entre recursos nem decide como a
 fabricação será executada. A arquitetura interna do Motor, seus
-consumidores e sua evolução são tratados no PAD-008, não neste
+consumidores e sua evolução pertencem ao escopo do PAD-008, não deste
 documento.
 
 ## Resultado esperado
