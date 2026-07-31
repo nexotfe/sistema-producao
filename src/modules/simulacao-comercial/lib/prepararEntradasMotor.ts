@@ -8,9 +8,12 @@
 // Inicial" já pronta (Calendário → Dias Produtivos → Capacidade Diária
 // → Produtividade → Horas Adicionais quando existir) - o Motor não
 // recalcula nada disso.
-"use client";
-
-import { supabase } from "@/lib/supabaseClient";
+//
+// Sem "use client": recebe o client Supabase por parâmetro - portável
+// entre o preview no navegador e a revalidação autoritativa no
+// servidor (PAD-008, seções 7-8). Quem chama decide qual client
+// passar; este módulo não importa nenhum fixo.
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolverBomAtivo } from "@/modules/bom/lib/resolverBomAtivo";
 import { coletarEstruturaBom } from "@/modules/bom/lib/coletarEstruturaBom";
 import { contarDiasProdutivosNaJanela } from "./agregarDiasProdutivos";
@@ -32,8 +35,11 @@ type ProjetoItemRow = { id: string; produto_id: string; quantidade: number };
  * outro lugar do sistema), e dentro de cada item, pela ordem do
  * roteiro (`bom_operacoes.ordem`).
  */
-async function coletarOperacoesDoProjeto(projetoId: string): Promise<OperacaoRoteiro[]> {
-  const { data: itensData, error: erroItens } = await supabase
+async function coletarOperacoesDoProjeto(
+  client: SupabaseClient,
+  projetoId: string,
+): Promise<OperacaoRoteiro[]> {
+  const { data: itensData, error: erroItens } = await client
     .from("projeto_itens")
     .select("id,produto_id,quantidade")
     .eq("projeto_id", projetoId)
@@ -54,12 +60,12 @@ async function coletarOperacoesDoProjeto(projetoId: string): Promise<OperacaoRot
 
   const operacoes: OperacaoRoteiro[] = [];
   for (const item of itens) {
-    const bomId = await resolverBomAtivo(item.produto_id);
+    const bomId = await resolverBomAtivo(client, item.produto_id);
     if (!bomId) {
       throw new RoteiroNaoEncontradoError(item.produto_id);
     }
 
-    const operacoesItem = await coletarEstruturaBom(bomId, Number(item.quantidade));
+    const operacoesItem = await coletarEstruturaBom(client, bomId, Number(item.quantidade));
     for (const op of operacoesItem) {
       operacoes.push({
         bomOperacaoId: op.bomOperacaoId,
@@ -73,8 +79,11 @@ async function coletarOperacoesDoProjeto(projetoId: string): Promise<OperacaoRot
   return operacoes;
 }
 
-async function capacidadeDiariaDoRecurso(recursoId: string): Promise<number> {
-  const { data, error } = await supabase
+async function capacidadeDiariaDoRecurso(
+  client: SupabaseClient,
+  recursoId: string,
+): Promise<number> {
+  const { data, error } = await client
     .from("recursos_produtivos")
     .select("capacidade_horas_dia")
     .eq("id", recursoId)
@@ -87,8 +96,11 @@ async function capacidadeDiariaDoRecurso(recursoId: string): Promise<number> {
   return Number(data.capacidade_horas_dia);
 }
 
-async function produtividadeEfetivaDoRecurso(recursoId: string): Promise<number> {
-  const { data, error } = await supabase.rpc("calcular_produtividade_efetiva", {
+async function produtividadeEfetivaDoRecurso(
+  client: SupabaseClient,
+  recursoId: string,
+): Promise<number> {
+  const { data, error } = await client.rpc("calcular_produtividade_efetiva", {
     p_recurso_id: recursoId,
   });
 
@@ -105,8 +117,12 @@ async function produtividadeEfetivaDoRecurso(recursoId: string): Promise<number>
   return data === null ? 1 : Number(data);
 }
 
-async function comprometidoDoRecurso(recursoId: string, projetoExcluidoId: string): Promise<number> {
-  const { data, error } = await supabase.rpc("calcular_comprometido_v1", {
+async function comprometidoDoRecurso(
+  client: SupabaseClient,
+  recursoId: string,
+  projetoExcluidoId: string,
+): Promise<number> {
+  const { data, error } = await client.rpc("calcular_comprometido_v1", {
     p_recurso_produtivo_id: recursoId,
     p_projeto_excluido_id: projetoExcluidoId,
   });
@@ -127,11 +143,12 @@ type CompatibilidadeRow = {
 };
 
 async function compatibilidadesDosRecursos(
+  client: SupabaseClient,
   recursoIds: string[],
 ): Promise<Record<string, CandidatoRecurso[]>> {
   if (recursoIds.length === 0) return {};
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("recurso_produtivo_compatibilidades")
     .select("recurso_origem_id,recurso_destino_id,prioridade")
     .in("recurso_origem_id", recursoIds)
@@ -171,12 +188,13 @@ export interface EntradasMotorPreparadas {
 }
 
 export async function prepararEntradasMotor(
+  client: SupabaseClient,
   empresaId: string,
   projetoId: string,
   janelaInicio: string,
   janelaFim: string,
 ): Promise<EntradasMotorPreparadas> {
-  const operacoesOrdenadas = await coletarOperacoesDoProjeto(projetoId);
+  const operacoesOrdenadas = await coletarOperacoesDoProjeto(client, projetoId);
 
   const recursosOriginais = Array.from(
     new Set(operacoesOrdenadas.map((op) => op.recursoOriginalId)),
@@ -185,13 +203,14 @@ export async function prepararEntradasMotor(
   // O Motor pode considerar recursos compatíveis (destino), não só os
   // originais - precisam ter capacidade/comprometido pré-carregados
   // também, senão o Motor os trataria como capacidade 0.
-  const compatibilidades = await compatibilidadesDosRecursos(recursosOriginais);
+  const compatibilidades = await compatibilidadesDosRecursos(client, recursosOriginais);
   const recursosDestino = Object.values(compatibilidades).flatMap((lista) =>
     lista.map((c) => c.recursoId),
   );
   const recursoIds = Array.from(new Set([...recursosOriginais, ...recursosDestino])).sort();
 
   const { diasProdutivos } = await contarDiasProdutivosNaJanela(
+    client,
     empresaId,
     janelaInicio,
     janelaFim,
@@ -202,8 +221,8 @@ export async function prepararEntradasMotor(
   const capacidadePorRecurso: Record<string, CapacidadeRecurso> = {};
 
   for (const recursoId of recursoIds) {
-    const capacidadeDiaria = await capacidadeDiariaDoRecurso(recursoId);
-    const produtividade = await produtividadeEfetivaDoRecurso(recursoId);
+    const capacidadeDiaria = await capacidadeDiariaDoRecurso(client, recursoId);
+    const produtividade = await produtividadeEfetivaDoRecurso(client, recursoId);
 
     // Capacidade Bruta = Dias Produtivos × Capacidade Diária
     // Capacidade Efetiva = Capacidade Bruta × Produtividade
@@ -221,7 +240,7 @@ export async function prepararEntradasMotor(
     };
     capacidadeDisponivelInicial[recursoId] = capacidadeDisponivel;
 
-    comprometido[recursoId] = await comprometidoDoRecurso(recursoId, projetoId);
+    comprometido[recursoId] = await comprometidoDoRecurso(client, recursoId, projetoId);
   }
 
   return {

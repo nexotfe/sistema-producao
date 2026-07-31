@@ -1,11 +1,8 @@
-// Depende de "@/lib/supabaseClient", cujo client e criado com
-// persistSession/detectSessionInUrl (ambos dependem de localStorage/window)
-// - por isso e exclusivo de navegador hoje. Uma futura execucao server-side
-// (job de agregacao de janela, rota de API) vai precisar de um client
-// Supabase separado, seguro para servidor.
-"use client";
-
-import { supabase } from "@/lib/supabaseClient";
+// Sem "use client": recebe o client Supabase por parâmetro (browser,
+// sessão do servidor, ou privilegiado - a escolha é de quem chama),
+// portável entre o preview no navegador e a revalidação autoritativa
+// no servidor (PAD-008, seções 7-8).
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ConfiguracaoCalendarioAusenteError,
   IntegridadeCalendarioError,
@@ -84,13 +81,14 @@ type FeriadoRow = {
 };
 
 export async function resolverDiaProdutivo(
+  client: SupabaseClient,
   empresaId: string,
   data: string,
 ): Promise<ResultadoDiaProdutivo> {
   validarData(data);
 
   // Etapa 1 - Calendario Operacional da Empresa (base)
-  const { data: padrao, error: erroPadrao } = await supabase
+  const { data: padrao, error: erroPadrao } = await client
     .from("calendario_operacional_empresa")
     .select("segunda,terca,quarta,quinta,sexta,sabado,domingo")
     .eq("empresa_id", empresaId)
@@ -125,7 +123,7 @@ export async function resolverDiaProdutivo(
     : `${diaSemana.label}: padrão semanal da empresa marca como não produtivo.`;
 
   // Etapa 2 - Calendario Oficial (subtrai)
-  const { data: empresa, error: erroEmpresa } = await supabase
+  const { data: empresa, error: erroEmpresa } = await client
     .from("empresas")
     .select("pais_codigo,uf_codigo,municipio_codigo")
     .eq("id", empresaId)
@@ -138,7 +136,7 @@ export async function resolverDiaProdutivo(
   }
 
   if (empresa?.pais_codigo) {
-    const { data: feriados, error: erroFeriados } = await supabase
+    const { data: feriados, error: erroFeriados } = await client
       .from("calendario_oficial_feriados")
       .select("abrangencia,uf_codigo,municipio_codigo,descricao")
       .eq("data", data)
@@ -189,7 +187,7 @@ export async function resolverDiaProdutivo(
   }
 
   // Etapa 3 - Calendario de Eventos da Empresa (prevalece sobre 1 e 2)
-  const { data: eventos, error: erroEventos } = await supabase
+  const { data: eventos, error: erroEventos } = await client
     .from("calendario_empresa_eventos")
     .select("id,tipo")
     .eq("empresa_id", empresaId)

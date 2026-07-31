@@ -2,9 +2,9 @@
 // (Etapa 1) para um intervalo, sem duplicar a regra de precedência do
 // calendário. Chama resolverDiaProdutivo dia a dia; a lógica de
 // Calendário Operacional / Calendário Oficial / Eventos da Empresa
-// continua existindo em um único lugar.
-"use client";
-
+// continua existindo em um único lugar. Sem "use client" - recebe o
+// client Supabase por parâmetro.
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   resolverDiaProdutivo,
   type ResultadoDiaProdutivo,
@@ -38,6 +38,7 @@ function proximoDiaIso(data: string): string {
  * determinístico.
  */
 export async function contarDiasProdutivosNaJanela(
+  client: SupabaseClient,
   empresaId: string,
   dataInicio: string,
   dataFim: string,
@@ -56,7 +57,7 @@ export async function contarDiasProdutivosNaJanela(
   let dataAtual = dataInicio;
 
   while (dataAtual <= dataFim) {
-    const resultado = await resolverDiaProdutivo(empresaId, dataAtual);
+    const resultado = await resolverDiaProdutivo(client, empresaId, dataAtual);
     detalhes.push({ data: dataAtual, resultado });
 
     if (resultado.produtivo) {

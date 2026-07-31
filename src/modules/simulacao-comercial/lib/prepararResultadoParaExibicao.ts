@@ -5,9 +5,11 @@
 // Motor, só enriquece para exibição - reutilizável por qualquer tela
 // futura que precise do mesmo resultado legível (ex: V1.1, antes de
 // aprovar).
-"use client";
+// Sem "use client" - recebe o client Supabase por parâmetro, por
+// consistência com o resto da cadeia (não é chamado pela Server
+// Action hoje, só pelo preview no navegador).
 
-import { supabase } from "@/lib/supabaseClient";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ResultadoSimulacao } from "./executarSimulacao";
 
 export interface OperacaoParaExibicao {
@@ -45,6 +47,7 @@ function formatarRecurso(recurso: RecursoRow): string {
  * contra depender da ordem natural de retorno do banco.
  */
 export async function prepararResultadoParaExibicao(
+  client: SupabaseClient,
   resultado: ResultadoSimulacao,
 ): Promise<OperacaoParaExibicao[]> {
   const bomOperacaoIds = Array.from(
@@ -65,7 +68,7 @@ export async function prepararResultadoParaExibicao(
     ),
   );
 
-  const { data: operacoesData, error: erroOperacoes } = await supabase
+  const { data: operacoesData, error: erroOperacoes } = await client
     .from("bom_operacoes")
     .select("id,ordem,descricao")
     .in("id", bomOperacaoIds)
@@ -77,7 +80,7 @@ export async function prepararResultadoParaExibicao(
     );
   }
 
-  const { data: recursosData, error: erroRecursos } = await supabase
+  const { data: recursosData, error: erroRecursos } = await client
     .from("recursos_produtivos")
     .select("id,nome,codigo")
     .in("id", recursoIds.length > 0 ? recursoIds : [""]);

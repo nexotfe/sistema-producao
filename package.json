@@ -13,10 +13,12 @@
     "supabase:migrate": "npx supabase db push --linked --yes"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "latest",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "latest",

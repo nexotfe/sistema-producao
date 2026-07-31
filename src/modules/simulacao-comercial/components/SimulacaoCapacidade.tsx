@@ -1,18 +1,24 @@
-// V1.0: só visualização. Não persiste nada - nenhuma chamada a
-// aprovarSimulacaoComercial nem a aprovar_projeto_com_simulacao aqui.
+// Preview/revalidação (execução inicial, reexecução para o modal de
+// divergência/déficit) continuam rodando aqui, no navegador, só para
+// feedback rápido de UX - nenhuma dessas chamadas persiste nada. A
+// aprovação em si (persistência real) não usa mais aprovarSimulacaoComercial
+// direto daqui - vai pela Server Action aprovarSimulacaoComercialAction,
+// que recalcula de novo no servidor antes de persistir (PAD-008,
+// seções 7-8). aprovarSimulacaoComercial (RPC v1) continua existindo
+// só como caminho de rollback, não é chamada por este componente.
 // Sem lógica de busca/transformação de dado neste componente: quem
 // enriquece o resultado para exibição é prepararResultadoParaExibicao
 // (lib/), consumido pronto aqui.
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
-  aprovarSimulacaoComercial,
   simularCapacidadeProjeto,
   type ResultadoSimulacao,
 } from "@/modules/simulacao-comercial/lib/executarSimulacao";
+import { aprovarSimulacaoComercialAction } from "@/modules/simulacao-comercial/actions/aprovarSimulacaoComercialAction";
 import {
   prepararResultadoParaExibicao,
   type OperacaoParaExibicao,
@@ -150,6 +156,14 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   // "pronta" (mockup), para o usuario saber quando o resultado que
   // esta prestes a aprovar foi calculado.
   const [simuladoEm, setSimuladoEm] = useState<Date | null>(null);
+
+  // Chave de idempotencia da tentativa de aprovacao em andamento -
+  // gerada uma vez quando o fluxo entra em "pronta" (iniciarAprovacao),
+  // reaproveitada em toda chamada de confirmarAprovacao dessa mesma
+  // tentativa (inclusive retries de rede). useRef, nao state: nao
+  // precisa re-renderizar quando muda, e precisa sobreviver a troca de
+  // outros estados no mesmo ciclo.
+  const chaveIdempotenciaRef = useRef<string | null>(null);
 
   // Parametros exigidos por aprovar_projeto_com_simulacao (NOT NULL em
   // simulacoes_comerciais) - abordagem minima combinada (sem tabela
@@ -302,13 +316,17 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       }
 
       const resultadoSimulacao = await simularCapacidadeProjeto(
+        supabase,
         usuario.empresa_id,
         projetoId,
         janelaInicio,
         janelaFim,
       );
 
-      const resultadoExibicao = await prepararResultadoParaExibicao(resultadoSimulacao);
+      const resultadoExibicao = await prepararResultadoParaExibicao(
+        supabase,
+        resultadoSimulacao,
+      );
       setResultadoBruto(resultadoSimulacao);
       setResultado(resultadoExibicao);
       setSimuladoEm(new Date());
@@ -363,6 +381,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     );
 
     const { diasProdutivos } = await contarDiasProdutivosNaJanela(
+      supabase,
       empresaId,
       janelaInicio,
       janelaFim,
@@ -420,6 +439,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         .maybeSingle();
 
       const revalidacao = await simularCapacidadeProjeto(
+        supabase,
         usuario.empresa_id,
         projetoId,
         janelaInicio,
@@ -441,6 +461,11 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         ? await calcularMotivoPrincipalDeficit(usuario.empresa_id)
         : null;
 
+      // Nova tentativa de aprovacao: chave nova. Reaproveitada por
+      // confirmarAprovacao enquanto o usuario nao voltar para ca (ex:
+      // depois de "Executar nova simulacao" no estado divergente).
+      chaveIdempotenciaRef.current = crypto.randomUUID();
+
       setStatusAprovacao({
         tipo: "pronta",
         temDeficit,
@@ -455,9 +480,10 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   }
 
   // Passo 2: so chamado depois que o usuario confirmar (UI do Item 4,
-  // inclusive a confirmacao extra quando ha deficit). Aprova sempre
-  // com resultadoBruto (o que foi revisado), nunca com o resultado da
-  // revalidacao - DEC-002.
+  // inclusive a confirmacao extra quando ha deficit). resultadoBruto e
+  // enviado so para a Server Action COMPARAR - quem decide o que
+  // persistir e a reexecucao autoritativa dela no servidor (PAD-008,
+  // secoes 7-8), nunca este resultado do cliente, mesmo que bata.
   async function confirmarAprovacao(params: {
     cenarioDemanda: string;
     modoProducao: string;
@@ -468,10 +494,18 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       return;
     }
 
+    if (!chaveIdempotenciaRef.current) {
+      setStatusAprovacao({
+        tipo: "erro",
+        mensagem: "Solicitação de aprovação sem chave de idempotência - inicie a aprovação novamente.",
+      });
+      return;
+    }
+
     setStatusAprovacao({ tipo: "aprovando" });
 
     try {
-      const { simulacaoComercialId } = await aprovarSimulacaoComercial({
+      const resultadoAcao = await aprovarSimulacaoComercialAction({
         projetoId,
         resultado: resultadoBruto,
         cenarioDemanda: params.cenarioDemanda,
@@ -480,9 +514,31 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         margemSegurancaDias: params.margemSegurancaDias,
         janelaInicio,
         janelaFim,
+        chaveIdempotencia: chaveIdempotenciaRef.current,
       });
 
-      setStatusAprovacao({ tipo: "aprovada", simulacaoComercialId });
+      if (!resultadoAcao.ok) {
+        if (resultadoAcao.motivo === "divergente") {
+          // Mesma UX do estado "divergente" do passo 1 - agora
+          // detectado autoritativamente no servidor, nao so no
+          // preview do cliente.
+          setStatusAprovacao({ tipo: "divergente", diferencas: resultadoAcao.diferencas });
+          return;
+        }
+
+        const mensagem =
+          resultadoAcao.motivo === "nao_autenticado"
+            ? "Usuário não autenticado."
+            : resultadoAcao.mensagem;
+        setStatusAprovacao({ tipo: "erro", mensagem });
+        return;
+      }
+
+      chaveIdempotenciaRef.current = null;
+      setStatusAprovacao({
+        tipo: "aprovada",
+        simulacaoComercialId: resultadoAcao.simulacaoComercialId,
+      });
       // Recarrega a simulacao vigente (a que acabou de ser inserida)
       // para a tela cair no mesmo modo leitura do Item 4d, sem
       // duplicar a renderizacao "aprovada" separadamente.

@@ -8,9 +8,10 @@
 // regra de resolução de BOM ativo/travessia de subconjuntos de forma
 // independente - reconciliação futura recomendada se a regra mudar,
 // para evitar divergência entre cálculo de custo e Simulação Comercial.
-"use client";
-
-import { supabase } from "@/lib/supabaseClient";
+// Sem "use client" - mesma razão de resolverBomAtivo.ts: recebe o
+// client Supabase por parâmetro, portável entre preview no navegador
+// e revalidação autoritativa no servidor.
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolverBomAtivo } from "./resolverBomAtivo";
 import { OperacaoSemRecursoError, ProfundidadeMaximaBomError } from "./errors";
 
@@ -44,6 +45,7 @@ type BomItemSubconjuntoRow = {
  * quantidade de cada nível de subconjunto atravessado).
  */
 export async function coletarEstruturaBom(
+  client: SupabaseClient,
   bomId: string,
   quantidadeAcumulada: number,
   profundidade = 0,
@@ -52,7 +54,7 @@ export async function coletarEstruturaBom(
     throw new ProfundidadeMaximaBomError(bomId);
   }
 
-  const { data: operacoesData, error: erroOperacoes } = await supabase
+  const { data: operacoesData, error: erroOperacoes } = await client
     .from("bom_operacoes")
     .select("id,ordem,tempo_estimado_minutos,recurso_produtivo_id")
     .eq("bom_id", bomId)
@@ -80,7 +82,7 @@ export async function coletarEstruturaBom(
     });
   }
 
-  const { data: subItens, error: erroSubItens } = await supabase
+  const { data: subItens, error: erroSubItens } = await client
     .from("bom_itens")
     .select("quantidade,componente_produto_id")
     .eq("bom_id", bomId)
@@ -96,9 +98,10 @@ export async function coletarEstruturaBom(
   }
 
   for (const sub of (subItens ?? []) as BomItemSubconjuntoRow[]) {
-    const bomFilhoId = await resolverBomAtivo(sub.componente_produto_id);
+    const bomFilhoId = await resolverBomAtivo(client, sub.componente_produto_id);
     if (bomFilhoId) {
       const operacoesFilho = await coletarEstruturaBom(
+        client,
         bomFilhoId,
         quantidadeAcumulada * Number(sub.quantidade),
         profundidade + 1,

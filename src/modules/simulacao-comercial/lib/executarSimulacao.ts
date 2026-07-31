@@ -3,11 +3,17 @@
 // nunca consolidado por recurso. Ver Princípio de Persistência da
 // Simulação Comercial, seção 18 da arquitetura - qualquer consolidação
 // por recurso é uma visão derivada (SUM/GROUP BY em consulta), nunca a
-// fonte primária. Chama aprovar_projeto_com_simulacao (RPC) para
-// persistir atomicamente.
-"use client";
-
-import { supabase } from "@/lib/supabaseClient";
+// fonte primária.
+//
+// Sem "use client": simularCapacidadeProjeto e aprovarSimulacaoComercial
+// recebem o client Supabase por parâmetro - portável entre o preview
+// no navegador (client da sessão do browser) e a revalidação
+// autoritativa no servidor (client da sessão do servidor, PAD-008,
+// seções 7-8). aprovarSimulacaoComercial chama a RPC v1
+// (aprovar_projeto_com_simulacao) e continua existindo só como
+// caminho de rollback - o fluxo novo usa a Server Action + RPC v2, não
+// esta função.
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { prepararEntradasMotor } from "./prepararEntradasMotor";
 import { executarMotorAvaliacaoSequencial } from "./motorAvaliacaoSequencial";
 
@@ -40,12 +46,14 @@ export interface ResultadoSimulacao {
  * "pré-visualização" (rodar a simulação sem aprovar o projeto).
  */
 export async function simularCapacidadeProjeto(
+  client: SupabaseClient,
   empresaId: string,
   projetoId: string,
   janelaInicio: string,
   janelaFim: string,
 ): Promise<ResultadoSimulacao> {
   const { entradas, capacidadePorRecurso } = await prepararEntradasMotor(
+    client,
     empresaId,
     projetoId,
     janelaInicio,
@@ -117,17 +125,20 @@ export async function simularCapacidadeProjeto(
  * para comparar) e responsabilidade de quem chama esta funcao, nao
  * dela.
  */
-export async function aprovarSimulacaoComercial(params: {
-  projetoId: string;
-  resultado: ResultadoSimulacao;
-  cenarioDemanda: string;
-  modoProducao: string;
-  dataNecessidade: string;
-  margemSegurancaDias: number;
-  janelaInicio: string;
-  janelaFim: string;
-}): Promise<{ simulacaoComercialId: string }> {
-  const { data, error } = await supabase.rpc("aprovar_projeto_com_simulacao", {
+export async function aprovarSimulacaoComercial(
+  client: SupabaseClient,
+  params: {
+    projetoId: string;
+    resultado: ResultadoSimulacao;
+    cenarioDemanda: string;
+    modoProducao: string;
+    dataNecessidade: string;
+    margemSegurancaDias: number;
+    janelaInicio: string;
+    janelaFim: string;
+  },
+): Promise<{ simulacaoComercialId: string }> {
+  const { data, error } = await client.rpc("aprovar_projeto_com_simulacao", {
     p_projeto_id: params.projetoId,
     p_cenario_demanda: params.cenarioDemanda,
     p_modo_producao: params.modoProducao,
