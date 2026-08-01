@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 2,
+  "title": "Design System: NEXOTFE",
+  "extensions": {
+    "frontmatterScope": "O frontmatter do DESIGN.md (bloco YAML components:) é parcial — o schema do formato limita cada item a 8 props (backgroundColor, textColor, typography, rounded, padding, size, height, width) e não inclui borda nem estado de foco. As props reais de borda/foco de cada componente estão só no CSS de components[] abaixo e na prosa do DESIGN.md. Não usar o frontmatter isoladamente para gerar interface.",
+    "colorMeta": {
+      "action-primary": { "role": "primary", "displayName": "Azul de Comando", "canonical": "#2563EB", "darkCanonical": "#3B82F6", "note": "Preenchimento exclusivo de ação primária/links/navegação ativa. NÃO é o token de foco — ver extensions.accessibility.focusTokenBoundary." },
+      "focus-ring": { "role": "primary", "displayName": "Anel de Foco", "canonical": "rgba(96, 165, 250, 0.40)", "darkCanonical": "rgba(96, 165, 250, 0.55)", "note": "Token dedicado ao contorno de foco, distinto de action-primary." },
+      "text-primary": { "role": "neutral", "displayName": "Tinta Grafite", "canonical": "#0F172A", "darkCanonical": "#F1F5F9", "note": "Reativo ao tema. Pode ser texto/ícone/borda de controle secundário; nunca preenchimento de ação." },
+      "background": { "role": "neutral", "displayName": "Névoa Operacional", "canonical": "#EDF1F5", "darkCanonical": "#0A1420", "note": "Sem rampa tonal fabricada: apenas os dois valores realmente declarados (claro/escuro) em globals.css são registrados." },
+      "brand-header-fixed": { "role": "neutral", "displayName": "Grafite Institucional", "canonical": "#0B1B2B", "fixed": true, "note": "Token fixo — não participa da troca claro/escuro. Só superfície estrutural; nunca texto, nunca ação." }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Título de página (H1), telas operacionais planas." },
+      "title": { "displayName": "Title", "purpose": "Cabeçalho de card/modal." },
+      "body": { "displayName": "Body", "purpose": "Texto de formulário, botão, tabela." },
+      "label": { "displayName": "Label", "purpose": "Rótulo de campo, badge, cabeçalho de tabela." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "transition-default", "value": "background-color 150ms ease, border-color 150ms ease", "purpose": "Hover/focus de botão, campo, linha de tabela — via classe utilitária `transition` do Tailwind; não há token de easing/duração dedicado, e nenhum componente usa `transition: all`." },
+      { "name": "reduced-motion", "value": "não implementado", "purpose": "Não existe hoje tratamento de `prefers-reduced-motion: reduce` em nenhum componente. Requisito registrado para qualquer movimento futuro (entrada institucional), não estado atual." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px", "source": "Tailwind default — não customizado em tailwind.config.ts" },
+      { "name": "md", "value": "768px", "source": "Tailwind default — não customizado em tailwind.config.ts" },
+      { "name": "lg", "value": "1024px", "source": "Tailwind default — não customizado em tailwind.config.ts" },
+      { "name": "xl", "value": "1280px", "source": "Tailwind default — não customizado em tailwind.config.ts" },
+      { "name": "2xl", "value": "1536px", "source": "Tailwind default — não customizado em tailwind.config.ts" }
+    ],
+    "accessibility": {
+      "contrastValidated": false,
+      "contrastNote": "Valores claro/escuro dos tokens de cor são estimativa de boa-fé (PAD-006 §2); não validados com ferramenta de contraste dedicada. Não tratar como conformidade WCAG confirmada.",
+      "semanticIndicatorPrinciple": "Cada estado precisa de um indicador semântico compreensível independente de cor — texto, rótulo ou mensagem explícita (a palavra do Badge, a mensagem de erro do campo). O trio texto+fundo+borda (Badges) ou o par borda/anel (campos) padronizam a apresentação visual; não substituem esse indicador, porque os três continuam sendo manifestações de cor.",
+      "statusVsFieldValidation": "Status/Badges usam o trio completo texto+fundo+borda. Validação de campo usa mensagem+borda/anel, sem exigir preenchimento de fundo colorido — confirmado em Field.tsx: o estado de erro não aplica nenhuma classe bg-* própria.",
+      "focusTokenBoundary": "focus-ring é o token do contorno de foco em todo componente interativo. action-primary nunca é o token de foco — em campos/selects a borda também muda para action-primary além do anel; em botões e no ThemeToggle só o anel (focus-ring) muda.",
+      "reducedMotion": "não implementado — requisito futuro, não estado atual (ver extensions.motion)."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação primária — preenchimento exclusivo action-primary; foco só por anel (focus-ring).",
+      "html": "<button class=\"ds-btn-primary\">Salvar</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:40px; padding:0 18px; border-radius:10px; font-size:13.5px; font-weight:600; background:var(--color-action-primary); color:var(--color-action-primary-text); border:none; transition:background-color 150ms ease; } .ds-btn-primary:hover { background:var(--color-action-primary-hover); } .ds-btn-primary:focus-visible { outline:none; box-shadow:0 0 0 3px var(--color-focus-ring); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação secundária — fundo neutro, borda neutra, texto grafite. Nunca fundo azul nem fundo grafite.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:10px; font-size:13.5px; font-weight:600; background:var(--color-surface); color:var(--color-text-primary); border:1px solid var(--color-border); transition:background-color 150ms ease; } .ds-btn-secondary:hover { background:var(--color-border-subtle); } .ds-btn-secondary:focus-visible { outline:none; box-shadow:0 0 0 3px var(--color-focus-ring); }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Ação destrutiva — família danger, nunca azul, nunca grafite.",
+      "html": "<button class=\"ds-btn-danger\">Excluir</button>",
+      "css": ".ds-btn-danger { display:inline-flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:10px; font-size:13.5px; font-weight:600; background:transparent; color:var(--color-danger-text); border:1px solid var(--color-danger-border); transition:background-color 150ms ease; } .ds-btn-danger:hover { background:var(--color-danger-bg); } .ds-btn-danger:focus-visible { outline:none; box-shadow:0 0 0 3px var(--color-focus-ring); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contêiner de conteúdo — sem sombra, sem hover, sem cor de ação.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\">Título</div><div class=\"ds-card-body\">Conteúdo</div></div>",
+      "css": ".ds-card { border-radius:12px; border:1px solid var(--color-border); background:var(--color-surface); overflow:hidden; } .ds-card-header { padding:18px 22px; border-bottom:1px solid var(--color-border-subtle); font-size:15px; font-weight:600; color:var(--color-text-primary); } .ds-card-body { padding:20px 22px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field-input",
+      "description": "Campo de texto com rótulo. Foco: borda action-primary + anel focus-ring juntos. Erro: borda danger-border + anel usando danger-bg como cor de contorno (não como fundo) + mensagem de texto explícita — indicador semântico real é a mensagem, não a cor.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\">Rótulo</label><input class=\"ds-field-input\" placeholder=\"Digite...\" /><span class=\"ds-field-error\">Mensagem de erro</span></div>",
+      "css": ".ds-field { display:flex; flex-direction:column; gap:7px; } .ds-field-label { font-size:12.5px; font-weight:600; color:var(--color-text-primary); } .ds-field-input { height:42px; border-radius:10px; border:1px solid var(--color-border); background:var(--color-surface-elevated); padding:0 13px; font-size:13.5px; color:var(--color-text-primary); outline:none; transition:border-color 150ms ease; } .ds-field-input:focus-visible { border-color:var(--color-action-primary); box-shadow:0 0 0 3px var(--color-focus-ring); } .ds-field-input.error { border-color:var(--color-danger-border); box-shadow:0 0 0 3px var(--color-danger-bg); } .ds-field-error { font-size:11.5px; color:var(--color-danger-text); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Pílula de status — trio texto+fundo+borda da mesma família para consistência visual. O indicador semântico real é a palavra dentro do badge, não a cor.",
+      "html": "<span class=\"ds-badge-success\">Ativo</span>",
+      "css": ".ds-badge-success { display:inline-flex; align-items:center; border-radius:9999px; border:1px solid var(--color-success-border); background:var(--color-success-bg); color:var(--color-success-text); padding:4px 11px; font-size:11.5px; font-weight:600; }"
+    },
+    {
+      "name": "Modal",
+      "kind": "custom",
+      "refersTo": "modal",
+      "description": "Diálogo modal — overlay escuro fixo (sem token, gap conhecido de PAD-006).",
+      "accessibilityState": ["role=\"dialog\"", "aria-modal=\"true\"", "aria-label com o título", "fecha com Escape"],
+      "accessibilityContract": [
+        "Foco deve mover para dentro do modal na abertura (primeiro elemento focável ou o container).",
+        "Foco deve ficar retido dentro do modal enquanto aberto — Tab não escapa para o conteúdo por trás.",
+        "Foco deve retornar ao elemento que abriu o modal quando ele fecha.",
+        "Escape sozinho não é suficiente sem os três itens acima."
+      ],
+      "html": "<div class=\"ds-modal-overlay\"><div class=\"ds-modal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ds-modal-title\"><div class=\"ds-modal-header\" id=\"ds-modal-title\">Título</div><div class=\"ds-modal-body\">Conteúdo</div></div></div>",
+      "css": ".ds-modal-overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(2,6,15,0.5); padding:20px; } .ds-modal { width:100%; max-width:420px; border-radius:16px; border:1px solid var(--color-border); background:var(--color-surface-elevated); overflow:hidden; } .ds-modal-header { padding:18px 22px; border-bottom:1px solid var(--color-border-subtle); font-size:15px; font-weight:600; color:var(--color-text-primary); } .ds-modal-body { padding:20px 22px; font-size:13px; color:var(--color-text-secondary); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Painel de Controle",
+    "overview": "O NEXOTFE tem duas naturezas visuais deliberadamente diferentes: a entrada institucional é o mostrador principal de um painel de controle industrial (marcante, contemporânea, confiável) e o interior operacional são os instrumentos individuais do mesmo painel (claros, calmos, eficientes, baixa carga cognitiva). Hoje só o lado operacional está consolidado como sistema de tokens. A sequência de entrada (login + hub central) ainda não foi redesenhada sob esse princípio e não deve ser tratada como referência definitiva.",
+    "keyCharacteristics": [
+      "Dualidade deliberada: entrada expressiva (mostrador principal), operação contida (instrumentos individuais) — fronteira rígida entre as duas.",
+      "Azul (action-primary) é o preenchimento exclusivo de ação primária, links e navegação ativa; o contorno de foco usa focus-ring, distinto de action-primary.",
+      "Grafite pode aparecer em texto/ícone/borda de controle secundário; nunca é preenchimento de ação primária.",
+      "Superfícies planas — profundidade vem de borda e camada de tom, não de sombra.",
+      "Todo indicador de estado precisa de significado legível independente de cor — texto/rótulo/mensagem, não só a paleta."
+    ],
+    "rules": [
+      { "name": "A Regra do Grafite em Controles", "body": "Grafite cobre dois tokens: text-primary pode ser texto/ícone/borda de controle secundário; brand-header-fixed é só superfície estrutural (cabeçalho). Nenhum dos dois é preenchimento de ação, em nenhuma variante — isso é exclusivo de action-primary.", "section": "colors" },
+      { "name": "A Regra da Cor de Ação", "body": "action-primary é o preenchimento exclusivo da ação primária, links e navegação ativa. Secundário usa fundo neutro + borda neutra + texto grafite. Destrutivo usa a família danger. O contorno de foco é sempre focus-ring, nunca action-primary isoladamente — em campos/selects a borda também muda para action-primary junto com o anel; em botões só o anel muda.", "section": "colors" },
+      { "name": "A Regra Plano-por-Padrão", "body": "Superfícies dos primitivos compartilhados ficam sem sombra em repouso.", "section": "elevation" },
+      { "name": "A Regra da Porta de Entrada", "body": "Reservar impacto visual para pontos de entrada e orientação; manter as telas operacionais claras, calmas e eficientes.", "section": "dos-and-donts" }
+    ],
+    "dos": [
+      "Do reservar impacto visual para pontos de entrada e orientação; manter as telas operacionais claras, calmas e eficientes.",
+      "Do manter toda tela operacional no registro plano e contido.",
+      "Do usar action-primary como preenchimento exclusivo de ação primária/links/navegação ativa; usar focus-ring para o contorno de foco.",
+      "Do compor Badges como trio texto+fundo+borda e validação de campo como mensagem+borda/anel sem fundo colorido; em ambos, garantir indicador semântico legível independente de cor.",
+      "Do manter foco visível por anel em qualquer componente novo.",
+      "Do respeitar prefers-reduced-motion em qualquer movimento novo — hoje não implementado, requisito futuro.",
+      "Do consumir componentes via token semântico, nunca classe de paleta literal."
+    ],
+    "donts": [
+      "Don't adicionar box-shadow a um primitivo de shared/ui.",
+      "Don't criar nova cópia local de Card/Field/Modal/Table.",
+      "Don't usar grafite como preenchimento de nenhuma ação — principal, secundária ou destrutiva.",
+      "Don't usar action-primary como token de foco — o contorno de foco é sempre focus-ring.",
+      "Don't deixar o tratamento visual de entrada vazar para dentro de uma tela operacional.",
+      "Don't confundir 'marcante' com gradiente genérico, animação em excesso, cantos arredondados indiscriminados ou aparência de template de IA.",
+      "Don't declarar um modal acessível por teclado só porque fecha com Escape — sem foco inicial, retenção e retorno de foco, o contrato não está completo.",
+      "Don't tratar a tela de login ou o hub central como referência da identidade pretendida — ambas ainda não migradas/desenhadas; não é autorização para redesenho automático."
+    ]
+  }
+}
