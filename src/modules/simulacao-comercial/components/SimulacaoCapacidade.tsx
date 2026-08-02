@@ -9,6 +9,14 @@
 // Sem lógica de busca/transformação de dado neste componente: quem
 // enriquece o resultado para exibição é prepararResultadoParaExibicao
 // (lib/), consumido pronto aqui.
+//
+// Entrega 1 do PAD-008 v2.0 (seção 17): janelaInicio/janelaFim deixam
+// de ser digitadas manualmente - Margem de Segurança e Data Prevista
+// de Aprovação do Pedido são as premissas informadas ANTES de simular,
+// e a janela produtiva é derivada automaticamente por
+// prepararJanelaComercial (lib/), a mesma função usada pelo servidor
+// na aprovação autoritativa (nunca confia na janela calculada aqui
+// para persistir - ver aprovarSimulacaoComercialAction.ts).
 "use client";
 
 import Link from "next/link";
@@ -28,6 +36,14 @@ import {
   type DiferencaSimulacao,
 } from "@/modules/simulacao-comercial/lib/compararResultadosSimulacao";
 import { contarDiasProdutivosNaJanela } from "@/modules/simulacao-comercial/lib/agregarDiasProdutivos";
+import {
+  compararJanelaEfetiva,
+  prepararJanelaComercial,
+  premissasComerciaisMudaram,
+  type PremissasJanelaComercial,
+  type ResultadoJanelaComercial,
+} from "@/modules/simulacao-comercial/lib/prepararJanelaComercial";
+import { calcularJanelaComercialParaExibicao } from "@/modules/simulacao-comercial/lib/calcularJanelaComercialParaExibicao";
 import {
   ProjetoSemItensError,
   RecursoSemCapacidadeCadastradaError,
@@ -75,6 +91,9 @@ type SimulacaoCapacidadeProps = {
 // quanto para "Data/hora da simulacao utilizada" - simulacoes_comerciais
 // so persiste um timestamp (aprovado_em); nao existe uma coluna
 // separada para "quando o Simular foi clicado". Ver nota no relatorio.
+// dataPrevistaAprovacaoPedido/dataChegadaPrevista podem ser null em
+// simulacoes aprovadas antes da Entrega 1 do PAD-008 v2.0 - telas
+// antigas nao tinham essas premissas.
 type SimulacaoAprovadaExistente = {
   aprovadoPorNome: string;
   aprovadoEm: string;
@@ -82,6 +101,8 @@ type SimulacaoAprovadaExistente = {
   modoProducao: string;
   dataNecessidade: string;
   margemSegurancaDias: number;
+  dataPrevistaAprovacaoPedido: string | null;
+  dataChegadaPrevista: string | null;
   janelaInicio: string;
   janelaFim: string;
   totalOperacoes: number;
@@ -110,8 +131,21 @@ function mensagemDeErro(erro: unknown): string {
   return "Erro inesperado ao simular capacidade.";
 }
 
+function formatarDataBr(dataIso: string): string {
+  const [ano, mes, dia] = dataIso.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function mensagemAusenciaJanela(janela: Extract<ResultadoJanelaComercial, { valida: false }>): string {
+  if (janela.motivo === "disponibilidade_apos_prazo_interno") {
+    return `A disponibilidade prevista do material (${formatarDataBr(janela.dataDisponibilidadeProducao)}) é posterior ao Prazo Interno (${formatarDataBr(janela.prazoInterno)}). Não existe janela produtiva viável para esta simulação.`;
+  }
+  return `Não há nenhum dia produtivo entre a disponibilidade do material (${formatarDataBr(janela.dataDisponibilidadeProducao)}) e o Prazo Interno (${formatarDataBr(janela.prazoInterno)}). Não existe janela produtiva viável para esta simulação.`;
+}
+
 // Rotulos legiveis para os campos comparados por compararResultadosSimulacao
-// (mesmos campos que aprovar_projeto_com_simulacao persiste - DEC-002).
+// (mesmos campos que aprovar_projeto_com_simulacao_v3 persiste - DEC-002)
+// e por compararJanelaEfetiva (PAD-008 v2.0 secao 17).
 const ROTULOS_CAMPO_DIFERENCA: Record<string, string> = {
   recursoConsideradoId: "Recurso considerado (ID)",
   motivoConsideracao: "Motivo de consideração",
@@ -123,6 +157,8 @@ const ROTULOS_CAMPO_DIFERENCA: Record<string, string> = {
   comprometido: "Comprometido (h)",
   livre: "Livre (h)",
   presenca: "Presença da operação",
+  janelaInicio: "Data de Disponibilidade para Produção",
+  janelaFim: "Prazo Interno",
 };
 
 function formatarValorDiferenca(valor: unknown): string {
@@ -136,14 +172,24 @@ function formatarValorDiferenca(valor: unknown): string {
 }
 
 export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
-  const [janelaInicio, setJanelaInicio] = useState("");
-  const [janelaFim, setJanelaFim] = useState("");
+  // Premissas comerciais (PAD-008 v2.0 §17, DEC-004 v1.1) - informadas
+  // ANTES de qualquer execução do Motor. dataNecessidade é carregada
+  // automaticamente de projetos.data_objetivo (efeito abaixo) e também
+  // editável mais adiante, junto de Cenário de Demanda/Modo de Produção.
+  const [dataPrevistaAprovacaoPedido, setDataPrevistaAprovacaoPedido] = useState("");
+  const [margemSegurancaDiasTexto, setMargemSegurancaDiasTexto] = useState("0");
+  const [dataNecessidade, setDataNecessidade] = useState("");
+
+  const [janelaComercial, setJanelaComercial] = useState<ResultadoJanelaComercial | null>(null);
+  const [calculandoJanela, setCalculandoJanela] = useState(false);
+  const [erroJanela, setErroJanela] = useState<string | null>(null);
+
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<OperacaoParaExibicao[] | null>(null);
   // Resultado cru do Motor, guardado a parte do de exibicao - e o que
   // sera usado na revalidacao/aprovacao (DEC-002), ja que o resultado
-  // de exibicao nao tem os campos que aprovar_projeto_com_simulacao
+  // de exibicao nao tem os campos que aprovar_projeto_com_simulacao_v3
   // exige (recursoOriginalId/recursoConsideradoId como UUID, e os 5
   // campos de capacidade).
   const [resultadoBruto, setResultadoBruto] = useState<ResultadoSimulacao | null>(
@@ -165,15 +211,17 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   // outros estados no mesmo ciclo.
   const chaveIdempotenciaRef = useRef<string | null>(null);
 
-  // Parametros exigidos por aprovar_projeto_com_simulacao (NOT NULL em
-  // simulacoes_comerciais) - abordagem minima combinada (sem tabela
-  // nova, sem premissa nova): cenarioDemanda/modoProducao texto livre,
-  // dataNecessidade pre-preenchida de projetos.data_objetivo e
-  // editavel, margemSegurancaDias numerico com default 0.
+  // Premissas da última simulação já exibida - usado só para detectar
+  // alteração posterior (DEC-004 v1.1: "Qualquer alteração posterior
+  // invalida o resultado apresentado"). null enquanto não há resultado.
+  const premissasDoResultadoRef = useRef<PremissasJanelaComercial | null>(null);
+
+  // Parametros exigidos por aprovar_projeto_com_simulacao_v3 (NOT NULL
+  // em simulacoes_comerciais) que não são premissas de janela - abordagem
+  // minima combinada (sem tabela nova, sem premissa nova): cenarioDemanda/
+  // modoProducao texto livre.
   const [cenarioDemanda, setCenarioDemanda] = useState("");
   const [modoProducao, setModoProducao] = useState("");
-  const [dataNecessidade, setDataNecessidade] = useState("");
-  const [margemSegurancaDiasTexto, setMargemSegurancaDiasTexto] = useState("0");
 
   // Item 4d: checagem na montagem da tela - se ja existe simulacao
   // vigente aprovada para este projeto, a tela vai direto para o modo
@@ -187,7 +235,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     const { data: vigente } = await supabase
       .from("simulacoes_comerciais")
       .select(
-        "id,cenario_demanda,modo_producao,data_necessidade,margem_seguranca_dias,janela_inicio,janela_fim,aprovado_em,aprovado_por",
+        "id,cenario_demanda,modo_producao,data_necessidade,margem_seguranca_dias,data_prevista_aprovacao_pedido,data_chegada_prevista,janela_inicio,janela_fim,aprovado_em,aprovado_por",
       )
       .eq("projeto_id", projetoId)
       .eq("vigente", true)
@@ -226,6 +274,8 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       modoProducao: vigente.modo_producao,
       dataNecessidade: vigente.data_necessidade,
       margemSegurancaDias: Number(vigente.margem_seguranca_dias),
+      dataPrevistaAprovacaoPedido: vigente.data_prevista_aprovacao_pedido,
+      dataChegadaPrevista: vigente.data_chegada_prevista,
       janelaInicio: vigente.janela_inicio,
       janelaFim: vigente.janela_fim,
       totalOperacoes: itensLista.length,
@@ -274,20 +324,81 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     };
   }, [projetoId]);
 
-  const janelaPreenchida = janelaInicio !== "" && janelaFim !== "";
-  const janelaFimAntesDoInicio = janelaPreenchida && janelaFim < janelaInicio;
-  const janelaValida = janelaPreenchida && !janelaFimAntesDoInicio;
-
   const margemSegurancaDias = Number(margemSegurancaDiasTexto.replace(",", "."));
-  const parametrosAprovacaoValidos =
-    cenarioDemanda.trim() !== "" &&
-    modoProducao.trim() !== "" &&
-    dataNecessidade !== "" &&
-    Number.isFinite(margemSegurancaDias) &&
-    margemSegurancaDias >= 0;
+  const margemSegurancaValida = Number.isInteger(margemSegurancaDias) && margemSegurancaDias >= 0;
+
+  // Camada de preparação comercial (PAD-008 v2.0 §17) - recalcula a
+  // janela produtiva sempre que qualquer premissa muda, ANTES de
+  // qualquer execução do núcleo do Motor. Roda no navegador só para
+  // preview/gate do botão Simular - o servidor recalcula tudo de novo
+  // na aprovação (aprovarSimulacaoComercialAction.ts), nunca confia
+  // neste resultado para persistir.
+  useEffect(() => {
+    let cancelado = false;
+
+    calcularJanelaComercialParaExibicao(
+      { dataNecessidade, margemSegurancaDiasProdutivos: margemSegurancaDias, dataPrevistaAprovacaoPedido },
+      margemSegurancaValida,
+      {
+        buscarEmpresaId: async () => {
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData.user) {
+            return null;
+          }
+
+          const { data: usuario } = await supabase
+            .from("usuarios")
+            .select("empresa_id")
+            .eq("id", userData.user.id)
+            .single();
+
+          return usuario?.empresa_id ?? null;
+        },
+        prepararJanela: (empresaId, premissas) =>
+          prepararJanelaComercial(supabase, empresaId, premissas),
+      },
+      {
+        setErro: setErroJanela,
+        setJanela: setJanelaComercial,
+        setCalculando: setCalculandoJanela,
+        foiCancelado: () => cancelado,
+      },
+    );
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataPrevistaAprovacaoPedido, dataNecessidade, margemSegurancaDias]);
+
+  // Invalidação por alteração de premissa (DEC-004 v1.1, "Papel do
+  // orçamentista"): se qualquer premissa muda depois de já existir um
+  // resultado exibido, o resultado anterior deixa de valer - exige
+  // nova simulação antes de qualquer aprovação.
+  useEffect(() => {
+    const premissasAtuais: PremissasJanelaComercial = {
+      dataNecessidade,
+      margemSegurancaDiasProdutivos: margemSegurancaDias,
+      dataPrevistaAprovacaoPedido,
+    };
+
+    const premissasAnteriores = premissasDoResultadoRef.current;
+
+    if (
+      premissasAnteriores !== null &&
+      resultado !== null &&
+      premissasComerciaisMudaram(premissasAnteriores, premissasAtuais)
+    ) {
+      setResultado(null);
+      setResultadoBruto(null);
+      setStatusAprovacao(null);
+      setSimuladoEm(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataNecessidade, margemSegurancaDias, dataPrevistaAprovacaoPedido]);
 
   async function handleSimular() {
-    if (!janelaValida) {
+    if (!janelaComercial?.valida) {
       return;
     }
 
@@ -319,8 +430,8 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         supabase,
         usuario.empresa_id,
         projetoId,
-        janelaInicio,
-        janelaFim,
+        janelaComercial.janelaInicio,
+        janelaComercial.janelaFim,
       );
 
       const resultadoExibicao = await prepararResultadoParaExibicao(
@@ -330,6 +441,11 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       setResultadoBruto(resultadoSimulacao);
       setResultado(resultadoExibicao);
       setSimuladoEm(new Date());
+      premissasDoResultadoRef.current = {
+        dataNecessidade,
+        margemSegurancaDiasProdutivos: margemSegurancaDias,
+        dataPrevistaAprovacaoPedido,
+      };
     } catch (erroCapturado) {
       setErro(mensagemDeErro(erroCapturado));
     } finally {
@@ -349,7 +465,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   async function calcularMotivoPrincipalDeficit(
     empresaId: string,
   ): Promise<MotivoPrincipalDeficit | null> {
-    if (!resultadoBruto) {
+    if (!resultadoBruto || !janelaComercial?.valida) {
       return null;
     }
 
@@ -383,8 +499,8 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     const { diasProdutivos } = await contarDiasProdutivosNaJanela(
       supabase,
       empresaId,
-      janelaInicio,
-      janelaFim,
+      janelaComercial.janelaInicio,
+      janelaComercial.janelaFim,
     );
 
     const disponivelNaJanela =
@@ -403,12 +519,12 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   }
 
   // Passo 1 do fluxo de aprovacao (DEC-002): busca simulacao vigente,
-  // revalida rodando o Motor de novo e compara com resultadoBruto (o
-  // que foi exibido). So decide o proximo estado - nao aprova nada
-  // aqui. UI (Item 4) le statusAprovacao para renderizar o aviso de
-  // substituicao, a lista de divergencias, ou o modal de deficit.
+  // revalida rodando o Motor de novo (sobre a janela recalculada a
+  // partir das premissas ATUAIS) e compara com resultadoBruto (o que
+  // foi exibido) + a janela usada then vs agora (PAD-008 v2.0 §17). So
+  // decide o proximo estado - nao aprova nada aqui.
   async function iniciarAprovacao() {
-    if (!resultadoBruto) {
+    if (!resultadoBruto || !janelaComercial?.valida) {
       return;
     }
 
@@ -438,18 +554,38 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         .eq("vigente", true)
         .maybeSingle();
 
+      const janelaRevalidada = await prepararJanelaComercial(supabase, usuario.empresa_id, {
+        dataNecessidade,
+        margemSegurancaDiasProdutivos: margemSegurancaDias,
+        dataPrevistaAprovacaoPedido,
+      });
+
+      if (!janelaRevalidada.valida) {
+        setStatusAprovacao({
+          tipo: "erro",
+          mensagem: mensagemAusenciaJanela(janelaRevalidada),
+        });
+        return;
+      }
+
+      const diferencasJanela = compararJanelaEfetiva(
+        { janelaInicio: janelaComercial.janelaInicio, janelaFim: janelaComercial.janelaFim },
+        { janelaInicio: janelaRevalidada.janelaInicio, janelaFim: janelaRevalidada.janelaFim },
+      );
+
       const revalidacao = await simularCapacidadeProjeto(
         supabase,
         usuario.empresa_id,
         projetoId,
-        janelaInicio,
-        janelaFim,
+        janelaRevalidada.janelaInicio,
+        janelaRevalidada.janelaFim,
       );
 
-      const comparacao = compararResultadosSimulacao(resultadoBruto, revalidacao);
+      const comparacaoItens = compararResultadosSimulacao(resultadoBruto, revalidacao);
+      const diferencas = [...diferencasJanela, ...comparacaoItens.diferencas];
 
-      if (!comparacao.identico) {
-        setStatusAprovacao({ tipo: "divergente", diferencas: comparacao.diferencas });
+      if (diferencas.length > 0) {
+        setStatusAprovacao({ tipo: "divergente", diferencas });
         return;
       }
 
@@ -481,16 +617,15 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
   // Passo 2: so chamado depois que o usuario confirmar (UI do Item 4,
   // inclusive a confirmacao extra quando ha deficit). resultadoBruto e
-  // enviado so para a Server Action COMPARAR - quem decide o que
-  // persistir e a reexecucao autoritativa dela no servidor (PAD-008,
-  // secoes 7-8), nunca este resultado do cliente, mesmo que bata.
+  // a janela exibida sao enviados so para a Server Action COMPARAR -
+  // quem decide o que persistir e a reexecucao/repreparacao
+  // autoritativa dela no servidor (PAD-008, secoes 7-8, 17), nunca
+  // este resultado do cliente, mesmo que bata.
   async function confirmarAprovacao(params: {
     cenarioDemanda: string;
     modoProducao: string;
-    dataNecessidade: string;
-    margemSegurancaDias: number;
   }) {
-    if (!resultadoBruto) {
+    if (!resultadoBruto || !janelaComercial?.valida) {
       return;
     }
 
@@ -510,10 +645,11 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         resultado: resultadoBruto,
         cenarioDemanda: params.cenarioDemanda,
         modoProducao: params.modoProducao,
-        dataNecessidade: params.dataNecessidade,
-        margemSegurancaDias: params.margemSegurancaDias,
-        janelaInicio,
-        janelaFim,
+        dataNecessidade,
+        margemSegurancaDias,
+        dataPrevistaAprovacaoPedido,
+        janelaInicio: janelaComercial.janelaInicio,
+        janelaFim: janelaComercial.janelaFim,
         chaveIdempotencia: chaveIdempotenciaRef.current,
       });
 
@@ -523,6 +659,14 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           // detectado autoritativamente no servidor, nao so no
           // preview do cliente.
           setStatusAprovacao({ tipo: "divergente", diferencas: resultadoAcao.diferencas });
+          return;
+        }
+
+        if (resultadoAcao.motivo === "sem_janela_produtiva") {
+          setStatusAprovacao({
+            tipo: "erro",
+            mensagem: mensagemAusenciaJanela(resultadoAcao.detalhe),
+          });
           return;
         }
 
@@ -563,7 +707,8 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   // compararResultadosSimulacao usa como chave) para a descricao
   // legivel da operacao. Operacao "adicionada" na revalidacao nao
   // esta em `resultado` (que reflete o resultado original exibido) -
-  // cai no fallback (o proprio id).
+  // cai no fallback (o proprio id, ou o rotulo fixo "janela-comercial"
+  // quando a diferenca vem de compararJanelaEfetiva).
   const operacaoDescricaoPorId = new Map(
     (resultado ?? []).map((op) => [op.bomOperacaoId, op.operacaoDescricao]),
   );
@@ -572,8 +717,6 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     confirmarAprovacao({
       cenarioDemanda,
       modoProducao,
-      dataNecessidade,
-      margemSegurancaDias,
     });
   }
 
@@ -637,14 +780,31 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           </span>
           <span>
             Margem de Segurança:{" "}
-            <strong>{simulacaoAprovadaExistente.margemSegurancaDias} dias</strong>
+            <strong>{simulacaoAprovadaExistente.margemSegurancaDias} dias produtivos</strong>
           </span>
           <span>
-            Janela:{" "}
+            Data Prevista de Aprovação do Pedido:{" "}
             <strong>
-              {simulacaoAprovadaExistente.janelaInicio} a{" "}
-              {simulacaoAprovadaExistente.janelaFim}
+              {simulacaoAprovadaExistente.dataPrevistaAprovacaoPedido
+                ? formatarDataBr(simulacaoAprovadaExistente.dataPrevistaAprovacaoPedido)
+                : "— (simulação anterior à Entrega 1)"}
             </strong>
+          </span>
+          <span>
+            Data de Chegada Prevista do Material:{" "}
+            <strong>
+              {simulacaoAprovadaExistente.dataChegadaPrevista
+                ? formatarDataBr(simulacaoAprovadaExistente.dataChegadaPrevista)
+                : "— (simulação anterior à Entrega 1)"}
+            </strong>
+          </span>
+          <span>
+            Data de Disponibilidade para Produção:{" "}
+            <strong>{formatarDataBr(simulacaoAprovadaExistente.janelaInicio)}</strong>
+          </span>
+          <span>
+            Prazo Interno:{" "}
+            <strong>{formatarDataBr(simulacaoAprovadaExistente.janelaFim)}</strong>
           </span>
           <span>
             Operações analisadas:{" "}
@@ -672,49 +832,68 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         <h2 className="text-sm font-bold">Simulação de Capacidade</h2>
         <p className="mt-0.5 text-xs text-slate-500">
           Avalia se os Recursos Produtivos comportam o roteiro do projeto na
-          janela informada. Não altera nem aprova o projeto.
+          janela produtiva derivada das premissas abaixo. Não altera nem
+          aprova o projeto.
         </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-600">
-            Data inicial
+            Data Prevista de Aprovação do Pedido
           </label>
           <input
             type="date"
-            value={janelaInicio}
-            onChange={(event) => setJanelaInicio(event.target.value)}
+            value={dataPrevistaAprovacaoPedido}
+            onChange={(event) => setDataPrevistaAprovacaoPedido(event.target.value)}
             className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-600">
-            Data final
+            Margem de Segurança (dias produtivos)
           </label>
           <input
-            type="date"
-            value={janelaFim}
-            onChange={(event) => setJanelaFim(event.target.value)}
-            className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            inputMode="numeric"
+            value={margemSegurancaDiasTexto}
+            onChange={(event) => setMargemSegurancaDiasTexto(event.target.value)}
+            className="h-10 w-40 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
         <button
           type="button"
           onClick={handleSimular}
-          disabled={carregando || !janelaValida}
+          disabled={carregando || calculandoJanela || !janelaComercial?.valida}
           className="h-10 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {carregando ? "Simulando..." : "Simular"}
         </button>
       </div>
 
-      {janelaFimAntesDoInicio ? (
-        <p className="mt-2 text-sm text-rose-600">
-          A data final não pode ser anterior à data inicial.
-        </p>
+      {calculandoJanela ? (
+        <p className="mt-2 text-sm text-slate-500">Calculando janela produtiva...</p>
+      ) : erroJanela ? (
+        <p className="mt-2 text-sm text-rose-600">{erroJanela}</p>
+      ) : janelaComercial ? (
+        janelaComercial.valida ? (
+          <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 sm:grid-cols-3">
+            <span>
+              Data de Chegada Prevista:{" "}
+              <strong>{formatarDataBr(janelaComercial.dataChegadaPrevista)}</strong>
+            </span>
+            <span>
+              Data de Disponibilidade para Produção:{" "}
+              <strong>{formatarDataBr(janelaComercial.dataDisponibilidadeProducao)}</strong>
+            </span>
+            <span>
+              Prazo Interno: <strong>{formatarDataBr(janelaComercial.prazoInterno)}</strong>
+            </span>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-rose-600">{mensagemAusenciaJanela(janelaComercial)}</p>
+        )
       ) : null}
 
       {erro ? <p className="mt-3 text-sm text-rose-600">{erro}</p> : null}
@@ -822,23 +1001,12 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
               />
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">
-                Margem de Segurança (dias)
-              </label>
-              <input
-                inputMode="numeric"
-                value={margemSegurancaDiasTexto}
-                onChange={(event) => setMargemSegurancaDiasTexto(event.target.value)}
-                className="h-10 w-32 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
             <button
               type="button"
               onClick={iniciarAprovacao}
               disabled={
-                !parametrosAprovacaoValidos ||
+                cenarioDemanda.trim() === "" ||
+                modoProducao.trim() === "" ||
                 statusAprovacao?.tipo === "revalidando" ||
                 statusAprovacao?.tipo === "aprovando"
               }
@@ -918,7 +1086,12 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
               Em déficit: <strong>{operacoesEmDeficit.length}</strong>
             </span>
             <span>
-              Janela: <strong>{janelaInicio} a {janelaFim}</strong>
+              Janela:{" "}
+              <strong>
+                {janelaComercial?.valida
+                  ? `${formatarDataBr(janelaComercial.janelaInicio)} a ${formatarDataBr(janelaComercial.janelaFim)}`
+                  : "—"}
+              </strong>
             </span>
             <span>
               Simulado em:{" "}

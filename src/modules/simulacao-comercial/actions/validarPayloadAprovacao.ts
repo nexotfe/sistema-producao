@@ -31,7 +31,11 @@ export type PayloadAprovacao = {
   modoProducao: string;
   dataNecessidade: string;
   margemSegurancaDias: number;
+  /** Estimativa do orçamentista de quando o pedido do cliente será confirmado (DEC-004 v1.1) - premissa obrigatória, informada antes da simulação. */
+  dataPrevistaAprovacaoPedido: string;
+  /** = dataDisponibilidadeProducao calculada pelo cliente na última revalidação (PAD-008 v2.0 §17) - só para comparação; o servidor recalcula a própria e nunca persiste este valor sem revalidar (ver aprovarSimulacaoComercialAction.ts). */
   janelaInicio: string;
+  /** = prazoInterno calculado pelo cliente na última revalidação - mesma ressalva de janelaInicio. */
   janelaFim: string;
   chaveIdempotencia: string;
 };
@@ -87,6 +91,7 @@ const CAMPOS_PAYLOAD = new Set([
   "modoProducao",
   "dataNecessidade",
   "margemSegurancaDias",
+  "dataPrevistaAprovacaoPedido",
   "janelaInicio",
   "janelaFim",
   "chaveIdempotencia",
@@ -183,6 +188,10 @@ export function validarPayloadAprovacao(payload: unknown): ResultadoValidacao {
     return { valido: false, motivo: "dataNecessidade inválida" };
   }
 
+  if (!ehDataIsoValida(registro.dataPrevistaAprovacaoPedido)) {
+    return { valido: false, motivo: "dataPrevistaAprovacaoPedido inválida" };
+  }
+
   if (!ehTextoLivreValido(registro.cenarioDemanda)) {
     return { valido: false, motivo: "cenarioDemanda inválido" };
   }
@@ -244,6 +253,7 @@ export function validarPayloadAprovacao(payload: unknown): ResultadoValidacao {
       modoProducao: registro.modoProducao as string,
       dataNecessidade: registro.dataNecessidade as string,
       margemSegurancaDias: registro.margemSegurancaDias as number,
+      dataPrevistaAprovacaoPedido: registro.dataPrevistaAprovacaoPedido as string,
       janelaInicio: registro.janelaInicio as string,
       janelaFim: registro.janelaFim as string,
       chaveIdempotencia: registro.chaveIdempotencia as string,

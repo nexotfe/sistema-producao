@@ -26,6 +26,29 @@ export class IntegridadeCalendarioError extends Error {
   }
 }
 
+export class LimiteDeslocamentoDiasProdutivosExcedidoError extends Error {
+  readonly empresaId: string;
+  readonly dataBase: string;
+  readonly deslocamento: number;
+  readonly diasCivisExaminados: number;
+
+  constructor(
+    empresaId: string,
+    dataBase: string,
+    deslocamento: number,
+    diasCivisExaminados: number,
+  ) {
+    super(
+      `Não foi possível deslocar ${deslocamento} dias produtivos a partir de "${dataBase}" para a empresa ${empresaId}: nenhum resultado encontrado após examinar ${diasCivisExaminados} dias civis. Verifique se o Calendário Operacional da empresa tem pelo menos um dia produtivo configurado.`,
+    );
+    this.name = "LimiteDeslocamentoDiasProdutivosExcedidoError";
+    this.empresaId = empresaId;
+    this.dataBase = dataBase;
+    this.deslocamento = deslocamento;
+    this.diasCivisExaminados = diasCivisExaminados;
+  }
+}
+
 export class TipoEventoNaoSuportadoError extends Error {
   readonly empresaId: string;
   readonly data: string;
