@@ -1,7 +1,7 @@
 # PAD-008 — Motor de Capacidade
 
 **Data original:** 2026-07-30
-**Última revisão:** 2026-08-01
+**Última revisão:** 2026-08-02
 **Versão:** 2.0
 **Status:** Vigente
 **Natureza do documento:** decisão de arquitetura permanente que descreve as fronteiras, os contratos e as propriedades do Motor de Capacidade, bem como sua realização técnica atual. Referenciado por `DEC-004_Simulacao_Comercial.md`, que trata o Motor apenas como um componente utilizado pela Simulação Comercial, sem descrever sua arquitetura interna — essa descrição é o objeto deste documento.
@@ -12,7 +12,7 @@
 
 ## 1. Objetivo
 
-Este documento descreve os componentes reais do Motor de Capacidade e seus contratos de entrada e saída, descrevendo seu comportamento determinístico no núcleo e os limites atuais de reprodução histórica e auditoria. Não é uma proposta de redesenho — exceto pelas extensões explicitamente marcadas como decisão aprovada pendente de implementação nas seções 17-20, que propõem, sem implementar, a evolução necessária para incorporar as decisões de negócio registradas em `DEC-004_Simulacao_Comercial.md`.
+Este documento descreve os componentes reais do Motor de Capacidade e seus contratos de entrada e saída, descrevendo seu comportamento determinístico no núcleo e os limites atuais de reprodução histórica e auditoria. Não é uma proposta de redesenho — exceto pela seção 17, que descreve um comportamento já implementado nesta versão (Entrega 1), pelas seções 18 e 19, que propõem, sem implementar, evoluções futuras ainda pendentes, e pela seção 20, que descreve a fronteira arquitetural vigente hoje entre essas camadas — não uma fronteira futura.
 
 ## 2. Princípios
 
@@ -40,7 +40,7 @@ Este documento descreve os componentes reais do Motor de Capacidade e seus contr
 - Identificar déficit por operação (hoje: total ou zero — ver seção 19 para a evolução a déficit parcial).
 - Retornar o resultado por operação de roteiro.
 
-**Decisão aprovada, pendente de implementação (seções 17-19):** distribuir parcialmente a necessidade de uma operação entre o recurso original e os compatíveis, na ordem de prioridade cadastrada; e, dada uma data-limite (Prazo Interno), estimar por engenharia reversa a Data de Início Necessária.
+**Decisão aprovada, pendente de implementação (seções 18-19):** distribuir parcialmente a necessidade de uma operação entre o recurso original e os compatíveis, na ordem de prioridade cadastrada; e, dada uma data-limite (Prazo Interno), estimar por engenharia reversa a Data de Início Necessária.
 
 ## 5. Não-responsabilidades
 
@@ -60,18 +60,23 @@ Este documento descreve os componentes reais do Motor de Capacidade e seus contr
 
 ## 6. Fluxo real de execução
 
-**Estado atual confirmado — isto descreve só o que existe e roda hoje. As seções 17-20 descrevem decisão aprovada pendente de implementação, marcada como tal, e não fazem parte deste fluxo real.**
+**Estado atual confirmado — isto descreve só o que existe e roda hoje, incluindo a camada de preparação comercial da seção 17 (implementada, descrita nas subseções 6.1/6.2 abaixo). As seções 18-20 descrevem decisão aprovada pendente de implementação, marcada como tal, e não fazem parte deste fluxo real.**
 
 O fluxo tem três momentos distintos, com fronteiras de confiança diferentes. Só o terceiro persiste dado oficial.
 
 ### 6.1 Preview (cliente, cálculo do Motor, sem persistência)
 
-Hoje, `janelaInicio`/`janelaFim` são digitadas livremente pelo orçamentista em dois campos de data (`SimulacaoCapacidade.tsx`) — não existe ainda nenhum cálculo de Prazo Interno, disponibilidade de material ou engenharia reversa (isso é decisão aprovada pendente de implementação, seções 17-18). Com essas duas datas, o preview roda inteiramente no navegador, para feedback rápido — nenhuma chamada desta etapa persiste nada.
+**Estado atual confirmado (implementado — Entrega 1, ver seção 17):** antes de qualquer execução do núcleo do Motor, uma camada de preparação comercial (seção 17) deriva automaticamente `janelaInicio`/`janelaFim` a partir de três premissas informadas pelo orçamentista **antes** de simular: Data Prevista de Aprovação do Pedido, Margem de Segurança (dias produtivos) e Data de Necessidade (carregada automaticamente de `projetos.data_objetivo` e ajustável nesta tela — o ajuste é uma premissa desta simulação, persistida no snapshot quando aprovada; não atualiza `projetos.data_objetivo` automaticamente). `janelaInicio`/`janelaFim` deixaram de ser digitadas livremente — são sempre o resultado de `prepararJanelaComercial` (`prepararJanelaComercial.ts`), rodando no navegador com o client de sessão do usuário, só para feedback rápido (nenhuma chamada desta etapa persiste nada). O botão "Simular" fica desabilitado enquanto não houver uma janela produtiva válida.
+
+O que ainda não existe (decisão aprovada, pendente de implementação — seção 18): a Data de Início Necessária, calculada por engenharia reversa a partir do Prazo Interno. A janela usada pelo núcleo do Motor hoje é sempre `[dataDisponibilidadeProducao, prazoInterno]`.
 
 ```mermaid
 flowchart LR
     subgraph Cliente["Navegador"]
-        A["janelaInicio / janelaFim<br/>(hoje: digitadas livremente)"] --> B["Adaptador<br/>prepararEntradasMotor.ts"]
+        P1["Data Prevista de Aprovação do Pedido<br/>Margem de Segurança<br/>Data de Necessidade"] --> P2["Camada de preparação comercial<br/>prepararJanelaComercial.ts (seção 17)"]
+        P2 -- "sem janela produtiva" --> P3["Bloqueia Simular<br/>resultado de domínio explícito"]
+        P2 -- "janela válida" --> A["janelaInicio / janelaFim<br/>(derivadas, não digitadas)"]
+        A --> B["Adaptador<br/>prepararEntradasMotor.ts"]
         B --> C["Núcleo do Motor<br/>motorAvaliacaoSequencial.ts"]
         C --> D["Resultado para decisão comercial<br/>(orçamentista revisa, decide aprovar)"]
     end
@@ -79,7 +84,7 @@ flowchart LR
 
 ### 6.2 Aprovação autoritativa (servidor, persistência)
 
-**Estado atual confirmado (implementado — ver histórico em 7-8):** nenhum dado do preview do cliente é confiado para persistência. A Server Action recalcula com o mesmo adaptador e núcleo, agora contra o estado corrente do banco, com a sessão do servidor.
+**Estado atual confirmado (implementado — ver histórico em 7-8, evolução v2→v3 na Entrega 1):** nenhum dado do preview do cliente é confiado para persistência — nem o resultado do Motor, nem a janela comercial. A Server Action recalcula os dois, com o mesmo adaptador e núcleo do Motor e com a mesma camada de preparação comercial (seção 17), agora contra o estado corrente do banco, com a sessão do servidor.
 
 ```mermaid
 flowchart LR
@@ -87,26 +92,32 @@ flowchart LR
         E["Orçamentista confirma aprovação"]
     end
     subgraph Servidor2["Servidor"]
-        F["Server Action<br/>aprovarSimulacaoComercialAction"]
+        F["Server Action<br/>aprovarSimulacaoComercialAction<br/>(orquestrarAprovacaoAutoritativa.ts)"]
         G["Sessão validada<br/>auth.getUser()"]
-        H["Recálculo no servidor<br/>(mesmo adaptador + núcleo)"]
-        I["Comparação<br/>compararResultadosSimulacao.ts"]
+        G2["Recálculo da janela comercial<br/>prepararJanelaComercial (seção 17)"]
+        G3{"Janela produtiva<br/>válida?"}
+        H["Recálculo do Motor<br/>(mesmo adaptador + núcleo)"]
+        I["Comparação<br/>janela (compararJanelaEfetiva) +<br/>itens (compararResultadosSimulacao.ts)"]
         J["Cliente privilegiado<br/>service_role"]
-        K["RPC v2<br/>aprovar_projeto_com_simulacao_v2"]
+        K["RPC v3<br/>aprovar_projeto_com_simulacao_v3"]
         L["Snapshot Comercial persistido"]
     end
-    E --> F --> G --> H --> I
-    I -- "Divergente" --> M["Bloqueia, exige nova simulação"]
+    E --> F --> G --> G2 --> G3
+    G3 -- "Não" --> N["Bloqueia<br/>sem_janela_produtiva"]
+    G3 -- "Sim" --> H --> I
+    I -- "Divergente (janela ou itens)" --> M["Bloqueia, exige nova simulação"]
     I -- "Idêntico" --> J --> K --> L
 ```
 
 Passos:
 
-- **Validação de payload** (`validarPayloadAprovacao.ts`) roda antes de qualquer consulta de rede — trata o payload como não confiável mesmo com tipos declarados em TypeScript.
+- **Validação de payload** (`validarPayloadAprovacao.ts`) roda antes de qualquer consulta de rede — trata o payload como não confiável mesmo com tipos declarados em TypeScript. Inclui, desde a Entrega 1, a Data Prevista de Aprovação do Pedido.
 - **Autenticação** — `auth.getUser()` (não `getSession()`) revalida o token contra o servidor de autenticação do Supabase.
-- **Recálculo autoritativo** — `simularCapacidadeProjeto` roda de novo, com `createSupabaseServerClient()` (sessão real do usuário via cookie, RLS normal).
-- **Comparação** — `compararResultadosSimulacao.ts` compara o resultado do cliente com o recalculado no servidor, campo a campo por operação (DEC-002). Divergência bloqueia.
-- **Persistência** — só se idêntico, `createSupabaseServiceClient()` (client `service_role`, nunca exposto ao navegador — `import "server-only"` falha o build se importado por Client Component) chama `aprovar_projeto_com_simulacao_v2`, enviando **o resultado recalculado no servidor**, nunca o do cliente, mesmo quando idênticos.
+- **Recálculo autoritativo da janela comercial** — `prepararJanelaComercial` roda de novo no servidor (seção 17), contra o calendário corrente. Se não houver janela produtiva válida, a aprovação para aqui — o núcleo do Motor nem chega a ser chamado.
+- **Recálculo autoritativo do Motor** — `simularCapacidadeProjeto` roda de novo, com `createSupabaseServerClient()` (sessão real do usuário via cookie, RLS normal), sobre a janela recalculada no servidor (nunca a do cliente).
+- **Comparação** — a janela efetivamente usada (`compararJanelaEfetiva`) e o resultado por operação (`compararResultadosSimulacao.ts`, DEC-002) são comparados contra o que o cliente enviou. Qualquer divergência, em qualquer um dos dois, bloqueia.
+- **Persistência** — só se idêntico nos dois, `createSupabaseServiceClient()` (client `service_role`, nunca exposto ao navegador — `import "server-only"` falha o build se importado por Client Component) chama `aprovar_projeto_com_simulacao_v3` (migration `202608010001`), enviando **a janela e o resultado recalculados no servidor**, nunca os do cliente, mesmo quando idênticos.
+- **Tratamento de erro** — resultados de domínio conhecidos (divergência entre cliente e servidor, ausência de janela produtiva, usuário não autenticado) retornam mensagens específicas, controladas e seguras — nenhuma delas expõe detalhe técnico, mas cada uma informa o motivo de negócio real ao orçamentista (ex.: quais campos divergiram, por que não há janela produtiva). Exceções técnicas inesperadas (falha de persistência, erro não previsto, empresa não encontrada) retornam uma mensagem genérica; o detalhe técnico vai só para `console.error` no servidor, nunca para o navegador.
 
 ## 7. Histórico — divergência arquitetural corrigida
 
@@ -126,8 +137,9 @@ Um Snapshot Comercial oficial não deve depender da confiança em cálculos envi
 - Migration `202607300001` — RPC v2 (`aprovar_projeto_com_simulacao_v2`), `EXECUTE` restrito a `service_role`; empresa do aprovador resolvida exclusivamente de `usuarios.empresa_id`, nunca de parâmetro do chamador; toda entidade referenciada (`bom_operacoes`, recursos) validada contra essa empresa; idempotência real por `(empresa_id, chave_idempotencia)` com índice único parcial e `INSERT ... ON CONFLICT DO NOTHING`, amarrada a um hash de conteúdo (`hash_solicitacao`).
 - Migration `202607310001` — corrige o congelamento de custos (`trg_projetos_congelar_custos`), que dependia de `empresa_atual_id()`/`auth.uid()` (sempre `NULL` sob `service_role`); `empresa_id` passa a ser explícito em toda a cadeia.
 - Migration `202607310002` — revoga `EXECUTE` de `authenticated` na RPC v1, depois de 7 cenários de teste confirmados por leitura direta no banco. A v1 continua existindo (rollback administrativo rápido via um único `GRANT`), só o caminho de sessão normal foi fechado.
+- Migration `202608010001` (Entrega 1, PAD-008 v2.0 §17) — RPC v3 (`aprovar_projeto_com_simulacao_v3`), aditiva sobre a v2: mesma validação estrutural, mesma idempotência, mesmo isolamento de tenant; estende o contrato com as duas premissas novas da camada de preparação comercial (`p_data_prevista_aprovacao_pedido`, `p_data_chegada_prevista`) e passa a receber/persistir `janela_inicio`/`janela_fim` já derivados (colunas reaproveitadas, sem mudança de schema — deixam de significar datas digitadas manualmente e passam a significar Data de Disponibilidade para Produção / Prazo Interno, seção 17). `aprovarSimulacaoComercialAction.ts` chama exclusivamente a v3 hoje. **A v2 permanece preservada tecnicamente** (intacta no banco, mesma ACL de sempre) — mas não é um caminho de rollback funcional direto: seu uso exigiria uma versão da aplicação compatível com o contrato antigo, já que a v2 não conhece `p_data_prevista_aprovacao_pedido`/`p_data_chegada_prevista` nem a semântica atual de `janela_inicio`/`janela_fim`.
 
-**O que ainda não está coberto pela correção acima:**
+**Os dois pontos residuais abaixo continuam valendo para a v3** — nenhum dos dois foi endereçado pela migration `202608010001`:
 
 - **Autorização por cargo** — nenhuma das duas RPCs (v1 ou v2) verifica papel/função do usuário; ambas checam só pertencimento à empresa. Evolução possível, sem solução proposta aqui.
 - **Janela de concorrência entre cálculo e persistência** — a RPC v2 não recalcula nem relê capacidade no momento do `INSERT`; só valida estrutura, tenant e idempotência. Entre o recálculo no servidor (seção 6.2) e a persistência efetiva, nada trava o estado de `comprometido` contra uma segunda aprovação concorrente consumindo o mesmo recurso. Risco residual conhecido, não corrigido por esta versão; qualquer correção (lock, serialização, recontagem final antes do `UPDATE`) é evolução possível, sem desenho proposto aqui.
@@ -142,6 +154,8 @@ Um Snapshot Comercial oficial não deve depender da confiança em cálculos envi
 - Dois formatos de déficit, mesma informação: o núcleo usa `deficit: boolean`; a camada pública (`ItemSimulacaoOperacao`) reexpressa isso como `deficit: number`, que só assume dois valores possíveis por operação — `necessario` (déficit total) ou `0`. Não existe déficit parcial em nenhuma das duas camadas hoje.
 - Granularidade: um item por operação de roteiro (`bomOperacaoId`) em todas as camadas — ver Princípios (seção 2).
 
+**Nota adicionada nesta revisão (Entrega 1):** os dois parâmetros `janelaInicio`/`janelaFim` deste contrato passaram a ser sempre o resultado de `prepararJanelaComercial` (seção 17) — nunca mais digitados diretamente. Isso não altera nenhum dos contratos descritos nesta seção: o núcleo (`motorAvaliacaoSequencial.ts`) continua recebendo exatamente os mesmos 4 parâmetros de sempre (`empresaId`, `projetoId`, `janelaInicio`, `janelaFim`), e o modelo de **recurso singular** (`recursoConsideradoId: string | null`) permanece o estado atual, inalterado — a evolução para distribuição entre múltiplos recursos continua sendo a seção 19, ainda pendente de implementação.
+
 ## 10. Sequenciamento
 
 **Estado atual confirmado:** o núcleo processa as operações de roteiro na ordem em que chegam em `operacoesOrdenadas` (itens do projeto por `created_at`, e dentro de cada item, pela ordem do roteiro). Essa ordem, junto com a seleção analítica de recursos (seção 9), determina qual operação recebe capacidade remanescente e qual fica em déficit quando duas operações disputam o mesmo recurso — a ordem afeta o resultado numérico da estimativa.
@@ -154,7 +168,9 @@ Um Snapshot Comercial oficial não deve depender da confiança em cálculos envi
 
 **Estado atual confirmado — adaptador de entradas:** os mesmos 4 parâmetros superficiais (`empresaId`, `projetoId`, `janelaInicio`, `janelaFim`) não garantem o mesmo resultado entre duas execuções, porque `prepararEntradasMotor.ts` lê, a cada chamada, fontes que podem mudar entre uma execução e outra: resolução de dias produtivos (calendário operacional da empresa, calendário oficial de feriados e eventos da empresa, consultados dia a dia sem cache); capacidade diária cadastrada do recurso; produtividade efetiva do recurso ou grupo; comprometido de outros projetos aprovados; compatibilidades cadastradas entre recursos; e a estrutura do roteiro e dos itens do projeto. Alterações nessas fontes podem mudar o resultado, mesmo com os 4 parâmetros idênticos.
 
-**Correção sobre o que muda com as seções 17-20:** o determinismo, como propriedade, é preservado como princípio (seção 2) — qualquer componente novo continua tendo que produzir o mesmo resultado para as mesmas entradas. O que **muda substancialmente** é o contrato e o algoritmo: o núcleo passa a distribuir uma operação entre vários recursos (seção 19), e um componente arquiteturalmente distinto do núcleo atual — o calculador reverso (seção 18) — passa a precisar de capacidade **por dia**, não mais só agregada por janela. Não é correto descrever isso como "o núcleo e o adaptador não mudam, só a origem dos parâmetros muda" — a forma interna do contrato muda; a propriedade de determinismo que esse contrato precisa satisfazer, não.
+A camada de preparação comercial (seção 17), já implementada, não altera o contrato do núcleo nem do adaptador atual — é uma camada nova, anterior a ambos (seção 6.1), com sua própria propriedade de determinismo: dado o mesmo calendário (padrão semanal, feriados e eventos vigentes no momento do cálculo) e as mesmas premissas comerciais, `prepararJanelaComercial` sempre produz o mesmo resultado — mas, como qualquer leitura de calendário (seção 12), esse resultado pode mudar se o calendário mudar entre duas execuções.
+
+**O que muda substancialmente com as seções 18 e 19 (futuras, não implementadas):** o determinismo, como propriedade, é preservado como princípio (seção 2) — qualquer componente novo continua tendo que produzir o mesmo resultado para as mesmas entradas. O que muda é o contrato e o algoritmo do núcleo: ele passa a distribuir uma operação entre vários recursos (seção 19), e um componente arquiteturalmente distinto do núcleo atual — o calculador reverso (seção 18) — passa a precisar de capacidade **por dia**, não mais só agregada por janela. Não é correto descrever isso como "o núcleo e o adaptador não mudam, só a origem dos parâmetros muda" — a forma interna do contrato muda; a propriedade de determinismo que esse contrato precisa satisfazer, não.
 
 ## 12. Reprodutibilidade
 
@@ -165,6 +181,8 @@ O que não fica congelado no snapshot: o BOM e as operações de roteiro origina
 ## 13. Critério de revalidação e aprovação
 
 **Estado atual confirmado:** o critério técnico de revalidação — comparação campo a campo por operação de roteiro, com a lista exata de campos persistidos comparados — está detalhado em `DEC-002_Aprovacao_Simulacao_Comercial.md`, seção "Regra de Negócio — Critério de Revalidação". Este documento não repete esse detalhamento. `DEC-004_Simulacao_Comercial.md`, seção "Aprovação (Snapshot)", registra só o princípio geral em nível de negócio (revalidação obrigatória, bloqueio quando algo relevante muda) — sem o detalhamento técnico, que pertence ao DEC-002.
+
+**Adição confirmada nesta revisão (Entrega 1, seção 17):** desde a implementação da camada de preparação comercial, a revalidação autoritativa (seção 6.2) também recalcula e compara a janela comercial (`compararJanelaEfetiva`), além do resultado do Motor por operação — qualquer divergência na janela (ex.: um feriado cadastrado entre o preview e a aprovação) bloqueia a aprovação, pelo mesmo princípio de nunca persistir um cálculo não revalidado no servidor. O critério técnico de comparação dos itens por operação continua definido no DEC-002, sem alteração. O critério de comparação da janela é próprio da camada de preparação comercial (seção 17) e pertence a este PAD-008 — coerente com o DEC-004, que trata a janela comercial como parte do papel do orçamentista, não do critério técnico de revalidação do Motor em si.
 
 **Decisão aprovada, pendente de implementação (seção 19):** quando o contrato de distribuição entre recursos existir, o critério de comparação passa a considerar a ordem canônica e todos os valores persistidos de `distribuicoes[]`, não mais um `recursoConsideradoId` escalar — ver seção 19.3 para o critério fechado. O DEC-002 precisará ser atualizado para refletir esse critério quando a implementação existir; este documento registra a decisão, não a aplica ao DEC-002 nesta rodada.
 
@@ -186,22 +204,30 @@ O que não fica congelado no snapshot: o BOM e as operações de roteiro origina
 
 **Estado atual confirmado:** para simulações aprovadas, o sistema registra os parâmetros comerciais **atualmente suportados**, quem aprovou, quando, e o resultado por operação. Não registra: simulações pré-visualizadas nunca aprovadas; quem rodou uma pré-visualização e quando; o resultado de uma comparação de revalidação que aponta divergência (calculado e exibido na tela, mas não persistido); tentativas de simulação abandonadas antes da aprovação.
 
-**Decisão aprovada, pendente de implementação:** depois que as seções 17-19 forem implementadas, o snapshot e sua persistência deverão passar a incluir as novas premissas (Margem de Segurança já é hoje registrada; Data Prevista de Aprovação do Pedido ainda não), as datas derivadas (Data de Chegada Prevista, Data de Disponibilidade para Produção, Prazo Interno, Data de Início Necessária) e as distribuições por recurso — não apenas os parâmetros de hoje.
+**Estado atual confirmado (implementado — Entrega 1, seção 17, migration `202608010001`):** o snapshot (`simulacoes_comerciais`) e sua persistência já incluem, além de Margem de Segurança (já registrada antes desta entrega): Data Prevista de Aprovação do Pedido e Data de Chegada Prevista (colunas novas, `data_prevista_aprovacao_pedido`/`data_chegada_prevista`, nullable — `NULL` em snapshots aprovados antes da Entrega 1, nunca preenchidas retroativamente); Data de Disponibilidade para Produção e Prazo Interno (reaproveitando as colunas já existentes `janela_inicio`/`janela_fim`, sem mudança de schema — a partir da Entrega 1 essas colunas deixam de ser digitadas manualmente e passam a ser sempre derivadas, seção 17). A tela de leitura de uma simulação já aprovada (`SimulacaoCapacidade.tsx`) trata explicitamente o caso `NULL` das duas colunas novas, exibindo "— (simulação anterior à Entrega 1)". Idempotência (`chave_idempotencia`/`hash_solicitacao`) continua o mesmo mecanismo já registrado nesta seção antes desta revisão — o hash canônico passou a incluir também as novas premissas e a janela recalculada no servidor, sem mudar o mecanismo em si.
+
+**Decisão aprovada, pendente de implementação (seções 18-19):** Data de Início Necessária (seção 18) e as distribuições por recurso (seção 19) ainda não existem em nenhuma camada — continuam fora do snapshot até essas seções serem implementadas.
 
 **Fora do escopo:** este PAD não decide persistir pré-visualizações. Essa eventual decisão exige avaliação específica de finalidade, volume, retenção, privacidade e custo operacional.
 
-## 17. Fluxo de preparação da solicitação (decisão aprovada, pendente de implementação)
+## 17. Fluxo de preparação da solicitação (implementado — Entrega 1)
 
-**Nada nesta seção está implementado. Tudo aqui é decisão aprovada, pendente de implementação, originada em `DEC-004_Simulacao_Comercial.md` — este documento registra só o contrato arquitetural correspondente, não a justificativa de negócio.**
+**Implementado na Entrega 1** (commit `3da17b3dab459f460a5811ae168a2b3373a98f67`; migration `202608010001_aprovar_projeto_com_simulacao_v3_janela_comercial.sql`; fechamento registrado em `HANDOVER-003_NEXOTFE_2026-08-02.md`, commit `e4bb2f36d456a492fc06e1d4acd28906091dfc25`). Esta seção descreve, como implementado hoje, o contrato originado em `DEC-004_Simulacao_Comercial.md` — não repete a justificativa de negócio, registrada lá.
 
 ### 17.1 Camada de preparação comercial — escopo
 
-Uma nova camada, anterior ao preview (seção 6.1) e arquiteturalmente distinta do núcleo do Motor (seção 20), receberá a Margem de Segurança e a Data Prevista de Aprovação do Pedido, calculará a disponibilidade de material e o Prazo Interno, e validará a existência de uma janela produtiva **antes** de qualquer chamada ao núcleo do Motor.
+Uma camada (`prepararJanelaComercial.ts`), anterior ao preview (seção 6.1) e arquiteturalmente distinta do núcleo do Motor (seção 20), recebe três entradas, informadas antes de qualquer chamada ao núcleo do Motor:
+
+- **Data Prevista de Aprovação do Pedido** — premissa nova desta entrega (seção 17.4).
+- **Margem de Segurança** (dias produtivos) — premissa já existente, migrada de parâmetro pós-simulação para pré-requisito (seção 17.3).
+- **Data de Necessidade** (`projetos.data_objetivo`, carregada automaticamente do projeto e ajustável na tela de Simulação — seção 6.1).
+
+A partir dessas três entradas, a camada calcula a Data de Chegada Prevista, a Data de Disponibilidade para Produção e o Prazo Interno, e valida a existência de uma janela produtiva — no cliente (preview, seção 6.1) e de novo no servidor (aprovação autoritativa, seção 6.2).
 
 ```mermaid
 flowchart TD
-    subgraph PrepAlvo["Camada de preparação comercial — decisão aprovada, NÃO implementada"]
-        A["Data Prevista de Aprovação do Pedido<br/>(campo novo, pendência de implementação)"] --> B["+ 9 dias produtivos<br/>(hipótese provisória de material)"]
+    subgraph PrepAlvo["Camada de preparação comercial — implementada (prepararJanelaComercial.ts)"]
+        A["Data Prevista de Aprovação do Pedido<br/>(premissa informada antes de simular)"] --> B["+ 9 dias produtivos<br/>(hipótese provisória de material)"]
         B --> C["Data de Chegada Prevista"]
         C --> D["+ 1 dia produtivo<br/>(hipótese conservadora: chegada no fim do dia)"]
         D --> E["Data de Disponibilidade para Produção"]
@@ -210,7 +236,7 @@ flowchart TD
         E --> I{"Data de Disponibilidade > Prazo Interno,<br/>ou zero dias produtivos no intervalo?"}
         H --> I
         I -- "Sim" --> J["Resultado de domínio:<br/>ausência de janela produtiva<br/>(núcleo do Motor NÃO executa; aprovação bloqueada)"]
-        I -- "Não" --> K["Janela válida<br/>segue para o calculador reverso (seção 18)<br/>e depois para o preview (seção 6.1)"]
+        I -- "Não" --> K["Janela válida<br/>hoje: segue direto para o preview/núcleo do Motor (seção 6.1)<br/>calculador reverso (seção 18) ainda não existe"]
     end
 ```
 
@@ -228,7 +254,9 @@ flowchart TD
 deslocarDiasProdutivos(dataBase, 0) = dataBase
 ```
 
-**Decisão aprovada, pendente de implementação:** a função que desloca uma data por N dias produtivos (positivo, negativo ou zero) não existe. Precisa ser criada, reaproveitando `resolverDiaProdutivo` dia a dia — mesmo padrão do agregador atual (`contarDiasProdutivosNaJanela`), sem duplicar a regra de precedência do calendário.
+**Estado atual confirmado (implementado):** a função que desloca uma data por N dias produtivos (positivo, negativo ou zero) existe — `deslocarDiasProdutivos` (`src/modules/calendario/lib/deslocarDiasProdutivos.ts`), coberta por testes automatizados que confirmam exatamente este contrato (base nunca conta, positivo/negativo, deslocamento zero, feriado, evento de dia trabalhado excepcional, limite defensivo).
+
+**Correção de performance registrada nesta revisão:** a implementação inicial fazia até 4 consultas ao Supabase **por dia civil examinado** (não por dia produtivo) — 124 consultas medidas no cenário real da Entrega 1. Corrigido antes do commit `3da17b3`: `contextoCalendario.ts` carrega o calendário do intervalo inteiro em lote (`carregarContextoCalendario`) e resolve os dias em memória (`resolverDiaProdutivoComContexto`, única fonte da regra de precedência — `resolverDiaProdutivo` virou um wrapper fino sobre ela); `prepararJanelaComercial.ts` compartilha um único contexto entre os três deslocamentos da janela e a contagem final de dias produtivos. Resultado, confirmado contra o banco remoto real: **4 consultas no cenário normal**, independente da distância entre as datas. Consultas adicionais só ocorrem por **paginação** (`.range()`, lotes de 500, ordenação determinística `data`+`id` — defesa contra o teto de linhas por resposta do Supabase, `api.max_rows`) ou por **expansão** (calendário atípico em que a estimativa inicial de janela não basta, limitada por `MAX_DIAS_CIVIS_EXAMINADOS`) — em ambos os casos o crescimento é por página/lote, nunca por dia civil. Detalhamento completo em `HANDOVER-003_NEXOTFE_2026-08-02.md`.
 
 ### 17.3 Prazo interno
 
@@ -238,7 +266,7 @@ prazoInterno = dataNecessidade − margemSegurancaDiasProdutivos
 
 Exemplo confirmado: Data de necessidade 30/11/2026, margem 3 dias produtivos → prazo interno 25/11/2026.
 
-**Decisão aprovada, pendente de implementação:** campo "Margem de Segurança" precisa migrar de "parâmetro pós-simulação" (hoje, dentro do bloco `{resultado ? ... }` de `SimulacaoCapacidade.tsx`) para pré-requisito de execução. Validação defensiva a implementar: número inteiro, não negativo. **Limite máximo de negócio: não existe hoje** — só uma defesa técnica (`MAX_MARGEM_SEGURANCA_DIAS = 3650`, explicitamente "não regra de negócio" no próprio comentário do código). Definir esse limite é pendência de negócio em aberto, não decidida aqui.
+**Estado atual confirmado (implementado):** o campo "Margem de Segurança" migrou de "parâmetro pós-simulação" para pré-requisito de execução — em `SimulacaoCapacidade.tsx`, é informado junto com a Data Prevista de Aprovação do Pedido, antes do botão "Simular" ficar habilitado. Validação defensiva implementada: número inteiro, não negativo (`prepararJanelaComercial.ts` lança `RangeError` caso contrário). **Limite máximo de negócio: continua não existindo** — só a mesma defesa técnica de antes (`MAX_MARGEM_SEGURANCA_DIAS = 3650`, ainda explicitamente "não regra de negócio" no comentário do código, inalterado por esta entrega). Definir esse limite continua pendência de negócio em aberto, não decidida aqui.
 
 ### 17.4 Disponibilidade provisória de material
 
@@ -249,11 +277,13 @@ dataDisponibilidadeProducao = deslocarDiasProdutivos(dataChegadaPrevista, +1)
 
 Decomposição dos 9 dias (decisão de negócio, DEC-004): 1 dia produtivo para criar a requisição, 1 dia produtivo para realizar a compra, 7 dias produtivos para chegada prevista do material. Na regra provisória atual, `dataDisponibilidadeProducao` equivale a `dataAprovacaoPrevista + 10 dias produtivos` — a chegada e a disponibilidade para produção são dois fatos distintos, documentados separadamente.
 
-**Decisão aprovada, pendente de implementação:** campo "Data Prevista de Aprovação do Pedido" não existe em nenhuma camada — não em `projetos`, não no formulário, não no payload de aprovação. Precisa ser criado, distinto de `situacao_comercial` (fato observado, não previsão) e de `data_objetivo`/Data de Necessidade (data de entrega).
+**Estado atual confirmado (implementado):** o campo "Data Prevista de Aprovação do Pedido" existe no formulário (`SimulacaoCapacidade.tsx`), no payload de aprovação (`validarPayloadAprovacao.ts`) e no snapshot persistido (`simulacoes_comerciais.data_prevista_aprovacao_pedido`, migration `202608010001`) — distinto de `situacao_comercial` (fato observado, não previsão) e de `data_objetivo`/Data de Necessidade (data de entrega), exatamente como decidido. **Não existe em `projetos`** — é uma premissa por simulação, não um campo do projeto, decisão preservada da redação original desta seção.
 
 **Evolução possível:** quando Compras existir, `dataChegadaPrevista` e `dataDisponibilidadeProducao` deverão vir do fluxo real de requisição/cotação/pedido/previsão de entrega — substituindo os 9 dias fixos, sem alterar a arquitetura desta seção. Mesmo princípio já registrado em Arquitetura Vigente §17. Sem data ou roadmap fechado.
 
 ### 17.5 Ausência de janela produtiva × conflito de material
+
+**Estado atual confirmado (implementado, comportamento coberto por testes automatizados):**
 
 Duas situações diferentes, com efeitos diferentes:
 
@@ -269,6 +299,8 @@ Também não executa quando o intervalo entre as duas datas contiver zero dias p
 Em qualquer caso de ausência de janela: retorna um **resultado de domínio explícito** — não uma exceção genérica (`RangeError` cru) e não um botão silenciosamente desabilitado sem explicação. Não existe simulação válida para aprovar (DEC-004, "Déficit × ausência de janela"). Formato exato (tipo TypeScript, mensagem) é decisão aprovada, pendente de implementação.
 
 ## 18. Calculador reverso baseado em capacidade diária
+
+**Confirmado nesta auditoria (2026-08-02): nenhuma linha desta seção foi implementada pela Entrega 1.** A própria migration `202608010001` registra isso explicitamente, tanto no cabeçalho quanto no comentário da função v3: *"Distribuicao parcial entre recursos e calculador reverso diario (PAD-008 v2.0 secoes 18-19) permanecem FORA do escopo desta migration/funcao - recurso_considerado_id continua singular."*
 
 Este componente é **arquiteturalmente distinto** do núcleo de distribuição sequencial descrito nas seções 9 e 19 — não é "o mesmo núcleo rodando ao contrário". O núcleo atual (e sua evolução na seção 19) recebe capacidade já **agregada por janela** (um único número de horas disponíveis por recurso, calculado uma vez a partir de `diasProdutivos × capacidadeDiaria × produtividade`). O cálculo reverso precisa de capacidade **por dia individual**, para poder caminhar dia a dia a partir do Prazo Interno — uma representação de dado que o adaptador atual (`prepararEntradasMotor.ts`) não produz. Tratar os dois como o mesmo componente seria impreciso.
 
@@ -385,7 +417,7 @@ Sem implementar nada, ficam confirmadas como pendência as mudanças em: núcleo
 
 **Decisão arquitetural**, separando quatro camadas distintas — não três:
 
-- **Camada de preparação comercial** (seção 17): recebe a Margem de Segurança e a Data Prevista de Aprovação do Pedido; calcula a Data de Chegada Prevista e a Data de Disponibilidade para Produção; calcula o Prazo Interno; valida a existência de uma janela produtiva antes de acionar qualquer cálculo de capacidade.
+- **Camada de preparação comercial** (seção 17, **implementada — Entrega 1**): recebe a Margem de Segurança e a Data Prevista de Aprovação do Pedido; calcula a Data de Chegada Prevista e a Data de Disponibilidade para Produção; calcula o Prazo Interno; valida a existência de uma janela produtiva antes de acionar qualquer cálculo de capacidade.
 - **Núcleo de distribuição analítica entre recursos** (seções 9 e 19): recebe capacidade **agregada por janela**; distribui a necessidade de cada operação entre o recurso original e os compatíveis; calcula déficit. É a evolução do núcleo sequencial atual — não é o mesmo componente que o calculador reverso abaixo.
 - **Calculador reverso baseado em capacidade diária** (seção 18): componente arquiteturalmente distinto do núcleo acima, com existência e fronteira decididas mas algoritmo ainda sem desenho; precisaria de capacidade **por dia**, não agregada, para caminhar de trás para frente a partir do Prazo Interno e estimar a Data de Início Necessária.
 - **Fluxo comercial de decisão e aprovação** (DEC-004, seção 6.2): o orçamentista informa premissas, avalia o resultado apresentado, decide aprovar ou não — inclusive sob déficit ou sob conflito de material assumido conscientemente.
@@ -417,3 +449,6 @@ Nenhuma das possibilidades acima é decidida por esta versão do documento. O al
 - `DEC-002_Aprovacao_Simulacao_Comercial.md` — critério técnico de revalidação (seção 13 deste documento).
 - `DEC-004_Simulacao_Comercial.md` — papéis de negócio da Simulação Comercial; referencia este documento para a arquitetura interna do Motor; origem de negócio das regras das seções 17-19.
 - `HANDOVER-002_NEXOTFE_2026-07-29.md` — investigação original que originou este PAD, incluindo achados sobre o estado do repositório não repetidos aqui.
+- `supabase/migrations/202608010001_aprovar_projeto_com_simulacao_v3_janela_comercial.sql` — RPC v3 e colunas de janela comercial (seção 17).
+- Commit `3da17b3dab459f460a5811ae168a2b3373a98f67` — implementação completa da Entrega 1 (janela comercial + correção de performance de calendário).
+- `HANDOVER-003_NEXOTFE_2026-08-02.md` (commit `e4bb2f36d456a492fc06e1d4acd28906091dfc25`) — fechamento da Entrega 1, teste ponta a ponta real contra o banco remoto, pendências registradas.
