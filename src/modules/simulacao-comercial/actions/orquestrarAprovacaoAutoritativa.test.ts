@@ -147,6 +147,37 @@ describe("orquestrarAprovacaoAutoritativa — correção 5: fronteira autoritati
     expect(deps.persistir).toHaveBeenCalledTimes(1);
   });
 
+  it("idempotência: a mesma chaveIdempotencia do payload é repassada sem alteração a cada chamada - repetir a aprovação com o mesmo payload produz o mesmo resultado, nunca uma chave nova gerada pelo orquestrador", async () => {
+    // Simula o comportamento real da RPC (v3/v4): mesma chave+hash já
+    // usada retorna o snapshot já gravado, sem erro e sem duplicar -
+    // este teste prova que o ORQUESTRADOR não atrapalha isso, repassando
+    // exatamente a chaveIdempotencia do payload em toda chamada, nunca
+    // gerando uma própria.
+    const payload = criarPayload({ chaveIdempotencia: "11111111-1111-1111-1111-111111111111" });
+    const persistirMock = vi.fn<DependenciasAprovacaoAutoritativa["persistir"]>(async () => ({
+      simulacaoComercialId: "snapshot-idempotente",
+      erro: null,
+    }));
+    const deps = criarDependenciasFelizes({ persistir: persistirMock });
+
+    const resultado1 = await orquestrarAprovacaoAutoritativa(payload, deps);
+    const resultado2 = await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(resultado1).toEqual({ ok: true, simulacaoComercialId: "snapshot-idempotente" });
+    expect(resultado2).toEqual({ ok: true, simulacaoComercialId: "snapshot-idempotente" });
+    expect(persistirMock).toHaveBeenCalledTimes(2);
+
+    const chamada1 = persistirMock.mock.calls[0][0];
+    const chamada2 = persistirMock.mock.calls[1][0];
+    expect(chamada1.chaveIdempotencia).toBe("11111111-1111-1111-1111-111111111111");
+    expect(chamada2.chaveIdempotencia).toBe("11111111-1111-1111-1111-111111111111");
+    // Mesmo payload + mesmo recálculo do servidor = mesmo hash de
+    // conteúdo em ambas as chamadas (é a RPC, não simulada aqui, que
+    // decide se é replay idempotente ou conflito - o orquestrador só
+    // precisa ser determinístico ao calcular esse hash).
+    expect(chamada1.hashSolicitacao).toBe(chamada2.hashSolicitacao);
+  });
+
   it("sem janela produtiva: não executa o Motor nem chama persistir", async () => {
     const payload = criarPayload();
     const deps = criarDependenciasFelizes({

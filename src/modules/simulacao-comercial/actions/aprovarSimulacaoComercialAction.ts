@@ -9,6 +9,13 @@
 // assíncronas, então tipos/constantes do orquestrador vivem lá, não
 // aqui.
 //
+// Fase 3 do rollout da Entrega 2 (PAD-008 v2.0 §19): persiste
+// nativamente via RPC v4 - a ponte v3 da Fase 2 (adaptarParaV3.ts,
+// motivo "distribuicao_nao_suportada_nesta_fase") foi removida junto
+// com esta troca. v3/v2/v1 permanecem intactas no banco, sem EXECUTE
+// para authenticated (nunca tiveram), como caminho de rollback técnico
+// - não chamadas por este componente.
+//
 // auth.getUser() (não getSession()) porque revalida o token contra o
 // servidor de autenticação do Supabase - não é falsificável só
 // adulterando o que o navegador envia.
@@ -20,64 +27,16 @@ import { createSupabaseServerClient } from "@/lib/supabaseServerClient";
 import { createSupabaseServiceClient } from "@/lib/supabaseServiceClient";
 import { simularCapacidadeProjeto } from "../lib/executarSimulacao";
 import { prepararJanelaComercial } from "../lib/prepararJanelaComercial";
-import { adaptarItensParaV3, type ItemAprovacaoV3 } from "../lib/adaptarParaV3";
+import { montarItensParaV4 } from "../lib/montarPayloadV4";
 import { validarPayloadAprovacao, type PayloadAprovacao } from "./validarPayloadAprovacao";
 import {
   orquestrarAprovacaoAutoritativa,
   type DependenciasAprovacaoAutoritativa,
   type ResultadoAprovacaoAction,
-  type ResultadoPersistencia,
 } from "./orquestrarAprovacaoAutoritativa";
 
 const MENSAGEM_VALIDACAO_GENERICA =
   "Não foi possível validar os dados da aprovação. Execute novamente a simulação.";
-
-// Fase 2 do rollout da Entrega 2 (PAD-008 v2.0 §19): a persistência
-// ainda vai pela RPC v3 + adaptarItensParaV3 (lib/adaptarParaV3.ts,
-// testável isoladamente - "use server" só pode exportar funções
-// assíncronas, por isso a lógica pura mora lá, não aqui). Troca para a
-// RPC v4 nativa (sem adaptador, sem a limitação de "só 1 recurso por
-// operação") é a Fase 3 do rollout - alteração separada, futura.
-async function persistirViaV3(
-  serviceClient: ReturnType<typeof createSupabaseServiceClient>,
-  p: Parameters<DependenciasAprovacaoAutoritativa["persistir"]>[0],
-): Promise<ResultadoPersistencia> {
-  const adaptacao = adaptarItensParaV3(p.itens);
-
-  if (!adaptacao.ok) {
-    return {
-      simulacaoComercialId: null,
-      erro: null,
-      naoSuportadoNestaFase: {
-        mensagem: `Esta simulação distribui carga parcialmente entre recursos em ${adaptacao.operacoesNaoRepresentaveis.length} operação(ões) - recurso ainda não disponível para aprovação nesta fase do rollout. Ajuste o roteiro/compatibilidades para que cada operação seja atendida integralmente por um único recurso, ou aguarde a conclusão da ativação da distribuição parcial.`,
-      },
-    };
-  }
-
-  const itensAdaptados: ItemAprovacaoV3[] = adaptacao.itens;
-
-  const { data, error } = await serviceClient
-    .rpc("aprovar_projeto_com_simulacao_v3", {
-      p_aprovado_por: p.aprovadoPor,
-      p_projeto_id: p.projetoId,
-      p_cenario_demanda: p.cenarioDemanda,
-      p_modo_producao: p.modoProducao,
-      p_data_necessidade: p.dataNecessidade,
-      p_margem_seguranca_dias: p.margemSegurancaDias,
-      p_data_prevista_aprovacao_pedido: p.dataPrevistaAprovacaoPedido,
-      p_data_chegada_prevista: p.dataChegadaPrevista,
-      p_janela_inicio: p.janelaInicio,
-      p_janela_fim: p.janelaFim,
-      p_itens: itensAdaptados,
-      p_chave_idempotencia: p.chaveIdempotencia,
-      p_hash_solicitacao: p.hashSolicitacao,
-    });
-
-  return {
-    simulacaoComercialId: error ? null : (data as string),
-    erro: error ? error.message : null,
-  };
-}
 
 export type { ResultadoAprovacaoAction };
 
@@ -129,11 +88,38 @@ export async function aprovarSimulacaoComercialAction(
     executarMotor: (empresaId, projetoId, janelaInicio, janelaFim) =>
       simularCapacidadeProjeto(serverClient, empresaId, projetoId, janelaInicio, janelaFim),
 
-    // Fase 2 do rollout da Entrega 2: ainda persiste via v3 + adaptador
-    // (ver persistirViaV3 acima). A troca para v4 nativa (sem
-    // adaptador, sem a limitação de "só 1 recurso por operação") é a
-    // Fase 3 - uma alteração separada, futura, não incluída aqui.
-    persistir: (p) => persistirViaV3(createSupabaseServiceClient(), p),
+    // `p.itens` aqui é sempre revalidacaoServidor.itensPorOperacao
+    // (ver orquestrarAprovacaoAutoritativa.ts) - o resultado RECALCULADO
+    // no servidor, nunca o que o navegador enviou. O cliente privilegiado
+    // (service_role) só é criado aqui dentro, nunca exposto ao módulo
+    // client-side.
+    persistir: async (p) => {
+      const serviceClient = createSupabaseServiceClient();
+
+      const { data, error } = await serviceClient.rpc("aprovar_projeto_com_simulacao_v4", {
+        p_aprovado_por: p.aprovadoPor,
+        p_projeto_id: p.projetoId,
+        p_cenario_demanda: p.cenarioDemanda,
+        p_modo_producao: p.modoProducao,
+        p_data_necessidade: p.dataNecessidade,
+        p_margem_seguranca_dias: p.margemSegurancaDias,
+        p_data_prevista_aprovacao_pedido: p.dataPrevistaAprovacaoPedido,
+        p_data_chegada_prevista: p.dataChegadaPrevista,
+        p_janela_inicio: p.janelaInicio,
+        p_janela_fim: p.janelaFim,
+        p_itens: montarItensParaV4(p.itens),
+        p_chave_idempotencia: p.chaveIdempotencia,
+        p_hash_solicitacao: p.hashSolicitacao,
+      });
+
+      return {
+        // Correção 4 (herdada): error.message nunca é repassado ao
+        // usuário - só volta aqui para o orquestrador logar no
+        // servidor (console.error) e devolver MENSAGEM_ERRO_GENERICA.
+        simulacaoComercialId: error ? null : (data as string),
+        erro: error ? error.message : null,
+      };
+    },
   };
 
   return orquestrarAprovacaoAutoritativa(params, dependenciasReais);

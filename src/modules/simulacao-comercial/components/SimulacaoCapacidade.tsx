@@ -3,10 +3,11 @@
 // feedback rápido de UX - nenhuma dessas chamadas persiste nada. A
 // aprovação em si (persistência real) vai pela Server Action
 // aprovarSimulacaoComercialAction, que recalcula de novo no servidor
-// antes de persistir (PAD-008, seções 7-8). Fase 2 do rollout da
-// Entrega 2: a persistência ainda vai pela RPC v3 (+ adaptador, dentro
-// da Server Action) - a v4 nativa é uma troca separada, futura (Fase
-// 3), não chamada por este componente ainda.
+// antes de persistir (PAD-008, seções 7-8). Fase 3 do rollout da
+// Entrega 2: a persistência vai nativamente pela RPC v4 (distribuição
+// parcial completa, sem a limitação de "só 1 recurso" da ponte v3 da
+// Fase 2, já removida) - v3/v2/v1 permanecem intactas no banco como
+// caminho de rollback técnico, não chamadas por este componente.
 // Sem lógica de busca/transformação de dado neste componente: quem
 // enriquece o resultado para exibição é prepararResultadoParaExibicao
 // (lib/), consumido pronto aqui.
@@ -799,9 +800,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           <span>
             Data de Necessidade:{" "}
             <strong>
-              {new Date(
-                simulacaoAprovadaExistente.dataNecessidade,
-              ).toLocaleDateString("pt-BR")}
+              {formatarDataBr(simulacaoAprovadaExistente.dataNecessidade)}
             </strong>
           </span>
           <span>
