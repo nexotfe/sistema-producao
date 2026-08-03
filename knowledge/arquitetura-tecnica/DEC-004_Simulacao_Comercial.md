@@ -1,8 +1,8 @@
 # DEC-004 — Simulação Comercial
 
 **Data original:** 2026-07-29
-**Última revisão:** 2026-08-01
-**Versão:** 1.1
+**Última revisão:** 2026-08-03
+**Versão:** 1.2
 **Status:** Vigente
 **Natureza do documento:** decisão de negócio formalizada, quarta da série `DEC-` (ver `DEC-001_Desconto_Comercial_Orcamento.md` para a convenção completa). Consolida, em nível funcional e de negócio, o objetivo, os papéis e os limites da Simulação Comercial — a arquitetura técnica que sustenta este comportamento está documentada em `ARQUITETURA_VIGENTE_SIMULACAO_COMERCIAL_CAPACIDADE.md`; sua consolidação como decisão arquitetural cabe ao PAD-008 (Motor de Capacidade). Este documento não repete esse conteúdo.
 
@@ -58,7 +58,7 @@ Exemplo: Data de Necessidade 30/11/2026, Margem de 3 dias produtivos → Prazo I
 
 ### Disponibilidade provisória de material
 
-**Decisão de negócio aprovada, pendente de implementação.** Enquanto o módulo de Compras não estiver operacional, a Simulação Comercial considera uma antecedência provisória de material, decomposta explicitamente:
+**Implementado (Entrega 1).** Enquanto o módulo de Compras não estiver operacional, a Simulação Comercial considera uma antecedência provisória de material, decomposta explicitamente:
 
 ```text
 1 dia produtivo  — criar a requisição
@@ -92,7 +92,7 @@ O Motor não decide hora extra, terceirização, antecipação de material ou re
 
 ## Distribuição analítica entre recursos compatíveis
 
-**Decisão de negócio aprovada, pendente de implementação.** Regra de negócio confirmada:
+**Implementado (Entrega 2).** Regra de negócio confirmada e validada por teste ponta a ponta real (projeto de teste `260009`: necessidade de 120 horas-padrão, distribuídas em 52,36h/52,36h/15,28h entre três recursos, produtividade 85%, déficit zero):
 
 - O Motor distribui as horas primeiro no recurso original.
 - O saldo segue pelos recursos compatíveis, respeitando a prioridade cadastrada.

@@ -1,8 +1,8 @@
 # PAD-008 — Motor de Capacidade
 
 **Data original:** 2026-07-30
-**Última revisão:** 2026-08-02
-**Versão:** 2.0
+**Última revisão:** 2026-08-03
+**Versão:** 2.1
 **Status:** Vigente
 **Natureza do documento:** decisão de arquitetura permanente que descreve as fronteiras, os contratos e as propriedades do Motor de Capacidade, bem como sua realização técnica atual. Referenciado por `DEC-004_Simulacao_Comercial.md`, que trata o Motor apenas como um componente utilizado pela Simulação Comercial, sem descrever sua arquitetura interna — essa descrição é o objeto deste documento.
 
@@ -12,7 +12,7 @@
 
 ## 1. Objetivo
 
-Este documento descreve os componentes reais do Motor de Capacidade e seus contratos de entrada e saída, descrevendo seu comportamento determinístico no núcleo e os limites atuais de reprodução histórica e auditoria. Não é uma proposta de redesenho — exceto pela seção 17, que descreve um comportamento já implementado nesta versão (Entrega 1), pelas seções 18 e 19, que propõem, sem implementar, evoluções futuras ainda pendentes, e pela seção 20, que descreve a fronteira arquitetural vigente hoje entre essas camadas — não uma fronteira futura.
+Este documento descreve os componentes reais do Motor de Capacidade e seus contratos de entrada e saída, descrevendo seu comportamento determinístico no núcleo e os limites atuais de reprodução histórica e auditoria. Não é uma proposta de redesenho — exceto pela seção 17, que descreve um comportamento já implementado (Entrega 1), pela seção 19, que descreve um comportamento já implementado (Entrega 2), pela seção 18, que propõe, sem implementar, uma evolução futura ainda pendente, e pela seção 20, que descreve a fronteira arquitetural vigente hoje entre essas camadas — não uma fronteira futura.
 
 ## 2. Princípios
 
@@ -21,7 +21,7 @@ Este documento descreve os componentes reais do Motor de Capacidade e seus contr
 - **Núcleo único para regras de avaliação** — as regras de consumo sequencial de capacidade, seleção analítica entre recurso original e compatíveis e identificação de déficit pertencem ao núcleo e não devem ser duplicadas pelos consumidores. As regras de preparação das entradas permanecem no adaptador correspondente à origem da demanda.
 - **Separação entre cálculo e decisão** — o Motor calcula viabilidade de capacidade; ele não decide aprovação, não assume risco comercial, não escolhe hora extra/terceirização/antecipação de material, e não programa produção. Essas decisões pertencem a quem consome o resultado (ver seção 20, Fronteiras Arquiteturais).
 - **Determinismo como princípio permanente** — dado um conjunto de entradas idêntico, o componente responsável sempre produz o mesmo resultado. Este princípio não muda com nenhuma evolução (ver seção 11 para o que muda: o contrato e o algoritmo, não a propriedade de determinismo em si).
-- **Resultado por operação de roteiro** — Estado atual confirmado: o cálculo utiliza um item por operação de roteiro, identificado por `bomOperacaoId`. **Decisão aprovada, pendente de implementação (seção 19):** dentro de uma mesma operação, quando o recurso original não comporta o total, o resultado passa a registrar contribuições de mais de um recurso compatível — a granularidade "1 item por operação" é preservada; o que muda é que cada item deixa de apontar para um único recurso considerado.
+- **Resultado por operação de roteiro** — **Estado atual confirmado (Entrega 2):** o cálculo utiliza um item por operação de roteiro, identificado por `bomOperacaoId`. Dentro de uma mesma operação, quando o recurso original não comporta o total, o resultado registra contribuições de 0..N recursos (original + compatíveis, na ordem cadastrada) — a granularidade "1 item por operação" é preservada; cada item deixou de apontar para um único recurso considerado (`recursoConsideradoId` escalar, modelo anterior à Entrega 2) e passou a conter um array `distribuicoes[]` (contrato completo na seção 19).
 - **Nenhuma duplicação das regras do núcleo** — qualquer novo consumidor deve utilizar o mesmo núcleo de avaliação e seu contrato, sem reimplementar as regras de seleção analítica de recurso ou cálculo de déficit.
 
 ## 3. Consumidores
@@ -37,10 +37,12 @@ Este documento descreve os componentes reais do Motor de Capacidade e seus contr
 - Calcular a necessidade de horas de cada operação de roteiro.
 - Avaliar se a capacidade disponível comporta essa necessidade.
 - Realizar seleção analítica entre o recurso original e os recursos compatíveis cadastrados.
-- Identificar déficit por operação (hoje: total ou zero — ver seção 19 para a evolução a déficit parcial).
+- Identificar déficit por operação — desde a Entrega 2, o déficit pode ser residual (parte da necessidade atendida, parte não), não mais só total ou zero (ver seção 19).
 - Retornar o resultado por operação de roteiro.
 
-**Decisão aprovada, pendente de implementação (seções 18-19):** distribuir parcialmente a necessidade de uma operação entre o recurso original e os compatíveis, na ordem de prioridade cadastrada; e, dada uma data-limite (Prazo Interno), estimar por engenharia reversa a Data de Início Necessária.
+**Estado atual confirmado (Entrega 2):** distribuir a necessidade de uma operação entre o recurso original e os compatíveis, na ordem de prioridade cadastrada, consumindo a capacidade disponível de cada um até esgotá-la ou até atender à necessidade (seção 19).
+
+**Decisão aprovada, pendente de implementação (seção 18):** dada uma data-limite (Prazo Interno), estimar por engenharia reversa a Data de Início Necessária.
 
 ## 5. Não-responsabilidades
 
@@ -60,7 +62,7 @@ Este documento descreve os componentes reais do Motor de Capacidade e seus contr
 
 ## 6. Fluxo real de execução
 
-**Estado atual confirmado — isto descreve só o que existe e roda hoje, incluindo a camada de preparação comercial da seção 17 (implementada, descrita nas subseções 6.1/6.2 abaixo). As seções 18-20 descrevem decisão aprovada pendente de implementação, marcada como tal, e não fazem parte deste fluxo real.**
+**Estado atual confirmado — isto descreve só o que existe e roda hoje, incluindo a camada de preparação comercial da seção 17 (implementada, Entrega 1) e a distribuição entre recursos compatíveis da seção 19 (implementada, Entrega 2, descrita nas subseções 6.1/6.2 abaixo). A seção 18 descreve decisão aprovada pendente de implementação, marcada como tal, e não faz parte deste fluxo real. A seção 20 descreve fronteiras arquiteturais permanentes, não um estado pendente.**
 
 O fluxo tem três momentos distintos, com fronteiras de confiança diferentes. Só o terceiro persiste dado oficial.
 
@@ -84,7 +86,7 @@ flowchart LR
 
 ### 6.2 Aprovação autoritativa (servidor, persistência)
 
-**Estado atual confirmado (implementado — ver histórico em 7-8, evolução v2→v3 na Entrega 1):** nenhum dado do preview do cliente é confiado para persistência — nem o resultado do Motor, nem a janela comercial. A Server Action recalcula os dois, com o mesmo adaptador e núcleo do Motor e com a mesma camada de preparação comercial (seção 17), agora contra o estado corrente do banco, com a sessão do servidor.
+**Estado atual confirmado (implementado — ver histórico em 7-8, evolução v2→v3→v4 nas Entregas 1-2):** nenhum dado do preview do cliente é confiado para persistência — nem o resultado do Motor, nem a janela comercial. A Server Action recalcula os dois, com o mesmo adaptador e núcleo do Motor e com a mesma camada de preparação comercial (seção 17), agora contra o estado corrente do banco, com a sessão do servidor.
 
 ```mermaid
 flowchart LR
@@ -99,7 +101,7 @@ flowchart LR
         H["Recálculo do Motor<br/>(mesmo adaptador + núcleo)"]
         I["Comparação<br/>janela (compararJanelaEfetiva) +<br/>itens (compararResultadosSimulacao.ts)"]
         J["Cliente privilegiado<br/>service_role"]
-        K["RPC v3<br/>aprovar_projeto_com_simulacao_v3"]
+        K["RPC v4<br/>aprovar_projeto_com_simulacao_v4"]
         L["Snapshot Comercial persistido"]
     end
     E --> F --> G --> G2 --> G3
@@ -116,7 +118,7 @@ Passos:
 - **Recálculo autoritativo da janela comercial** — `prepararJanelaComercial` roda de novo no servidor (seção 17), contra o calendário corrente. Se não houver janela produtiva válida, a aprovação para aqui — o núcleo do Motor nem chega a ser chamado.
 - **Recálculo autoritativo do Motor** — `simularCapacidadeProjeto` roda de novo, com `createSupabaseServerClient()` (sessão real do usuário via cookie, RLS normal), sobre a janela recalculada no servidor (nunca a do cliente).
 - **Comparação** — a janela efetivamente usada (`compararJanelaEfetiva`) e o resultado por operação (`compararResultadosSimulacao.ts`, DEC-002) são comparados contra o que o cliente enviou. Qualquer divergência, em qualquer um dos dois, bloqueia.
-- **Persistência** — só se idêntico nos dois, `createSupabaseServiceClient()` (client `service_role`, nunca exposto ao navegador — `import "server-only"` falha o build se importado por Client Component) chama `aprovar_projeto_com_simulacao_v3` (migration `202608010001`), enviando **a janela e o resultado recalculados no servidor**, nunca os do cliente, mesmo quando idênticos.
+- **Persistência** — só se idêntico nos dois, `createSupabaseServiceClient()` (client `service_role`, nunca exposto ao navegador — `import "server-only"` falha o build se importado por Client Component) chama `aprovar_projeto_com_simulacao_v4` (migration `202608020001`, Entrega 2), enviando **a janela e o resultado recalculados no servidor**, nunca os do cliente, mesmo quando idênticos.
 - **Tratamento de erro** — resultados de domínio conhecidos (divergência entre cliente e servidor, ausência de janela produtiva, usuário não autenticado) retornam mensagens específicas, controladas e seguras — nenhuma delas expõe detalhe técnico, mas cada uma informa o motivo de negócio real ao orçamentista (ex.: quais campos divergiram, por que não há janela produtiva). Exceções técnicas inesperadas (falha de persistência, erro não previsto, empresa não encontrada) retornam uma mensagem genérica; o detalhe técnico vai só para `console.error` no servidor, nunca para o navegador.
 
 ## 7. Histórico — divergência arquitetural corrigida
@@ -137,24 +139,54 @@ Um Snapshot Comercial oficial não deve depender da confiança em cálculos envi
 - Migration `202607300001` — RPC v2 (`aprovar_projeto_com_simulacao_v2`), `EXECUTE` restrito a `service_role`; empresa do aprovador resolvida exclusivamente de `usuarios.empresa_id`, nunca de parâmetro do chamador; toda entidade referenciada (`bom_operacoes`, recursos) validada contra essa empresa; idempotência real por `(empresa_id, chave_idempotencia)` com índice único parcial e `INSERT ... ON CONFLICT DO NOTHING`, amarrada a um hash de conteúdo (`hash_solicitacao`).
 - Migration `202607310001` — corrige o congelamento de custos (`trg_projetos_congelar_custos`), que dependia de `empresa_atual_id()`/`auth.uid()` (sempre `NULL` sob `service_role`); `empresa_id` passa a ser explícito em toda a cadeia.
 - Migration `202607310002` — revoga `EXECUTE` de `authenticated` na RPC v1, depois de 7 cenários de teste confirmados por leitura direta no banco. A v1 continua existindo (rollback administrativo rápido via um único `GRANT`), só o caminho de sessão normal foi fechado.
-- Migration `202608010001` (Entrega 1, PAD-008 v2.0 §17) — RPC v3 (`aprovar_projeto_com_simulacao_v3`), aditiva sobre a v2: mesma validação estrutural, mesma idempotência, mesmo isolamento de tenant; estende o contrato com as duas premissas novas da camada de preparação comercial (`p_data_prevista_aprovacao_pedido`, `p_data_chegada_prevista`) e passa a receber/persistir `janela_inicio`/`janela_fim` já derivados (colunas reaproveitadas, sem mudança de schema — deixam de significar datas digitadas manualmente e passam a significar Data de Disponibilidade para Produção / Prazo Interno, seção 17). `aprovarSimulacaoComercialAction.ts` chama exclusivamente a v3 hoje. **A v2 permanece preservada tecnicamente** (intacta no banco, mesma ACL de sempre) — mas não é um caminho de rollback funcional direto: seu uso exigiria uma versão da aplicação compatível com o contrato antigo, já que a v2 não conhece `p_data_prevista_aprovacao_pedido`/`p_data_chegada_prevista` nem a semântica atual de `janela_inicio`/`janela_fim`.
+- Migration `202608010001` (Entrega 1, PAD-008 v2.0 §17) — RPC v3 (`aprovar_projeto_com_simulacao_v3`), aditiva sobre a v2: mesma validação estrutural, mesma idempotência, mesmo isolamento de tenant; estende o contrato com as duas premissas novas da camada de preparação comercial (`p_data_prevista_aprovacao_pedido`, `p_data_chegada_prevista`) e passa a receber/persistir `janela_inicio`/`janela_fim` já derivados (colunas reaproveitadas, sem mudança de schema — deixam de significar datas digitadas manualmente e passam a significar Data de Disponibilidade para Produção / Prazo Interno, seção 17). **A v2 permanece preservada tecnicamente** (intacta no banco, mesma ACL de sempre) — mas não é um caminho de rollback funcional direto: seu uso exigiria uma versão da aplicação compatível com o contrato antigo, já que a v2 não conhece `p_data_prevista_aprovacao_pedido`/`p_data_chegada_prevista` nem a semântica atual de `janela_inicio`/`janela_fim`.
+- Migration `202608020001` (Entrega 2) — RPC v4 (`aprovar_projeto_com_simulacao_v4`), **aditiva** sobre a v3 (v1/v2/v3 permanecem intactas no banco, sem `EXECUTE` para `authenticated`, como caminho de rollback técnico — nenhuma reescrita, ao contrário do que a seção 19.4 desta revisão anterior previa). Adiciona `versao_resultado_motor` em `simulacao_comercial_itens` (1 = legado escalar, 2 = novo com tabela filha) e a tabela `simulacao_comercial_item_distribuicoes` (0..N linhas por item, uma por recurso participante). Valida a cadeia matemática completa antes de persistir (capacidade efetiva = bruta × produtividade; disponível inicial = max(0, efetiva − comprometido); saldo antes/depois coerente e contínuo por recurso ao longo de toda a simulação; soma das alocações + déficit = necessário), tolerância `0.000001`. Também adiciona `calcular_comprometido_v2` (substitui `calcular_comprometido_v1` como função em uso — v1 preservada, sem alteração, como rollback; corrige forma — soma por recurso via tabela filha, com `UNION` entre snapshots legados e novos — **e** regra de negócio — só projetos com `projetos.situacao_comercial = 'pedido_recebido'` comprometem capacidade, nunca a aprovação interna da Simulação Comercial) e o trigger `trg_projetos_validar_pedido_recebido` (bloqueia a transição para `pedido_recebido` sem uma `simulacoes_comerciais` vigente). `aprovarSimulacaoComercialAction.ts` chama exclusivamente a v4 hoje (commit `62f03c2112539765b3a4441e7395d378048ff2c6`).
 
-**Os dois pontos residuais abaixo continuam valendo para a v3** — nenhum dos dois foi endereçado pela migration `202608010001`:
+**Os pontos residuais abaixo continuam valendo para a v4** — nenhum foi endereçado pela migration `202608020001`:
 
-- **Autorização por cargo** — nenhuma das duas RPCs (v1 ou v2) verifica papel/função do usuário; ambas checam só pertencimento à empresa. Evolução possível, sem solução proposta aqui.
-- **Janela de concorrência entre cálculo e persistência** — a RPC v2 não recalcula nem relê capacidade no momento do `INSERT`; só valida estrutura, tenant e idempotência. Entre o recálculo no servidor (seção 6.2) e a persistência efetiva, nada trava o estado de `comprometido` contra uma segunda aprovação concorrente consumindo o mesmo recurso. Risco residual conhecido, não corrigido por esta versão; qualquer correção (lock, serialização, recontagem final antes do `UPDATE`) é evolução possível, sem desenho proposto aqui.
+- **Autorização por cargo** — nenhuma das RPCs (v1 a v4) verifica papel/função do usuário; todas checam só pertencimento à empresa. Evolução possível, sem solução proposta aqui.
+- **Janela de concorrência entre cálculo e persistência** — a garantia de que nunca existe mais de uma linha `vigente = true` por projeto vem do índice único parcial `simulacoes_comerciais_vigente_unico` (`on simulacoes_comerciais (projeto_id) where vigente = true`, criado na migration `202607190006`, nunca removido nem alterado desde então — inclusive citado em comentário na própria RPC v2 como o motivo de inserir sempre com `vigente = false` primeiro). Esse índice impede, em qualquer cenário, a coexistência de duas linhas vigentes para o mesmo projeto. Mas a v4 **não serializa** duas aprovações concorrentes reais com chaves de idempotência diferentes (ex.: dois orçamentistas aprovando o mesmo projeto ao mesmo tempo): a sequência de dois `UPDATE` (desativar a vigente anterior, depois ativar a nova) permite que a segunda aprovação a persistir assuma a vigência sem erro, mesmo que a primeira já tivesse sido persistida com sucesso — há prevalência silenciosa da última atualização, sem detecção de conflito nem aviso a nenhum dos dois usuários. **Não se afirma atomicidade completa.** Risco residual conhecido, não corrigido por esta versão; qualquer correção (lock, serialização, recontagem final antes do `UPDATE`) é evolução possível, sem desenho proposto aqui.
 
-## 9. Contratos de entrada e saída (estado atual — recurso singular)
+## 9. Contratos de entrada e saída (estado atual — distribuição entre recursos, Entrega 2)
 
-**Estado atual confirmado**, por leitura direta de `motorAvaliacaoSequencial.ts` e `executarSimulacao.ts`. **Esta seção descreve o contrato hoje em produção. O contrato aprovado e pendente de implementação, com distribuição entre múltiplos recursos, está na seção 19 — não substitui esta seção até ser implementado.**
+**Estado atual confirmado**, por leitura direta de `motorAvaliacaoSequencial.ts`, `executarSimulacao.ts` e `montarPayloadV4.ts`. **Este é o contrato hoje em produção — substitui o modelo de recurso singular (`recursoConsideradoId: string | null`) descrito em revisões anteriores deste documento.**
 
 - Conversão minutos → horas ocorre dentro do núcleo, por operação: `tempoNecessarioHoras = (tempoEstimadoMinutos / 60) * quantidade`.
-- Déficit total (nenhum recurso — original ou compatível — comporta a operação): `recursoConsideradoId` fica `null`, `motivoConsideracao` fica `null`, e o `deficit` booleano do núcleo fica `true` — sempre os três juntos, nunca parcial (operação indivisível, avaliada inteira em um único recurso).
-- O Motor realiza seleção analítica do recurso considerado para avaliar capacidade: o recurso original entra com prioridade fixa, sempre avaliado primeiro; os recursos compatíveis cadastrados entram ordenados por prioridade ascendente. Essa seleção afeta o resultado da estimativa, mas não representa alocação operacional nem sequenciamento da produção. A interface de cadastro de compatibilidade já descreve esse comportamento explicitamente para o usuário (`CompatibilidadeRecursos.tsx`, linhas 51-53): *"Se este recurso estiver sem capacidade disponível, a Simulação de Capacidade tentará os recursos abaixo, nesta ordem."*
-- Dois formatos de déficit, mesma informação: o núcleo usa `deficit: boolean`; a camada pública (`ItemSimulacaoOperacao`) reexpressa isso como `deficit: number`, que só assume dois valores possíveis por operação — `necessario` (déficit total) ou `0`. Não existe déficit parcial em nenhuma das duas camadas hoje.
+- O núcleo consome candidatos na ordem: recurso original primeiro (`ordemConsideracao = 0`), depois compatíveis por prioridade cadastrada (`ordemConsideracao = 1..N`), via `Math.min(disponível, restante)` — cada candidato só entra em `distribuicoes[]` quando efetivamente aloca horas (`horasPadraoAlocadas > 0`); candidato sem capacidade disponível no momento avaliado não gera linha vazia.
+- `recursoId` é único dentro de `distribuicoes[]` da mesma operação — duplicata é tratada como dado corrompido (`CandidatoDuplicadoError`, `errors.ts`), nunca silenciosamente descartada.
+- Déficit total (nenhum recurso comporta nada): `distribuicoes = []`, `deficit = necessario`. Déficit residual (recursos elegíveis esgotados, mas soma alocada < necessário): `distribuicoes` não vazio, `deficit > 0`. Déficit zero: soma de `horasPadraoAlocadas` de `distribuicoes[]` = `necessario`. Os três estados usam o mesmo campo `deficit: number` — não existe mais um campo booleano `deficit` separado do valor numérico.
+- Contrato real (`ItemSimulacaoOperacao`, `executarSimulacao.ts`):
+
+```typescript
+type ItemSimulacaoOperacao = {
+  bomOperacaoId: string;
+  recursoOriginalId: string;
+  necessario: number;
+  deficit: number;
+  distribuicoes: DistribuicaoParaPersistencia[];
+};
+
+type DistribuicaoParaPersistencia = {
+  recursoId: string;
+  origem: "ORIGINAL" | "COMPATIBILIDADE";
+  ordemConsideracao: number;
+  capacidadeBrutaPeriodo: number;
+  produtividadeConsiderada: number;
+  capacidadeEfetiva: number;
+  comprometidoInicial: number;
+  capacidadeDisponivelInicial: number;
+  capacidadeDisponivelAntes: number;
+  horasPadraoAlocadas: number;
+  horasMaquinaEstimadas: number;
+  capacidadeDisponivelDepois: number;
+};
+```
+
+- Diferente do contrato originalmente planejado (revisão anterior deste PAD, §19.3): a implementação real congela **toda a base de cálculo** por distribuição (`capacidadeBrutaPeriodo`, `produtividadeConsiderada`, `capacidadeEfetiva`, `comprometidoInicial`, `capacidadeDisponivelInicial`), não só o saldo — decisão mais defensiva que o contrato original previa, para permitir auditoria completa de cada linha do snapshot sem depender de recálculo.
+- `EPSILON_HORAS = 0.000001` (`constantesNumericas.ts`) é a tolerância única para toda comparação numérica do módulo — usada no núcleo, na comparação de revalidação (seção 13) e espelhada na RPC (mesmo valor literal, comentado no SQL por não ser importável de lá).
 - Granularidade: um item por operação de roteiro (`bomOperacaoId`) em todas as camadas — ver Princípios (seção 2).
 
-**Nota adicionada nesta revisão (Entrega 1):** os dois parâmetros `janelaInicio`/`janelaFim` deste contrato passaram a ser sempre o resultado de `prepararJanelaComercial` (seção 17) — nunca mais digitados diretamente. Isso não altera nenhum dos contratos descritos nesta seção: o núcleo (`motorAvaliacaoSequencial.ts`) continua recebendo exatamente os mesmos 4 parâmetros de sempre (`empresaId`, `projetoId`, `janelaInicio`, `janelaFim`), e o modelo de **recurso singular** (`recursoConsideradoId: string | null`) permanece o estado atual, inalterado — a evolução para distribuição entre múltiplos recursos continua sendo a seção 19, ainda pendente de implementação.
+**Nota herdada da Entrega 1:** os dois parâmetros `janelaInicio`/`janelaFim` deste contrato são sempre o resultado de `prepararJanelaComercial` (seção 17) — nunca digitados diretamente. O núcleo (`motorAvaliacaoSequencial.ts`) continua recebendo exatamente os mesmos 4 parâmetros de sempre (`empresaId`, `projetoId`, `janelaInicio`, `janelaFim`).
 
 ## 10. Sequenciamento
 
@@ -170,7 +202,7 @@ Um Snapshot Comercial oficial não deve depender da confiança em cálculos envi
 
 A camada de preparação comercial (seção 17), já implementada, não altera o contrato do núcleo nem do adaptador atual — é uma camada nova, anterior a ambos (seção 6.1), com sua própria propriedade de determinismo: dado o mesmo calendário (padrão semanal, feriados e eventos vigentes no momento do cálculo) e as mesmas premissas comerciais, `prepararJanelaComercial` sempre produz o mesmo resultado — mas, como qualquer leitura de calendário (seção 12), esse resultado pode mudar se o calendário mudar entre duas execuções.
 
-**O que muda substancialmente com as seções 18 e 19 (futuras, não implementadas):** o determinismo, como propriedade, é preservado como princípio (seção 2) — qualquer componente novo continua tendo que produzir o mesmo resultado para as mesmas entradas. O que muda é o contrato e o algoritmo do núcleo: ele passa a distribuir uma operação entre vários recursos (seção 19), e um componente arquiteturalmente distinto do núcleo atual — o calculador reverso (seção 18) — passa a precisar de capacidade **por dia**, não mais só agregada por janela. Não é correto descrever isso como "o núcleo e o adaptador não mudam, só a origem dos parâmetros muda" — a forma interna do contrato muda; a propriedade de determinismo que esse contrato precisa satisfazer, não.
+**O que já mudou com a seção 19 (Entrega 2, implementada) e o que ainda muda com a seção 18 (futura, não implementada):** o determinismo, como propriedade, é preservado como princípio (seção 2) — qualquer componente novo continua tendo que produzir o mesmo resultado para as mesmas entradas. A seção 19 já mudou o contrato e o algoritmo do núcleo: ele distribui uma operação entre vários recursos (seção 9). O que ainda falta é um componente arquiteturalmente distinto do núcleo atual — o calculador reverso (seção 18) — que vai precisar de capacidade **por dia**, não mais só agregada por janela.
 
 ## 12. Reprodutibilidade
 
@@ -184,7 +216,7 @@ O que não fica congelado no snapshot: o BOM e as operações de roteiro origina
 
 **Adição confirmada nesta revisão (Entrega 1, seção 17):** desde a implementação da camada de preparação comercial, a revalidação autoritativa (seção 6.2) também recalcula e compara a janela comercial (`compararJanelaEfetiva`), além do resultado do Motor por operação — qualquer divergência na janela (ex.: um feriado cadastrado entre o preview e a aprovação) bloqueia a aprovação, pelo mesmo princípio de nunca persistir um cálculo não revalidado no servidor. O critério técnico de comparação dos itens por operação continua definido no DEC-002, sem alteração. O critério de comparação da janela é próprio da camada de preparação comercial (seção 17) e pertence a este PAD-008 — coerente com o DEC-004, que trata a janela comercial como parte do papel do orçamentista, não do critério técnico de revalidação do Motor em si.
 
-**Decisão aprovada, pendente de implementação (seção 19):** quando o contrato de distribuição entre recursos existir, o critério de comparação passa a considerar a ordem canônica e todos os valores persistidos de `distribuicoes[]`, não mais um `recursoConsideradoId` escalar — ver seção 19.3 para o critério fechado. O DEC-002 precisará ser atualizado para refletir esse critério quando a implementação existir; este documento registra a decisão, não a aplica ao DEC-002 nesta rodada.
+**Implementado nesta revisão (Entrega 2):** o critério de comparação passou a considerar a ordem canônica e todos os valores persistidos de `distribuicoes[]` — `compararResultadosSimulacao.ts` compara `necessario`, `deficit` e, para cada distribuição (por `recursoId`, não por posição de array), os 10 campos completos do contrato da seção 9. **Pendência de documentação identificada, fora do escopo desta revisão:** `DEC-002_Aprovacao_Simulacao_Comercial.md` (linha 43) ainda cita `recurso_considerado_id`/`motivo_consideracao` como o critério técnico — desatualizado desde a Entrega 2. Atualizar o DEC-002 é tarefa separada, não incluída nesta revisão do PAD-008.
 
 ## 14. Relação com PCP/OF/operações materializadas
 
@@ -206,7 +238,9 @@ O que não fica congelado no snapshot: o BOM e as operações de roteiro origina
 
 **Estado atual confirmado (implementado — Entrega 1, seção 17, migration `202608010001`):** o snapshot (`simulacoes_comerciais`) e sua persistência já incluem, além de Margem de Segurança (já registrada antes desta entrega): Data Prevista de Aprovação do Pedido e Data de Chegada Prevista (colunas novas, `data_prevista_aprovacao_pedido`/`data_chegada_prevista`, nullable — `NULL` em snapshots aprovados antes da Entrega 1, nunca preenchidas retroativamente); Data de Disponibilidade para Produção e Prazo Interno (reaproveitando as colunas já existentes `janela_inicio`/`janela_fim`, sem mudança de schema — a partir da Entrega 1 essas colunas deixam de ser digitadas manualmente e passam a ser sempre derivadas, seção 17). A tela de leitura de uma simulação já aprovada (`SimulacaoCapacidade.tsx`) trata explicitamente o caso `NULL` das duas colunas novas, exibindo "— (simulação anterior à Entrega 1)". Idempotência (`chave_idempotencia`/`hash_solicitacao`) continua o mesmo mecanismo já registrado nesta seção antes desta revisão — o hash canônico passou a incluir também as novas premissas e a janela recalculada no servidor, sem mudar o mecanismo em si.
 
-**Decisão aprovada, pendente de implementação (seções 18-19):** Data de Início Necessária (seção 18) e as distribuições por recurso (seção 19) ainda não existem em nenhuma camada — continuam fora do snapshot até essas seções serem implementadas.
+**Implementado nesta revisão (Entrega 2, migration `202608020001`):** as distribuições por recurso já fazem parte do snapshot — `simulacao_comercial_itens.versao_resultado_motor = 2` mais 0..N linhas em `simulacao_comercial_item_distribuicoes`. Snapshots aprovados antes da Entrega 2 permanecem `versao_resultado_motor = 1` (formato legado, sintetizado na leitura — ver `carregarSnapshotPersistido.ts`), nunca migrados retroativamente.
+
+**Decisão aprovada, pendente de implementação (seção 18):** Data de Início Necessária ainda não existe em nenhuma camada — continua fora do snapshot até essa seção ser implementada.
 
 **Fora do escopo:** este PAD não decide persistir pré-visualizações. Essa eventual decisão exige avaliação específica de finalidade, volume, retenção, privacidade e custo operacional.
 
@@ -314,7 +348,7 @@ A Arquitetura Vigente §17 já registrava este conceito como "Motor de Engenhari
 
 **Invariante herdado da Arquitetura Vigente §17 (Motor V2), preservado aqui:** a Compatibilidade entre Recursos Produtivos já é parte do núcleo atual (seção 9); o cálculo reverso deve preservar essa lógica — para cada operação, se o recurso original não tiver capacidade disponível na data sendo avaliada, o cálculo reverso consulta a lista de recursos compatíveis, na mesma ordem de prioridade usada hoje para frente.
 
-**O calculador reverso deverá utilizar o contrato-alvo de distribuição parcial da seção 19: recurso original primeiro e, depois, consumo parcial dos compatíveis na prioridade cadastrada. Não deverá reproduzir a seleção binária atualmente implementada.**
+**O calculador reverso deverá utilizar o mesmo contrato de distribuição parcial já implementado na seção 19: recurso original primeiro e, depois, consumo parcial dos compatíveis na prioridade cadastrada — não a seleção binária anterior à Entrega 2, já substituída.**
 
 ### 18.1 Comparação com a disponibilidade de material
 
@@ -329,23 +363,15 @@ dataDisponibilidadeProducao <= dataInicioNecessaria
 
 **O Motor informa os fatos. Ele não decide hora extra, terceirização, antecipação de material ou renegociação da entrega** — mesma fronteira já registrada em DEC-004, "Princípio".
 
-## 19. Distribuição parcial entre recursos compatíveis (divergência confirmada + contrato fechado)
+## 19. Distribuição parcial entre recursos compatíveis (implementado — Entrega 2)
 
-### 19.1 Divergência confirmada
+**Implementado na Entrega 2** (migration `202608020001_simulacao_comercial_distribuicao_parcial.sql`, commit `70d5f61f66775b42ba4ce11d7a4533d48886aaa8`; núcleo e leitura dupla no commit `cbc9a718177be90b90b913bf3dcb2813e90d32f6`; ativação da persistência nativa via RPC v4 no commit `62f03c2112539765b3a4441e7395d378048ff2c6`; fechamento registrado em `HANDOVER-004_NEXOTFE_2026-08-03.md`).
 
-**Estado atual confirmado, por leitura de `motorAvaliacaoSequencial.ts`:**
+### 19.1 Histórico da divergência (resolvida)
 
-- O Motor atual não distribui uma operação entre vários recursos.
-- Ele verifica se o recurso original comporta a operação inteira (`capacidadeRemanescente[candidato.recursoId] >= tempoNecessarioHoras`).
-- Caso contrário, tenta cada compatível na ordem de prioridade.
-- Ele escolhe um único recurso que comporte tudo — o primeiro candidato que passa no teste `>=` vence e a busca para (`break`).
-- Se nenhum recurso individual comportar a operação inteira, retorna déficit total (nunca parcial).
-- `recursoConsideradoId` é singular (`string | null`) em `ItemResultadoMotor`, `ItemSimulacaoOperacao`, na tabela `simulacao_comercial_itens`, e no `CHECK` `simulacao_comercial_itens_motivo_consistente_chk` (3 estados mutuamente exclusivos: déficit total / original coube / compatível coube — nenhum estado parcial).
-- A tela de cadastro de compatibilidade (`CompatibilidadeRecursos.tsx`, linhas 51-53) confirma esse modelo textualmente para o usuário: *"a Simulação de Capacidade tentará os recursos abaixo, nesta ordem"* — linguagem de tentativa sequencial/substituição, não de compartilhamento simultâneo. A tela de Simulação (`SimulacaoCapacidade.tsx`) mostra uma única coluna "Recurso considerado" por operação, consistente com essa mesma leitura.
+Revisões anteriores deste documento registravam aqui uma divergência confirmada entre a intenção de negócio (distribuição parcial, DEC-004) e a implementação então existente (substituição binária — o Motor escolhia um único recurso que comportasse a operação inteira, `break` no primeiro candidato que passasse no teste `>=`). Essa divergência **foi corrigida pela Entrega 2** — não existe mais.
 
-> **Divergência entre a intenção de negócio confirmada (distribuição parcial, DEC-004) e a implementação atual (substituição binária, acima) — pendência de correção. A distribuição parcial NÃO existe hoje, em nenhuma camada.**
-
-### 19.2 Regra de negócio confirmada (DEC-004)
+### 19.2 Regra de negócio implementada (DEC-004)
 
 - O Motor distribui as horas primeiro no recurso original.
 - O saldo segue pelos recursos compatíveis, respeitando a prioridade cadastrada.
@@ -358,67 +384,62 @@ horasConsideradas = mínimo(saldoNecessario, capacidadeDisponivel)
 saldoNecessario   = saldoNecessario − horasConsideradas
 ```
 
-Exemplo obrigatório (registrado para referência, não uma execução real):
+**Exemplo ilustrativo** (referência conceitual, não uma execução real):
 
 ```text
 Necessidade: 200 horas
-
-Torno 1, original:            disponível 140h → consome 140h → saldo 60h
+Torno 1, original:                disponível 140h → consome 140h → saldo 60h
 Torno 2, compatível prioridade 1: disponível  40h → consome  40h → saldo 20h
 Torno 3, compatível prioridade 2: disponível  50h → consome  20h → saldo  0h
-
-Déficit: zero.
-Capacidade remanescente do Torno 3: 30 horas.
+Déficit: zero. Capacidade remanescente do Torno 3: 30 horas.
 ```
 
-### 19.3 Contrato fechado (decisão aprovada, pendente de implementação — sem pergunta em aberto)
+**Exemplo real, confirmado por teste E2E** (projeto de teste `260009`, operação de 120 horas-padrão, produtividade 85% nos três recursos):
 
-```typescript
-export type OrigemConsideracao = "ORIGINAL" | "COMPATIVEL";
-
-export interface DistribuicaoRecurso {
-  recursoId: string;
-  /** 0 = recurso original; 1..N = compatíveis, na prioridade cadastrada. Único dentro de uma mesma operação. */
-  ordemConsideracao: number;
-  /** "ORIGINAL" quando ordemConsideracao === 0; "COMPATIVEL" em qualquer outro caso. */
-  origem: OrigemConsideracao;
-  horasDisponiveisAntes: number;
-  horasConsideradas: number;
-  /** = horasDisponiveisAntes - horasConsideradas (validado, não apenas informativo). */
-  horasDisponiveisDepois: number;
-}
-
-export interface ItemResultadoMotor {
-  bomOperacaoId: string;
-  recursoOriginalId: string;
-  horasNecessarias: number;
-  /** Ordenado canonicamente por ordemConsideracao ascendente — sempre, em memória, em serialização e em persistência. */
-  distribuicoes: DistribuicaoRecurso[];
-  deficitHoras: number;
-  /** = deficitHoras === 0 */
-  viavel: boolean;
-}
+```text
+FCNC-003, original:                52,36 horas-padrão alocadas
+FCNC-002, compatível prioridade 1: 52,36 horas-padrão alocadas
+FCNC-004, compatível prioridade 2: 15,28 horas-padrão alocadas
+Soma: 120 horas-padrão. Déficit: zero.
 ```
 
-Regras que fecham o contrato, sem pergunta em aberto:
+Snapshot persistido `19c364ad-6a0b-45c6-9ad9-a1c81c9cd756`: 1 item (`versao_resultado_motor = 2`), 3 distribuições, ordens `0/1/2`. Replay com a mesma chave de idempotência retornou o mesmo ID, sem duplicação. Projeto permaneceu `situacao_comercial = consulta` durante todo o teste — não comprometeu capacidade de nenhum recurso (confirmado por leitura direta: `calcular_comprometido_v2` só conta projetos com `situacao_comercial = 'pedido_recebido'`).
 
-- `recursoId` é único dentro de `distribuicoes` da mesma operação — nenhum recurso aparece duas vezes na mesma operação.
-- Um recurso só ganha uma entrada em `distribuicoes` quando `horasConsideradas > 0` — candidatos sem capacidade disponível no momento em que são avaliados não geram linha vazia.
-- `distribuicoes` é sempre serializada e persistida ordenada por `ordemConsideracao` ascendente — essa é a ordem canônica, usada também no hash de solicitação.
-- **Comparação de revalidação** (substitui o critério do DEC-002 quando implementado): duas execuções são idênticas para uma operação quando `horasNecessarias`, `deficitHoras`, `viavel` são iguais **e** os arrays `distribuicoes` são iguais na ordem canônica, elemento a elemento, em todos os campos (`recursoId`, `ordemConsideracao`, `origem`, `horasDisponiveisAntes`, `horasConsideradas`, `horasDisponiveisDepois`) — incluindo diferença de tamanho do array como divergência.
-- **Consistência aritmética obrigatória**, validada antes de persistir: soma de `horasConsideradas` de todas as distribuições, somada a `deficitHoras`, é igual a `horasNecessarias`; cada `horasDisponiveisDepois` é igual a `horasDisponiveisAntes − horasConsideradas`.
-- **Hash de solicitação**: serializa as operações ordenadas por `bomOperacaoId` e, dentro de cada uma, `distribuicoes` já na ordem canônica — determinístico por construção.
+### 19.3 Contrato implementado (estado atual confirmado)
 
-### 19.4 Impacto de implementação
+O contrato real, tal como implementado, está descrito na seção 9 (`ItemSimulacaoOperacao`/`DistribuicaoParaPersistencia`) — não repetido aqui. Principais diferenças em relação ao contrato originalmente desenhado (revisões anteriores deste PAD, antes da implementação): nomes de campo diferentes (`necessario`/`deficit` em vez de `horasNecessarias`/`deficitHoras`; `horasPadraoAlocadas` em vez de `horasConsideradas`; `capacidadeDisponivelAntes`/`Depois` em vez de `horasDisponiveisAntes`/`Depois`); `origem: "COMPATIBILIDADE"` em vez de `"COMPATIVEL"`; sem campo `viavel` próprio (inferido por `deficit === 0`); base de cálculo completa (bruta/produtividade/efetiva/comprometido) congelada por distribuição, não só o saldo.
 
-Sem implementar nada, ficam confirmadas como pendência as mudanças em: núcleo do Motor (algoritmo de consumo parcial); `ItemSimulacaoOperacao` e `ResultadoSimulacao`; `prepararResultadoParaExibicao.ts` e a tabela de `SimulacaoCapacidade.tsx` (precisa virar hierárquica); `compararResultadosSimulacao.ts` (aplicar o critério fechado em 19.3); `validarPayloadAprovacao.ts` (validar array aninhado e a consistência aritmética de 19.3); o hash de solicitação (serialização já fechada em 19.3); a RPC v2 (reescrita substancial: tabela pai por operação + tabela filha por distribuição); migration nova para `simulacao_comercial_itens` e a tabela filha, incluindo o desenho fino de quais colunas de capacidade permanecem denormalizadas — esse desenho de schema SQL é pendência de implementação, não uma pergunta em aberto do contrato central (que está fechado em 19.3); testes automatizados (nenhum teste existente encontrado para o Motor nesta auditoria).
+Regras que fecham o contrato, confirmadas em produção:
+
+- `recursoId` é único dentro de `distribuicoes` da mesma operação — violação é `CandidatoDuplicadoError` (núcleo) ou rejeitada pela constraint `simulacao_comercial_item_distribuicoes_recurso_unico` (banco).
+- Um recurso só ganha uma entrada em `distribuicoes` quando `horasPadraoAlocadas > 0`.
+- `distribuicoes` é sempre serializada e persistida ordenada por `ordemConsideracao` ascendente.
+- **Comparação de revalidação** (`compararResultadosSimulacao.ts`, DEC-002 pendente de atualização formal — ver seção 13): duas execuções são idênticas para uma operação quando `necessario`, `deficit` são iguais (tolerância `EPSILON_HORAS`) **e** `distribuicoes` são iguais elemento a elemento, comparadas por `recursoId` (não por posição), incluindo diferença de tamanho como divergência.
+- **Consistência aritmética**, validada tanto no núcleo/hash quanto na RPC antes de persistir: soma de `horasPadraoAlocadas` + `deficit` = `necessario`; `capacidadeDisponivelDepois` = `capacidadeDisponivelAntes − horasPadraoAlocadas`; `capacidadeEfetiva` = `capacidadeBrutaPeriodo × produtividadeConsiderada`; `capacidadeDisponivelInicial` = `max(0, capacidadeEfetiva − comprometidoInicial)` — todas com tolerância `0.000001`.
+- **Hash de solicitação** (`orquestrarAprovacaoAutoritativa.ts`, `calcularHashSolicitacao`): serializa as operações ordenadas por `bomOperacaoId` e, dentro de cada uma, `distribuicoes` ordenadas por `recursoId` — determinístico por construção, `sha256`.
+
+### 19.4 Impacto de implementação — concluído
+
+Todos os itens abaixo, listados como pendência em revisões anteriores, foram implementados:
+
+- Núcleo do Motor (`motorAvaliacaoSequencial.ts`) — algoritmo de consumo parcial.
+- `ItemSimulacaoOperacao`/`ResultadoSimulacao` (`executarSimulacao.ts`) — contrato multi-recurso.
+- `prepararResultadoParaExibicao.ts` e `SimulacaoCapacidade.tsx` — tabela hierárquica operação → recursos.
+- `compararResultadosSimulacao.ts` — critério fechado em 19.3.
+- `validarPayloadAprovacao.ts` — validação do array aninhado e consistência de forma.
+- Hash de solicitação — serialização determinística.
+- **RPC v4 aditiva** (`aprovar_projeto_com_simulacao_v4`) — não uma reescrita de v2, como revisões anteriores previam; v1/v2/v3 preservadas intactas como caminho de rollback técnico.
+- Migration `202608020001` — coluna `versao_resultado_motor` em `simulacao_comercial_itens`; tabela nova `simulacao_comercial_item_distribuicoes`; `calcular_comprometido_v2`; trigger `trg_projetos_validar_pedido_recebido`.
+- Testes automatizados: 63 testes no módulo `simulacao-comercial` (7 arquivos), cobrindo núcleo, comparação, leitura dupla de snapshot, mapeamento para o payload v4, e idempotência do orquestrador.
+
+**Limitação conhecida, não corrigida por esta entrega:** ver §8, "Janela de concorrência entre cálculo e persistência" — continua valendo para a v4.
 
 ## 20. Fronteiras arquiteturais
 
 **Decisão arquitetural**, separando quatro camadas distintas — não três:
 
 - **Camada de preparação comercial** (seção 17, **implementada — Entrega 1**): recebe a Margem de Segurança e a Data Prevista de Aprovação do Pedido; calcula a Data de Chegada Prevista e a Data de Disponibilidade para Produção; calcula o Prazo Interno; valida a existência de uma janela produtiva antes de acionar qualquer cálculo de capacidade.
-- **Núcleo de distribuição analítica entre recursos** (seções 9 e 19): recebe capacidade **agregada por janela**; distribui a necessidade de cada operação entre o recurso original e os compatíveis; calcula déficit. É a evolução do núcleo sequencial atual — não é o mesmo componente que o calculador reverso abaixo.
+- **Núcleo de distribuição analítica entre recursos** (seções 9 e 19): recebe capacidade **agregada por janela**; distribui a necessidade de cada operação entre o recurso original e os compatíveis; calcula déficit. **Implementado na Entrega 2** — é o núcleo atualmente em produção, distinto do calculador reverso abaixo.
 - **Calculador reverso baseado em capacidade diária** (seção 18): componente arquiteturalmente distinto do núcleo acima, com existência e fronteira decididas mas algoritmo ainda sem desenho; precisaria de capacidade **por dia**, não agregada, para caminhar de trás para frente a partir do Prazo Interno e estimar a Data de Início Necessária.
 - **Fluxo comercial de decisão e aprovação** (DEC-004, seção 6.2): o orçamentista informa premissas, avalia o resultado apresentado, decide aprovar ou não — inclusive sob déficit ou sob conflito de material assumido conscientemente.
 
@@ -435,9 +456,8 @@ Sem compromisso de roadmap:
 - Integração entre o Motor e PCP/Ordens de Fabricação/operações de produção materializadas (seção 14).
 - Persistência de pré-visualizações não aprovadas (seção 16), sujeita à avaliação descrita ali.
 - Substituição dos 9 dias produtivos fixos pelo dado real de Compras (seção 17.4), sem data ou roadmap fechado.
-- Correção da janela de concorrência residual entre cálculo e persistência (seção 8).
+- Correção da janela de concorrência residual entre cálculo e persistência (seção 8) — continua válida para a v4, não corrigida pela Entrega 2.
 - Autorização por cargo na aprovação (seção 8).
-- Desenho fino do schema SQL da tabela filha de distribuições (seção 19.4).
 - Atualização formal do critério de revalidação do DEC-002 para o contrato de 19.3.
 - Reconciliação de escopo entre a seção 18 e a Arquitetura Vigente §17 quanto a "Motor V2" — não resolvida aqui.
 
@@ -452,3 +472,6 @@ Nenhuma das possibilidades acima é decidida por esta versão do documento. O al
 - `supabase/migrations/202608010001_aprovar_projeto_com_simulacao_v3_janela_comercial.sql` — RPC v3 e colunas de janela comercial (seção 17).
 - Commit `3da17b3dab459f460a5811ae168a2b3373a98f67` — implementação completa da Entrega 1 (janela comercial + correção de performance de calendário).
 - `HANDOVER-003_NEXOTFE_2026-08-02.md` (commit `e4bb2f36d456a492fc06e1d4acd28906091dfc25`) — fechamento da Entrega 1, teste ponta a ponta real contra o banco remoto, pendências registradas.
+- `supabase/migrations/202608020001_simulacao_comercial_distribuicao_parcial.sql` — RPC v4, `versao_resultado_motor`, tabela `simulacao_comercial_item_distribuicoes`, `calcular_comprometido_v2` (seção 19).
+- Commits `70d5f61f66775b42ba4ce11d7a4533d48886aaa8` (schema), `cbc9a718177be90b90b913bf3dcb2813e90d32f6` (núcleo + leitura dupla), `62f03c2112539765b3a4441e7395d378048ff2c6` (ativação da RPC v4) — implementação completa da Entrega 2.
+- `HANDOVER-004_NEXOTFE_2026-08-03.md` — fechamento da Entrega 2, teste ponta a ponta real contra o banco remoto (projeto `260009`), replay de idempotência confirmado, auditoria final do diff.
