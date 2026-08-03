@@ -1,11 +1,12 @@
 // Preview/revalidação (execução inicial, reexecução para o modal de
 // divergência/déficit) continuam rodando aqui, no navegador, só para
 // feedback rápido de UX - nenhuma dessas chamadas persiste nada. A
-// aprovação em si (persistência real) não usa mais aprovarSimulacaoComercial
-// direto daqui - vai pela Server Action aprovarSimulacaoComercialAction,
-// que recalcula de novo no servidor antes de persistir (PAD-008,
-// seções 7-8). aprovarSimulacaoComercial (RPC v1) continua existindo
-// só como caminho de rollback, não é chamada por este componente.
+// aprovação em si (persistência real) vai pela Server Action
+// aprovarSimulacaoComercialAction, que recalcula de novo no servidor
+// antes de persistir (PAD-008, seções 7-8). Fase 2 do rollout da
+// Entrega 2: a persistência ainda vai pela RPC v3 (+ adaptador, dentro
+// da Server Action) - a v4 nativa é uma troca separada, futura (Fase
+// 3), não chamada por este componente ainda.
 // Sem lógica de busca/transformação de dado neste componente: quem
 // enriquece o resultado para exibição é prepararResultadoParaExibicao
 // (lib/), consumido pronto aqui.
@@ -17,10 +18,15 @@
 // prepararJanelaComercial (lib/), a mesma função usada pelo servidor
 // na aprovação autoritativa (nunca confia na janela calculada aqui
 // para persistir - ver aprovarSimulacaoComercialAction.ts).
+//
+// Entrega 2 (seção 19): cada operação pode ser atendida por mais de um
+// recurso (distribuição parcial) - a tabela de resultado é hierárquica
+// (operação → recursos participantes), não mais uma linha por
+// operação com um único "recurso considerado".
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   simularCapacidadeProjeto,
@@ -31,6 +37,10 @@ import {
   prepararResultadoParaExibicao,
   type OperacaoParaExibicao,
 } from "@/modules/simulacao-comercial/lib/prepararResultadoParaExibicao";
+import {
+  carregarSnapshotPersistido,
+  type OperacaoSnapshotExibicao,
+} from "@/modules/simulacao-comercial/lib/carregarSnapshotPersistido";
 import {
   compararResultadosSimulacao,
   type DiferencaSimulacao,
@@ -144,18 +154,12 @@ function mensagemAusenciaJanela(janela: Extract<ResultadoJanelaComercial, { vali
 }
 
 // Rotulos legiveis para os campos comparados por compararResultadosSimulacao
-// (mesmos campos que aprovar_projeto_com_simulacao_v3 persiste - DEC-002)
+// (mesmos campos que aprovar_projeto_com_simulacao_v4 persiste - DEC-002)
 // e por compararJanelaEfetiva (PAD-008 v2.0 secao 17).
 const ROTULOS_CAMPO_DIFERENCA: Record<string, string> = {
-  recursoConsideradoId: "Recurso considerado (ID)",
-  motivoConsideracao: "Motivo de consideração",
-  deficit: "Déficit (h)",
   necessario: "Necessário (h)",
-  capacidadeBruta: "Capacidade bruta (h)",
-  capacidadeEfetiva: "Capacidade efetiva (h)",
-  capacidadeDisponivel: "Capacidade disponível (h)",
-  comprometido: "Comprometido (h)",
-  livre: "Livre (h)",
+  deficit: "Déficit (h)",
+  distribuicoes: "Distribuição entre recursos",
   presenca: "Presença da operação",
   janelaInicio: "Data de Disponibilidade para Produção",
   janelaFim: "Prazo Interno",
@@ -167,6 +171,21 @@ function formatarValorDiferenca(valor: unknown): string {
   }
   if (typeof valor === "number") {
     return valor.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  }
+  if (Array.isArray(valor)) {
+    // campo "distribuicoes": resume por recurso, sem despejar o objeto
+    // inteiro na tela - cada elemento vem de DistribuicaoParaPersistencia.
+    if (valor.length === 0) return "nenhuma distribuição (déficit total)";
+    return valor
+      .map((item) => {
+        const distribuicao = item as { recursoId?: unknown; horasPadraoAlocadas?: unknown };
+        const horas =
+          typeof distribuicao.horasPadraoAlocadas === "number"
+            ? distribuicao.horasPadraoAlocadas.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
+            : "?";
+        return `${distribuicao.recursoId ?? "?"}: ${horas}h`;
+      })
+      .join(", ");
   }
   return String(valor);
 }
@@ -189,9 +208,9 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   const [resultado, setResultado] = useState<OperacaoParaExibicao[] | null>(null);
   // Resultado cru do Motor, guardado a parte do de exibicao - e o que
   // sera usado na revalidacao/aprovacao (DEC-002), ja que o resultado
-  // de exibicao nao tem os campos que aprovar_projeto_com_simulacao_v3
-  // exige (recursoOriginalId/recursoConsideradoId como UUID, e os 5
-  // campos de capacidade).
+  // de exibicao nao tem os campos que aprovar_projeto_com_simulacao_v4
+  // exige (recursoOriginalId como UUID e a base completa de cada
+  // distribuicao por recurso).
   const [resultadoBruto, setResultadoBruto] = useState<ResultadoSimulacao | null>(
     null,
   );
@@ -216,7 +235,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   // invalida o resultado apresentado"). null enquanto não há resultado.
   const premissasDoResultadoRef = useRef<PremissasJanelaComercial | null>(null);
 
-  // Parametros exigidos por aprovar_projeto_com_simulacao_v3 (NOT NULL
+  // Parametros exigidos por aprovar_projeto_com_simulacao_v4 (NOT NULL
   // em simulacoes_comerciais) que não são premissas de janela - abordagem
   // minima combinada (sem tabela nova, sem premissa nova): cenarioDemanda/
   // modoProducao texto livre.
@@ -230,6 +249,14 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     useState(true);
   const [simulacaoAprovadaExistente, setSimulacaoAprovadaExistente] =
     useState<SimulacaoAprovadaExistente | null>(null);
+  // Fase 2 (leitura dupla): detalhamento por operação/recurso do
+  // snapshot vigente, carregado direto do banco (nunca recalculado) -
+  // funciona tanto para snapshots legados (versao_resultado_motor=1,
+  // sintetizado) quanto novos (=2, tabela filha). null enquanto carrega
+  // ou quando não há snapshot vigente.
+  const [detalhamentoSnapshot, setDetalhamentoSnapshot] = useState<
+    OperacaoSnapshotExibicao[] | null
+  >(null);
 
   const carregarSimulacaoVigente = useCallback(async () => {
     const { data: vigente } = await supabase
@@ -243,15 +270,12 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
     if (!vigente) {
       setSimulacaoAprovadaExistente(null);
+      setDetalhamentoSnapshot(null);
       return;
     }
 
-    const { data: itens } = await supabase
-      .from("simulacao_comercial_itens")
-      .select("deficit")
-      .eq("simulacao_comercial_id", vigente.id);
-
-    const itensLista = (itens ?? []) as { deficit: number }[];
+    const detalhamento = await carregarSnapshotPersistido(supabase, vigente.id);
+    setDetalhamentoSnapshot(detalhamento);
 
     // Lookup do aprovador: se falhar, nao bloqueia a tela - fica o
     // fallback com o ID.
@@ -278,8 +302,8 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       dataChegadaPrevista: vigente.data_chegada_prevista,
       janelaInicio: vigente.janela_inicio,
       janelaFim: vigente.janela_fim,
-      totalOperacoes: itensLista.length,
-      totalEmDeficit: itensLista.filter((item) => Number(item.deficit) > 0).length,
+      totalOperacoes: detalhamento.length,
+      totalEmDeficit: detalhamento.filter((item) => item.deficit > 0).length,
     });
   }, [projetoId]);
 
@@ -454,14 +478,15 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   }
 
   // Bloco "Motivo principal do deficit" do modal: pega a operacao de
-  // maior deficit e mostra o que ela realmente precisava vs. o que o
-  // recurso original tinha disponivel na janela. capacidadeDisponivel
-  // do resultado do Motor NAO serve aqui - em deficit total ela vem
-  // NULL de proposito (o recurso foi recusado, nao "considerado"), ver
-  // executarSimulacao.ts. Por isso esta funcao recalcula, para o
-  // recurso ORIGINAL, com as mesmas 3 consultas que prepararEntradasMotor.ts
-  // ja usa (capacidade_horas_dia, calcular_produtividade_efetiva,
-  // contarDiasProdutivosNaJanela).
+  // maior deficit (agora possivelmente parcial, nao so total - Entrega
+  // 2) e mostra o que ela realmente precisava vs. o que o recurso
+  // ORIGINAL tinha disponivel na janela (o mesmo recurso, mesmo com
+  // distribuicao parcial - o "motivo principal" continua sendo sobre o
+  // recurso previsto no roteiro, nao sobre os compativeis que
+  // eventualmente absorveram parte da carga). Por isso esta funcao
+  // recalcula, para o recurso ORIGINAL, com as mesmas 3 consultas que
+  // prepararEntradasMotor.ts ja usa (capacidade_horas_dia,
+  // calcular_produtividade_efetiva, contarDiasProdutivosNaJanela).
   async function calcularMotivoPrincipalDeficit(
     empresaId: string,
   ): Promise<MotivoPrincipalDeficit | null> {
@@ -470,7 +495,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     }
 
     const itensDeficit = resultadoBruto.itensPorOperacao.filter(
-      (item) => item.recursoConsideradoId === null,
+      (item) => item.deficit > 0,
     );
 
     if (itensDeficit.length === 0) {
@@ -590,7 +615,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       }
 
       const temDeficit = resultadoBruto.itensPorOperacao.some(
-        (item) => item.recursoConsideradoId === null,
+        (item) => item.deficit > 0,
       );
 
       const motivoPrincipalDeficit = temDeficit
@@ -695,10 +720,11 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   // Estatisticas derivadas para o resumo do estado "pronta" (mockup) -
   // calculadas a partir do resultado de exibicao, que ja tem os nomes
   // legiveis dos recursos.
-  const operacoesEmDeficit = resultado?.filter((op) => op.recursoConsideradoNome === null) ?? [];
+  const operacoesEmDeficit = resultado?.filter((op) => op.deficit > 0) ?? [];
   const totalOperacoes = resultado?.length ?? 0;
   const totalComCompatibilidade =
-    resultado?.filter((op) => op.motivoConsideracao === "COMPATIBILIDADE").length ?? 0;
+    resultado?.filter((op) => op.distribuicoes.some((d) => d.origem === "COMPATIBILIDADE"))
+      .length ?? 0;
   const deficitTotalHoras = operacoesEmDeficit.reduce((acc, op) => acc + op.deficit, 0);
   const recursosIndisponiveis = Array.from(
     new Set(operacoesEmDeficit.map((op) => op.recursoOriginalNome)),
@@ -816,6 +842,109 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           </span>
         </div>
 
+        {detalhamentoSnapshot && detalhamentoSnapshot.length > 0 ? (
+          <div className="mt-5 border-t border-emerald-200 pt-4">
+            <h3 className="text-sm font-bold text-emerald-900">
+              Detalhamento por operação e recurso
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Base congelada no momento da aprovação - nunca recalculada a
+              partir do cadastro atual de recursos.
+            </p>
+
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 font-bold">Operação / Recurso</th>
+                    <th className="px-4 py-3 text-center font-bold">Origem</th>
+                    <th className="px-4 py-3 text-center font-bold">Horas-padrão</th>
+                    <th className="px-4 py-3 text-center font-bold">Produtividade</th>
+                    <th className="px-4 py-3 text-center font-bold">Horas de máquina</th>
+                    <th className="px-4 py-3 text-center font-bold">Saldo antes → depois</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {detalhamentoSnapshot.map((operacao) => (
+                    <Fragment key={operacao.bomOperacaoId}>
+                      <tr className={operacao.deficit > 0 ? "bg-rose-50" : "bg-slate-50/60"}>
+                        <td className="px-4 py-2 align-middle font-semibold text-slate-800" colSpan={2}>
+                          {operacao.operacaoDescricao}{" "}
+                          <span className="font-normal text-slate-500">
+                            (original: {operacao.recursoOriginalNome}
+                            {operacao.versaoResultadoMotor === 1 ? " — formato anterior à Entrega 2" : ""})
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-center align-middle font-semibold text-slate-800">
+                          {operacao.necessario.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h
+                        </td>
+                        <td className="px-4 py-2 text-center align-middle text-slate-500" colSpan={2}>
+                          necessário
+                        </td>
+                        <td
+                          className={
+                            operacao.deficit > 0
+                              ? "px-4 py-2 text-center align-middle font-semibold text-rose-700"
+                              : "px-4 py-2 text-center align-middle text-slate-500"
+                          }
+                        >
+                          {operacao.deficit > 0
+                            ? `déficit: ${operacao.deficit.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h`
+                            : "sem déficit"}
+                        </td>
+                      </tr>
+
+                      {operacao.distribuicoes.length === 0 ? (
+                        <tr>
+                          <td className="px-4 py-2 pl-8 align-middle text-rose-700" colSpan={6}>
+                            Nenhum recurso comportou esta operação - déficit total.
+                          </td>
+                        </tr>
+                      ) : (
+                        operacao.distribuicoes.map((distribuicao, indice) => (
+                          <tr key={`${operacao.bomOperacaoId}-${distribuicao.recursoNome}-${indice}`}>
+                            <td className="px-4 py-2 pl-8 align-middle text-slate-700" colSpan={2}>
+                              {distribuicao.recursoNome}
+                            </td>
+                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                              {distribuicao.origem === "ORIGINAL" ? "Original" : "Compatível"}
+                            </td>
+                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                              {distribuicao.horasPadraoAlocadas.toLocaleString("pt-BR", {
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                              {distribuicao.produtividadeConsiderada !== null
+                                ? `${(distribuicao.produtividadeConsiderada * 100).toLocaleString("pt-BR", {
+                                    maximumFractionDigits: 1,
+                                  })}%`
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                              {distribuicao.horasMaquinaEstimadas !== null
+                                ? distribuicao.horasMaquinaEstimadas.toLocaleString("pt-BR", {
+                                    maximumFractionDigits: 2,
+                                  })
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-2 text-center align-middle text-slate-500">
+                              {distribuicao.capacidadeDisponivelAntes !== null &&
+                              distribuicao.capacidadeDisponivelDepois !== null
+                                ? `${distribuicao.capacidadeDisponivelAntes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} → ${distribuicao.capacidadeDisponivelDepois.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}`
+                                : `não progressivo — livre: ${distribuicao.capacidadeDisponivelInicial.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}`}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
         <Link
           href={`/projetos/${projetoId}`}
           className="mt-4 inline-flex h-10 items-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -908,53 +1037,89 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
                 <tr>
-                  <th className="px-4 py-3 font-bold">Operação</th>
-                  <th className="px-4 py-3 font-bold">Recurso original</th>
-                  <th className="px-4 py-3 font-bold">Recurso considerado</th>
-                  <th className="px-4 py-3 text-center font-bold">Motivo</th>
-                  <th className="px-4 py-3 text-center font-bold">Necessário (h)</th>
-                  <th className="px-4 py-3 text-center font-bold">Déficit (h)</th>
+                  <th className="px-4 py-3 font-bold">Operação / Recurso</th>
+                  <th className="px-4 py-3 text-center font-bold">Origem</th>
+                  <th className="px-4 py-3 text-center font-bold">Horas-padrão</th>
+                  <th className="px-4 py-3 text-center font-bold">Produtividade</th>
+                  <th className="px-4 py-3 text-center font-bold">Horas de máquina</th>
+                  <th className="px-4 py-3 text-center font-bold">Saldo antes → depois</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {resultado.map((operacao) => (
-                  <tr
-                    key={operacao.bomOperacaoId}
-                    className={operacao.deficit > 0 ? "bg-rose-50" : undefined}
-                  >
-                    <td className="px-4 py-3 align-middle text-slate-700">
-                      {operacao.operacaoDescricao}
-                    </td>
-                    <td className="px-4 py-3 align-middle text-slate-700">
-                      {operacao.recursoOriginalNome}
-                    </td>
-                    <td className="px-4 py-3 align-middle text-slate-700">
-                      {operacao.recursoConsideradoNome ?? (
-                        <span className="font-semibold text-rose-700">Déficit</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center align-middle text-slate-700">
-                      {operacao.motivoConsideracao ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center align-middle text-slate-700">
-                      {operacao.necessario.toLocaleString("pt-BR", {
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td
-                      className={
-                        operacao.deficit > 0
-                          ? "px-4 py-3 text-center align-middle font-semibold text-rose-700"
-                          : "px-4 py-3 text-center align-middle text-slate-700"
-                      }
+                  <Fragment key={operacao.bomOperacaoId}>
+                    <tr
+                      className={operacao.deficit > 0 ? "bg-rose-50" : "bg-slate-50/60"}
                     >
-                      {operacao.deficit > 0
-                        ? operacao.deficit.toLocaleString("pt-BR", {
-                            maximumFractionDigits: 2,
-                          })
-                        : "—"}
-                    </td>
-                  </tr>
+                      <td className="px-4 py-2 align-middle font-semibold text-slate-800" colSpan={2}>
+                        {operacao.operacaoDescricao}{" "}
+                        <span className="font-normal text-slate-500">
+                          (original: {operacao.recursoOriginalNome})
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-center align-middle font-semibold text-slate-800">
+                        {operacao.necessario.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h
+                      </td>
+                      <td className="px-4 py-2 text-center align-middle text-slate-500" colSpan={2}>
+                        necessário
+                      </td>
+                      <td
+                        className={
+                          operacao.deficit > 0
+                            ? "px-4 py-2 text-center align-middle font-semibold text-rose-700"
+                            : "px-4 py-2 text-center align-middle text-slate-500"
+                        }
+                      >
+                        {operacao.deficit > 0
+                          ? `déficit: ${operacao.deficit.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h`
+                          : "sem déficit"}
+                      </td>
+                    </tr>
+
+                    {operacao.distribuicoes.length === 0 ? (
+                      <tr key={`${operacao.bomOperacaoId}-vazio`}>
+                        <td className="px-4 py-2 pl-8 align-middle text-rose-700" colSpan={6}>
+                          Nenhum recurso comportou esta operação - déficit total.
+                        </td>
+                      </tr>
+                    ) : (
+                      operacao.distribuicoes.map((distribuicao, indice) => (
+                        <tr key={`${operacao.bomOperacaoId}-${distribuicao.recursoNome}-${indice}`}>
+                          <td className="px-4 py-2 pl-8 align-middle text-slate-700" colSpan={2}>
+                            {distribuicao.recursoNome}
+                          </td>
+                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            {distribuicao.origem === "ORIGINAL" ? "Original" : "Compatível"}
+                          </td>
+                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            {distribuicao.horasPadraoAlocadas.toLocaleString("pt-BR", {
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            {(distribuicao.produtividadeConsiderada * 100).toLocaleString("pt-BR", {
+                              maximumFractionDigits: 1,
+                            })}
+                            %
+                          </td>
+                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            {distribuicao.horasMaquinaEstimadas.toLocaleString("pt-BR", {
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-4 py-2 text-center align-middle text-slate-500">
+                            {distribuicao.capacidadeDisponivelAntes.toLocaleString("pt-BR", {
+                              maximumFractionDigits: 1,
+                            })}{" "}
+                            →{" "}
+                            {distribuicao.capacidadeDisponivelDepois.toLocaleString("pt-BR", {
+                              maximumFractionDigits: 1,
+                            })}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

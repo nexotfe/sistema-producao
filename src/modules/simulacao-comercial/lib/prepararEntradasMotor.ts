@@ -122,14 +122,21 @@ async function comprometidoDoRecurso(
   recursoId: string,
   projetoExcluidoId: string,
 ): Promise<number> {
-  const { data, error } = await client.rpc("calcular_comprometido_v1", {
+  // v2 (Entrega 2): soma snapshots legados e novos (UNION, por formato -
+  // ver migration da distribuição parcial) e só considera projetos com
+  // situacao_comercial='pedido_recebido' - oportunidade comercial
+  // (orçamento em elaboração, proposta, negociação, aprovação interna
+  // da simulação) nunca compromete capacidade. calcular_comprometido_v1
+  // permanece intocada como caminho de rollback, não é mais chamada
+  // por este módulo.
+  const { data, error } = await client.rpc("calcular_comprometido_v2", {
     p_recurso_produtivo_id: recursoId,
     p_projeto_excluido_id: projetoExcluidoId,
   });
 
   if (error) {
     throw new Error(
-      `Erro ao chamar calcular_comprometido_v1 para recurso ${recursoId}: ${error.message}`,
+      `Erro ao chamar calcular_comprometido_v2 para recurso ${recursoId}: ${error.message}`,
     );
   }
 
@@ -175,15 +182,25 @@ async function compatibilidadesDosRecursos(
   return porOrigem;
 }
 
+// Entrega 2: nomes inequívocos, cada um documentando exatamente se já
+// inclui ou não o desconto de comprometido - para nunca subtrair
+// comprometido duas vezes nem esquecer de subtrair.
 export interface CapacidadeRecurso {
+  /** Dias produtivos × capacidade diária - sem produtividade, sem comprometido. */
   capacidadeBruta: number;
+  /** Fração 0-1 (recursos_produtivos.produtividade / grupos_recursos.produtividade_padrao) - guardada crua para o cálculo de horas de máquina na camada de enriquecimento (executarSimulacao.ts). Nunca reentra no cálculo de capacidade remanescente. */
+  produtividade: number;
+  /** = capacidadeBruta × produtividade. Ainda SEM desconto de comprometido. */
   capacidadeEfetiva: number;
-  capacidadeDisponivel: number;
+  /** calcular_comprometido_v2 para este recurso - horas já comprometidas por OUTROS projetos com pedido_recebido, ANTES desta simulação consumir qualquer saldo. */
+  comprometidoInicial: number;
+  /** = max(0, capacidadeEfetiva - comprometidoInicial). JÁ LÍQUIDO - é o único lugar onde este desconto acontece. Nunca subtrair comprometidoInicial de novo a partir daqui. */
+  capacidadeDisponivelInicial: number;
 }
 
 export interface EntradasMotorPreparadas {
   entradas: EntradasMotor;
-  /** Necessário para a consolidação final (4d) reportar os 3 sub-valores de capacidade separadamente, não só o total que o Motor consome. */
+  /** Base completa por recurso (bruta, produtividade, efetiva, comprometido inicial, disponível inicial) - para a consolidação final (4d) e para o snapshot persistido reportarem cada valor separadamente, não só o líquido que o Motor consome. */
   capacidadePorRecurso: Record<string, CapacidadeRecurso>;
 }
 
@@ -217,7 +234,6 @@ export async function prepararEntradasMotor(
   );
 
   const capacidadeDisponivelInicial: Record<string, number> = {};
-  const comprometido: Record<string, number> = {};
   const capacidadePorRecurso: Record<string, CapacidadeRecurso> = {};
 
   for (const recursoId of recursoIds) {
@@ -226,28 +242,37 @@ export async function prepararEntradasMotor(
 
     // Capacidade Bruta = Dias Produtivos × Capacidade Diária
     // Capacidade Efetiva = Capacidade Bruta × Produtividade
-    // Capacidade Disponível = Capacidade Efetiva + Horas Adicionais
     //   (Horas Adicionais/Modo de Produção ainda não existe no sistema
-    //   - tratado como 0, não inventado aqui).
+    //   - tratado como 0, não inventado aqui - por isso Capacidade
+    //   Efetiva já seria "Capacidade Disponível" na fórmula original;
+    //   aqui ela ainda NÃO tem o desconto de comprometido).
     const capacidadeBruta = diasProdutivos * capacidadeDiaria;
     const capacidadeEfetiva = capacidadeBruta * produtividade;
-    const capacidadeDisponivel = capacidadeEfetiva;
+
+    const comprometidoInicial = await comprometidoDoRecurso(client, recursoId, projetoId);
+
+    // Único lugar de todo o módulo onde comprometido é subtraído da
+    // capacidade - o núcleo (motorAvaliacaoSequencial.ts) recebe este
+    // valor já líquido e nunca subtrai comprometido de novo.
+    const capacidadeDisponivelInicialRecurso = Math.max(0, capacidadeEfetiva - comprometidoInicial);
 
     capacidadePorRecurso[recursoId] = {
       capacidadeBruta,
+      produtividade,
       capacidadeEfetiva,
-      capacidadeDisponivel,
+      comprometidoInicial,
+      capacidadeDisponivelInicial: capacidadeDisponivelInicialRecurso,
     };
-    capacidadeDisponivelInicial[recursoId] = capacidadeDisponivel;
-
-    comprometido[recursoId] = await comprometidoDoRecurso(client, recursoId, projetoId);
+    capacidadeDisponivelInicial[recursoId] = capacidadeDisponivelInicialRecurso;
   }
 
   return {
     entradas: {
       operacoesOrdenadas,
+      // Já líquido (ver capacidadePorRecurso[recursoId].capacidadeDisponivelInicial)
+      // - o núcleo não recebe mais `comprometido` separado, exatamente
+      // para eliminar o risco de subtrair duas vezes.
       capacidadeDisponivelInicial,
-      comprometido,
       compatibilidades,
     },
     capacidadePorRecurso,

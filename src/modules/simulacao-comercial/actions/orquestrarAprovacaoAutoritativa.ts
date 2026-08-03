@@ -36,6 +36,8 @@ export type ResultadoAprovacaoAction =
   | { ok: false; motivo: "nao_autenticado" }
   | { ok: false; motivo: "divergente"; diferencas: DiferencaSimulacao[] }
   | { ok: false; motivo: "sem_janela_produtiva"; detalhe: JanelaComercialInvalida }
+  /** Fase 2 do rollout da Entrega 2 (distribuição parcial): a persistência ainda vai pela RPC v3, que só representa déficit total (0 distribuições) ou atendimento integral por 1 recurso (1 distribuição, deficit=0). Uma distribuição parcial real (1 recurso não cobrindo tudo, ou 2+ recursos) não é representável nesta fase - motivo específico, não um erro técnico genérico, para o usuário entender a causa real. */
+  | { ok: false; motivo: "distribuicao_nao_suportada_nesta_fase"; mensagem: string }
   | { ok: false; motivo: "erro"; mensagem: string };
 
 export interface ParametrosPersistencia {
@@ -58,6 +60,8 @@ export interface ResultadoPersistencia {
   simulacaoComercialId: string | null;
   /** Mensagem TÉCNICA (ex.: error.message do Supabase) - nunca repassada ao usuário; só para console.error no orquestrador. */
   erro: string | null;
+  /** Fase 2 (rollout da Entrega 2): sinaliza que o resultado recalculado não é representável pela RPC ainda em uso (v3) - distinto de `erro`, que é sempre técnico/genérico. Quando presente, `erro` deve ser null. */
+  naoSuportadoNestaFase?: { mensagem: string };
 }
 
 export interface DependenciasAprovacaoAutoritativa {
@@ -99,20 +103,32 @@ function calcularHashSolicitacao(dados: {
   janelaFim: string;
   itens: ItemSimulacaoOperacao[];
 }): string {
+  // Distribuições ordenadas por recursoId (chave única dentro da
+  // operação) - o hash não pode depender da ordem em que o núcleo
+  // decidiu processar os candidatos, só do conteúdo.
   const itensOrdenados = [...dados.itens]
     .sort((a, b) => a.bomOperacaoId.localeCompare(b.bomOperacaoId))
     .map((item) => ({
       bomOperacaoId: item.bomOperacaoId,
       recursoOriginalId: item.recursoOriginalId,
-      recursoConsideradoId: item.recursoConsideradoId,
-      motivoConsideracao: item.motivoConsideracao,
       necessario: item.necessario,
-      capacidadeBruta: item.capacidadeBruta,
-      capacidadeEfetiva: item.capacidadeEfetiva,
-      capacidadeDisponivel: item.capacidadeDisponivel,
-      comprometido: item.comprometido,
-      livre: item.livre,
       deficit: item.deficit,
+      distribuicoes: [...item.distribuicoes]
+        .sort((a, b) => a.recursoId.localeCompare(b.recursoId))
+        .map((distribuicao) => ({
+          recursoId: distribuicao.recursoId,
+          origem: distribuicao.origem,
+          ordemConsideracao: distribuicao.ordemConsideracao,
+          capacidadeBrutaPeriodo: distribuicao.capacidadeBrutaPeriodo,
+          produtividadeConsiderada: distribuicao.produtividadeConsiderada,
+          capacidadeEfetiva: distribuicao.capacidadeEfetiva,
+          comprometidoInicial: distribuicao.comprometidoInicial,
+          capacidadeDisponivelInicial: distribuicao.capacidadeDisponivelInicial,
+          capacidadeDisponivelAntes: distribuicao.capacidadeDisponivelAntes,
+          horasPadraoAlocadas: distribuicao.horasPadraoAlocadas,
+          horasMaquinaEstimadas: distribuicao.horasMaquinaEstimadas,
+          capacidadeDisponivelDepois: distribuicao.capacidadeDisponivelDepois,
+        })),
     }));
 
   const canonico = JSON.stringify({
@@ -237,6 +253,17 @@ export async function orquestrarAprovacaoAutoritativa(
       chaveIdempotencia: params.chaveIdempotencia,
       hashSolicitacao,
     });
+
+    if (resultadoPersistencia.naoSuportadoNestaFase) {
+      // Fase 2: não é erro técnico nem divergência - o resultado é
+      // válido e foi revalidado, só não é representável pela RPC ainda
+      // em uso. Mensagem específica, não a genérica.
+      return {
+        ok: false,
+        motivo: "distribuicao_nao_suportada_nesta_fase",
+        mensagem: resultadoPersistencia.naoSuportadoNestaFase.mensagem,
+      };
+    }
 
     if (resultadoPersistencia.erro) {
       // Correção 4: o detalhe técnico (ex.: error.message da RPC) vai

@@ -19,6 +19,15 @@
 // inseridas (que por sua vez segue a ordem de operacoesOrdenadas,
 // responsabilidade de quem monta as entradas). Nenhum Map/Set, nenhuma
 // dependência de ordem de retorno de rede/banco.
+//
+// Entrega 2 (distribuição parcial): uma operação pode agora ser
+// atendida por MAIS DE UM recurso - o original primeiro, depois os
+// compatíveis na ordem cadastrada, cada um consumido por completo antes
+// de passar ao próximo (regra de negócio fechada). O que sobrar vira
+// déficit da operação, não mais um estado binário "coube tudo/não coube
+// nada".
+import { CandidatoDuplicadoError } from "./errors";
+import { tratarComoZero } from "./constantesNumericas";
 
 export type MotivoConsideracao = "ORIGINAL" | "COMPATIBILIDADE";
 
@@ -33,29 +42,93 @@ export interface OperacaoRoteiro {
 
 export interface CandidatoRecurso {
   recursoId: string;
-  /** Ordem de prioridade cadastrada em recurso_produtivo_compatibilidades - menor primeiro. */
+  /** Ordem de prioridade cadastrada em recurso_produtivo_compatibilidades - menor primeiro. Sempre > 0 (recurso_produtivo_compatibilidades_prioridade_check). */
   prioridade: number;
+}
+
+/** Candidato já normalizado - origem explícita, sem depender de nenhum valor numérico sentinela para saber quem é o original. */
+export interface CandidatoNormalizado {
+  recursoId: string;
+  origem: MotivoConsideracao;
+  /** null para ORIGINAL; prioridade cadastrada (sempre > 0) para COMPATIBILIDADE. Só para persistência/auditoria - não participa da decisão de ordem (a ordem já vem pronta no array). */
+  prioridade: number | null;
 }
 
 export interface EntradasMotor {
   /** Operações do roteiro, JÁ NA ORDEM em que devem ser processadas (decisão: sequência do roteiro de fabricação). */
   operacoesOrdenadas: OperacaoRoteiro[];
-  /** Capacidade Disponível Inicial por recurso, em HORAS - resultado pronto de Calendário → Dias Produtivos → Capacidade Diária → Produtividade → Horas Adicionais. */
+  /** Capacidade Disponível Inicial por recurso, em HORAS-PADRÃO-equivalentes - JÁ LÍQUIDA de comprometido (ver prepararEntradasMotor.ts, único lugar onde esse desconto acontece). O núcleo nunca subtrai comprometido de novo - por isso não recebe mais esse campo separado. */
   capacidadeDisponivelInicial: Record<string, number>;
-  /** Comprometido por outros projetos aprovados, por recurso, em HORAS (calcular_comprometido_v1). */
-  comprometido: Record<string, number>;
   /** Compatibilidades diretas do recurso original, já ordenadas por prioridade ascendente. */
   compatibilidades: Record<string, CandidatoRecurso[]>;
+}
+
+/** Uma fatia da operação atendida por um único recurso. 0..N por operação - vazio significa déficit total. */
+export interface DistribuicaoRecurso {
+  recursoId: string;
+  origem: MotivoConsideracao;
+  /** 0 para ORIGINAL; prioridade cadastrada (sempre > 0) para COMPATIBILIDADE. Só para persistência/auditoria - não participou da decisão de ordem (já veio de normalizarCandidatos). */
+  ordemConsideracao: number;
+  /** Horas-padrão desta fatia especificamente - nunca a operação inteira. */
+  horasPadraoAlocadas: number;
+  /** Saldo do recurso ANTES desta alocação, em horas-padrão-equivalentes (capacidade efetiva remanescente). */
+  capacidadeDisponivelAntes: number;
+  /** = capacidadeDisponivelAntes - horasPadraoAlocadas, nunca negativo. */
+  capacidadeDisponivelDepois: number;
 }
 
 export interface ItemResultadoMotor {
   bomOperacaoId: string;
   recursoOriginalId: string;
-  /** null quando nenhum recurso (original nem compatível) comportou a operação inteira. */
-  recursoConsideradoId: string | null;
-  motivoConsideracao: MotivoConsideracao | null;
-  deficit: boolean;
   tempoNecessarioHoras: number;
+  /** 0..N alocações, na ordem em que o núcleo as decidiu (original primeiro, depois compatíveis por prioridade). */
+  distribuicoes: DistribuicaoRecurso[];
+  /** tempoNecessarioHoras - soma(distribuicoes.horasPadraoAlocadas). Sempre >= 0. */
+  deficit: number;
+}
+
+/**
+ * Constrói a lista de candidatos já na ordem final de avaliação - o
+ * original SEMPRE primeiro, por construção explícita (nunca por um
+ * valor numérico "vencer" uma comparação, tipo um sentinela -1), depois
+ * os compatíveis ordenados pela prioridade cadastrada.
+ *
+ * Falha explicitamente (CandidatoDuplicadoError) se o recurso original
+ * aparecer também entre os compatíveis, ou se um compatível se repetir -
+ * o schema hoje já impede isso estruturalmente (CHECK origem<>destino,
+ * unique parcial em (origem,destino) entre ativos), mas o núcleo não
+ * confia só nisso: duplicidade aqui é corrupção de cadastro ou de
+ * montagem de entradas, não um caso de negócio a ser tolerado em
+ * silêncio.
+ */
+export function normalizarCandidatos(
+  recursoOriginalId: string,
+  compatibilidades: CandidatoRecurso[],
+): CandidatoNormalizado[] {
+  const vistos = new Set<string>([recursoOriginalId]);
+
+  for (const candidato of compatibilidades) {
+    if (vistos.has(candidato.recursoId)) {
+      throw new CandidatoDuplicadoError(recursoOriginalId, candidato.recursoId);
+    }
+    vistos.add(candidato.recursoId);
+  }
+
+  // Reordena explicitamente aqui - mesma defesa que já existia no
+  // núcleo antes da Entrega 2: não confia que quem montou
+  // `compatibilidades` já entregou o array na ordem certa.
+  const compatibilidadesOrdenadas = [...compatibilidades].sort(
+    (a, b) => a.prioridade - b.prioridade,
+  );
+
+  return [
+    { recursoId: recursoOriginalId, origem: "ORIGINAL" as const, prioridade: null },
+    ...compatibilidadesOrdenadas.map((candidato) => ({
+      recursoId: candidato.recursoId,
+      origem: "COMPATIBILIDADE" as const,
+      prioridade: candidato.prioridade,
+    })),
+  ];
 }
 
 export function executarMotorAvaliacaoSequencial(
@@ -65,9 +138,13 @@ export function executarMotorAvaliacaoSequencial(
   const capacidadeRemanescente: Record<string, number> = {};
 
   for (const recursoId of Object.keys(entradas.capacidadeDisponivelInicial)) {
-    capacidadeRemanescente[recursoId] =
-      entradas.capacidadeDisponivelInicial[recursoId] -
-      (entradas.comprometido[recursoId] ?? 0);
+    const bruto = entradas.capacidadeDisponivelInicial[recursoId];
+    // Nunca negativo, e resíduo de ponto flutuante próximo de zero vira
+    // zero - sem isso, um saldo como -0.00000000000001 poderia deixar
+    // um recurso indevidamente "disponível" ou gerar déficit artificial
+    // em outra ponta. Já líquido de comprometido - ver comentário do
+    // campo em EntradasMotor.
+    capacidadeRemanescente[recursoId] = tratarComoZero(bruto) ? 0 : Math.max(0, bruto);
   }
 
   const resultado: ItemResultadoMotor[] = [];
@@ -76,53 +153,57 @@ export function executarMotorAvaliacaoSequencial(
     const tempoNecessarioHoras =
       (operacao.tempoEstimadoMinutos / 60) * operacao.quantidade;
 
-    // Operação indivisível: avaliada inteira em um único recurso - o
-    // Motor nunca divide a mesma operação entre múltiplos recursos.
-    //
-    // Ordena por prioridade explicitamente aqui, em vez de confiar que
-    // quem montou `entradas.compatibilidades` já entregou o array na
-    // ordem certa - reprodutibilidade não pode depender de uma
-    // convenção implícita de outra camada. Recurso original usa -1
-    // como chave de ordenação (sempre primeira opção, decisão 5a),
-    // menor que qualquer prioridade cadastrada (que é sempre > 0).
-    const candidatos = [
-      { recursoId: operacao.recursoOriginalId, prioridade: -1 },
-      ...(entradas.compatibilidades[operacao.recursoOriginalId] ?? []),
-    ].sort((a, b) => a.prioridade - b.prioridade);
+    const candidatos = normalizarCandidatos(
+      operacao.recursoOriginalId,
+      entradas.compatibilidades[operacao.recursoOriginalId] ?? [],
+    );
 
-    let recursoConsideradoId: string | null = null;
+    const distribuicoes: DistribuicaoRecurso[] = [];
+    let restante = tempoNecessarioHoras;
 
     for (const candidato of candidatos) {
+      if (tratarComoZero(restante)) {
+        restante = 0;
+        break;
+      }
+
       if (capacidadeRemanescente[candidato.recursoId] === undefined) {
         capacidadeRemanescente[candidato.recursoId] = 0;
       }
 
-      // Primeiro candidato que comporta a operação INTEIRA vence - não
-      // o mais livre, não o de maior prioridade "melhor", apenas o
-      // primeiro na ordem (original, depois compatíveis por prioridade).
-      if (capacidadeRemanescente[candidato.recursoId] >= tempoNecessarioHoras) {
-        recursoConsideradoId = candidato.recursoId;
-        capacidadeRemanescente[candidato.recursoId] -= tempoNecessarioHoras;
-        break;
-      }
+      const disponivelBruto = capacidadeRemanescente[candidato.recursoId];
+      const disponivel = tratarComoZero(disponivelBruto) ? 0 : disponivelBruto;
+      if (disponivel <= 0) continue;
+
+      // Consome o candidato atual até o limite do que ele tem - nunca
+      // passa ao próximo antes de esgotar (ou zerar) o candidato atual.
+      const alocado = Math.min(disponivel, restante);
+      const saldoDepois = Math.max(0, disponivel - alocado);
+
+      distribuicoes.push({
+        recursoId: candidato.recursoId,
+        origem: candidato.origem,
+        ordemConsideracao: candidato.origem === "ORIGINAL" ? 0 : (candidato.prioridade as number),
+        horasPadraoAlocadas: alocado,
+        capacidadeDisponivelAntes: disponivel,
+        capacidadeDisponivelDepois: saldoDepois,
+      });
+
+      capacidadeRemanescente[candidato.recursoId] = saldoDepois;
+      restante = tratarComoZero(restante - alocado) ? 0 : restante - alocado;
     }
 
     resultado.push({
       bomOperacaoId: operacao.bomOperacaoId,
       recursoOriginalId: operacao.recursoOriginalId,
-      recursoConsideradoId,
-      motivoConsideracao:
-        recursoConsideradoId === null
-          ? null
-          : recursoConsideradoId === operacao.recursoOriginalId
-            ? "ORIGINAL"
-            : "COMPATIBILIDADE",
-      deficit: recursoConsideradoId === null,
       tempoNecessarioHoras,
+      distribuicoes,
+      deficit: Math.max(0, restante),
     });
 
-    // Sem alternativa viável: registra déficit para ESTA operação e
-    // continua para a próxima - o Motor não para no primeiro déficit.
+    // Sem alternativa viável (ou capacidade insuficiente para cobrir o
+    // total): registra déficit para ESTA operação e continua para a
+    // próxima - o Motor não para no primeiro déficit.
   }
 
   return resultado;

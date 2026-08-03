@@ -3,23 +3,38 @@
 // operação, nome dos recursos), consultando bom_operacoes e
 // recursos_produtivos pelos IDs envolvidos. Não recalcula nada do
 // Motor, só enriquece para exibição - reutilizável por qualquer tela
-// futura que precise do mesmo resultado legível (ex: V1.1, antes de
-// aprovar).
+// futura que precise do mesmo resultado legível.
 // Sem "use client" - recebe o client Supabase por parâmetro, por
-// consistência com o resto da cadeia (não é chamado pela Server
-// Action hoje, só pelo preview no navegador).
+// consistência com o resto da cadeia.
+//
+// Entrega 2 (distribuição parcial): cada operação vira hierárquica -
+// uma linha por distribuição (recurso participante), não mais um único
+// "recurso considerado" por operação.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ResultadoSimulacao } from "./executarSimulacao";
+
+export interface DistribuicaoParaExibicao {
+  recursoNome: string;
+  origem: "ORIGINAL" | "COMPATIBILIDADE";
+  capacidadeBrutaPeriodo: number;
+  produtividadeConsiderada: number;
+  capacidadeEfetiva: number;
+  comprometidoInicial: number;
+  capacidadeDisponivelInicial: number;
+  capacidadeDisponivelAntes: number;
+  horasPadraoAlocadas: number;
+  horasMaquinaEstimadas: number;
+  capacidadeDisponivelDepois: number;
+}
 
 export interface OperacaoParaExibicao {
   bomOperacaoId: string;
   operacaoOrdem: number;
   operacaoDescricao: string;
   recursoOriginalNome: string;
-  /** NULL exatamente quando a operação está em déficit total - ver ItemSimulacaoOperacao.recursoConsideradoId. */
-  recursoConsideradoNome: string | null;
-  motivoConsideracao: "ORIGINAL" | "COMPATIBILIDADE" | null;
+  /** 0..N - vazio quando a operação está em déficit total. */
+  distribuicoes: DistribuicaoParaExibicao[];
   necessario: number;
   deficit: number;
 }
@@ -44,7 +59,9 @@ function formatarRecurso(recurso: RecursoRow): string {
  * número de ordem - ordenar globalmente por esse número misturaria
  * itens distintos de forma incorreta. A consulta a bom_operacoes abaixo
  * usa ORDER BY explícito mesmo assim, como defesa em profundidade
- * contra depender da ordem natural de retorno do banco.
+ * contra depender da ordem natural de retorno do banco. A ordem das
+ * distribuições DENTRO de cada operação também é preservada como o
+ * Motor decidiu (original primeiro, depois compatíveis por prioridade).
  */
 export async function prepararResultadoParaExibicao(
   client: SupabaseClient,
@@ -60,11 +77,10 @@ export async function prepararResultadoParaExibicao(
 
   const recursoIds = Array.from(
     new Set(
-      resultado.itensPorOperacao.flatMap((item) =>
-        [item.recursoOriginalId, item.recursoConsideradoId].filter(
-          (id): id is string => id !== null,
-        ),
-      ),
+      resultado.itensPorOperacao.flatMap((item) => [
+        item.recursoOriginalId,
+        ...item.distribuicoes.map((distribuicao) => distribuicao.recursoId),
+      ]),
     ),
   );
 
@@ -98,26 +114,34 @@ export async function prepararResultadoParaExibicao(
     (recursosData ?? []).map((recurso) => [recurso.id, recurso as RecursoRow]),
   );
 
+  function nomeDoRecurso(recursoId: string): string {
+    const recurso = recursoPorId.get(recursoId);
+    return recurso ? formatarRecurso(recurso) : recursoId;
+  }
+
   return resultado.itensPorOperacao.map((item) => {
     const operacao = operacaoPorId.get(item.bomOperacaoId);
-    const recursoOriginal = recursoPorId.get(item.recursoOriginalId);
-    const recursoConsiderado = item.recursoConsideradoId
-      ? recursoPorId.get(item.recursoConsideradoId)
-      : null;
 
     return {
       bomOperacaoId: item.bomOperacaoId,
       operacaoOrdem: operacao?.ordem ?? 0,
       operacaoDescricao: operacao?.descricao ?? `Operação ${item.bomOperacaoId}`,
-      recursoOriginalNome: recursoOriginal
-        ? formatarRecurso(recursoOriginal)
-        : item.recursoOriginalId,
-      recursoConsideradoNome: recursoConsiderado
-        ? formatarRecurso(recursoConsiderado)
-        : null,
-      motivoConsideracao: item.motivoConsideracao,
+      recursoOriginalNome: nomeDoRecurso(item.recursoOriginalId),
       necessario: item.necessario,
       deficit: item.deficit,
+      distribuicoes: item.distribuicoes.map((distribuicao) => ({
+        recursoNome: nomeDoRecurso(distribuicao.recursoId),
+        origem: distribuicao.origem,
+        capacidadeBrutaPeriodo: distribuicao.capacidadeBrutaPeriodo,
+        produtividadeConsiderada: distribuicao.produtividadeConsiderada,
+        capacidadeEfetiva: distribuicao.capacidadeEfetiva,
+        comprometidoInicial: distribuicao.comprometidoInicial,
+        capacidadeDisponivelInicial: distribuicao.capacidadeDisponivelInicial,
+        capacidadeDisponivelAntes: distribuicao.capacidadeDisponivelAntes,
+        horasPadraoAlocadas: distribuicao.horasPadraoAlocadas,
+        horasMaquinaEstimadas: distribuicao.horasMaquinaEstimadas,
+        capacidadeDisponivelDepois: distribuicao.capacidadeDisponivelDepois,
+      })),
     };
   });
 }

@@ -23,15 +23,24 @@ function criarItem(overrides: Partial<ItemSimulacaoOperacao> = {}): ItemSimulaca
   return {
     bomOperacaoId: "op-1",
     recursoOriginalId: "recurso-1",
-    recursoConsideradoId: "recurso-1",
-    motivoConsideracao: "ORIGINAL",
     necessario: 10,
-    capacidadeBruta: 100,
-    capacidadeEfetiva: 90,
-    capacidadeDisponivel: 90,
-    comprometido: 0,
-    livre: 90,
     deficit: 0,
+    distribuicoes: [
+      {
+        recursoId: "recurso-1",
+        origem: "ORIGINAL",
+        ordemConsideracao: 0,
+        capacidadeBrutaPeriodo: 100,
+        produtividadeConsiderada: 0.9,
+        capacidadeEfetiva: 90,
+        comprometidoInicial: 0,
+        capacidadeDisponivelInicial: 90,
+        capacidadeDisponivelAntes: 90,
+        horasPadraoAlocadas: 10,
+        horasMaquinaEstimadas: 10 / 0.9,
+        capacidadeDisponivelDepois: 80,
+      },
+    ],
     ...overrides,
   };
 }
