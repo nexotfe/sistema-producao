@@ -79,21 +79,44 @@ async function coletarOperacoesDoProjeto(
   return operacoes;
 }
 
-async function capacidadeDiariaDoRecurso(
+// Correção de N+1 (medida em produção: ~6s de ~7s do preview completo,
+// dominados por este loop, antes desta correção): uma única consulta
+// em lote (.in()) para todos os recursos envolvidos, em vez de uma
+// consulta .single() por recurso. Mesma checagem de negócio de antes -
+// capacidade ausente ou nula ainda lança RecursoSemCapacidadeCadastradaError
+// para o PRIMEIRO recurso (na ordem de `recursoIds`, já determinística)
+// que falhar, idêntico ao comportamento do loop sequencial anterior.
+async function capacidadesDiariasDosRecursos(
   client: SupabaseClient,
-  recursoId: string,
-): Promise<number> {
-  const { data, error } = await client
-    .from("recursos_produtivos")
-    .select("capacidade_horas_dia")
-    .eq("id", recursoId)
-    .single();
-
-  if (error || !data || data.capacidade_horas_dia === null) {
-    throw new RecursoSemCapacidadeCadastradaError(recursoId);
+  recursoIds: string[],
+): Promise<Record<string, number>> {
+  if (recursoIds.length === 0) {
+    return {};
   }
 
-  return Number(data.capacidade_horas_dia);
+  const { data, error } = await client
+    .from("recursos_produtivos")
+    .select("id,capacidade_horas_dia")
+    .in("id", recursoIds);
+
+  if (error) {
+    throw new Error(`Erro ao consultar capacidade_horas_dia em lote: ${error.message}`);
+  }
+
+  const capacidadePorId = new Map<string, number | null>(
+    (data ?? []).map((linha) => [linha.id as string, linha.capacidade_horas_dia as number | null]),
+  );
+
+  const resultado: Record<string, number> = {};
+  for (const recursoId of recursoIds) {
+    const capacidade = capacidadePorId.get(recursoId);
+    if (capacidade === undefined || capacidade === null) {
+      throw new RecursoSemCapacidadeCadastradaError(recursoId);
+    }
+    resultado[recursoId] = Number(capacidade);
+  }
+
+  return resultado;
 }
 
 async function produtividadeEfetivaDoRecurso(
@@ -141,6 +164,53 @@ async function comprometidoDoRecurso(
   }
 
   return Number(data ?? 0);
+}
+
+// Correção de N+1: calcular_produtividade_efetiva e calcular_comprometido_v2
+// recebem exatamente 1 recurso por chamada (sem variante em lote no
+// banco) - a lógica de cada chamada individual (produtividadeEfetivaDoRecurso/
+// comprometidoDoRecurso) não muda nem é substituída; só deixam de ser
+// aguardadas sequencialmente e passam a ser disparadas em paralelo.
+// Promise.allSettled (não Promise.all) preserva a mesma semântica de
+// erro do loop sequencial anterior: se mais de um recurso falhar, o
+// erro relatado é sempre o do PRIMEIRO da lista `recursoIds` (ordem já
+// determinística) - nunca o que "chegou primeiro" da rede, que seria
+// não determinístico com execução paralela via Promise.all puro.
+async function produtividadesEComprometidosDosRecursos(
+  client: SupabaseClient,
+  recursoIds: string[],
+  projetoId: string,
+): Promise<{
+  produtividadePorRecurso: Record<string, number>;
+  comprometidoInicialPorRecurso: Record<string, number>;
+}> {
+  const resultados = await Promise.allSettled(
+    recursoIds.map(async (recursoId) => {
+      const [produtividade, comprometido] = await Promise.all([
+        produtividadeEfetivaDoRecurso(client, recursoId),
+        comprometidoDoRecurso(client, recursoId, projetoId),
+      ]);
+      return { recursoId, produtividade, comprometido };
+    }),
+  );
+
+  for (const resultado of resultados) {
+    if (resultado.status === "rejected") {
+      throw resultado.reason;
+    }
+  }
+
+  const produtividadePorRecurso: Record<string, number> = {};
+  const comprometidoInicialPorRecurso: Record<string, number> = {};
+
+  for (const resultado of resultados) {
+    if (resultado.status === "fulfilled") {
+      produtividadePorRecurso[resultado.value.recursoId] = resultado.value.produtividade;
+      comprometidoInicialPorRecurso[resultado.value.recursoId] = resultado.value.comprometido;
+    }
+  }
+
+  return { produtividadePorRecurso, comprometidoInicialPorRecurso };
 }
 
 type CompatibilidadeRow = {
@@ -204,13 +274,30 @@ export interface EntradasMotorPreparadas {
   capacidadePorRecurso: Record<string, CapacidadeRecurso>;
 }
 
-export async function prepararEntradasMotor(
+// Entrega 3 (Calculador Reverso, Fase 1): tudo que NÃO depende de uma
+// janela específica (roteiro, compatibilidades, e a base de capacidade
+// por recurso ANTES de multiplicar por dias produtivos) - calculado UMA
+// VEZ. O calculador reverso reavalia dezenas de janelas candidatas
+// (busca binária); refazer estas consultas a cada candidata seria um
+// N+1 novo, multiplicado pela busca. calcularCapacidadeParaJanela,
+// abaixo, é a parte pura (sem I/O) que muda por janela - o preview
+// normal (prepararEntradasMotor) e o calculador reverso
+// (estimarInicioNecessario.ts) chamam as MESMAS duas funções, nunca
+// reimplementam a fórmula em paralelo.
+export interface BaseFixaMotor {
+  operacoesOrdenadas: OperacaoRoteiro[];
+  recursoIds: string[];
+  compatibilidades: Record<string, CandidatoRecurso[]>;
+  capacidadeDiariaPorRecurso: Record<string, number>;
+  produtividadePorRecurso: Record<string, number>;
+  comprometidoInicialPorRecurso: Record<string, number>;
+}
+
+export async function prepararBaseFixaMotor(
   client: SupabaseClient,
   empresaId: string,
   projetoId: string,
-  janelaInicio: string,
-  janelaFim: string,
-): Promise<EntradasMotorPreparadas> {
+): Promise<BaseFixaMotor> {
   const operacoesOrdenadas = await coletarOperacoesDoProjeto(client, projetoId);
 
   const recursosOriginais = Array.from(
@@ -226,19 +313,43 @@ export async function prepararEntradasMotor(
   );
   const recursoIds = Array.from(new Set([...recursosOriginais, ...recursosDestino])).sort();
 
-  const { diasProdutivos } = await contarDiasProdutivosNaJanela(
-    client,
-    empresaId,
-    janelaInicio,
-    janelaFim,
-  );
+  // As duas fontes abaixo são independentes entre si (uma consulta em
+  // lote; a outra, chamadas de RPC em paralelo) - disparadas juntas.
+  const [capacidadeDiariaPorRecurso, { produtividadePorRecurso, comprometidoInicialPorRecurso }] =
+    await Promise.all([
+      capacidadesDiariasDosRecursos(client, recursoIds),
+      produtividadesEComprometidosDosRecursos(client, recursoIds, projetoId),
+    ]);
 
+  return {
+    operacoesOrdenadas,
+    recursoIds,
+    compatibilidades,
+    capacidadeDiariaPorRecurso,
+    produtividadePorRecurso,
+    comprometidoInicialPorRecurso,
+  };
+}
+
+/**
+ * Pura, sem I/O - dada a base fixa (já carregada) e uma contagem de dias
+ * produtivos para UMA janela candidata, calcula a capacidade disponível
+ * inicial por recurso. Único lugar onde comprometido é subtraído da
+ * capacidade - nem o preview normal, nem o calculador reverso (que chama
+ * esta função uma vez por janela candidata da busca binária) subtraem
+ * de novo em nenhum outro ponto.
+ */
+export function calcularCapacidadeParaJanela(
+  baseFixa: BaseFixaMotor,
+  diasProdutivos: number,
+): { capacidadeDisponivelInicial: Record<string, number>; capacidadePorRecurso: Record<string, CapacidadeRecurso> } {
   const capacidadeDisponivelInicial: Record<string, number> = {};
   const capacidadePorRecurso: Record<string, CapacidadeRecurso> = {};
 
-  for (const recursoId of recursoIds) {
-    const capacidadeDiaria = await capacidadeDiariaDoRecurso(client, recursoId);
-    const produtividade = await produtividadeEfetivaDoRecurso(client, recursoId);
+  for (const recursoId of baseFixa.recursoIds) {
+    const capacidadeDiaria = baseFixa.capacidadeDiariaPorRecurso[recursoId];
+    const produtividade = baseFixa.produtividadePorRecurso[recursoId];
+    const comprometidoInicial = baseFixa.comprometidoInicialPorRecurso[recursoId];
 
     // Capacidade Bruta = Dias Produtivos × Capacidade Diária
     // Capacidade Efetiva = Capacidade Bruta × Produtividade
@@ -248,12 +359,6 @@ export async function prepararEntradasMotor(
     //   aqui ela ainda NÃO tem o desconto de comprometido).
     const capacidadeBruta = diasProdutivos * capacidadeDiaria;
     const capacidadeEfetiva = capacidadeBruta * produtividade;
-
-    const comprometidoInicial = await comprometidoDoRecurso(client, recursoId, projetoId);
-
-    // Único lugar de todo o módulo onde comprometido é subtraído da
-    // capacidade - o núcleo (motorAvaliacaoSequencial.ts) recebe este
-    // valor já líquido e nunca subtrai comprometido de novo.
     const capacidadeDisponivelInicialRecurso = Math.max(0, capacidadeEfetiva - comprometidoInicial);
 
     capacidadePorRecurso[recursoId] = {
@@ -266,14 +371,44 @@ export async function prepararEntradasMotor(
     capacidadeDisponivelInicial[recursoId] = capacidadeDisponivelInicialRecurso;
   }
 
+  return { capacidadeDisponivelInicial, capacidadePorRecurso };
+}
+
+/**
+ * Wrapper fino: preview normal (executarSimulacao.ts) continua chamando
+ * só esta função, comportamento e contrato inalterados - por dentro,
+ * agora delega para prepararBaseFixaMotor + calcularCapacidadeParaJanela,
+ * compostas com contarDiasProdutivosNaJanela.
+ */
+export async function prepararEntradasMotor(
+  client: SupabaseClient,
+  empresaId: string,
+  projetoId: string,
+  janelaInicio: string,
+  janelaFim: string,
+): Promise<EntradasMotorPreparadas> {
+  const baseFixa = await prepararBaseFixaMotor(client, empresaId, projetoId);
+
+  const { diasProdutivos } = await contarDiasProdutivosNaJanela(
+    client,
+    empresaId,
+    janelaInicio,
+    janelaFim,
+  );
+
+  const { capacidadeDisponivelInicial, capacidadePorRecurso } = calcularCapacidadeParaJanela(
+    baseFixa,
+    diasProdutivos,
+  );
+
   return {
     entradas: {
-      operacoesOrdenadas,
+      operacoesOrdenadas: baseFixa.operacoesOrdenadas,
       // Já líquido (ver capacidadePorRecurso[recursoId].capacidadeDisponivelInicial)
       // - o núcleo não recebe mais `comprometido` separado, exatamente
       // para eliminar o risco de subtrair duas vezes.
       capacidadeDisponivelInicial,
-      compatibilidades,
+      compatibilidades: baseFixa.compatibilidades,
     },
     capacidadePorRecurso,
   };

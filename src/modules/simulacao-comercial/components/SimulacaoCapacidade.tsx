@@ -31,8 +31,15 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   simularCapacidadeProjeto,
+  simularCapacidadeProjetoComBaseFixa,
   type ResultadoSimulacao,
 } from "@/modules/simulacao-comercial/lib/executarSimulacao";
+import { prepararBaseFixaMotor } from "@/modules/simulacao-comercial/lib/prepararEntradasMotor";
+import {
+  prepararContextoCalculadorReverso,
+  calcularEstimativaInicioNecessarioComContexto,
+} from "@/modules/simulacao-comercial/lib/prepararCalculadorReverso";
+import type { ResultadoEstimativaInicioNecessario } from "@/modules/simulacao-comercial/lib/estimarInicioNecessario";
 import { aprovarSimulacaoComercialAction } from "@/modules/simulacao-comercial/actions/aprovarSimulacaoComercialAction";
 import {
   prepararResultadoParaExibicao,
@@ -218,6 +225,10 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   const [statusAprovacao, setStatusAprovacao] = useState<StatusAprovacao | null>(
     null,
   );
+  // Entrega 3 (Calculador Reverso) - Fase 3: calculado junto do preview
+  // normal (mesmo clique em "Simular"), nunca persistido nesta fase.
+  const [resultadoEstimativa, setResultadoEstimativa] =
+    useState<ResultadoEstimativaInicioNecessario | null>(null);
   // Data/hora do clique em "Simular" - exibida no resumo do estado
   // "pronta" (mockup), para o usuario saber quando o resultado que
   // esta prestes a aprovar foi calculado.
@@ -416,6 +427,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     ) {
       setResultado(null);
       setResultadoBruto(null);
+      setResultadoEstimativa(null);
       setStatusAprovacao(null);
       setSimuladoEm(null);
     }
@@ -431,6 +443,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     setErro(null);
     setResultado(null);
     setResultadoBruto(null);
+    setResultadoEstimativa(null);
     setStatusAprovacao(null);
     setSimuladoEm(null);
 
@@ -451,13 +464,42 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         throw new Error("Empresa do usuário não encontrada.");
       }
 
-      const resultadoSimulacao = await simularCapacidadeProjeto(
+      // Entrega 3 - Fase 3: roteiro/capacidade/produtividade/comprometido
+      // (baseFixa) e o contexto de calendário são carregados UMA VEZ cada
+      // e reaproveitados tanto pelo preview normal quanto pelo calculador
+      // reverso, na mesma interação de "Simular" - nenhum dos dois
+      // consulta o roteiro/recursos/comprometido de novo, e o preview
+      // reaproveita o contexto de calendário mais amplo do calculador
+      // reverso (que sempre cobre a janela do preview) em vez de carregar
+      // o seu próprio.
+      const baseFixa = await prepararBaseFixaMotor(supabase, usuario.empresa_id, projetoId);
+
+      const { P, contexto, diasCivisExaminados } = await prepararContextoCalculadorReverso(
         supabase,
         usuario.empresa_id,
-        projetoId,
-        janelaComercial.janelaInicio,
-        janelaComercial.janelaFim,
+        janelaComercial.prazoInterno,
       );
+
+      const [resultadoSimulacao, resultadoEstimativaCalculada] = await Promise.all([
+        simularCapacidadeProjetoComBaseFixa(
+          supabase,
+          usuario.empresa_id,
+          baseFixa,
+          janelaComercial.janelaInicio,
+          janelaComercial.janelaFim,
+          { contexto },
+        ),
+        calcularEstimativaInicioNecessarioComContexto(
+          supabase,
+          usuario.empresa_id,
+          baseFixa,
+          P,
+          contexto,
+          janelaComercial.prazoInterno,
+          janelaComercial.dataDisponibilidadeProducao,
+          diasCivisExaminados,
+        ),
+      ]);
 
       const resultadoExibicao = await prepararResultadoParaExibicao(
         supabase,
@@ -465,6 +507,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       );
       setResultadoBruto(resultadoSimulacao);
       setResultado(resultadoExibicao);
+      setResultadoEstimativa(resultadoEstimativaCalculada);
       setSimuladoEm(new Date());
       premissasDoResultadoRef.current = {
         dataNecessidade,
@@ -551,6 +594,25 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   // decide o proximo estado - nao aprova nada aqui.
   async function iniciarAprovacao() {
     if (!resultadoBruto || !janelaComercial?.valida) {
+      return;
+    }
+
+    // Entrega 3 - Fase 3: dados_insuficientes e horizonte_tecnico_excedido
+    // são estados técnicos, não cenários comerciais aprováveis - bloqueia
+    // ANTES de qualquer revalidação, sem oferecer nenhum caminho de
+    // confirmação (nem o modal de risco, reservado a janela_insuficiente
+    // e ao déficit comercial já existente).
+    if (
+      resultadoEstimativa?.estado === "dados_insuficientes" ||
+      resultadoEstimativa?.estado === "horizonte_tecnico_excedido"
+    ) {
+      setStatusAprovacao({
+        tipo: "erro",
+        mensagem:
+          resultadoEstimativa.estado === "dados_insuficientes"
+            ? "Não é possível aprovar: dados insuficientes para calcular a Estimativa de Início Necessário. Corrija o cadastro (capacidade dos recursos envolvidos) antes de prosseguir."
+            : "Não é possível aprovar: a Estimativa de Início Necessário não pôde ser determinada dentro do horizonte técnico de busca.",
+      });
       return;
     }
 
@@ -739,6 +801,26 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   const operacaoDescricaoPorId = new Map(
     (resultado ?? []).map((op) => [op.bomOperacaoId, op.operacaoDescricao]),
   );
+
+  // Entrega 3 - Fase 3 (correção da auditoria): resultadoEstimativa só
+  // tem UUIDs crus de recurso (núcleo puro, sem I/O - ver
+  // estimarInicioNecessario.ts). recursoOriginalId é uma propriedade do
+  // ROTEIRO (fixa por bomOperacaoId, igual para o preview normal e para
+  // o calculador reverso, os dois lidos do mesmo baseFixa.operacoesOrdenadas)
+  // - por isso dá para resolver o nome legível reaproveitando `resultado`
+  // (já carregado pelo preview normal, com nome via prepararResultadoParaExibicao),
+  // sem nenhuma consulta nova. UUID cru só aparece como fallback
+  // defensivo (diagnóstico técnico), nunca como o valor principal.
+  const recursoOriginalNomePorOperacaoId = new Map(
+    (resultado ?? []).map((op) => [op.bomOperacaoId, op.recursoOriginalNome]),
+  );
+
+  // Entrega 3 - Fase 3: janela_insuficiente reaproveita o MESMO modal de
+  // risco já existente para déficit de capacidade - não cria um segundo
+  // fluxo de confirmação só porque o valor vem do calculador reverso.
+  const precisaConfirmarRisco =
+    statusAprovacao?.tipo === "pronta" &&
+    (statusAprovacao.temDeficit || resultadoEstimativa?.estado === "janela_insuficiente");
 
   function handleConfirmarAprovacao() {
     confirmarAprovacao({
@@ -1126,6 +1208,103 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         )
       ) : null}
 
+      {resultadoEstimativa ? (
+        <div className="mt-5 border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-bold">Estimativa de Início Necessário</h3>
+          <p className="mt-0.5 text-xs font-semibold text-slate-500">
+            Esta estimativa comercial não é uma programação de PCP. A
+            ausência de precedências entre operações e de distribuição
+            temporal dos compromissos existentes pode deslocar a data em
+            relação à necessidade operacional real.
+          </p>
+
+          {resultadoEstimativa.estado === "viavel" ||
+          resultadoEstimativa.estado === "viavel_no_limite" ? (
+            <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+              <p>
+                Estimativa de Início Necessário:{" "}
+                <strong>{formatarDataBr(resultadoEstimativa.dataEstimadaInicioNecessario)}</strong>
+              </p>
+              <p className="mt-1">
+                {resultadoEstimativa.estado === "viavel_no_limite"
+                  ? "Sem folga - a produção precisaria começar exatamente quando o material estiver disponível."
+                  : `Folga: ${resultadoEstimativa.folgaDiasProdutivos} dia(s) produtivo(s) antes do limite.`}
+              </p>
+            </div>
+          ) : null}
+
+          {resultadoEstimativa.estado === "janela_insuficiente" ? (
+            <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="font-semibold">Janela insuficiente</p>
+              <dl className="mt-2 grid gap-x-3 gap-y-1 sm:grid-cols-2">
+                <dt className="text-amber-700">Estimativa de Início Necessário</dt>
+                <dd>{formatarDataBr(resultadoEstimativa.dataEstimadaInicioNecessario)}</dd>
+                <dt className="text-amber-700">Data de Disponibilidade para Produção</dt>
+                <dd>{formatarDataBr(resultadoEstimativa.dataDisponibilidadeProducao)}</dd>
+                <dt className="text-amber-700">Folga (dias produtivos)</dt>
+                <dd>{resultadoEstimativa.folgaDiasProdutivos}</dd>
+                <dt className="text-amber-700">Déficit na janela realmente permitida</dt>
+                <dd>
+                  {resultadoEstimativa.avaliacaoNaJanelaRealmentePermitida.deficitTotal.toLocaleString(
+                    "pt-BR",
+                    { maximumFractionDigits: 2 },
+                  )}{" "}
+                  h
+                </dd>
+              </dl>
+
+              {resultadoEstimativa.avaliacaoNaJanelaRealmentePermitida.resultadoPorOperacao.some(
+                (op) => op.deficit > 0,
+              ) ? (
+                <div className="mt-2">
+                  <p className="font-semibold text-amber-800">Operações/recursos afetados</p>
+                  <ul className="mt-1 list-disc pl-5">
+                    {resultadoEstimativa.avaliacaoNaJanelaRealmentePermitida.resultadoPorOperacao
+                      .filter((op) => op.deficit > 0)
+                      .map((op) => (
+                        <li key={op.bomOperacaoId}>
+                          {operacaoDescricaoPorId.get(op.bomOperacaoId) ?? op.bomOperacaoId}: déficit{" "}
+                          {op.deficit.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h
+                          (recurso original {recursoOriginalNomePorOperacaoId.get(op.bomOperacaoId) ?? op.recursoOriginalId})
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {resultadoEstimativa.estado === "dados_insuficientes" ? (
+            <div className="mt-3 rounded-md border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700">
+              <p className="font-semibold">Dados insuficientes para estimar</p>
+              <p className="mt-1">
+                {resultadoEstimativa.causa === "capacidade_cadastral_zero"
+                  ? `Nenhum recurso elegível (original ou compatível) da operação ${
+                      operacaoDescricaoPorId.get(resultadoEstimativa.operacaoAfetada) ??
+                      resultadoEstimativa.operacaoAfetada
+                    } tem capacidade diária cadastrada.`
+                  : resultadoEstimativa.mensagem}
+              </p>
+            </div>
+          ) : null}
+
+          {resultadoEstimativa.estado === "horizonte_tecnico_excedido" ? (
+            <div className="mt-3 rounded-md border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700">
+              <p className="font-semibold">
+                Não foi possível determinar a estimativa dentro do horizonte técnico de busca
+              </p>
+              <p className="mt-1">
+                Déficit residual mesmo no limite técnico da busca:{" "}
+                {resultadoEstimativa.avaliacaoNoLimiteTecnico.deficitTotal.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 2,
+                })}{" "}
+                h.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {resultado ? (
         <div className="mt-5 border-t border-slate-200 pt-4">
           <h3 className="text-sm font-bold">Parâmetros da Aprovação</h3>
@@ -1222,7 +1401,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         </div>
       ) : null}
 
-      {statusAprovacao?.tipo === "pronta" && !statusAprovacao.temDeficit ? (
+      {statusAprovacao?.tipo === "pronta" && !precisaConfirmarRisco ? (
         <div className="mt-5 rounded-md border border-emerald-200 bg-emerald-50 p-4">
           {statusAprovacao.simulacaoVigente ? (
             <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -1275,7 +1454,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         </div>
       ) : null}
 
-      {statusAprovacao?.tipo === "pronta" && statusAprovacao.temDeficit ? (
+      {statusAprovacao?.tipo === "pronta" && precisaConfirmarRisco ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
           <div className="w-full max-w-lg rounded-lg border border-rose-200 bg-app-card shadow-xl">
             <div className="border-b border-rose-200 px-6 py-4">
@@ -1297,28 +1476,59 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                 </p>
               ) : null}
 
-              <p>
-                <strong>{operacoesEmDeficit.length}</strong> operação(ões) em
-                déficit, totalizando{" "}
-                <strong>
-                  {deficitTotalHoras.toLocaleString("pt-BR", {
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  h
-                </strong>{" "}
-                de capacidade faltante.
-              </p>
-
-              <div>
-                <p className="font-semibold text-slate-800">
-                  Recurso restritivo:
+              {statusAprovacao.temDeficit ? (
+                <p>
+                  <strong>{operacoesEmDeficit.length}</strong> operação(ões) em
+                  déficit, totalizando{" "}
+                  <strong>
+                    {deficitTotalHoras.toLocaleString("pt-BR", {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    h
+                  </strong>{" "}
+                  de capacidade faltante.
                 </p>
-                <ul className="mt-1 list-disc pl-5">
-                  {recursosIndisponiveis.map((nome) => (
-                    <li key={nome}>{nome}</li>
-                  ))}
-                </ul>
-              </div>
+              ) : null}
+
+              {statusAprovacao.temDeficit ? (
+                <div>
+                  <p className="font-semibold text-slate-800">
+                    Recurso restritivo:
+                  </p>
+                  <ul className="mt-1 list-disc pl-5">
+                    {recursosIndisponiveis.map((nome) => (
+                      <li key={nome}>{nome}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {resultadoEstimativa?.estado === "janela_insuficiente" ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                  <p className="font-semibold text-amber-900">
+                    Estimativa de Início Necessário indica janela insuficiente
+                  </p>
+                  <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                    <dt className="text-amber-700">Estimativa de Início Necessário</dt>
+                    <dd>{formatarDataBr(resultadoEstimativa.dataEstimadaInicioNecessario)}</dd>
+                    <dt className="text-amber-700">Data de Disponibilidade para Produção</dt>
+                    <dd>{formatarDataBr(resultadoEstimativa.dataDisponibilidadeProducao)}</dd>
+                    <dt className="text-amber-700">Folga (dias produtivos)</dt>
+                    <dd>{resultadoEstimativa.folgaDiasProdutivos}</dd>
+                    <dt className="text-amber-700">Déficit na janela realmente permitida</dt>
+                    <dd>
+                      {resultadoEstimativa.avaliacaoNaJanelaRealmentePermitida.deficitTotal.toLocaleString(
+                        "pt-BR",
+                        { maximumFractionDigits: 2 },
+                      )}{" "}
+                      h
+                    </dd>
+                  </dl>
+                  <p className="mt-2 text-xs text-amber-800">
+                    Esta estimativa comercial não é uma programação de PCP.
+                  </p>
+                </div>
+              ) : null}
 
               {statusAprovacao.motivoPrincipalDeficit ? (
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">

@@ -22,8 +22,19 @@
 // partir do mesmo capacidadePorRecurso que o núcleo usou nesta
 // execução.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { prepararEntradasMotor } from "./prepararEntradasMotor";
-import { executarMotorAvaliacaoSequencial } from "./motorAvaliacaoSequencial";
+import type { ContextoCalendario } from "@/modules/calendario/lib/contextoCalendario";
+import { contarDiasProdutivosNaJanela } from "./agregarDiasProdutivos";
+import {
+  calcularCapacidadeParaJanela,
+  prepararBaseFixaMotor,
+  type BaseFixaMotor,
+  type CapacidadeRecurso,
+} from "./prepararEntradasMotor";
+import {
+  executarMotorAvaliacaoSequencial,
+  type EntradasMotor,
+  type ItemResultadoMotor,
+} from "./motorAvaliacaoSequencial";
 
 export type MotivoConsideracao = "ORIGINAL" | "COMPATIBILIDADE";
 
@@ -68,28 +79,18 @@ export interface ResultadoSimulacao {
 }
 
 /**
- * Roda o Motor e monta o resultado por operação, sem persistir.
- * Separado da persistência para permitir a tela de pré-visualização
- * (rodar a simulação sem aprovar o projeto).
+ * Enriquecimento puro (sem I/O): dado o resultado cru do núcleo e a base
+ * de capacidade que o alimentou, monta o resultado público por operação.
+ * Extraída para ser reaproveitada tanto pelo fluxo normal quanto por
+ * quem já tem `baseFixa`/capacidade preparadas (Entrega 3, calculador
+ * reverso, ver simularCapacidadeProjetoComBaseFixa) - a fórmula de
+ * enriquecimento nunca é duplicada.
  */
-export async function simularCapacidadeProjeto(
-  client: SupabaseClient,
-  empresaId: string,
-  projetoId: string,
-  janelaInicio: string,
-  janelaFim: string,
-): Promise<ResultadoSimulacao> {
-  const { entradas, capacidadePorRecurso } = await prepararEntradasMotor(
-    client,
-    empresaId,
-    projetoId,
-    janelaInicio,
-    janelaFim,
-  );
-
-  const resultadosOperacoes = executarMotorAvaliacaoSequencial(entradas);
-
-  const itensPorOperacao: ItemSimulacaoOperacao[] = resultadosOperacoes.map((item) => ({
+export function montarItensSimulacao(
+  resultadosOperacoes: ItemResultadoMotor[],
+  capacidadePorRecurso: Record<string, CapacidadeRecurso>,
+): ItemSimulacaoOperacao[] {
+  return resultadosOperacoes.map((item) => ({
     bomOperacaoId: item.bomOperacaoId,
     recursoOriginalId: item.recursoOriginalId,
     necessario: item.tempoNecessarioHoras,
@@ -118,6 +119,61 @@ export async function simularCapacidadeProjeto(
       };
     }),
   }));
+}
 
-  return { itensPorOperacao };
+/**
+ * Entrega 3 (Calculador Reverso, Fase 3): roda o Motor a partir de uma
+ * `baseFixa` JÁ CARREGADA (roteiro, capacidade diária, produtividade,
+ * comprometido) - permite que a tela de Simulação carregue essa base
+ * UMA VEZ e reaproveite tanto para o preview normal quanto para o
+ * calculador reverso, na mesma interação de "Simular". `opcoes.contexto`
+ * permite reaproveitar também um contexto de calendário já carregado
+ * (ex.: pelo calculador reverso, cuja janela [floorDate, prazoInterno]
+ * sempre cobre [janelaInicio, janelaFim] do preview) - contarDiasProdutivosNaJanela
+ * só consulta de novo se o contexto passado não bastar.
+ */
+export async function simularCapacidadeProjetoComBaseFixa(
+  client: SupabaseClient,
+  empresaId: string,
+  baseFixa: BaseFixaMotor,
+  janelaInicio: string,
+  janelaFim: string,
+  opcoes: { contexto?: ContextoCalendario } = {},
+): Promise<ResultadoSimulacao> {
+  const { diasProdutivos } = await contarDiasProdutivosNaJanela(client, empresaId, janelaInicio, janelaFim, {
+    contexto: opcoes.contexto,
+  });
+
+  const { capacidadeDisponivelInicial, capacidadePorRecurso } = calcularCapacidadeParaJanela(
+    baseFixa,
+    diasProdutivos,
+  );
+
+  const entradas: EntradasMotor = {
+    operacoesOrdenadas: baseFixa.operacoesOrdenadas,
+    capacidadeDisponivelInicial,
+    compatibilidades: baseFixa.compatibilidades,
+  };
+
+  const resultadosOperacoes = executarMotorAvaliacaoSequencial(entradas);
+
+  return { itensPorOperacao: montarItensSimulacao(resultadosOperacoes, capacidadePorRecurso) };
+}
+
+/**
+ * Roda o Motor e monta o resultado por operação, sem persistir.
+ * Separado da persistência para permitir a tela de pré-visualização
+ * (rodar a simulação sem aprovar o projeto). Wrapper fino: contrato e
+ * comportamento inalterados - por dentro, carrega a base fixa e delega
+ * para simularCapacidadeProjetoComBaseFixa.
+ */
+export async function simularCapacidadeProjeto(
+  client: SupabaseClient,
+  empresaId: string,
+  projetoId: string,
+  janelaInicio: string,
+  janelaFim: string,
+): Promise<ResultadoSimulacao> {
+  const baseFixa = await prepararBaseFixaMotor(client, empresaId, projetoId);
+  return simularCapacidadeProjetoComBaseFixa(client, empresaId, baseFixa, janelaInicio, janelaFim);
 }
