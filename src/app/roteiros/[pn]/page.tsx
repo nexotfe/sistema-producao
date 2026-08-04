@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { use } from "react";
+import { use, useState } from "react";
 import { useRoteiro } from "@/modules/roteiros/hooks/useRoteiro";
 import { RoteiroForm } from "@/modules/roteiros/components/RoteiroForm";
+import { DuplicarProdutoModal } from "@/modules/produtos/components/DuplicarProdutoModal";
 import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
 
 type RoutePageProps = {
@@ -14,7 +15,10 @@ type RoutePageProps = {
 
 export default function ManufacturingRoutePage({ params }: RoutePageProps) {
   const { pn } = use(params);
+  const codigoProduto = decodeURIComponent(pn);
+  const [duplicarAberto, setDuplicarAberto] = useState(false);
   const {
+    produtoId,
     bom,
     loading,
     processando,
@@ -42,7 +46,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
     adicionarTransporte,
     removerTransporte,
     custo,
-  } = useRoteiro(decodeURIComponent(pn));
+  } = useRoteiro(codigoProduto);
 
   return (
     <main className="min-h-screen bg-app-bg text-slate-950">
@@ -92,7 +96,9 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
                   </button>
                   <button
                     type="button"
-                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]"
+                    onClick={() => setDuplicarAberto(true)}
+                    disabled={!produtoId}
+                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Duplicar
                   </button>
@@ -169,6 +175,15 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
           custo={custo}
         />
       )}
+
+      {produtoId ? (
+        <DuplicarProdutoModal
+          open={duplicarAberto}
+          onClose={() => setDuplicarAberto(false)}
+          produtoOrigemId={produtoId}
+          produtoOrigemCodigo={codigoProduto}
+        />
+      ) : null}
     </main>
   );
 }

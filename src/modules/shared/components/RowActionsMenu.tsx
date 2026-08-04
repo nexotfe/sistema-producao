@@ -8,7 +8,9 @@ type RowActionsMenuProps = {
   onFechar: () => void;
   ariaLabel: string;
   editarHref: string;
-  duplicarHref: string;
+  duplicarHref?: string;
+  /** Quando informado, "Duplicar" vira botão (dispara isto) em vez de link para duplicarHref. */
+  onDuplicar?: () => void;
   ativo: boolean;
   onToggleAtivo: () => void;
   onExcluir?: () => void;
@@ -25,6 +27,7 @@ export function RowActionsMenu({
   ariaLabel,
   editarHref,
   duplicarHref,
+  onDuplicar,
   ativo,
   onToggleAtivo,
   onExcluir,
@@ -48,12 +51,22 @@ export function RowActionsMenu({
           >
             Editar
           </Link>
-          <Link
-            href={duplicarHref}
-            className="block px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          >
-            Duplicar
-          </Link>
+          {onDuplicar ? (
+            <button
+              type="button"
+              onClick={onDuplicar}
+              className="block w-full px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Duplicar
+            </button>
+          ) : duplicarHref ? (
+            <Link
+              href={duplicarHref}
+              className="block px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Duplicar
+            </Link>
+          ) : null}
           <button
             type="button"
             onClick={onToggleAtivo}

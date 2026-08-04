@@ -6,6 +6,7 @@ import { EmptyState } from "@/modules/clientes/components/EmptyState";
 import { LoadingState } from "@/modules/clientes/components/LoadingState";
 import { StatusBadge } from "@/modules/clientes/components/StatusBadge";
 import { RowActionsMenu } from "@/modules/shared/components/RowActionsMenu";
+import { DuplicarProdutoModal } from "./DuplicarProdutoModal";
 import type { Product } from "../types";
 
 type ProductsTableProps = {
@@ -24,6 +25,7 @@ export function ProductsTable({
   alternarAtivoProduto,
 }: ProductsTableProps) {
   const [menuAbertoId, setMenuAbertoId] = useState<string | null>(null);
+  const [produtoDuplicando, setProdutoDuplicando] = useState<Product | null>(null);
 
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-app-card">
@@ -112,7 +114,10 @@ export function ProductsTable({
                       onFechar={() => setMenuAbertoId(null)}
                       ariaLabel={`Abrir ações de ${product.description}`}
                       editarHref={`/produtos/${encodeURIComponent(product.code)}/editar`}
-                      duplicarHref="/produtos/novo"
+                      onDuplicar={() => {
+                        setMenuAbertoId(null);
+                        setProdutoDuplicando(product);
+                      }}
                       ativo={product.active}
                       onToggleAtivo={() => {
                         setMenuAbertoId(null);
@@ -126,6 +131,15 @@ export function ProductsTable({
           </table>
         </div>
       )}
+
+      {produtoDuplicando ? (
+        <DuplicarProdutoModal
+          open={produtoDuplicando !== null}
+          onClose={() => setProdutoDuplicando(null)}
+          produtoOrigemId={produtoDuplicando.id}
+          produtoOrigemCodigo={produtoDuplicando.code}
+        />
+      ) : null}
     </section>
   );
 }
