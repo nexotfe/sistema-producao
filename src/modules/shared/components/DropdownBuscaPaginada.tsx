@@ -9,6 +9,7 @@
 // caminho.
 import { useEffect, useId, useRef, useState } from "react";
 import type { EstadoBuscaPaginada } from "../hooks/useBuscaPaginada";
+import { proximoIndiceParaBaixo, proximoIndiceParaCima } from "../lib/navegacaoTecladoBusca";
 
 export interface DropdownBuscaPaginadaProps<T> {
   busca: EstadoBuscaPaginada<T>;
@@ -21,6 +22,8 @@ export interface DropdownBuscaPaginadaProps<T> {
   placeholder?: string;
   mensagemVazio?: string;
   ariaLabel?: string;
+  /** Itens que satisfazem a busca mas não podem ser selecionados (ex.: produto sem BOM cadastrado) - navegação por teclado pula sobre eles. */
+  itemDesabilitado?: (item: T) => boolean;
 }
 
 // Distância (px) do fim da lista para disparar carregarMais() por
@@ -40,6 +43,7 @@ export function DropdownBuscaPaginada<T>({
   placeholder = "Buscar",
   mensagemVazio = "Nenhum resultado encontrado.",
   ariaLabel,
+  itemDesabilitado,
 }: DropdownBuscaPaginadaProps<T>) {
   const { termo, setTermo, itens, carregando, carregandoMais, erro, temMais, carregarMais } = busca;
 
@@ -108,17 +112,17 @@ export function DropdownBuscaPaginada<T>({
         setAberto(true);
         return;
       }
-      if (indiceAtivoClamped + 1 >= itens.length) {
-        // Chegou (ou já estava) no fim da lista carregada - se houver
-        // mais páginas, carrega automaticamente antes de tentar avançar
-        // mais - cobre a lista inteira por teclado, não só o que já
-        // está em memória.
+      const proximo = proximoIndiceParaBaixo(itens, indiceAtivoClamped, itemDesabilitado);
+      if (proximo === -1) {
+        // Não há item habilitado daqui até o fim da página carregada -
+        // se houver mais páginas, carrega automaticamente antes de
+        // tentar avançar mais, cobrindo a lista inteira por teclado
+        // (inclusive quando a página inteira está desabilitada).
         if (temMais && !carregando && !carregandoMais) {
           carregarMais();
         }
         return;
       }
-      const proximo = indiceAtivoClamped + 1;
       setIndiceAtivo(proximo);
       rolarParaItemAtivo(proximo);
       return;
@@ -126,14 +130,19 @@ export function DropdownBuscaPaginada<T>({
 
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      const anterior = Math.max(0, indiceAtivoClamped - 1);
+      const anterior = proximoIndiceParaCima(itens, indiceAtivoClamped, itemDesabilitado);
+      if (anterior === -1) return; // nada habilitado acima - mantém a seleção atual
       setIndiceAtivo(anterior);
       rolarParaItemAtivo(anterior);
       return;
     }
 
     if (event.key === "Enter") {
-      if (indiceAtivoClamped >= 0 && indiceAtivoClamped < itens.length) {
+      if (
+        indiceAtivoClamped >= 0 &&
+        indiceAtivoClamped < itens.length &&
+        !itemDesabilitado?.(itens[indiceAtivoClamped])
+      ) {
         event.preventDefault();
         selecionar(itens[indiceAtivoClamped]);
       }
@@ -187,23 +196,29 @@ export function DropdownBuscaPaginada<T>({
             onScroll={aoRolar}
             className="max-h-64 overflow-y-auto py-1"
           >
-            {itens.map((item, indice) => (
-              <li
-                key={obterId(item)}
-                id={idOpcao(indice)}
-                role="option"
-                aria-selected={indice === indiceAtivoClamped}
-                onMouseEnter={() => setIndiceAtivo(indice)}
-                onClick={() => selecionar(item)}
-                className={
-                  indice === indiceAtivoClamped
-                    ? "cursor-pointer bg-blue-50 px-3 py-2 text-sm text-blue-900"
-                    : "cursor-pointer px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                }
-              >
-                {renderItem(item, indice === indiceAtivoClamped)}
-              </li>
-            ))}
+            {itens.map((item, indice) => {
+              const desabilitado = itemDesabilitado?.(item) ?? false;
+              return (
+                <li
+                  key={obterId(item)}
+                  id={idOpcao(indice)}
+                  role="option"
+                  aria-selected={indice === indiceAtivoClamped}
+                  aria-disabled={desabilitado}
+                  onMouseEnter={() => !desabilitado && setIndiceAtivo(indice)}
+                  onClick={() => !desabilitado && selecionar(item)}
+                  className={
+                    desabilitado
+                      ? "cursor-not-allowed px-3 py-2 text-sm text-slate-400"
+                      : indice === indiceAtivoClamped
+                        ? "cursor-pointer bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                        : "cursor-pointer px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  }
+                >
+                  {renderItem(item, indice === indiceAtivoClamped)}
+                </li>
+              );
+            })}
 
             {itens.length === 0 && !carregando ? (
               <li className="px-3 py-2 text-sm text-slate-400" role="presentation">

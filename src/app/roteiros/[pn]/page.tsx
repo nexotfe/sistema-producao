@@ -25,7 +25,6 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
     adicionarMaterial,
     removerMaterial,
     subconjuntos,
-    produtosDisponiveis,
     adicionarSubconjunto,
     removerSubconjunto,
     operacoesEngenharia,
@@ -151,7 +150,6 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
           onAdicionarMaterial={adicionarMaterial}
           onRemoverMaterial={removerMaterial}
           subconjuntos={subconjuntos}
-          produtosDisponiveis={produtosDisponiveis}
           onAdicionarSubconjunto={adicionarSubconjunto}
           onRemoverSubconjunto={removerSubconjunto}
           operacoesEngenharia={operacoesEngenharia}

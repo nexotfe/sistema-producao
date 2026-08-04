@@ -24,7 +24,7 @@ type CompatibilidadeRow = {
   deleted_at: string | null;
 };
 type ProjetoItemRow = { id: string; projeto_id: string; produto_id: string; quantidade: number; ativo: boolean; deleted_at: string | null; created_at: string };
-type BomRow = { id: string; produto_id: string; status: string; created_at: string; deleted_at: string | null };
+type BomRow = { id: string; produto_id: string; status: string; created_at: string; ativo: boolean; deleted_at: string | null };
 type OperacaoRow = {
   id: string;
   bom_id: string;
@@ -284,7 +284,7 @@ function baseMinima(overrides: Partial<Base> = {}): Base {
     projetoItens: [
       { id: "item-1", projeto_id: "projeto-1", produto_id: "produto-1", quantidade: 2, ativo: true, deleted_at: null, created_at: "2026-01-01" },
     ],
-    boms: [{ id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", deleted_at: null }],
+    boms: [{ id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", ativo: true, deleted_at: null }],
     operacoes: [
       { id: "op-1", bom_id: "bom-1", ordem: 10, tempo_estimado_minutos: 60, recurso_produtivo_id: "recurso-1", ativo: true, deleted_at: null },
     ],
@@ -398,8 +398,8 @@ describe("prepararEntradasMotor", () => {
     const client = criarClienteFalso(
       baseMinima({
         boms: [
-          { id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", deleted_at: null },
-          { id: "bom-filho", produto_id: "produto-2", status: "ativo", created_at: "2026-01-01", deleted_at: null },
+          { id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", ativo: true, deleted_at: null },
+          { id: "bom-filho", produto_id: "produto-2", status: "ativo", created_at: "2026-01-01", ativo: true, deleted_at: null },
         ],
         operacoes: [
           { id: "op-filho", bom_id: "bom-filho", ordem: 10, tempo_estimado_minutos: 30, recurso_produtivo_id: "recurso-1", ativo: true, deleted_at: null },
@@ -450,8 +450,8 @@ describe("prepararEntradasMotor", () => {
           { id: "item-1", projeto_id: "projeto-1", produto_id: "produto-1", quantidade: 1, ativo: true, deleted_at: null, created_at: "2026-01-01" },
         ],
         boms: [
-          { id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", deleted_at: null },
-          { id: "bom-2", produto_id: "produto-2", status: "ativo", created_at: "2026-01-01", deleted_at: null },
+          { id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", ativo: true, deleted_at: null },
+          { id: "bom-2", produto_id: "produto-2", status: "ativo", created_at: "2026-01-01", ativo: true, deleted_at: null },
         ],
         operacoes: [
           { id: "op-produto-1", bom_id: "bom-1", ordem: 10, tempo_estimado_minutos: 10, recurso_produtivo_id: "recurso-1", ativo: true, deleted_at: null },

@@ -162,9 +162,6 @@ export function useRoteiro(pn: string) {
   const [transportes, setTransportes] = useState<BomTransporte[]>([]);
   const [custo, setCusto] = useState<CustoBom>(custoVazio);
 
-  const [produtosDisponiveis, setProdutosDisponiveis] = useState<OpcaoSelect[]>(
-    [],
-  );
   const [recursosDisponiveis, setRecursosDisponiveis] = useState<
     OpcaoSelect[]
   >([]);
@@ -521,17 +518,13 @@ export function useRoteiro(pn: string) {
       setLoading(true);
       setErro(null);
 
-      const [produtoResult, itensResult, recResult, fornResult] =
+      const [produtoResult, recResult, fornResult] =
         await Promise.all([
           supabase
             .from("itens_industriais")
             .select("id,codigo,descricao")
             .eq("codigo", pn)
             .single(),
-          supabase
-            .from("itens_industriais")
-            .select("id,codigo,descricao")
-            .order("descricao", { ascending: true }),
           supabase
             .from("recursos_produtivos")
             .select("id,codigo,nome")
@@ -566,12 +559,6 @@ export function useRoteiro(pn: string) {
 
       setProdutoId(produtoResult.data.id);
       setProdutoDescricao(produtoResult.data.descricao ?? "");
-
-      setProdutosDisponiveis(
-        ((itensResult.data ?? []) as ItemIndustrialRow[])
-          .filter((item) => item.id !== produtoResult.data.id)
-          .map((item) => ({ id: item.id, label: `${item.codigo} — ${item.descricao}` })),
-      );
 
       await carregarBom(produtoResult.data.id);
       setLoading(false);
@@ -942,7 +929,6 @@ export function useRoteiro(pn: string) {
     removerMaterial,
 
     subconjuntos,
-    produtosDisponiveis,
     adicionarSubconjunto,
     removerSubconjunto,
 

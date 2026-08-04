@@ -2,26 +2,23 @@
 
 import { useState } from "react";
 import { unidadesBomItem } from "../types";
-import type {
-  NovoSubconjuntoInput,
-  OpcaoSelect,
-  ResultadoOperacaoRoteiro,
-} from "../types";
+import { ProdutoSubconjuntoSearchInput, type ProdutoSubconjuntoResumo } from "./ProdutoSubconjuntoSearchInput";
+import type { NovoSubconjuntoInput, ResultadoOperacaoRoteiro } from "../types";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onAdd: (input: NovoSubconjuntoInput) => Promise<ResultadoOperacaoRoteiro>;
-  produtosDisponiveis: OpcaoSelect[];
+  produtoAtualId: string;
 };
 
 export function AdicionarSubconjuntoModal({
   open,
   onClose,
   onAdd,
-  produtosDisponiveis,
+  produtoAtualId,
 }: Props) {
-  const [componenteProdutoId, setComponenteProdutoId] = useState("");
+  const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoSubconjuntoResumo | null>(null);
   const [quantidade, setQuantidade] = useState("");
   const [unidade, setUnidade] = useState("peca");
   const [observacoes, setObservacoes] = useState("");
@@ -33,7 +30,7 @@ export function AdicionarSubconjuntoModal({
   }
 
   function limparEFechar() {
-    setComponenteProdutoId("");
+    setProdutoSelecionado(null);
     setQuantidade("");
     setUnidade("peca");
     setObservacoes("");
@@ -42,8 +39,13 @@ export function AdicionarSubconjuntoModal({
   }
 
   async function handleAdicionar() {
-    if (!componenteProdutoId) {
+    if (!produtoSelecionado) {
       setErro("Selecione o produto do subconjunto.");
+      return;
+    }
+
+    if (!produtoSelecionado.temBom) {
+      setErro("Este produto não tem roteiro cadastrado e não pode ser usado como subconjunto.");
       return;
     }
 
@@ -58,7 +60,7 @@ export function AdicionarSubconjuntoModal({
     setErro(null);
 
     const resultado = await onAdd({
-      componenteProdutoId,
+      componenteProdutoId: produtoSelecionado.id,
       quantidade: quantidadeNumerica,
       unidade,
       observacoes,
@@ -92,18 +94,12 @@ export function AdicionarSubconjuntoModal({
               <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                 Produto
               </label>
-              <select
-                value={componenteProdutoId}
-                onChange={(event) => setComponenteProdutoId(event.target.value)}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Selecione</option>
-                {produtosDisponiveis.map((produto) => (
-                  <option key={produto.id} value={produto.id}>
-                    {produto.label}
-                  </option>
-                ))}
-              </select>
+              <ProdutoSubconjuntoSearchInput
+                value={produtoSelecionado}
+                onChange={setProdutoSelecionado}
+                produtoAtualId={produtoAtualId}
+                placeholder="Buscar produto por código ou descrição"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

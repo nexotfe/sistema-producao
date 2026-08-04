@@ -9,7 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { coletarEstruturaBom } from "./coletarEstruturaBom";
 import { OperacaoSemRecursoError, ProfundidadeMaximaBomError } from "./errors";
 
-type BomRow = { id: string; produto_id: string; status: string; created_at: string; deleted_at: string | null };
+type BomRow = { id: string; produto_id: string; status: string; created_at: string; ativo: boolean; deleted_at: string | null };
 type OperacaoRow = {
   id: string;
   bom_id: string;
@@ -101,7 +101,7 @@ function criarClienteFalso(base: Base): SupabaseClient {
 }
 
 function bom(overrides: Partial<BomRow> = {}): BomRow {
-  return { id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", deleted_at: null, ...overrides };
+  return { id: "bom-1", produto_id: "produto-1", status: "ativo", created_at: "2026-01-01", ativo: true, deleted_at: null, ...overrides };
 }
 
 function operacao(overrides: Partial<OperacaoRow> = {}): OperacaoRow {

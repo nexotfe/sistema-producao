@@ -35,7 +35,6 @@ type RoteiroFormProps = {
   onRemoverMaterial: (id: string) => Promise<ResultadoExclusao>;
 
   subconjuntos: BomItemSubconjunto[];
-  produtosDisponiveis: OpcaoSelect[];
   onAdicionarSubconjunto: (
     input: NovoSubconjuntoInput,
   ) => Promise<ResultadoOperacaoRoteiro>;
@@ -93,7 +92,6 @@ export function RoteiroForm({
   onAdicionarMaterial,
   onRemoverMaterial,
   subconjuntos,
-  produtosDisponiveis,
   onAdicionarSubconjunto,
   onRemoverSubconjunto,
   operacoesEngenharia,
@@ -637,7 +635,7 @@ export function RoteiroForm({
         open={modalSubconjuntoAberto}
         onClose={() => setModalSubconjuntoAberto(false)}
         onAdd={onAdicionarSubconjunto}
-        produtosDisponiveis={produtosDisponiveis}
+        produtoAtualId={bom.produtoId}
       />
 
       <AdicionarOperacaoModal
