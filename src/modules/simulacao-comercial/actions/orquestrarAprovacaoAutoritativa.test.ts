@@ -18,6 +18,8 @@ import {
 import type { ItemSimulacaoOperacao, ResultadoSimulacao } from "../lib/executarSimulacao";
 import type { JanelaComercialValida, JanelaComercialInvalida } from "../lib/prepararJanelaComercial";
 import type { PayloadAprovacao } from "./validarPayloadAprovacao";
+import { EstruturaFabricacaoIncompletaError } from "../lib/errors";
+import { SubconjuntoSemBomError } from "@/modules/bom/lib/errors";
 
 function criarItem(overrides: Partial<ItemSimulacaoOperacao> = {}): ItemSimulacaoOperacao {
   return {
@@ -194,6 +196,37 @@ describe("orquestrarAprovacaoAutoritativa — correção 5: fronteira autoritati
 
     expect(resultado).toMatchObject({ ok: false, motivo: "sem_janela_produtiva" });
     expect(deps.executarMotor).not.toHaveBeenCalled();
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  it("estrutura de fabricação incompleta (EstruturaFabricacaoIncompletaError do Motor): motivo autoritativo específico, mensagem de negócio repassada, persistir nunca chamado", async () => {
+    const mensagem =
+      "Roteiro de fabricação incompleto: nenhuma matéria-prima ativa foi encontrada (item abc, caminho: ZTESTE-SIMCAP-002).";
+    const payload = criarPayload();
+    const deps = criarDependenciasFelizes({
+      executarMotor: vi.fn(async () => {
+        throw new EstruturaFabricacaoIncompletaError("projeto-1", mensagem);
+      }),
+    });
+
+    const resultado = await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(resultado).toEqual({ ok: false, motivo: "estrutura_fabricacao_incompleta", mensagem });
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  it("subconjunto sem BOM (SubconjuntoSemBomError do Motor): mesmo motivo autoritativo específico, persistir nunca chamado", async () => {
+    const mensagem = 'O subconjunto SUB-01 não possui roteiro (BOM) cadastrado (caminho: PROD-RAIZ → SUB-01).';
+    const payload = criarPayload();
+    const deps = criarDependenciasFelizes({
+      executarMotor: vi.fn(async () => {
+        throw new SubconjuntoSemBomError("produto-2", "SUB-01", ["PROD-RAIZ", "SUB-01"]);
+      }),
+    });
+
+    const resultado = await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(resultado).toEqual({ ok: false, motivo: "estrutura_fabricacao_incompleta", mensagem });
     expect(deps.persistir).not.toHaveBeenCalled();
   });
 

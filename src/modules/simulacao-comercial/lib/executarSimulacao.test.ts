@@ -372,6 +372,12 @@ describe("simularCapacidadeProjeto (wrapper antigo) - equivalência com o caminh
         }
       },
       rpc(nome: string, args: Record<string, unknown>) {
+        if (nome === "gerar_lista_tecnica_projeto") {
+          return Promise.resolve({
+            data: { estado: "calculado", mensagem: null, itens_analisados: [], materiais: [] },
+            error: null,
+          });
+        }
         if (nome === "calcular_produtividade_efetiva") {
           return Promise.resolve({ data: 0.9, error: null });
         }

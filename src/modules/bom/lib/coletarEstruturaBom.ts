@@ -13,7 +13,7 @@
 // e revalidação autoritativa no servidor.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolverBomAtivo } from "./resolverBomAtivo";
-import { OperacaoSemRecursoError, ProfundidadeMaximaBomError } from "./errors";
+import { OperacaoSemRecursoError, ProfundidadeMaximaBomError, SubconjuntoSemBomError } from "./errors";
 
 const PROFUNDIDADE_MAXIMA_BOM = 20;
 
@@ -49,6 +49,14 @@ export async function coletarEstruturaBom(
   bomId: string,
   quantidadeAcumulada: number,
   profundidade = 0,
+  /**
+   * Ids dos produtos já percorridos até este BOM (raiz incluída) - só
+   * usados para montar a mensagem de SubconjuntoSemBomError (resolvidos
+   * para código em lote, uma única consulta, só no caminho de erro).
+   * Nunca consultados no caminho feliz - custo igual ao de antes desta
+   * correção.
+   */
+  caminhoIds: string[] = [],
 ): Promise<OperacaoBom[]> {
   if (profundidade > PROFUNDIDADE_MAXIMA_BOM) {
     throw new ProfundidadeMaximaBomError(bomId);
@@ -99,16 +107,47 @@ export async function coletarEstruturaBom(
 
   for (const sub of (subItens ?? []) as BomItemSubconjuntoRow[]) {
     const bomFilhoId = await resolverBomAtivo(client, sub.componente_produto_id);
-    if (bomFilhoId) {
-      const operacoesFilho = await coletarEstruturaBom(
-        client,
-        bomFilhoId,
-        quantidadeAcumulada * Number(sub.quantidade),
-        profundidade + 1,
-      );
-      operacoes.push(...operacoesFilho);
+
+    if (!bomFilhoId) {
+      // Corrige lacuna conhecida: um subconjunto sem BOM resolvível não
+      // pode mais ser ignorado silenciosamente - bloqueia citando código
+      // e caminho. Vale para qualquer natureza de projeto (inclusive
+      // industrialização): operações produtivas precisam estar
+      // completas independente de quem fornece a matéria-prima.
+      throw await criarSubconjuntoSemBomError(client, sub.componente_produto_id, [
+        ...caminhoIds,
+        sub.componente_produto_id,
+      ]);
     }
+
+    const operacoesFilho = await coletarEstruturaBom(
+      client,
+      bomFilhoId,
+      quantidadeAcumulada * Number(sub.quantidade),
+      profundidade + 1,
+      [...caminhoIds, sub.componente_produto_id],
+    );
+    operacoes.push(...operacoesFilho);
   }
 
   return operacoes;
+}
+
+// Só chamada no caminho de ERRO (nunca no caminho feliz) - uma única
+// consulta em lote resolve todos os códigos do caminho de uma vez,
+// nunca N+1.
+async function criarSubconjuntoSemBomError(
+  client: SupabaseClient,
+  produtoSemBomId: string,
+  caminhoIds: string[],
+): Promise<SubconjuntoSemBomError> {
+  const { data } = await client.from("itens_industriais").select("id,codigo").in("id", caminhoIds);
+
+  const codigoPorId = new Map(
+    ((data ?? []) as { id: string; codigo: string }[]).map((linha) => [linha.id, linha.codigo]),
+  );
+  const caminhoCodigos = caminhoIds.map((id) => codigoPorId.get(id) ?? id);
+  const codigo = codigoPorId.get(produtoSemBomId) ?? produtoSemBomId;
+
+  return new SubconjuntoSemBomError(produtoSemBomId, codigo, caminhoCodigos);
 }

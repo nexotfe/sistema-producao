@@ -17,6 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolverBomAtivo } from "@/modules/bom/lib/resolverBomAtivo";
 import { coletarEstruturaBom } from "@/modules/bom/lib/coletarEstruturaBom";
 import { contarDiasProdutivosNaJanela } from "./agregarDiasProdutivos";
+import { validarEstruturaFabricacaoProjeto } from "./validarEstruturaFabricacaoProjeto";
 import type { CandidatoRecurso, EntradasMotor, OperacaoRoteiro } from "./motorAvaliacaoSequencial";
 import {
   ProjetoSemItensError,
@@ -65,7 +66,13 @@ async function coletarOperacoesDoProjeto(
       throw new RoteiroNaoEncontradoError(item.produto_id);
     }
 
-    const operacoesItem = await coletarEstruturaBom(client, bomId, Number(item.quantidade));
+    const operacoesItem = await coletarEstruturaBom(
+      client,
+      bomId,
+      Number(item.quantidade),
+      0,
+      [item.produto_id],
+    );
     for (const op of operacoesItem) {
       operacoes.push({
         bomOperacaoId: op.bomOperacaoId,
@@ -298,6 +305,13 @@ export async function prepararBaseFixaMotor(
   empresaId: string,
   projetoId: string,
 ): Promise<BaseFixaMotor> {
+  // Requisito obrigatório (pendência registrada na entrega da Lista
+  // Técnica Consolidada): estrutura de fabricação inválida bloqueia
+  // ANTES de qualquer consulta de roteiro/recursos - mesmo ponto único
+  // para preview (client do navegador) e revalidação autoritativa
+  // (serverClient, ver orquestrarAprovacaoAutoritativa.ts).
+  await validarEstruturaFabricacaoProjeto(client, projetoId);
+
   const operacoesOrdenadas = await coletarOperacoesDoProjeto(client, projetoId);
 
   const recursosOriginais = Array.from(

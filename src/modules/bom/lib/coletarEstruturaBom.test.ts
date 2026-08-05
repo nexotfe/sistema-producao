@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { coletarEstruturaBom } from "./coletarEstruturaBom";
-import { OperacaoSemRecursoError, ProfundidadeMaximaBomError } from "./errors";
+import { OperacaoSemRecursoError, ProfundidadeMaximaBomError, SubconjuntoSemBomError } from "./errors";
 
 type BomRow = { id: string; produto_id: string; status: string; created_at: string; ativo: boolean; deleted_at: string | null };
 type OperacaoRow = {
@@ -29,15 +29,20 @@ type ItemRow = {
   ordem: number;
 };
 
+type ItemIndustrialRow = { id: string; codigo: string };
+
 type Base = {
   boms: BomRow[];
   operacoes: OperacaoRow[];
   itens: ItemRow[];
+  /** Só usado pelo caminho de erro de SubconjuntoSemBomError (resolução de código). */
+  itensIndustriais?: ItemIndustrialRow[];
 };
 
 function criarClienteFalso(base: Base): SupabaseClient {
   function builderPara(tabela: string) {
     const filtrosEq: Record<string, unknown> = {};
+    let filtroIn: { coluna: string; valores: unknown[] } | null = null;
     const ordenacao: { coluna: string; ascending: boolean }[] = [];
 
     const builder = {
@@ -52,6 +57,10 @@ function criarClienteFalso(base: Base): SupabaseClient {
         filtrosEq[coluna] = valor;
         return builder;
       },
+      in(coluna: string, valores: unknown[]) {
+        filtroIn = { coluna, valores };
+        return builder;
+      },
       order(coluna: string, opcoes?: { ascending?: boolean }) {
         ordenacao.push({ coluna, ascending: opcoes?.ascending ?? true });
         return builder;
@@ -64,14 +73,17 @@ function criarClienteFalso(base: Base): SupabaseClient {
               ? (base.operacoes as unknown as Record<string, unknown>[])
               : tabela === "bom_itens"
                 ? (base.itens as unknown as Record<string, unknown>[])
-                : (() => {
-                    throw new Error(`Tabela não suportada no cliente falso: ${tabela}`);
-                  })();
+                : tabela === "itens_industriais"
+                  ? ((base.itensIndustriais ?? []) as unknown as Record<string, unknown>[])
+                  : (() => {
+                      throw new Error(`Tabela não suportada no cliente falso: ${tabela}`);
+                    })();
 
         let filtradas = linhas.filter((linha) => {
           for (const [coluna, valor] of Object.entries(filtrosEq)) {
             if (linha[coluna] !== valor) return false;
           }
+          if (filtroIn && !filtroIn.valores.includes(linha[filtroIn.coluna])) return false;
           return true;
         });
 
@@ -207,16 +219,61 @@ describe("coletarEstruturaBom", () => {
     expect(resultado[0].quantidadeAcumulada).toBe(10);
   });
 
-  it("ignora item de bom_itens cujo componente não tem BOM ativo (resolverBomAtivo retorna null) - sem lançar erro", async () => {
+  it("lança SubconjuntoSemBomError (citando código e caminho) quando o componente não tem BOM ativo - corrige lacuna que antes ignorava silenciosamente", async () => {
     const client = criarClienteFalso({
       boms: [], // nenhum BOM cadastrado para produto-2
       operacoes: [operacao({ id: "op-pai", bom_id: "bom-1" })],
       itens: [itemSubconjunto({ bom_id: "bom-1", componente_produto_id: "produto-2" })],
+      itensIndustriais: [
+        { id: "produto-1", codigo: "PROD-RAIZ" },
+        { id: "produto-2", codigo: "SUB-SEM-BOM" },
+      ],
     });
 
-    const resultado = await coletarEstruturaBom(client, "bom-1", 1);
+    let erroCapturado: unknown;
+    try {
+      await coletarEstruturaBom(client, "bom-1", 1, 0, ["produto-1"]);
+    } catch (erro) {
+      erroCapturado = erro;
+    }
 
-    expect(resultado.map((op) => op.bomOperacaoId)).toEqual(["op-pai"]);
+    expect(erroCapturado).toBeInstanceOf(SubconjuntoSemBomError);
+    const erro = erroCapturado as SubconjuntoSemBomError;
+    expect(erro.produtoId).toBe("produto-2");
+    expect(erro.codigo).toBe("SUB-SEM-BOM");
+    expect(erro.caminhoCodigos).toEqual(["PROD-RAIZ", "SUB-SEM-BOM"]);
+    expect(erro.message).toContain("SUB-SEM-BOM");
+    expect(erro.message).toContain("PROD-RAIZ → SUB-SEM-BOM");
+  });
+
+  it("SubconjuntoSemBomError acumula o caminho completo em 2 níveis (subconjunto válido → neto sem BOM)", async () => {
+    const client = criarClienteFalso({
+      boms: [bom({ id: "bom-filho", produto_id: "produto-2" })], // produto-2 TEM bom; produto-3 (neto) não tem
+      operacoes: [
+        operacao({ id: "op-pai", bom_id: "bom-1" }),
+        operacao({ id: "op-filho", bom_id: "bom-filho" }),
+      ],
+      itens: [
+        itemSubconjunto({ bom_id: "bom-1", componente_produto_id: "produto-2" }),
+        itemSubconjunto({ bom_id: "bom-filho", componente_produto_id: "produto-3", ordem: 10 }),
+      ],
+      itensIndustriais: [
+        { id: "produto-1", codigo: "RAIZ" },
+        { id: "produto-2", codigo: "FILHO-VALIDO" },
+        { id: "produto-3", codigo: "NETO-SEM-BOM" },
+      ],
+    });
+
+    let erroCapturado: unknown;
+    try {
+      await coletarEstruturaBom(client, "bom-1", 1, 0, ["produto-1"]);
+    } catch (erro) {
+      erroCapturado = erro;
+    }
+
+    expect(erroCapturado).toBeInstanceOf(SubconjuntoSemBomError);
+    const erro = erroCapturado as SubconjuntoSemBomError;
+    expect(erro.caminhoCodigos).toEqual(["RAIZ", "FILHO-VALIDO", "NETO-SEM-BOM"]);
   });
 
   it("lança OperacaoSemRecursoError quando uma operação não tem recurso_produtivo_id", async () => {

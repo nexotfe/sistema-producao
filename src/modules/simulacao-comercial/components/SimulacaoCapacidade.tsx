@@ -66,8 +66,9 @@ import {
   ProjetoSemItensError,
   RecursoSemCapacidadeCadastradaError,
   RoteiroNaoEncontradoError,
+  EstruturaFabricacaoIncompletaError,
 } from "@/modules/simulacao-comercial/lib/errors";
-import { OperacaoSemRecursoError } from "@/modules/bom/lib/errors";
+import { OperacaoSemRecursoError, SubconjuntoSemBomError } from "@/modules/bom/lib/errors";
 
 type SimulacaoVigenteInfo = {
   id: string;
@@ -133,6 +134,12 @@ function mensagemDeErro(erro: unknown): string {
   }
   if (erro instanceof RoteiroNaoEncontradoError) {
     return "Um dos itens do projeto não tem uma estrutura (BOM) cadastrada. Cadastre o Roteiro antes de simular.";
+  }
+  if (erro instanceof EstruturaFabricacaoIncompletaError || erro instanceof SubconjuntoSemBomError) {
+    // Mensagem de negócio já pronta (da RPC gerar_lista_tecnica_projeto
+    // ou de coletarEstruturaBom.ts) - repassada sem reformular, mesmo
+    // padrão do restante desta função.
+    return erro.message;
   }
   if (erro instanceof OperacaoSemRecursoError) {
     return "Uma operação do roteiro não tem Recurso Produtivo vinculado. Vincule um recurso a essa operação antes de simular.";

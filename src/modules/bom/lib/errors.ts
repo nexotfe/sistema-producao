@@ -21,3 +21,19 @@ export class ProfundidadeMaximaBomError extends Error {
     this.bomId = bomId;
   }
 }
+
+export class SubconjuntoSemBomError extends Error {
+  readonly produtoId: string;
+  readonly codigo: string;
+  readonly caminhoCodigos: string[];
+
+  constructor(produtoId: string, codigo: string, caminhoCodigos: string[]) {
+    super(
+      `O subconjunto ${codigo} não possui roteiro (BOM) cadastrado (caminho: ${caminhoCodigos.join(" → ")}).`,
+    );
+    this.name = "SubconjuntoSemBomError";
+    this.produtoId = produtoId;
+    this.codigo = codigo;
+    this.caminhoCodigos = caminhoCodigos;
+  }
+}

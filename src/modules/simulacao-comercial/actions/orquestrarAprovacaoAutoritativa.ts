@@ -25,6 +25,8 @@ import {
   type ResultadoJanelaComercial,
 } from "../lib/prepararJanelaComercial";
 import type { ResultadoSimulacao, ItemSimulacaoOperacao } from "../lib/executarSimulacao";
+import { EstruturaFabricacaoIncompletaError } from "../lib/errors";
+import { SubconjuntoSemBomError } from "@/modules/bom/lib/errors";
 import type { PayloadAprovacao } from "./validarPayloadAprovacao";
 import { createHash } from "crypto";
 
@@ -36,6 +38,7 @@ export type ResultadoAprovacaoAction =
   | { ok: false; motivo: "nao_autenticado" }
   | { ok: false; motivo: "divergente"; diferencas: DiferencaSimulacao[] }
   | { ok: false; motivo: "sem_janela_produtiva"; detalhe: JanelaComercialInvalida }
+  | { ok: false; motivo: "estrutura_fabricacao_incompleta"; mensagem: string }
   | { ok: false; motivo: "erro"; mensagem: string };
 
 export interface ParametrosPersistencia {
@@ -200,12 +203,34 @@ export async function orquestrarAprovacaoAutoritativa(
     // Reexecução autoritativa: mesmo núcleo do preview, agora rodando
     // no servidor, contra o estado corrente do banco, e sobre a janela
     // recalculada no servidor (nunca a do cliente).
-    const revalidacaoServidor = await deps.executarMotor(
-      empresaId,
-      params.projetoId,
-      janelaServidor.janelaInicio,
-      janelaServidor.janelaFim,
-    );
+    //
+    // Try/catch isolado só nesta chamada: estrutura de fabricação
+    // inválida (matéria-prima ou roteiro/BOM incompletos - requisito
+    // obrigatório da Lista Técnica Consolidada) precisa de um motivo
+    // autoritativo PRÓPRIO (estrutura_fabricacao_incompleta), nunca cair
+    // no catch genérico externo (motivo "erro") - o `return` abaixo
+    // garante que `deps.persistir` nunca é alcançado nesse caso.
+    let revalidacaoServidor: ResultadoSimulacao;
+    try {
+      revalidacaoServidor = await deps.executarMotor(
+        empresaId,
+        params.projetoId,
+        janelaServidor.janelaInicio,
+        janelaServidor.janelaFim,
+      );
+    } catch (erroEstrutura) {
+      if (
+        erroEstrutura instanceof EstruturaFabricacaoIncompletaError ||
+        erroEstrutura instanceof SubconjuntoSemBomError
+      ) {
+        return {
+          ok: false,
+          motivo: "estrutura_fabricacao_incompleta",
+          mensagem: erroEstrutura.message,
+        };
+      }
+      throw erroEstrutura;
+    }
 
     const comparacaoItens = compararResultadosSimulacao(params.resultado, revalidacaoServidor);
     const diferencas = [...diferencasJanela, ...comparacaoItens.diferencas];

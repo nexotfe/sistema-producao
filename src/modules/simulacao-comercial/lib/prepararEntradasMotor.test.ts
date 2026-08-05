@@ -13,6 +13,7 @@ import {
   ProjetoSemItensError,
   RoteiroNaoEncontradoError,
   RecursoSemCapacidadeCadastradaError,
+  EstruturaFabricacaoIncompletaError,
 } from "./errors";
 
 type RecursoRow = { id: string; capacidade_horas_dia: number | null };
@@ -62,6 +63,12 @@ type Base = {
   // resultado). Usado para provar que os dois casos não são confundidos:
   // um vira Error genérico, o outro continua RecursoSemCapacidadeCadastradaError.
   erroConsultaRecursosEmLote?: string;
+  // Resposta simulada de validarEstruturaFabricacaoProjeto (que por sua
+  // vez chama a RPC gerar_lista_tecnica_projeto via
+  // gerarListaTecnicaProjeto.ts) - default é sucesso (estado
+  // "calculado"), para não quebrar os testes de comportamento pré-
+  // existentes acima, que não têm relação com esta validação.
+  resultadoValidacaoEstrutura?: { estado: string; mensagem?: string | null } | { erro: string };
 };
 
 function tabelaGenerica(linhas: Record<string, unknown>[]) {
@@ -214,6 +221,21 @@ function criarClienteFalso(base: Base): SupabaseClient {
       }
     },
     rpc(nome: string, args: Record<string, unknown>) {
+      if (nome === "gerar_lista_tecnica_projeto") {
+        const cfg = base.resultadoValidacaoEstrutura ?? { estado: "calculado" };
+        if ("erro" in cfg) {
+          return Promise.resolve({ data: null, error: { message: cfg.erro } });
+        }
+        return Promise.resolve({
+          data: {
+            estado: cfg.estado,
+            mensagem: cfg.mensagem ?? null,
+            itens_analisados: [],
+            materiais: [],
+          },
+          error: null,
+        });
+      }
       if (nome === "calcular_produtividade_efetiva") {
         const recursoId = args.p_recurso_id as string;
         const erro = base.errosProdutividade?.find((e) => e.recursoId === recursoId);
@@ -432,6 +454,53 @@ describe("prepararEntradasMotor", () => {
     await expect(prepararEntradasMotor(client, "empresa-1", "projeto-1", JANELA_INICIO, JANELA_FIM)).rejects.toThrow(
       RoteiroNaoEncontradoError,
     );
+  });
+
+  it("lança EstruturaFabricacaoIncompletaError quando gerar_lista_tecnica_projeto (via validarEstruturaFabricacaoProjeto) retorna erro, ANTES de consultar roteiro/recursos - requisito obrigatório da Lista Técnica Consolidada", async () => {
+    const mensagemRpc =
+      "Roteiro de fabricação incompleto: nenhuma matéria-prima ativa foi encontrada (item item-1, caminho: PRODUTO-1).";
+    const base = baseMinima({
+      resultadoValidacaoEstrutura: { erro: mensagemRpc },
+    });
+    const { client, contagem } = criarClienteFalsoComContagem(base);
+
+    let erroCapturado: unknown;
+    try {
+      await prepararEntradasMotor(client, "empresa-1", "projeto-1", JANELA_INICIO, JANELA_FIM);
+    } catch (erro) {
+      erroCapturado = erro;
+    }
+
+    expect(erroCapturado).toBeInstanceOf(EstruturaFabricacaoIncompletaError);
+    expect((erroCapturado as Error).message).toBe(mensagemRpc);
+
+    // A validação bloqueia ANTES de qualquer consulta ao roteiro/
+    // recursos - nenhuma das tabelas abaixo chega a ser consultada.
+    expect(contagem.porTabela["projeto_itens"] ?? 0).toBe(0);
+    expect(contagem.porTabela["boms"] ?? 0).toBe(0);
+    expect(contagem.porTabela["bom_operacoes"] ?? 0).toBe(0);
+    expect(contagem.porTabela["bom_itens"] ?? 0).toBe(0);
+    expect(contagem.porTabela["recursos_produtivos"] ?? 0).toBe(0);
+    expect(contagem.porRpc["gerar_lista_tecnica_projeto"]).toBe(1);
+    expect(contagem.porRpc["calcular_produtividade_efetiva"] ?? 0).toBe(0);
+    expect(contagem.porRpc["calcular_comprometido_v2"] ?? 0).toBe(0);
+  });
+
+  it("prossegue normalmente quando gerar_lista_tecnica_projeto retorna estado 'nao_aplicavel_industrializacao' (material do cliente não bloqueia capacidade)", async () => {
+    const client = criarClienteFalso(
+      baseMinima({
+        resultadoValidacaoEstrutura: {
+          estado: "nao_aplicavel_industrializacao",
+          mensagem: "A matéria-prima deste projeto é fornecida pelo cliente.",
+        },
+      }),
+    );
+
+    const { entradas } = await prepararEntradasMotor(client, "empresa-1", "projeto-1", JANELA_INICIO, JANELA_FIM);
+
+    expect(entradas.operacoesOrdenadas).toEqual([
+      { bomOperacaoId: "op-1", recursoOriginalId: "recurso-1", tempoEstimadoMinutos: 60, quantidade: 2 },
+    ]);
   });
 
   it("lança RecursoSemCapacidadeCadastradaError quando capacidade_horas_dia é nula", async () => {

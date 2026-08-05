@@ -57,6 +57,21 @@ export class CandidatoDuplicadoError extends Error {
   }
 }
 
+// Reutiliza gerarListaTecnicaProjeto.ts (módulo de Projetos) como porta
+// de validação estrutural/material antes do cálculo de capacidade -
+// ver validarEstruturaFabricacaoProjeto.ts. A mensagem é sempre a que a
+// RPC gerar_lista_tecnica_projeto já formula (negócio, sem detalhe
+// técnico) - nunca reformulada aqui.
+export class EstruturaFabricacaoIncompletaError extends Error {
+  readonly projetoId: string;
+
+  constructor(projetoId: string, mensagem: string) {
+    super(mensagem);
+    this.name = "EstruturaFabricacaoIncompletaError";
+    this.projetoId = projetoId;
+  }
+}
+
 // Fase 2 (leitura dupla, carregarSnapshotPersistido.ts): sinaliza que um
 // snapshot já persistido não respeita as invariantes estruturais
 // esperadas (item versao_resultado_motor=1 com filhos; item
