@@ -17,6 +17,7 @@ import {
   type ItemCustoParaEditar,
 } from "@/modules/projetos/components/EditarCustoItemModal";
 import { useOrcamento } from "@/modules/projetos/hooks/useOrcamento";
+import { ListaTecnicaProjetoModal } from "@/modules/projetos/components/ListaTecnicaProjetoModal";
 import { PROJECT_TYPE_LABELS } from "@/modules/projetos/constants";
 import { Field } from "@/modules/shared/ui/Field";
 import { Card } from "@/modules/shared/ui/Card";
@@ -82,6 +83,7 @@ export function ProjectDetailsPageContent({
   } = useOrcamento(projectId);
 
   const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
+  const [listaTecnicaAberta, setListaTecnicaAberta] = useState(false);
   const [itemEditando, setItemEditando] = useState<ItemParaEditar | null>(
     null,
   );
@@ -275,6 +277,14 @@ export function ProjectDetailsPageContent({
                   </button>
                   <button
                     type="button"
+                    onClick={() => setListaTecnicaAberta(true)}
+                    disabled={!projetoId}
+                    className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Lista Técnica
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleSalvar}
                     disabled={salvando}
                     className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
@@ -398,6 +408,15 @@ export function ProjectDetailsPageContent({
           onClose={() => setItemCustoEditando(null)}
           onSave={editarCustoItem}
         />
+
+        {projetoId ? (
+          <ListaTecnicaProjetoModal
+            open={listaTecnicaAberta}
+            onClose={() => setListaTecnicaAberta(false)}
+            projetoId={projetoId}
+            numeroProjeto={numeroProjeto}
+          />
+        ) : null}
 
         {formulaErro && (
           <p className="text-sm font-medium text-rose-600">{formulaErro}</p>
