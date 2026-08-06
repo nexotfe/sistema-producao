@@ -595,44 +595,85 @@ export function ProjectDetailsPageContent({
             Produtivo.
           </p>
 
-          <div className="mt-3 flex flex-col gap-2">
-            {resumoProdutivo.linhas.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                Nenhuma operação de roteiro cadastrada nos itens do projeto.
-              </p>
-            ) : (
-              resumoProdutivo.linhas.map((linha) => (
-                <div
-                  key={linha.recursoId ?? "sem-recurso"}
-                  className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                >
-                  <span
-                    className={
-                      linha.recursoId
-                        ? "text-slate-800"
-                        : "font-medium text-amber-700"
-                    }
-                  >
-                    {linha.recursoId
-                      ? `${linha.codigo ?? "—"} — ${linha.nome ?? "—"}`
-                      : "Sem recurso definido"}
+          {resumoProdutivo.erro ? (
+            <p className="mt-3 text-sm font-medium text-red-600">
+              {resumoProdutivo.erro}
+            </p>
+          ) : (
+            <>
+              {resumoProdutivo.estado === "incompleto" ? (
+                <div className="mt-3 rounded-md border-2 border-amber-400 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+                  <p className="font-bold">
+                    Resumo Produtivo incompleto — não utilizar para prazo ou
+                    capacidade
+                  </p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    Os itens abaixo não têm estrutura de fabricação
+                    totalmente resolvível, então os minutos calculados são
+                    parciais:
+                  </p>
+                  <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-xs">
+                    {resumoProdutivo.itensIncompletos.map((item) => (
+                      <li key={item.projetoItemId}>
+                        <span className="font-semibold">
+                          {item.produtoCodigo}
+                        </span>
+                        {item.motivo === "ciclo"
+                          ? " — ciclo detectado na estrutura"
+                          : item.motivo === "profundidade_excedida"
+                            ? " — estrutura excede a profundidade máxima calculável"
+                            : " — sem roteiro cadastrado"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              <div className="mt-3 flex flex-col gap-2">
+                {resumoProdutivo.linhas.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    Nenhuma operação de roteiro cadastrada nos itens do
+                    projeto.
+                  </p>
+                ) : (
+                  resumoProdutivo.linhas.map((linha) => (
+                    <div
+                      key={linha.recursoId ?? "sem-recurso"}
+                      className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                    >
+                      <span
+                        className={
+                          linha.recursoId
+                            ? "text-slate-800"
+                            : "font-medium text-amber-700"
+                        }
+                      >
+                        {linha.recursoId
+                          ? `${linha.codigo ?? "—"} — ${linha.nome ?? "—"}`
+                          : "Sem recurso cadastrado"}
+                      </span>
+                      <span className="font-medium text-slate-800">
+                        {linha.minutos.toLocaleString("pt-BR")} min
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {resumoProdutivo.linhas.length > 0 ? (
+                <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-sm font-semibold text-slate-900">
+                  <span>
+                    {resumoProdutivo.estado === "incompleto"
+                      ? "Horas parciais identificadas"
+                      : "Total das operações"}
                   </span>
-                  <span className="font-medium text-slate-800">
-                    {linha.minutos.toLocaleString("pt-BR")} min total
+                  <span>
+                    {resumoProdutivo.totalMinutos.toLocaleString("pt-BR")} min
                   </span>
                 </div>
-              ))
-            )}
-          </div>
-
-          {resumoProdutivo.linhas.length > 0 ? (
-            <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-sm font-semibold text-slate-900">
-              <span>Total das operações</span>
-              <span>
-                {resumoProdutivo.totalMinutos.toLocaleString("pt-BR")} min
-              </span>
-            </div>
-          ) : null}
+              ) : null}
+            </>
+          )}
         </section>
 
         <section className="rounded-md border border-slate-200 bg-app-card">
