@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export type ItemCustoParaEditar = {
   id: string;
@@ -20,20 +20,30 @@ type Props = {
 };
 
 export function EditarCustoItemModal({ item, onClose, onSave }: Props) {
-  const [custo, setCusto] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (item) {
-      setCusto(String(item.custoUnitario));
-      setErro(null);
-    }
-  }, [item]);
-
   if (!item) {
     return null;
   }
+
+  return (
+    <EditarCustoItemModalConteudo
+      key={`${item.id}:${item.custoUnitario}`}
+      item={item}
+      onClose={onClose}
+      onSave={onSave}
+    />
+  );
+}
+
+type ConteudoProps = {
+  item: ItemCustoParaEditar;
+  onClose: () => void;
+  onSave: Props["onSave"];
+};
+
+function EditarCustoItemModalConteudo({ item, onClose, onSave }: ConteudoProps) {
+  const [custo, setCusto] = useState(String(item.custoUnitario));
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   function limparEFechar() {
     setErro(null);
@@ -41,10 +51,6 @@ export function EditarCustoItemModal({ item, onClose, onSave }: Props) {
   }
 
   async function handleSalvar() {
-    if (!item) {
-      return;
-    }
-
     const custoNumerico = Number(custo.replace(",", "."));
 
     if (!Number.isFinite(custoNumerico) || custoNumerico < 0) {

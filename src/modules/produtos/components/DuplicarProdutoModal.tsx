@@ -4,7 +4,7 @@
 // tela de roteiro (/roteiros/[pn]): mesmo componente, mesma chamada a
 // duplicarProdutoComRoteiro, para garantir que as duas entradas da UI
 // executem exatamente a mesma operação.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { duplicarProdutoComRoteiro } from "../lib/duplicarProdutoComRoteiro";
@@ -17,30 +17,32 @@ type Props = {
   produtoOrigemCodigo: string;
 };
 
-export function DuplicarProdutoModal({
-  open,
-  onClose,
-  produtoOrigemId,
-  produtoOrigemCodigo,
-}: Props) {
-  const router = useRouter();
-  const [codigo, setCodigo] = useState("");
-  const [duplicando, setDuplicando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [controlador] = useState(() => new ControladorChamadaUnica());
-
-  // Sugestão "CODIGO-ORIGINAL-COPIA", recalculada toda vez que o modal
-  // abre (ou muda de produto de origem) - editável antes de confirmar.
-  useEffect(() => {
-    if (open) {
-      setCodigo(`${produtoOrigemCodigo}-COPIA`);
-      setErro(null);
-    }
-  }, [open, produtoOrigemCodigo]);
-
+export function DuplicarProdutoModal({ open, ...props }: Props) {
   if (!open) {
     return null;
   }
+
+  return (
+    <DuplicarProdutoModalConteudo
+      key={`${props.produtoOrigemId}:${props.produtoOrigemCodigo}`}
+      {...props}
+    />
+  );
+}
+
+type ConteudoProps = Omit<Props, "open">;
+
+function DuplicarProdutoModalConteudo({
+  onClose,
+  produtoOrigemId,
+  produtoOrigemCodigo,
+}: ConteudoProps) {
+  const router = useRouter();
+  // Sugestão "CODIGO-ORIGINAL-COPIA" - editável antes de confirmar.
+  const [codigo, setCodigo] = useState(`${produtoOrigemCodigo}-COPIA`);
+  const [duplicando, setDuplicando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [controlador] = useState(() => new ControladorChamadaUnica());
 
   function fechar() {
     if (duplicando) return; // não fecha no meio da chamada

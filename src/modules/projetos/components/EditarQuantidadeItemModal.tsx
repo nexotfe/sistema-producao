@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export type ItemParaEditar = {
   id: string;
@@ -20,20 +20,34 @@ type Props = {
 };
 
 export function EditarQuantidadeItemModal({ item, onClose, onSave }: Props) {
-  const [quantidade, setQuantidade] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (item) {
-      setQuantidade(String(item.quantidade));
-      setErro(null);
-    }
-  }, [item]);
-
   if (!item) {
     return null;
   }
+
+  return (
+    <EditarQuantidadeItemModalConteudo
+      key={`${item.id}:${item.quantidade}`}
+      item={item}
+      onClose={onClose}
+      onSave={onSave}
+    />
+  );
+}
+
+type ConteudoProps = {
+  item: ItemParaEditar;
+  onClose: () => void;
+  onSave: Props["onSave"];
+};
+
+function EditarQuantidadeItemModalConteudo({
+  item,
+  onClose,
+  onSave,
+}: ConteudoProps) {
+  const [quantidade, setQuantidade] = useState(String(item.quantidade));
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   function limparEFechar() {
     setErro(null);
@@ -41,10 +55,6 @@ export function EditarQuantidadeItemModal({ item, onClose, onSave }: Props) {
   }
 
   async function handleSalvar() {
-    if (!item) {
-      return;
-    }
-
     const quantidadeNumerica = Number(quantidade.replace(",", "."));
 
     if (!Number.isFinite(quantidadeNumerica) || quantidadeNumerica <= 0) {
