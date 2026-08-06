@@ -27,6 +27,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
     criarPrimeiroRoteiro,
     materiais,
     adicionarMaterial,
+    editarMaterial,
     removerMaterial,
     subconjuntos,
     adicionarSubconjunto,
@@ -154,6 +155,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
           bom={bom}
           materiais={materiais}
           onAdicionarMaterial={adicionarMaterial}
+          onEditarMaterial={editarMaterial}
           onRemoverMaterial={removerMaterial}
           subconjuntos={subconjuntos}
           onAdicionarSubconjunto={adicionarSubconjunto}

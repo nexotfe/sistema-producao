@@ -6,6 +6,7 @@ import {
   excluirRegistro,
   type ResultadoExclusao,
 } from "@/modules/shared/data/excluirRegistro";
+import { editarMaterial as editarMaterialLib } from "../lib/editarMaterial";
 import type {
   Bom,
   BomItemMateriaPrima,
@@ -677,6 +678,25 @@ export function useRoteiro(pn: string) {
     return resultado;
   }
 
+  async function editarMaterial(
+    id: string,
+    input: NovoBomItemInput,
+  ): Promise<ResultadoOperacaoRoteiro> {
+    if (!bom) {
+      return { status: "erro", mensagem: "Roteiro não encontrado." };
+    }
+
+    setProcessando(true);
+    const resultado = await editarMaterialLib(supabase, id, input);
+
+    if (resultado.status === "ok") {
+      await Promise.all([carregarMateriais(bom.id), carregarCusto(bom.id)]);
+    }
+
+    setProcessando(false);
+    return resultado;
+  }
+
   async function adicionarSubconjunto(
     input: NovoSubconjuntoInput,
   ): Promise<ResultadoOperacaoRoteiro> {
@@ -926,6 +946,7 @@ export function useRoteiro(pn: string) {
 
     materiais,
     adicionarMaterial,
+    editarMaterial,
     removerMaterial,
 
     subconjuntos,

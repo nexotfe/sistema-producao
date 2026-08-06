@@ -32,6 +32,10 @@ type RoteiroFormProps = {
   onAdicionarMaterial: (
     input: NovoBomItemInput,
   ) => Promise<ResultadoOperacaoRoteiro>;
+  onEditarMaterial: (
+    id: string,
+    input: NovoBomItemInput,
+  ) => Promise<ResultadoOperacaoRoteiro>;
   onRemoverMaterial: (id: string) => Promise<ResultadoExclusao>;
 
   subconjuntos: BomItemSubconjunto[];
@@ -90,6 +94,7 @@ export function RoteiroForm({
   bom,
   materiais,
   onAdicionarMaterial,
+  onEditarMaterial,
   onRemoverMaterial,
   subconjuntos,
   onAdicionarSubconjunto,
@@ -111,6 +116,8 @@ export function RoteiroForm({
   custo,
 }: RoteiroFormProps) {
   const [modalMaterialAberto, setModalMaterialAberto] = useState(false);
+  const [materialEditando, setMaterialEditando] =
+    useState<BomItemMateriaPrima | null>(null);
   const [modalSubconjuntoAberto, setModalSubconjuntoAberto] = useState(false);
   const [modalOperacaoAberto, setModalOperacaoAberto] = useState(false);
   const [operacaoEditando, setOperacaoEditando] = useState<BomOperacao | null>(
@@ -130,6 +137,21 @@ export function RoteiroForm({
     setErroMaterial(null);
     const resultado = await onRemoverMaterial(id);
     setErroMaterial(mensagemErroExclusao(resultado));
+  }
+
+  function handleEditarMaterial(material: BomItemMateriaPrima) {
+    setMaterialEditando(material);
+    setModalMaterialAberto(true);
+  }
+
+  function handleAbrirModalMaterial() {
+    setMaterialEditando(null);
+    setModalMaterialAberto(true);
+  }
+
+  function handleFecharModalMaterial() {
+    setModalMaterialAberto(false);
+    setMaterialEditando(null);
   }
 
   async function handleRemoverSubconjunto(id: string) {
@@ -215,7 +237,7 @@ export function RoteiroForm({
 
             <button
               type="button"
-              onClick={() => setModalMaterialAberto(true)}
+              onClick={handleAbrirModalMaterial}
               className="h-9 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Adicionar material
@@ -276,6 +298,13 @@ export function RoteiroForm({
                         {item.observacoes || "—"}
                       </td>
                       <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleEditarMaterial(item)}
+                          className="mr-3 text-xs font-semibold text-blue-700 hover:underline"
+                        >
+                          Editar
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleRemoverMaterial(item.id)}
@@ -627,8 +656,10 @@ export function RoteiroForm({
 
       <AdicionarMaterialModal
         open={modalMaterialAberto}
-        onClose={() => setModalMaterialAberto(false)}
+        onClose={handleFecharModalMaterial}
         onAdd={onAdicionarMaterial}
+        onEdit={onEditarMaterial}
+        materialEditando={materialEditando}
       />
 
       <AdicionarSubconjuntoModal

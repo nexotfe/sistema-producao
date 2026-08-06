@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { unidadesBomItem } from "../types";
-import type { NovoBomItemInput, ResultadoOperacaoRoteiro } from "../types";
+import type {
+  BomItemMateriaPrima,
+  NovoBomItemInput,
+  ResultadoOperacaoRoteiro,
+} from "../types";
 import {
   MateriaPrimaSearchInput,
   type MateriaPrimaResumo,
@@ -12,39 +16,89 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onAdd: (input: NovoBomItemInput) => Promise<ResultadoOperacaoRoteiro>;
+  onEdit: (
+    id: string,
+    input: NovoBomItemInput,
+  ) => Promise<ResultadoOperacaoRoteiro>;
+  materialEditando: BomItemMateriaPrima | null;
 };
 
-export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
-  const [materiaPrima, setMateriaPrima] = useState<MateriaPrimaResumo | null>(
-    null,
-  );
-  const [quantidade, setQuantidade] = useState("");
-  const [dimensoes, setDimensoes] = useState("");
-  const [observacoes, setObservacoes] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
+export function AdicionarMaterialModal({
+  open,
+  onClose,
+  onAdd,
+  onEdit,
+  materialEditando,
+}: Props) {
   if (!open) {
     return null;
   }
 
-  const unidade = materiaPrima?.unidade ?? "";
+  // key=materialEditando?.id: cada abertura (adicionar, ou editar um
+  // material diferente) monta uma instância nova do conteúdo - o
+  // estado nasce já com os valores corretos direto no useState, sem
+  // precisar de um efeito para sincronizar/resetar estado a cada
+  // abertura (mesmo padrão de ListaTecnicaProjetoModal.tsx).
+  return (
+    <AdicionarMaterialModalConteudo
+      key={materialEditando?.id ?? "novo"}
+      onClose={onClose}
+      onAdd={onAdd}
+      onEdit={onEdit}
+      materialEditando={materialEditando}
+    />
+  );
+}
+
+type ConteudoProps = {
+  onClose: () => void;
+  onAdd: (input: NovoBomItemInput) => Promise<ResultadoOperacaoRoteiro>;
+  onEdit: (
+    id: string,
+    input: NovoBomItemInput,
+  ) => Promise<ResultadoOperacaoRoteiro>;
+  materialEditando: BomItemMateriaPrima | null;
+};
+
+function AdicionarMaterialModalConteudo({
+  onClose,
+  onAdd,
+  onEdit,
+  materialEditando,
+}: ConteudoProps) {
+  const [materiaPrima, setMateriaPrima] = useState<MateriaPrimaResumo | null>(
+    null,
+  );
+  const [unidadeEdicao, setUnidadeEdicao] = useState(
+    materialEditando?.unidade ?? "",
+  );
+  const [quantidade, setQuantidade] = useState(
+    materialEditando ? String(materialEditando.quantidade) : "",
+  );
+  const [dimensoes, setDimensoes] = useState(
+    materialEditando?.dimensoes ?? "",
+  );
+  const [observacoes, setObservacoes] = useState(
+    materialEditando?.observacoes ?? "",
+  );
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const unidade = materialEditando
+    ? unidadeEdicao
+    : (materiaPrima?.unidade ?? "");
   const unidadeLabel =
     unidadesBomItem.find((opcao) => opcao.value === unidade)?.label ??
     unidade;
 
-  function limparEFechar() {
-    setMateriaPrima(null);
-    setQuantidade("");
-    setDimensoes("");
-    setObservacoes("");
-    setErro(null);
-    onClose();
-  }
-
   async function handleAdicionar() {
-    if (!materiaPrima) {
+    if (!materialEditando && !materiaPrima) {
       setErro("Selecione a matéria-prima.");
+      return;
+    }
+
+    if (materialEditando && !unidadeEdicao) {
+      setErro("Selecione a unidade.");
       return;
     }
 
@@ -58,13 +112,21 @@ export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
     setSalvando(true);
     setErro(null);
 
-    const resultado = await onAdd({
-      materiaPrimaId: materiaPrima.id,
-      quantidade: quantidadeNumerica,
-      unidade,
-      dimensoes,
-      observacoes,
-    });
+    const resultado = materialEditando
+      ? await onEdit(materialEditando.id, {
+          materiaPrimaId: materialEditando.materiaPrimaId,
+          quantidade: quantidadeNumerica,
+          unidade: unidadeEdicao,
+          dimensoes,
+          observacoes,
+        })
+      : await onAdd({
+          materiaPrimaId: materiaPrima!.id,
+          quantidade: quantidadeNumerica,
+          unidade,
+          dimensoes,
+          observacoes,
+        });
 
     setSalvando(false);
 
@@ -73,7 +135,7 @@ export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
       return;
     }
 
-    limparEFechar();
+    onClose();
   }
 
   return (
@@ -81,10 +143,12 @@ export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
       <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">
-            Adicionar Material
+            {materialEditando ? "Editar material" : "Adicionar Material"}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Vincule uma matéria-prima já cadastrada a este roteiro.
+            {materialEditando
+              ? "Corrija quantidade, unidade, dimensões e observações. Para trocar a matéria-prima vinculada, remova e adicione novamente."
+              : "Vincule uma matéria-prima já cadastrada a este roteiro."}
           </p>
         </div>
 
@@ -94,10 +158,16 @@ export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
               <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                 Matéria-prima
               </label>
-              <MateriaPrimaSearchInput
-                value={materiaPrima}
-                onChange={setMateriaPrima}
-              />
+              {materialEditando ? (
+                <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+                  {materialEditando.descricao}
+                </div>
+              ) : (
+                <MateriaPrimaSearchInput
+                  value={materiaPrima}
+                  onChange={setMateriaPrima}
+                />
+              )}
             </div>
 
             <div>
@@ -133,9 +203,23 @@ export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
                 <label className="mb-1.5 block text-xs font-semibold text-slate-600">
                   Unidade
                 </label>
-                <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
-                  {unidadeLabel || "Selecione a matéria-prima"}
-                </div>
+                {materialEditando ? (
+                  <select
+                    value={unidadeEdicao}
+                    onChange={(event) => setUnidadeEdicao(event.target.value)}
+                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    {unidadesBomItem.map((opcao) => (
+                      <option key={opcao.value} value={opcao.value}>
+                        {opcao.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
+                    {unidadeLabel || "Selecione a matéria-prima"}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -160,7 +244,7 @@ export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
         <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
           <button
             type="button"
-            onClick={limparEFechar}
+            onClick={onClose}
             className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Cancelar
@@ -171,7 +255,13 @@ export function AdicionarMaterialModal({ open, onClose, onAdd }: Props) {
             disabled={salvando}
             className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {salvando ? "Adicionando..." : "Adicionar"}
+            {materialEditando
+              ? salvando
+                ? "Salvando..."
+                : "Salvar"
+              : salvando
+                ? "Adicionando..."
+                : "Adicionar"}
           </button>
         </div>
       </div>
