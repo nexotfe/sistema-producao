@@ -35,17 +35,21 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  useEffect(() => {
-    const termoBusca = termo.trim();
+  const termoBusca = termo.trim();
+  const buscaAtiva = !produtoSelecionado && termoBusca.length > 0;
+  const resultadosExibidos = buscaAtiva ? resultados : [];
+  const buscandoExibido = buscaAtiva ? buscando : false;
 
-    if (produtoSelecionado || !termoBusca) {
-      setResultados([]);
+  useEffect(() => {
+    if (!buscaAtiva) {
       return;
     }
 
-    setBuscando(true);
+    let cancelado = false;
 
     const timeoutId = setTimeout(async () => {
+      setBuscando(true);
+
       const { data } = await supabase
         .from("itens_industriais")
         .select("id,codigo,descricao")
@@ -54,12 +58,19 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
         .order("codigo", { ascending: true })
         .limit(8);
 
+      if (cancelado) {
+        return;
+      }
+
       setResultados((data ?? []) as ProdutoResumo[]);
       setBuscando(false);
     }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [termo, produtoSelecionado]);
+    return () => {
+      cancelado = true;
+      clearTimeout(timeoutId);
+    };
+  }, [buscaAtiva, termoBusca]);
 
   if (!open) {
     return null;
@@ -109,9 +120,8 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
     limparEFechar();
   }
 
-  const termoBusca = termo.trim();
   const semResultados =
-    !buscando && termoBusca.length > 0 && resultados.length === 0;
+    !buscandoExibido && termoBusca.length > 0 && resultadosExibidos.length === 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
@@ -182,7 +192,7 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
                 />
               </div>
 
-              {buscando ? (
+              {buscandoExibido ? (
                 <p className="text-sm text-slate-400">Buscando...</p>
               ) : semResultados ? (
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-center">
@@ -197,9 +207,9 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
                     Criar novo produto
                   </button>
                 </div>
-              ) : resultados.length > 0 ? (
+              ) : resultadosExibidos.length > 0 ? (
                 <div className="rounded-md border border-slate-200">
-                  {resultados.map((produto) => (
+                  {resultadosExibidos.map((produto) => (
                     <button
                       key={produto.id}
                       type="button"

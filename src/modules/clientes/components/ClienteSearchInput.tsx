@@ -26,15 +26,19 @@ export function ClienteSearchInput({
   onChange,
   placeholder = "Buscar cliente",
 }: ClienteSearchInputProps) {
+  // Ajuste de estado durante o render (padrao oficial do React) - sem
+  // useEffect: reseta termo sempre que o objeto value mudar.
+  const [valorAnterior, setValorAnterior] = useState(value);
   const [termo, setTermo] = useState(value?.nome ?? "");
+  if (value !== valorAnterior) {
+    setValorAnterior(value);
+    setTermo(value?.nome ?? "");
+  }
+
   const [resultados, setResultados] = useState<ClienteRow[]>([]);
   const [aberto, setAberto] = useState(false);
   const [buscando, setBuscando] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setTermo(value?.nome ?? "");
-  }, [value]);
 
   useEffect(() => {
     function aoClicarFora(event: MouseEvent) {
@@ -47,17 +51,30 @@ export function ClienteSearchInput({
     return () => document.removeEventListener("mousedown", aoClicarFora);
   }, []);
 
-  useEffect(() => {
-    const termoBusca = termo.trim();
+  const termoBusca = termo.trim();
+  const buscaAtiva =
+    termoBusca.length > 0 && !(value && termoBusca === value.nome);
+  // Deriva o que e' exibido em vez de limpar resultados/buscando via
+  // setState no efeito - nunca sobra resultado/loading de uma busca
+  // que deixou de ser relevante (termo vazio ou ja igual ao value).
+  const resultadosExibidos = buscaAtiva ? resultados : [];
+  const buscandoExibido = buscaAtiva ? buscando : false;
 
-    if (!termoBusca || (value && termoBusca === value.nome)) {
-      setResultados([]);
+  useEffect(() => {
+    if (!buscaAtiva) {
+      // Nada a agendar - resultadosExibidos/buscandoExibido acima ja
+      // refletem "sem busca ativa" sem nenhum setState aqui.
       return;
     }
 
-    setBuscando(true);
+    let cancelado = false;
 
     const timeoutId = setTimeout(async () => {
+      // setBuscando so' roda quando o debounce realmente inicia a
+      // consulta (300ms depois, macrotask separada) - nunca no corpo
+      // sincrono do efeito.
+      setBuscando(true);
+
       const termoEscapado = termoBusca.replace(/"/g, '\\"');
       const filtro = ["nome", "nome_fantasia", "cnpj"]
         .map((coluna) => `${coluna}.ilike."%${termoEscapado}%"`)
@@ -72,12 +89,21 @@ export function ClienteSearchInput({
         .order("nome", { ascending: true })
         .limit(8);
 
+      if (cancelado) {
+        // Uma busca mais nova ja assumiu - nao aplica resultado nem
+        // encerra o loading dela.
+        return;
+      }
+
       setResultados((data ?? []) as ClienteRow[]);
       setBuscando(false);
     }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [termo, value]);
+    return () => {
+      cancelado = true;
+      clearTimeout(timeoutId);
+    };
+  }, [termoBusca, buscaAtiva]);
 
   function selecionar(cliente: ClienteRow) {
     onChange({ id: cliente.id, nome: cliente.nome ?? "" });
@@ -108,14 +134,14 @@ export function ClienteSearchInput({
 
       {mostrarDropdown ? (
         <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-app-card py-1 shadow-lg">
-          {buscando ? (
+          {buscandoExibido ? (
             <p className="px-3 py-2 text-sm text-slate-400">Buscando...</p>
-          ) : resultados.length === 0 ? (
+          ) : resultadosExibidos.length === 0 ? (
             <p className="px-3 py-2 text-sm text-slate-400">
               Nenhum cliente encontrado.
             </p>
           ) : (
-            resultados.map((cliente) => (
+            resultadosExibidos.map((cliente) => (
               <button
                 key={cliente.id}
                 type="button"

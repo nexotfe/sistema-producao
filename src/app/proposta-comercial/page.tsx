@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { proximaRevisao, useProposta } from "@/modules/projetos/hooks/useProposta";
 
@@ -61,11 +61,17 @@ export default function CommercialProposalPage() {
 
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isRevisaoModalOpen, setIsRevisaoModalOpen] = useState(false);
-  const [textoConsideracoes, setTextoConsideracoes] = useState(consideracoes);
 
-  useEffect(() => {
+  // Ajuste de estado durante o render (padrao oficial do React) - sem
+  // useEffect: compara com o valor anterior de consideracoes e, se
+  // mudou, resincroniza o texto no mesmo render.
+  const [consideracoesAnterior, setConsideracoesAnterior] =
+    useState(consideracoes);
+  const [textoConsideracoes, setTextoConsideracoes] = useState(consideracoes);
+  if (consideracoes !== consideracoesAnterior) {
+    setConsideracoesAnterior(consideracoes);
     setTextoConsideracoes(consideracoes);
-  }, [consideracoes]);
+  }
 
   async function handleConfirmarNovaRevisao() {
     setIsRevisaoModalOpen(false);
@@ -78,7 +84,7 @@ export default function CommercialProposalPage() {
   // ganharem coluna). Nome do Vendedor tem como sugestão inicial o
   // usuário logado (não existe coluna "responsavel" persistida em
   // projetos - mesma aproximação usada no Orçamento).
-  const [nomeVendedor, setNomeVendedor] = useState("");
+  const [nomeVendedor, setNomeVendedor] = useState(responsavelNome);
   const [emailVendedor, setEmailVendedor] = useState("comercial@nexotfe.com.br");
   const [telefoneContato, setTelefoneContato] = useState("(11) 0000-0000");
   const [validadeProposta, setValidadeProposta] = useState("15 dias");
@@ -91,11 +97,19 @@ export default function CommercialProposalPage() {
     "Prazo sujeito à confirmação no aceite da proposta.",
   );
 
-  useEffect(() => {
-    if (responsavelNome) {
-      setNomeVendedor((atual) => atual || responsavelNome);
+  // Regra especial: preenche nomeVendedor com responsavelNome so' na
+  // transicao em que responsavelNome muda (ex: chega do carregamento
+  // assincrono) E somente se o campo ainda estiver vazio - nunca
+  // sobrescreve o que o usuario ja tiver digitado. Ajuste de estado
+  // durante o render, sem useEffect.
+  const [responsavelAnterior, setResponsavelAnterior] =
+    useState(responsavelNome);
+  if (responsavelNome !== responsavelAnterior) {
+    setResponsavelAnterior(responsavelNome);
+    if (responsavelNome && !nomeVendedor) {
+      setNomeVendedor(responsavelNome);
     }
-  }, [responsavelNome]);
+  }
 
   const outrasInformacoes: [string, string, (valor: string) => void][] = [
     ["Nome do Vendedor", nomeVendedor, setNomeVendedor],

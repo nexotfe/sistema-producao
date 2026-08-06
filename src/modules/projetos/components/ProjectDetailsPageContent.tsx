@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ProjectStructureItemsTable,
   type ProjectStructureItem,
@@ -97,28 +97,33 @@ export function ProjectDetailsPageContent({
   // valor numerico limpo (sem zero a esquerda) vai para o hook a cada
   // mudanca, e o texto se resincroniza com o numero quando ele muda por
   // outra via (ex: carregamento inicial).
+  // Ajuste de estado durante o render (padrao oficial do React para
+  // estado derivado de prop - https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes):
+  // compara com o valor anterior e, se mudou, atualiza o texto no
+  // mesmo render, sem useEffect.
+  const [margemAnterior, setMargemAnterior] = useState(margemLucroPercent);
   const [margemTexto, setMargemTexto] = useState(String(margemLucroPercent));
-  const [cargaTexto, setCargaTexto] = useState(
-    String(cargaTributariaPercent ?? cargaTributariaEfetiva),
-  );
-
-  useEffect(() => {
+  if (margemLucroPercent !== margemAnterior) {
+    setMargemAnterior(margemLucroPercent);
     setMargemTexto(String(margemLucroPercent));
-  }, [margemLucroPercent]);
+  }
 
-  useEffect(() => {
-    setCargaTexto(String(cargaTributariaPercent ?? cargaTributariaEfetiva));
-  }, [cargaTributariaPercent, cargaTributariaEfetiva]);
+  const cargaTributariaAtual = cargaTributariaPercent ?? cargaTributariaEfetiva;
+  const [cargaAnterior, setCargaAnterior] = useState(cargaTributariaAtual);
+  const [cargaTexto, setCargaTexto] = useState(String(cargaTributariaAtual));
+  if (cargaTributariaAtual !== cargaAnterior) {
+    setCargaAnterior(cargaTributariaAtual);
+    setCargaTexto(String(cargaTributariaAtual));
+  }
 
+  const [descontoAnterior, setDescontoAnterior] = useState(descontoPercentual);
   const [descontoTexto, setDescontoTexto] = useState(
     descontoPercentual !== null ? String(descontoPercentual) : "",
   );
-
-  useEffect(() => {
-    setDescontoTexto(
-      descontoPercentual !== null ? String(descontoPercentual) : "",
-    );
-  }, [descontoPercentual]);
+  if (descontoPercentual !== descontoAnterior) {
+    setDescontoAnterior(descontoPercentual);
+    setDescontoTexto(descontoPercentual !== null ? String(descontoPercentual) : "");
+  }
 
   if (!projectId) {
     return (

@@ -52,12 +52,14 @@ export function ContatoSearchInput({
     return () => document.removeEventListener("mousedown", aoClicarFora);
   }, []);
 
-  useEffect(() => {
-    const termo = valorNome.trim();
+  const termo = valorNome.trim();
+  // Sem cliente selecionado, o campo funciona normal - sem autocomplete.
+  const buscaAtiva = Boolean(clienteId) && termo.length > 0;
+  const resultadosExibidos = buscaAtiva ? resultados : [];
+  const buscandoExibido = buscaAtiva ? buscando : false;
 
-    // Sem cliente selecionado, o campo funciona normal - sem autocomplete.
-    if (!clienteId || !termo) {
-      setResultados([]);
+  useEffect(() => {
+    if (!buscaAtiva || !clienteId) {
       return;
     }
 
@@ -66,9 +68,11 @@ export function ContatoSearchInput({
     const colTelefone = `${prefixoColuna}_telefone`;
     const colSetor = `${prefixoColuna}_setor`;
 
-    setBuscando(true);
+    let cancelado = false;
 
     const timeoutId = setTimeout(async () => {
+      setBuscando(true);
+
       let query = supabase
         .from("projetos")
         .select(`${colNome},${colEmail},${colTelefone},${colSetor},created_at`)
@@ -85,6 +89,11 @@ export function ContatoSearchInput({
       }
 
       const { data } = await query;
+
+      if (cancelado) {
+        return;
+      }
+
       const linhas = (data ?? []) as unknown as ProjetoContatoRow[];
 
       const vistos = new Set<string>();
@@ -114,8 +123,11 @@ export function ContatoSearchInput({
       setBuscando(false);
     }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [valorNome, clienteId, prefixoColuna, projetoIdAtual]);
+    return () => {
+      cancelado = true;
+      clearTimeout(timeoutId);
+    };
+  }, [buscaAtiva, termo, clienteId, prefixoColuna, projetoIdAtual]);
 
   function selecionar(contato: ContatoSugestao) {
     onSelecionar(contato);
@@ -144,14 +156,14 @@ export function ContatoSearchInput({
 
       {mostrarDropdown ? (
         <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-app-card py-1 shadow-lg">
-          {buscando ? (
+          {buscandoExibido ? (
             <p className="px-3 py-2 text-sm text-slate-400">Buscando...</p>
-          ) : resultados.length === 0 ? (
+          ) : resultadosExibidos.length === 0 ? (
             <p className="px-3 py-2 text-sm text-slate-400">
               Nenhuma sugestão.
             </p>
           ) : (
-            resultados.map((contato) => (
+            resultadosExibidos.map((contato) => (
               <button
                 key={contato.nome}
                 type="button"
