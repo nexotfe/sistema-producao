@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type {
   BomOperacao,
   NovaOperacaoInput,
@@ -21,50 +21,49 @@ type Props = {
   operacaoEditando: BomOperacao | null;
 };
 
-export function AdicionarOperacaoModal({
-  open,
+export function AdicionarOperacaoModal({ open, ...props }: Props) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <AdicionarOperacaoModalConteudo
+      key={props.operacaoEditando?.id ?? "novo"}
+      {...props}
+    />
+  );
+}
+
+type ConteudoProps = Omit<Props, "open">;
+
+function AdicionarOperacaoModalConteudo({
   onClose,
   onAdd,
   onEdit,
   recursosDisponiveis,
   proximaOrdem,
   operacaoEditando,
-}: Props) {
-  const [ordem, setOrdem] = useState(String(proximaOrdem));
-  const [descricao, setDescricao] = useState("");
-  const [recursoProdutivoId, setRecursoProdutivoId] = useState("");
-  const [tipo, setTipo] = useState<"engenharia" | "producao">("producao");
-  const [tempoEstimadoMinutos, setTempoEstimadoMinutos] = useState("");
-  const [observacoes, setObservacoes] = useState("");
+}: ConteudoProps) {
+  const [ordem, setOrdem] = useState(
+    String(operacaoEditando ? operacaoEditando.ordem : proximaOrdem),
+  );
+  const [descricao, setDescricao] = useState(
+    operacaoEditando?.descricao ?? "",
+  );
+  const [recursoProdutivoId, setRecursoProdutivoId] = useState(
+    operacaoEditando?.recursoProdutivoId ?? "",
+  );
+  const [tipo, setTipo] = useState<"engenharia" | "producao">(
+    operacaoEditando?.tipo ?? "producao",
+  );
+  const [tempoEstimadoMinutos, setTempoEstimadoMinutos] = useState(
+    operacaoEditando ? String(operacaoEditando.tempoEstimadoMinutos) : "",
+  );
+  const [observacoes, setObservacoes] = useState(
+    operacaoEditando?.observacoes ?? "",
+  );
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    if (operacaoEditando) {
-      setOrdem(String(operacaoEditando.ordem));
-      setDescricao(operacaoEditando.descricao);
-      setRecursoProdutivoId(operacaoEditando.recursoProdutivoId ?? "");
-      setTipo(operacaoEditando.tipo);
-      setTempoEstimadoMinutos(String(operacaoEditando.tempoEstimadoMinutos));
-      setObservacoes(operacaoEditando.observacoes ?? "");
-      return;
-    }
-
-    setOrdem(String(proximaOrdem));
-    setDescricao("");
-    setRecursoProdutivoId("");
-    setTipo("producao");
-    setTempoEstimadoMinutos("");
-    setObservacoes("");
-  }, [open, proximaOrdem, operacaoEditando]);
-
-  if (!open) {
-    return null;
-  }
 
   function limparEFechar() {
     setDescricao("");
