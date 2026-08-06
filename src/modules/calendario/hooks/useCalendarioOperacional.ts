@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { CalendarioEmpresaEvento, TipoEventoCalendario } from "../types";
 
@@ -26,13 +26,16 @@ export function useCalendarioOperacional() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
+  const [versaoRecarga, setVersaoRecarga] = useState(0);
 
-  const carregar = useCallback(async () => {
-    setLoading(true);
-    setErro(null);
+  useEffect(() => {
+    let cancelado = false;
 
-    const [{ data: padrao, error: erroPadrao }, { data: eventosData, error: erroEventos }] =
-      await Promise.all([
+    async function carregar() {
+      const [
+        { data: padrao, error: erroPadrao },
+        { data: eventosData, error: erroEventos },
+      ] = await Promise.all([
         supabase
           .from("calendario_operacional_empresa")
           .select("id,segunda,terca,quarta,quinta,sexta,sabado,domingo")
@@ -43,31 +46,37 @@ export function useCalendarioOperacional() {
           .is("deleted_at", null)
           .order("data", { ascending: false }),
       ]);
+      if (cancelado) return;
 
-    if (erroPadrao || erroEventos) {
-      setErro("Não foi possível carregar o calendário operacional.");
+      if (erroPadrao || erroEventos) {
+        setErro("Não foi possível carregar o calendário operacional.");
+        setLoading(false);
+        return;
+      }
+
+      setErro(null);
+
+      if (padrao) {
+        setRegistroId(padrao.id);
+        setSegunda(padrao.segunda);
+        setTerca(padrao.terca);
+        setQuarta(padrao.quarta);
+        setQuinta(padrao.quinta);
+        setSexta(padrao.sexta);
+        setSabado(padrao.sabado);
+        setDomingo(padrao.domingo);
+      }
+
+      setEventos((eventosData ?? []) as CalendarioEmpresaEvento[]);
       setLoading(false);
-      return;
     }
 
-    if (padrao) {
-      setRegistroId(padrao.id);
-      setSegunda(padrao.segunda);
-      setTerca(padrao.terca);
-      setQuarta(padrao.quarta);
-      setQuinta(padrao.quinta);
-      setSexta(padrao.sexta);
-      setSabado(padrao.sabado);
-      setDomingo(padrao.domingo);
-    }
-
-    setEventos((eventosData ?? []) as CalendarioEmpresaEvento[]);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
     carregar();
-  }, [carregar]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [versaoRecarga]);
 
   async function salvarPadraoSemanal(): Promise<ResultadoAcao> {
     try {
@@ -171,7 +180,8 @@ export function useCalendarioOperacional() {
       return { status: "erro", mensagem: mensagemErro };
     }
 
-    await carregar();
+    setLoading(true);
+    setVersaoRecarga((v) => v + 1);
     setMensagem("Evento adicionado.");
     return { status: "ok" };
   }
@@ -199,7 +209,8 @@ export function useCalendarioOperacional() {
       return { status: "erro", mensagem: mensagemErro };
     }
 
-    await carregar();
+    setLoading(true);
+    setVersaoRecarga((v) => v + 1);
     setMensagem("Evento removido.");
     return { status: "ok" };
   }

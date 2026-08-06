@@ -119,8 +119,14 @@ export function useProjeto(
   const [contatoTecnico2, setContatoTecnico2] =
     useState<ContatoProjeto>(contatoVazio);
 
-  const [resumoOperacional, setResumoOperacional] =
-    useState<ResumoOperacional | null>(null);
+  // resumoCarregado guarda o ultimo resultado junto da chave
+  // (projetoId|status|tipoProjeto) para a qual ele foi calculado -
+  // resumoOperacional (adiante) deriva null sempre que essa chave nao
+  // bater com a atual, sem precisar de nenhum setState para "limpar".
+  const [resumoCarregado, setResumoCarregado] = useState<{
+    chave: string;
+    resumo: ResumoOperacional;
+  } | null>(null);
 
   // Estado "invisivel" do modo Duplicar: /projeto nao tem campos de
   // Margem/Carga Tributaria nem de itens na tela, mas esses dados
@@ -140,8 +146,13 @@ export function useProjeto(
   const [erro, setErro] = useState<string | null>(null);
   const salvandoRef = useRef(false);
 
-  const carregarResumoOperacional = useCallback(
-    async (idProjeto: string, tipoAtual: ProjectType) => {
+  // Busca pura (sem setState) - a unica proprietaria do calculo e do
+  // disparo e' a segunda useEffect (chave projetoId|status|tipoProjeto);
+  // a carga inicial NAO chama esta funcao diretamente para nunca fazer
+  // duas consultas pela mesma chave (a segunda useEffect ja dispara
+  // sozinha assim que projetoId/status/tipoProjeto carregam).
+  const buscarResumoOperacional = useCallback(
+    async (idProjeto: string, tipoAtual: ProjectType): Promise<ResumoOperacional> => {
       const [{ data: itens }, { count: numOfs }] = await Promise.all([
         supabase
           .from("projeto_itens")
@@ -197,11 +208,11 @@ export function useProjeto(
         custoEstimado += Number(total ?? 0) * item.quantidade;
       }
 
-      setResumoOperacional({
+      return {
         numProdutos: linhas.length,
         numOfs: numOfs ?? 0,
         custoEstimado,
-      });
+      };
     },
     [],
   );
@@ -346,29 +357,56 @@ export function useProjeto(
         }
       }
 
-      if (projeto.status === "aprovado") {
-        await carregarResumoOperacional(projeto.id, projeto.tipo_projeto);
-      }
-
+      // Resumo Operacional (numProdutos/numOfs/custoEstimado) nao e'
+      // buscado aqui - a segunda useEffect abaixo e' a unica
+      // proprietaria desse calculo (dispara sozinha assim que
+      // projetoId/status/tipoProjeto carregam) para nunca consultar a
+      // mesma chave duas vezes.
       setLoading(false);
     }
 
     carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idInicial, duplicarDeId]);
 
+  // Unica proprietaria do calculo/consulta do Resumo Operacional.
+  // resumoOperacional (visto pelo consumidor) e' derivado abaixo, sem
+  // nenhum setState sincrono: nao-aprovado ou chave desatualizada
+  // resultam em null direto no render, nunca no efeito.
+  const chaveResumoOperacional =
+    projetoId !== null ? `${projetoId}|${status}|${tipoProjeto}` : null;
+
+  const resumoOperacional =
+    status === "aprovado" &&
+    chaveResumoOperacional !== null &&
+    resumoCarregado?.chave === chaveResumoOperacional
+      ? resumoCarregado.resumo
+      : null;
+
   useEffect(() => {
-    if (!projetoId) {
-      setResumoOperacional(null);
+    if (!projetoId || status !== "aprovado") {
       return;
     }
 
-    if (status === "aprovado") {
-      carregarResumoOperacional(projetoId, tipoProjeto);
-    } else {
-      setResumoOperacional(null);
+    const chaveAlvo = chaveResumoOperacional as string;
+    const projetoIdAtual = projetoId;
+    const tipoProjetoAtual = tipoProjeto;
+    let cancelado = false;
+
+    async function atualizar() {
+      const resumo = await buscarResumoOperacional(
+        projetoIdAtual,
+        tipoProjetoAtual,
+      );
+      if (cancelado) return;
+      setResumoCarregado({ chave: chaveAlvo, resumo });
     }
-  }, [projetoId, status, tipoProjeto, carregarResumoOperacional]);
+
+    atualizar();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [projetoId, status, tipoProjeto, chaveResumoOperacional, buscarResumoOperacional]);
 
   async function salvar(): Promise<ResultadoSalvar> {
     if (!nome.trim()) {

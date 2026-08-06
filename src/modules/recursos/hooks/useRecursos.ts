@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   excluirRegistro,
@@ -17,56 +17,62 @@ export function useRecursos() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [usuario, setUsuario] = useState("Usuario");
-
-  const carregarDados = useCallback(async () => {
-    setLoading(true);
-    setErro(null);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user?.email) {
-      setUsuario(user.email);
-    }
-
-    const [recursosResult, gruposResult] = await Promise.all([
-      supabase
-        .from("recursos_produtivos")
-        .select(
-          "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,capacidade_horas_dia,tecnologia_aplicada_id,valor_hora,ativo,created_at",
-        )
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("grupos_recursos")
-        .select("id,codigo,nome,setor")
-        .order("nome", { ascending: true }),
-    ]);
-
-    if (recursosResult.error || gruposResult.error) {
-      setErro("Nao foi possivel carregar os recursos produtivos.");
-      setRecursos([]);
-      setLoading(false);
-      return;
-    }
-
-    const grupos = (gruposResult.data ?? []) as GrupoRecurso[];
-    const gruposPorId = new Map(grupos.map((grupo) => [grupo.id, grupo]));
-
-    setRecursos(
-      ((recursosResult.data ?? []) as RecursoRow[]).map((recurso) => ({
-        ...recurso,
-        grupo: recurso.grupo_id
-          ? gruposPorId.get(recurso.grupo_id) ?? null
-          : null,
-      })),
-    );
-    setLoading(false);
-  }, []);
+  const [versaoRecarga, setVersaoRecarga] = useState(0);
 
   useEffect(() => {
+    let cancelado = false;
+
+    async function carregarDados() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelado) return;
+      if (user?.email) {
+        setUsuario(user.email);
+      }
+
+      const [recursosResult, gruposResult] = await Promise.all([
+        supabase
+          .from("recursos_produtivos")
+          .select(
+            "id,grupo_id,codigo,nome,fabricante,modelo,setor,capacidade,capacidade_horas_dia,tecnologia_aplicada_id,valor_hora,ativo,created_at",
+          )
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("grupos_recursos")
+          .select("id,codigo,nome,setor")
+          .order("nome", { ascending: true }),
+      ]);
+      if (cancelado) return;
+
+      if (recursosResult.error || gruposResult.error) {
+        setErro("Nao foi possivel carregar os recursos produtivos.");
+        setRecursos([]);
+        setLoading(false);
+        return;
+      }
+
+      const grupos = (gruposResult.data ?? []) as GrupoRecurso[];
+      const gruposPorId = new Map(grupos.map((grupo) => [grupo.id, grupo]));
+
+      setErro(null);
+      setRecursos(
+        ((recursosResult.data ?? []) as RecursoRow[]).map((recurso) => ({
+          ...recurso,
+          grupo: recurso.grupo_id
+            ? gruposPorId.get(recurso.grupo_id) ?? null
+            : null,
+        })),
+      );
+      setLoading(false);
+    }
+
     carregarDados();
-  }, [carregarDados]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [versaoRecarga]);
 
   async function alternarAtivoRecurso(id: string, ativoAtual: boolean) {
     const { error } = await supabase
@@ -79,14 +85,16 @@ export function useRecursos() {
       return;
     }
 
-    await carregarDados();
+    setLoading(true);
+    setVersaoRecarga((v) => v + 1);
   }
 
   async function excluirRecurso(id: string): Promise<ResultadoExclusao> {
     const resultado = await excluirRegistro("recursos_produtivos", id);
 
     if (resultado.status === "excluido") {
-      await carregarDados();
+      setLoading(true);
+      setVersaoRecarga((v) => v + 1);
     }
 
     return resultado;

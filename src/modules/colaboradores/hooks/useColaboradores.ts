@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   excluirRegistro,
@@ -15,41 +15,46 @@ export function useColaboradores() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [usuario, setUsuario] = useState("Usuario");
-
-  const carregarDados = useCallback(async () => {
-    setLoading(true);
-    setErro(null);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user?.email) {
-      setUsuario(user.email);
-    }
-
-    const { data, error } = await supabase
-      .from("funcionarios")
-      .select(
-        "id,codigo,nome,apelido,setor,funcao,habilidades,carga_produtiva,telefone,email,data_admissao,observacoes,ativo,created_at,tecnologia_aplicada_id",
-      )
-      .order("created_at", {
-        ascending: false,
-      });
-
-    if (error) {
-      setErro("Nao foi possivel carregar os colaboradores.");
-      setColaboradores([]);
-    } else {
-      setColaboradores(data ?? []);
-    }
-
-    setLoading(false);
-  }, []);
+  const [versaoRecarga, setVersaoRecarga] = useState(0);
 
   useEffect(() => {
+    let cancelado = false;
+
+    async function carregarDados() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelado) return;
+      if (user?.email) {
+        setUsuario(user.email);
+      }
+
+      const { data, error } = await supabase
+        .from("funcionarios")
+        .select(
+          "id,codigo,nome,apelido,setor,funcao,habilidades,carga_produtiva,telefone,email,data_admissao,observacoes,ativo,created_at,tecnologia_aplicada_id",
+        )
+        .order("created_at", {
+          ascending: false,
+        });
+      if (cancelado) return;
+
+      if (error) {
+        setErro("Nao foi possivel carregar os colaboradores.");
+        setColaboradores([]);
+      } else {
+        setErro(null);
+        setColaboradores(data ?? []);
+      }
+      setLoading(false);
+    }
+
     carregarDados();
-  }, [carregarDados]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [versaoRecarga]);
 
   async function alternarAtivoColaborador(id: string, ativoAtual: boolean) {
     const { error } = await supabase
@@ -62,14 +67,16 @@ export function useColaboradores() {
       return;
     }
 
-    await carregarDados();
+    setLoading(true);
+    setVersaoRecarga((v) => v + 1);
   }
 
   async function excluirColaborador(id: string): Promise<ResultadoExclusao> {
     const resultado = await excluirRegistro("funcionarios", id);
 
     if (resultado.status === "excluido") {
-      await carregarDados();
+      setLoading(true);
+      setVersaoRecarga((v) => v + 1);
     }
 
     return resultado;

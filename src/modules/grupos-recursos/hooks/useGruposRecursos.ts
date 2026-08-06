@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   excluirRegistro,
@@ -18,39 +18,44 @@ export function useGruposRecursos() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [usuario, setUsuario] = useState("Usuario");
-
-  const carregarDados = useCallback(async () => {
-    setLoading(true);
-    setErro(null);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user?.email) {
-      setUsuario(user.email);
-    }
-
-    const { data, error } = await supabase
-      .from("grupos_recursos")
-      .select(
-        "id,codigo,nome,descricao,setor,unidade_capacidade,ativo,created_at",
-      )
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setErro("Nao foi possivel carregar os grupos de recursos.");
-      setGrupos([]);
-    } else {
-      setGrupos((data ?? []) as GrupoRecursoProdutivo[]);
-    }
-
-    setLoading(false);
-  }, []);
+  const [versaoRecarga, setVersaoRecarga] = useState(0);
 
   useEffect(() => {
+    let cancelado = false;
+
+    async function carregarDados() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelado) return;
+      if (user?.email) {
+        setUsuario(user.email);
+      }
+
+      const { data, error } = await supabase
+        .from("grupos_recursos")
+        .select(
+          "id,codigo,nome,descricao,setor,unidade_capacidade,ativo,created_at",
+        )
+        .order("created_at", { ascending: false });
+      if (cancelado) return;
+
+      if (error) {
+        setErro("Nao foi possivel carregar os grupos de recursos.");
+        setGrupos([]);
+      } else {
+        setErro(null);
+        setGrupos((data ?? []) as GrupoRecursoProdutivo[]);
+      }
+      setLoading(false);
+    }
+
     carregarDados();
-  }, [carregarDados]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [versaoRecarga]);
 
   async function alternarAtivoGrupo(id: string, ativoAtual: boolean) {
     const { error } = await supabase
@@ -63,14 +68,16 @@ export function useGruposRecursos() {
       return;
     }
 
-    await carregarDados();
+    setLoading(true);
+    setVersaoRecarga((v) => v + 1);
   }
 
   async function excluirGrupo(id: string): Promise<ResultadoExclusao> {
     const resultado = await excluirRegistro("grupos_recursos", id);
 
     if (resultado.status === "excluido") {
-      await carregarDados();
+      setLoading(true);
+      setVersaoRecarga((v) => v + 1);
     }
 
     return resultado;

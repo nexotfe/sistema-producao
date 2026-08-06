@@ -93,62 +93,70 @@ export function useProducts() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-
-  async function carregarProdutos() {
-    setLoading(true);
-    setErro(null);
-
-    const { data, error } = await supabase
-      .from("itens_industriais")
-      .select("id,codigo,descricao,tipo_item,unidade,ativo")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setErro("Não foi possível carregar os produtos.");
-      setProducts([]);
-      setLoading(false);
-      return;
-    }
-
-    const rows = (data ?? []) as ItemIndustrialRow[];
-    const ids = rows.map((item) => item.id);
-    const quantidades = new Map<string, number>();
-
-    if (ids.length > 0) {
-      const { data: saldos } = await supabase
-        .from("produto_saldos")
-        .select("item_id,saldo_disponivel")
-        .in("item_id", ids);
-
-      ((saldos ?? []) as ProdutoSaldo[]).forEach((saldo) => {
-        quantidades.set(
-          saldo.item_id,
-          (quantidades.get(saldo.item_id) ?? 0) +
-            Number(saldo.saldo_disponivel ?? 0),
-        );
-      });
-    }
-
-    const valores = await calcularValorProdutos(ids);
-
-    setProducts(
-      rows.map((item) => ({
-        id: item.id,
-        code: item.codigo,
-        description: item.descricao,
-        type: item.tipo_item,
-        unit: item.unidade,
-        active: item.ativo,
-        quantity: quantidades.get(item.id) ?? 0,
-        valor: valores.get(item.id) ?? null,
-      })),
-    );
-    setLoading(false);
-  }
+  const [versaoRecarga, setVersaoRecarga] = useState(0);
 
   useEffect(() => {
+    let cancelado = false;
+
+    async function carregarProdutos() {
+      const { data, error } = await supabase
+        .from("itens_industriais")
+        .select("id,codigo,descricao,tipo_item,unidade,ativo")
+        .order("created_at", { ascending: false });
+      if (cancelado) return;
+
+      if (error) {
+        setErro("Não foi possível carregar os produtos.");
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      const rows = (data ?? []) as ItemIndustrialRow[];
+      const ids = rows.map((item) => item.id);
+      const quantidades = new Map<string, number>();
+
+      if (ids.length > 0) {
+        const { data: saldos } = await supabase
+          .from("produto_saldos")
+          .select("item_id,saldo_disponivel")
+          .in("item_id", ids);
+        if (cancelado) return;
+
+        ((saldos ?? []) as ProdutoSaldo[]).forEach((saldo) => {
+          quantidades.set(
+            saldo.item_id,
+            (quantidades.get(saldo.item_id) ?? 0) +
+              Number(saldo.saldo_disponivel ?? 0),
+          );
+        });
+      }
+
+      const valores = await calcularValorProdutos(ids);
+      if (cancelado) return;
+
+      setErro(null);
+      setProducts(
+        rows.map((item) => ({
+          id: item.id,
+          code: item.codigo,
+          description: item.descricao,
+          type: item.tipo_item,
+          unit: item.unidade,
+          active: item.ativo,
+          quantity: quantidades.get(item.id) ?? 0,
+          valor: valores.get(item.id) ?? null,
+        })),
+      );
+      setLoading(false);
+    }
+
     carregarProdutos();
-  }, []);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [versaoRecarga]);
 
   async function alternarAtivoProduto(id: string, ativoAtual: boolean) {
     const { error } = await supabase
@@ -161,7 +169,8 @@ export function useProducts() {
       return;
     }
 
-    await carregarProdutos();
+    setLoading(true);
+    setVersaoRecarga((v) => v + 1);
   }
 
   const filteredProducts = useMemo(() => {
