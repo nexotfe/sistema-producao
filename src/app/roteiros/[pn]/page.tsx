@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import { useRoteiro } from "@/modules/roteiros/hooks/useRoteiro";
 import { RoteiroForm } from "@/modules/roteiros/components/RoteiroForm";
+import { ExcluirRoteiroModal } from "@/modules/roteiros/components/ExcluirRoteiroModal";
 import { DuplicarProdutoModal } from "@/modules/produtos/components/DuplicarProdutoModal";
 import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
+import { getEntityHref } from "@/modules/shared/navigation/entityRoutes";
 
 type RoutePageProps = {
   params: Promise<{
@@ -16,7 +19,9 @@ type RoutePageProps = {
 export default function ManufacturingRoutePage({ params }: RoutePageProps) {
   const { pn } = use(params);
   const codigoProduto = decodeURIComponent(pn);
+  const router = useRouter();
   const [duplicarAberto, setDuplicarAberto] = useState(false);
+  const [excluirAberto, setExcluirAberto] = useState(false);
   const {
     produtoId,
     bom,
@@ -25,6 +30,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
     erro,
     produtoDescricao,
     criarPrimeiroRoteiro,
+    excluirRoteiro,
     materiais,
     adicionarMaterial,
     editarMaterial,
@@ -105,9 +111,11 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
                   </button>
                   <button
                     type="button"
-                    className="h-10 rounded-md border border-red-500/40 bg-red-500/10 px-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20"
+                    onClick={() => setExcluirAberto(true)}
+                    disabled={!bom}
+                    className="h-10 rounded-md border border-red-500/40 bg-red-500/10 px-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Excluir
+                    Excluir roteiro
                   </button>
                   <button
                     type="button"
@@ -184,6 +192,19 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
           onClose={() => setDuplicarAberto(false)}
           produtoOrigemId={produtoId}
           produtoOrigemCodigo={codigoProduto}
+        />
+      ) : null}
+
+      {bom ? (
+        <ExcluirRoteiroModal
+          open={excluirAberto}
+          onClose={() => setExcluirAberto(false)}
+          codigoProduto={codigoProduto}
+          versaoRoteiro={bom.versao}
+          onConfirmar={excluirRoteiro}
+          onSucesso={() => {
+            router.push(getEntityHref("item", encodeURIComponent(codigoProduto)));
+          }}
         />
       ) : null}
     </main>

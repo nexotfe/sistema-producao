@@ -7,6 +7,7 @@ import {
   type ResultadoExclusao,
 } from "@/modules/shared/data/excluirRegistro";
 import { editarMaterial as editarMaterialLib } from "../lib/editarMaterial";
+import { excluirBom as excluirBomLib } from "../lib/excluirBom";
 import type {
   Bom,
   BomItemMateriaPrima,
@@ -601,6 +602,39 @@ export function useRoteiro(pn: string) {
     return { status: "ok" };
   }
 
+  async function excluirRoteiro(): Promise<ResultadoOperacaoRoteiro> {
+    if (!bom) {
+      return { status: "erro", mensagem: "Roteiro não encontrado." };
+    }
+
+    setProcessando(true);
+
+    try {
+      const produtoIdConfirmado = await excluirBomLib(supabase, bom.id);
+
+      if (produtoIdConfirmado !== produtoId) {
+        setProcessando(false);
+        return {
+          status: "erro",
+          mensagem:
+            "A exclusão retornou um produto diferente do esperado - operação cancelada por segurança.",
+        };
+      }
+
+      setProcessando(false);
+      return { status: "ok" };
+    } catch (erro) {
+      setProcessando(false);
+      return {
+        status: "erro",
+        mensagem:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível excluir o roteiro.",
+      };
+    }
+  }
+
   function proximaOrdemBomItens() {
     const ordens = [...materiais, ...subconjuntos].map((item) => item.ordem);
     return ordens.length > 0 ? Math.max(...ordens) + 1 : 1;
@@ -943,6 +977,7 @@ export function useRoteiro(pn: string) {
     processando,
     erro,
     criarPrimeiroRoteiro,
+    excluirRoteiro,
 
     materiais,
     adicionarMaterial,
