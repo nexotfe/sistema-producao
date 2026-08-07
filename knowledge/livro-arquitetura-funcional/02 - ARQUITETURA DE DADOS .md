@@ -375,5 +375,5 @@ Nunca o contrário.
 
 **Documentos relacionados:**
 
-* `01-ARQUITETURA-GERAL.md`
-* `03-ESTADOS-OFICIAIS.md`
+* `01 - ARQUITETURA GERAL.md`
+* `03 - ESTADOS OFICIAIS Estados.md`

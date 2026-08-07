@@ -311,4 +311,4 @@ A implementação deverá seguir obrigatoriamente a sequência definida neste do
 
 **Documento relacionado:**
 
-`07-PLANO-EXECUTIVO.md`
+`07 - PLANO EXECUTIVO.md`

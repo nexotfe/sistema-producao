@@ -357,4 +357,4 @@ Toda decisão arquitetural futura deverá preservar os princípios estabelecidos
 
 **Documento relacionado:**
 
-`02-ARQUITETURA-DE-DADOS.md`
+`02 - ARQUITETURA DE DADOS .md`

@@ -286,10 +286,10 @@ A qualidade da plataforma depende do cumprimento rigoroso deste documento.
 
 **Documentos relacionados:**
 
-* `00-INTRODUCAO.md`
-* `01-ARQUITETURA-GERAL.md`
-* `02-ARQUITETURA-DE-DADOS.md`
-* `03-ESTADOS-OFICIAIS.md`
-* `04-PADRAO-DE-CLASSIFICACOES.md`
-* `05-DICIONARIO-INDUSTRIAL.md`
-* `06-PLANO-DIRETOR.md`
+* `00 - INTRODUÇÃO.md`
+* `01 - ARQUITETURA GERAL.md`
+* `02 - ARQUITETURA DE DADOS .md`
+* `03 - ESTADOS OFICIAIS Estados.md`
+* `04 - PADRÃO OFICIAL.md`
+* `05 - DICIONÁRIO INDUSTRIAL.md`
+* `06 - PLANO DIRETOR.md`

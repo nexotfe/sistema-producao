@@ -135,20 +135,20 @@ Deploy confirmado `success`, homepage respondendo.
 
 ## 3. Pendências documentais fechadas nesta sessão
 
-- `PAD-008_Motor_Capacidade.md` (v2.0 → v2.1) — seção 19 reescrita de
+- `arquitetura-tecnica/PAD-008_Motor_Capacidade.md` (v2.0 → v2.1) — seção 19 reescrita de
   "decisão aprovada, pendente" para "implementado"; nomenclatura do
   contrato §19.3 corrigida para os nomes reais de campo; seções 1, 2,
   4, 6, 6.2, 8, 9, 11, 13, 16, 20, 21, 22 atualizadas onde citavam a
   distribuição parcial ou a RPC v3 como estado presente/futuro
   incorreto.
-- `DEC-004_Simulacao_Comercial.md` (v1.1 → v1.2) — seções
+- `arquitetura-tecnica/DEC-004_Simulacao_Comercial.md` (v1.1 → v1.2) — seções
   "Disponibilidade provisória de material" e "Distribuição analítica
   entre recursos compatíveis" corrigidas de "pendente de implementação"
   para "implementado".
 
 ## 4. Pendência documental identificada, não fechada nesta sessão
 
-- `DEC-002_Aprovacao_Simulacao_Comercial.md` (linha 43) ainda cita
+- `arquitetura-tecnica/DEC-002_Aprovacao_Simulacao_Comercial.md` (linha 43) ainda cita
   `recurso_considerado_id`/`motivo_consideracao` como o critério
   técnico de revalidação — desatualizado desde a Entrega 2 (o critério
   real agora compara `distribuicoes[]` completo, ver PAD-008 §13/§19.3).

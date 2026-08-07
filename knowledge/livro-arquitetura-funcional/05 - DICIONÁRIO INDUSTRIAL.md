@@ -407,7 +407,7 @@ Toda nova funcionalidade deverá utilizar obrigatoriamente os conceitos definido
 
 **Documentos relacionados:**
 
-* `01-ARQUITETURA-GERAL.md`
-* `02-ARQUITETURA-DE-DADOS.md`
-* `03-ESTADOS-OFICIAIS.md`
-* `04-PADRAO-DE-CLASSIFICACOES.md`
+* `01 - ARQUITETURA GERAL.md`
+* `02 - ARQUITETURA DE DADOS .md`
+* `03 - ESTADOS OFICIAIS Estados.md`
+* `04 - PADRÃO OFICIAL.md`

@@ -446,5 +446,5 @@ Qualquer evolução futura deverá preservar a consistência definida neste docu
 
 **Documentos relacionados:**
 
-* `02-ARQUITETURA-DE-DADOS.md`
-* `04-PADRAO-DE-CLASSIFICACOES.md`
+* `02 - ARQUITETURA DE DADOS .md`
+* `04 - PADRÃO OFICIAL.md`

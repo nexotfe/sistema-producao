@@ -133,7 +133,7 @@ como sempre).
 
 - **Push ainda não feito** (seção "Status do push" acima) — decisão
   separada, aguardando autorização explícita.
-- **`PAD-008_Motor_Capacidade.md`, seção 17, está desatualizada.** O
+- **`arquitetura-tecnica/PAD-008_Motor_Capacidade.md`, seção 17, está desatualizada.** O
   cabeçalho da seção diz *"decisão aprovada, pendente de
   implementação"* e a linha de abertura diz *"Nada nesta seção está
   implementado"* — isso deixou de ser verdade nesta sessão (a Entrega 1

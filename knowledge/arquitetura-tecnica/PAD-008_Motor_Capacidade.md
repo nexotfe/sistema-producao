@@ -224,7 +224,7 @@ O que não fica congelado no snapshot: o BOM e as operações de roteiro origina
 
 `ordens_fabricacao.bom_id` estabelece ancestralidade estrutural indireta com o BOM e suas operações. Isso não representa consumo de OF pelo Motor nem integração funcional entre os fluxos.
 
-**Evidência de suporte:** a investigação que fundamenta este estado atual está registrada no HANDOVER-002 (`HANDOVER-002_NEXOTFE_2026-07-29.md`).
+**Evidência de suporte:** a investigação que fundamenta este estado atual está registrada no HANDOVER-002 (`../HANDOVER-002_NEXOTFE_2026-07-29.md`).
 
 ## 15. "Cenário de Execução"
 
@@ -246,7 +246,7 @@ O que não fica congelado no snapshot: o BOM e as operações de roteiro origina
 
 ## 17. Fluxo de preparação da solicitação (implementado — Entrega 1)
 
-**Implementado na Entrega 1** (commit `3da17b3dab459f460a5811ae168a2b3373a98f67`; migration `202608010001_aprovar_projeto_com_simulacao_v3_janela_comercial.sql`; fechamento registrado em `HANDOVER-003_NEXOTFE_2026-08-02.md`, commit `e4bb2f36d456a492fc06e1d4acd28906091dfc25`). Esta seção descreve, como implementado hoje, o contrato originado em `DEC-004_Simulacao_Comercial.md` — não repete a justificativa de negócio, registrada lá.
+**Implementado na Entrega 1** (commit `3da17b3dab459f460a5811ae168a2b3373a98f67`; migration `202608010001_aprovar_projeto_com_simulacao_v3_janela_comercial.sql`; fechamento registrado em `../HANDOVER-003_NEXOTFE_2026-08-02.md`, commit `e4bb2f36d456a492fc06e1d4acd28906091dfc25`). Esta seção descreve, como implementado hoje, o contrato originado em `DEC-004_Simulacao_Comercial.md` — não repete a justificativa de negócio, registrada lá.
 
 ### 17.1 Camada de preparação comercial — escopo
 
@@ -290,7 +290,7 @@ deslocarDiasProdutivos(dataBase, 0) = dataBase
 
 **Estado atual confirmado (implementado):** a função que desloca uma data por N dias produtivos (positivo, negativo ou zero) existe — `deslocarDiasProdutivos` (`src/modules/calendario/lib/deslocarDiasProdutivos.ts`), coberta por testes automatizados que confirmam exatamente este contrato (base nunca conta, positivo/negativo, deslocamento zero, feriado, evento de dia trabalhado excepcional, limite defensivo).
 
-**Correção de performance registrada nesta revisão:** a implementação inicial fazia até 4 consultas ao Supabase **por dia civil examinado** (não por dia produtivo) — 124 consultas medidas no cenário real da Entrega 1. Corrigido antes do commit `3da17b3`: `contextoCalendario.ts` carrega o calendário do intervalo inteiro em lote (`carregarContextoCalendario`) e resolve os dias em memória (`resolverDiaProdutivoComContexto`, única fonte da regra de precedência — `resolverDiaProdutivo` virou um wrapper fino sobre ela); `prepararJanelaComercial.ts` compartilha um único contexto entre os três deslocamentos da janela e a contagem final de dias produtivos. Resultado, confirmado contra o banco remoto real: **4 consultas no cenário normal**, independente da distância entre as datas. Consultas adicionais só ocorrem por **paginação** (`.range()`, lotes de 500, ordenação determinística `data`+`id` — defesa contra o teto de linhas por resposta do Supabase, `api.max_rows`) ou por **expansão** (calendário atípico em que a estimativa inicial de janela não basta, limitada por `MAX_DIAS_CIVIS_EXAMINADOS`) — em ambos os casos o crescimento é por página/lote, nunca por dia civil. Detalhamento completo em `HANDOVER-003_NEXOTFE_2026-08-02.md`.
+**Correção de performance registrada nesta revisão:** a implementação inicial fazia até 4 consultas ao Supabase **por dia civil examinado** (não por dia produtivo) — 124 consultas medidas no cenário real da Entrega 1. Corrigido antes do commit `3da17b3`: `contextoCalendario.ts` carrega o calendário do intervalo inteiro em lote (`carregarContextoCalendario`) e resolve os dias em memória (`resolverDiaProdutivoComContexto`, única fonte da regra de precedência — `resolverDiaProdutivo` virou um wrapper fino sobre ela); `prepararJanelaComercial.ts` compartilha um único contexto entre os três deslocamentos da janela e a contagem final de dias produtivos. Resultado, confirmado contra o banco remoto real: **4 consultas no cenário normal**, independente da distância entre as datas. Consultas adicionais só ocorrem por **paginação** (`.range()`, lotes de 500, ordenação determinística `data`+`id` — defesa contra o teto de linhas por resposta do Supabase, `api.max_rows`) ou por **expansão** (calendário atípico em que a estimativa inicial de janela não basta, limitada por `MAX_DIAS_CIVIS_EXAMINADOS`) — em ambos os casos o crescimento é por página/lote, nunca por dia civil. Detalhamento completo em `../HANDOVER-003_NEXOTFE_2026-08-02.md`.
 
 ### 17.3 Prazo interno
 
@@ -365,7 +365,7 @@ dataDisponibilidadeProducao <= dataInicioNecessaria
 
 ## 19. Distribuição parcial entre recursos compatíveis (implementado — Entrega 2)
 
-**Implementado na Entrega 2** (migration `202608020001_simulacao_comercial_distribuicao_parcial.sql`, commit `70d5f61f66775b42ba4ce11d7a4533d48886aaa8`; núcleo e leitura dupla no commit `cbc9a718177be90b90b913bf3dcb2813e90d32f6`; ativação da persistência nativa via RPC v4 no commit `62f03c2112539765b3a4441e7395d378048ff2c6`; fechamento registrado em `HANDOVER-004_NEXOTFE_2026-08-03.md`).
+**Implementado na Entrega 2** (migration `202608020001_simulacao_comercial_distribuicao_parcial.sql`, commit `70d5f61f66775b42ba4ce11d7a4533d48886aaa8`; núcleo e leitura dupla no commit `cbc9a718177be90b90b913bf3dcb2813e90d32f6`; ativação da persistência nativa via RPC v4 no commit `62f03c2112539765b3a4441e7395d378048ff2c6`; fechamento registrado em `../HANDOVER-004_NEXOTFE_2026-08-03.md`).
 
 ### 19.1 Histórico da divergência (resolvida)
 
@@ -468,10 +468,10 @@ Nenhuma das possibilidades acima é decidida por esta versão do documento. O al
 - `ARQUITETURA_VIGENTE_SIMULACAO_COMERCIAL_CAPACIDADE.md` — seções 2 (Princípio Fundamental), 7 (Calendário Operacional), 17 (Evolução Futura, incluindo a menção original a Motor V2/engenharia reversa e disponibilidade de matéria-prima), 18 (Compatibilidade entre Recursos Produtivos e Motor de Avaliação Sequencial).
 - `DEC-002_Aprovacao_Simulacao_Comercial.md` — critério técnico de revalidação (seção 13 deste documento).
 - `DEC-004_Simulacao_Comercial.md` — papéis de negócio da Simulação Comercial; referencia este documento para a arquitetura interna do Motor; origem de negócio das regras das seções 17-19.
-- `HANDOVER-002_NEXOTFE_2026-07-29.md` — investigação original que originou este PAD, incluindo achados sobre o estado do repositório não repetidos aqui.
+- `../HANDOVER-002_NEXOTFE_2026-07-29.md` — investigação original que originou este PAD, incluindo achados sobre o estado do repositório não repetidos aqui.
 - `supabase/migrations/202608010001_aprovar_projeto_com_simulacao_v3_janela_comercial.sql` — RPC v3 e colunas de janela comercial (seção 17).
 - Commit `3da17b3dab459f460a5811ae168a2b3373a98f67` — implementação completa da Entrega 1 (janela comercial + correção de performance de calendário).
-- `HANDOVER-003_NEXOTFE_2026-08-02.md` (commit `e4bb2f36d456a492fc06e1d4acd28906091dfc25`) — fechamento da Entrega 1, teste ponta a ponta real contra o banco remoto, pendências registradas.
+- `../HANDOVER-003_NEXOTFE_2026-08-02.md` (commit `e4bb2f36d456a492fc06e1d4acd28906091dfc25`) — fechamento da Entrega 1, teste ponta a ponta real contra o banco remoto, pendências registradas.
 - `supabase/migrations/202608020001_simulacao_comercial_distribuicao_parcial.sql` — RPC v4, `versao_resultado_motor`, tabela `simulacao_comercial_item_distribuicoes`, `calcular_comprometido_v2` (seção 19).
 - Commits `70d5f61f66775b42ba4ce11d7a4533d48886aaa8` (schema), `cbc9a718177be90b90b913bf3dcb2813e90d32f6` (núcleo + leitura dupla), `62f03c2112539765b3a4441e7395d378048ff2c6` (ativação da RPC v4) — implementação completa da Entrega 2.
-- `HANDOVER-004_NEXOTFE_2026-08-03.md` — fechamento da Entrega 2, teste ponta a ponta real contra o banco remoto (projeto `260009`), replay de idempotência confirmado, auditoria final do diff.
+- `../HANDOVER-004_NEXOTFE_2026-08-03.md` — fechamento da Entrega 2, teste ponta a ponta real contra o banco remoto (projeto `260009`), replay de idempotência confirmado, auditoria final do diff.

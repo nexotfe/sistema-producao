@@ -34,7 +34,7 @@ Tornar o banco atual inventariado, recuperável e reproduzível antes da primeir
 - Branch declarada no repositório: `main`.
 - HEAD observado: `a895fbeabfa0e3013b45d469bd888be4c71833f4`.
 - Migrations locais encontradas: 52.
-- Manifesto normativo: `MANIFESTO_BASELINE_NORMATIVO_NEXOTFE_1_0.md`.
+- Manifesto normativo: `livro-arquitetura-funcional/MANIFESTO_BASELINE_NORMATIVO_NEXOTFE_1_0.md`.
 
 ## Gates
 

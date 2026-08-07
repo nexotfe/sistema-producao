@@ -121,9 +121,9 @@ npm run dev
 ## 📞 Informações de Suporte
 
 ### Arquivos importantes:
-- 📖 [MIGRATIONS_README.md](../MIGRATIONS_README.md) - Instruções detalhadas
-- 📊 [MIGRATIONS_SUMMARY.md](../MIGRATIONS_SUMMARY.md) - Sumário técnico
-- 🔍 [supabase/migrations/202606050037_validation_check.sql](../supabase/migrations/202606050037_validation_check.sql) - Script de validação
+- 📖 [MIGRATIONS_README.md](MIGRATIONS_README.md) - Instruções detalhadas
+- 📊 [MIGRATIONS_SUMMARY.md](MIGRATIONS_SUMMARY.md) - Sumário técnico
+- 🔍 [supabase/migrations/202606050037_validation_check.sql](supabase/migrations/202606050037_validation_check.sql) - Script de validação
 
 ### URLs:
 - Supabase Dashboard: https://app.supabase.com

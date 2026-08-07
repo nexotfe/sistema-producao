@@ -9,19 +9,19 @@
 
 | Entrega | Estado | Evidência |
 |---|---|---|
-| Milestone 1 | Concluído | `MILESTONE_01_ARQUITETURA_NEXOTFE_1_0_CONGELADA.md` |
-| Coleção canônica 00–07 identificada | Concluído | `00 - INTRODUÇÃO.md` |
-| Índice normativo | Concluído | `INDICE_NORMATIVO_NEXOTFE_1_0.md` |
-| Manifesto de hashes | Concluído | `MANIFESTO_BASELINE_NORMATIVO_NEXOTFE_1_0.md` |
-| Matriz de rastreabilidade | Concluído | `MATRIZ_RASTREABILIDADE_NORMATIVA_NEXOTFE_1_0.md` |
-| Arquitetura Geral | Concluído | `01 - ARQUITETURA GERAL.md` |
-| Arquitetura de Dados | Concluído | `02 - ARQUITETURA DE DADOS .md` |
-| Estados Oficiais | Concluído | `03 - ESTADOS OFICIAIS Estados.md` |
-| Padrão Oficial de Classificações | Concluído | `04 - PADRÃO OFICIAL.md` |
-| Dicionário Industrial | Concluído | `05 - DICIONÁRIO INDUSTRIAL.md` |
-| Plano Diretor | Concluído | `06 - PLANO DIRETOR.md` |
-| Plano Executivo | Concluído | `07 - PLANO EXECUTIVO.md` |
-| Princípios Arquiteturais | Concluído | `99 - PRINCÍPIOS ARQUITETURAIS.md` |
+| Milestone 1 | Concluído | `livro-arquitetura-funcional/MILESTONE_01_ARQUITETURA_NEXOTFE_1_0_CONGELADA.md` |
+| Coleção canônica 00–07 identificada | Concluído | `livro-arquitetura-funcional/00 - INTRODUÇÃO.md` |
+| Índice normativo | Concluído | `livro-arquitetura-funcional/INDICE_NORMATIVO_NEXOTFE_1_0.md` |
+| Manifesto de hashes | Concluído | `livro-arquitetura-funcional/MANIFESTO_BASELINE_NORMATIVO_NEXOTFE_1_0.md` |
+| Matriz de rastreabilidade | Concluído | `livro-arquitetura-funcional/MATRIZ_RASTREABILIDADE_NORMATIVA_NEXOTFE_1_0.md` |
+| Arquitetura Geral | Concluído | `livro-arquitetura-funcional/01 - ARQUITETURA GERAL.md` |
+| Arquitetura de Dados | Concluído | `livro-arquitetura-funcional/02 - ARQUITETURA DE DADOS .md` |
+| Estados Oficiais | Concluído | `livro-arquitetura-funcional/03 - ESTADOS OFICIAIS Estados.md` |
+| Padrão Oficial de Classificações | Concluído | `livro-arquitetura-funcional/04 - PADRÃO OFICIAL.md` |
+| Dicionário Industrial | Concluído | `livro-arquitetura-funcional/05 - DICIONÁRIO INDUSTRIAL.md` |
+| Plano Diretor | Concluído | `livro-arquitetura-funcional/06 - PLANO DIRETOR.md` |
+| Plano Executivo | Concluído | `livro-arquitetura-funcional/07 - PLANO EXECUTIVO.md` |
+| Princípios Arquiteturais | Concluído | `livro-arquitetura-funcional/99 - PRINCÍPIOS ARQUITETURAIS.md` |
 | Autorização para Sprint 02 | Liberada | Autorização explícita em 20/06/2026 |
 
 ## Critérios de encerramento

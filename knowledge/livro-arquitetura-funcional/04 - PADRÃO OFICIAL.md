@@ -332,5 +332,5 @@ Toda nova classificação deverá seguir os princípios definidos neste document
 
 **Documentos relacionados:**
 
-* `03-ESTADOS-OFICIAIS.md`
-* `05-DICIONARIO-INDUSTRIAL.md`
+* `03 - ESTADOS OFICIAIS Estados.md`
+* `05 - DICIONÁRIO INDUSTRIAL.md`
