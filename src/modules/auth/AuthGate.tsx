@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
+import { UserMenu } from "@/modules/auth/UserMenu";
 
 const publicRoutes = new Set(["/"]);
 
@@ -73,6 +74,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!session && !isPublicRoute) {
     return null;
+  }
+
+  if (session && !isPublicRoute) {
+    return (
+      <>
+        <UserMenu email={session.user.email} />
+        {children}
+      </>
+    );
   }
 
   return <>{children}</>;
