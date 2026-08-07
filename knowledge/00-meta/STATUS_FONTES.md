@@ -48,6 +48,22 @@
    `src/app/projetos/` ativos, `src/app/page.tsx:49` confirma `router.push("/central")` como destino
    pós-login, commits recentes evoluindo `/central`). Status: **Desatualizado confirmado** (o conteúdo da
    decisão está correto; só o campo Status do documento está errado).
+7. **"PN" vs. "Código" — fechada em 2026-08-07 por instrução direta do usuário.** Deixou de ser nota aberta:
+   interface, pesquisas e mensagens usam exclusivamente "Código"; "PN" é legado técnico. A coluna física
+   `projeto_itens.pn` e rotas com segmento `[pn]` **não são renomeadas agora** (decisão de nomenclatura de
+   interface, não de schema). Registrado em `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md` item 6.
+   `src/modules/projetos/README.md` corrigido na mesma sessão (ver linha própria abaixo).
+8. **Gap de `excluir_bom` fechado.** O teste de roteador de 2026-08-07 (pergunta "regras de exclusão lógica
+   de roteiro") expôs que a migration mais recente sobre o tema (`202608060002_excluir_bom_logico.sql`,
+   2026-08-06) não tinha nenhum documento correspondente indexado — o agente de teste precisou cair para
+   Grep amplo. Fechado com `knowledge/arquitetura-tecnica/DEC-005_Exclusao_Logica_Roteiro.md` (novo) e
+   entradas em `INDICE.md` nas seções "02 · Roteiros/BOM" e "05 · Banco".
+
+## Regra de fallback (adicionada em 2026-08-07)
+
+Para comportamento **implementado recentemente**, migrations reais (`supabase/migrations/`) e código
+vigente (`src/modules/`, `src/app/`) prevalecem sobre documentação desatualizada — a mesma lógica que
+resolveu as decisões #5, #6 e #8 acima. Ver a seção equivalente em `CLAUDE.md`/`AGENTS.md` (router).
 
 ## Decisões mantidas em aberto (fora do escopo desta fase — aguardando você)
 
@@ -103,7 +119,7 @@
 | `knowledge/HANDOVER-004_NEXOTFE_2026-08-03.md` | Histórico | Contém pendência viva (DEC-002 desatualizado) não promovida a documento formal |
 | `src/modules/compras/README.md` | Desatualizado confirmado | Escopo real do módulo já é maior que o descrito |
 | `src/modules/estoque/README.md` | Desatualizado confirmado | Idem |
-| `src/modules/projetos/README.md` | Desatualizado confirmado | Usa "PN" como identidade central — banido por `knowledge/BASELINE_OPERACIONAL_NEXOTFE_1_0.md` e `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md` |
+| `src/modules/projetos/README.md` | Vigente | Corrigido em 2026-08-07 — usa "Código", cita "PN" só como legado da coluna física `projeto_itens.pn` (ver `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md` item 6) |
 
 ## 01 · Produto
 
@@ -170,6 +186,7 @@
 | `knowledge/arquitetura-tecnica/PAD-004_Politica_Exclusao_Registros.md` | Vigente | — |
 | `knowledge/arquitetura-tecnica/AUD-2026-07-19_Soft_Delete.md` | Histórico | Auditoria concluída, valor de registro reconhecido pelo próprio documento |
 | `knowledge/arquitetura-tecnica/IMP-SoftDelete.md` | Vigente | Implementação de referência; aceita ficar levemente desatualizada por definição própria |
+| `knowledge/arquitetura-tecnica/DEC-005_Exclusao_Logica_Roteiro.md` | Vigente | Especializa PAD-004 para Roteiro/BOM; aponta para `202608060002_excluir_bom_logico.sql` (2026-08-06) |
 | `knowledge/arquitetura-tecnica/PAD-005_Seguranca_Functions_SQL.md` | Vigente | — |
 
 ## 06 · Operação

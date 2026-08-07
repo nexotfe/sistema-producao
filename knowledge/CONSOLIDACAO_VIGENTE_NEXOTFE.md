@@ -196,6 +196,43 @@ superado.
 
 ---
 
+## 6. Interface, pesquisas e mensagens usam exclusivamente "Código" — "PN" é legado técnico
+
+**Registrado em:** 2026-08-07 (adição posterior à consolidação original
+de 2026-07-14 — fecha a nota que estava aberta na seção "Notas para
+revisão futura" desde então).
+
+**Decisão vigente:** em toda interface, campo de pesquisa e mensagem do
+sistema (rótulo, placeholder, cabeçalho de coluna, mensagem de erro), o
+identificador do produto/peça é sempre apresentado e buscado como
+**"Código"**. "PN" (Part Number) é legado técnico — não deve aparecer em
+nenhum texto visível ao usuário.
+
+**O que não muda agora:** esta é uma decisão de nomenclatura de
+interface, não de schema. **Não renomear** a coluna física
+`projeto_itens.pn` (existe hoje, `not null`) nem rotas legadas com
+segmento `[pn]` (ex.: `/roteiros/[pn]`) nesta fase — podem continuar
+existindo tecnicamente. Rename de coluna/rota é tarefa própria, com
+plano e aprovação específicos (Regra 2 do `CLAUDE.md`).
+
+**Motivo da mudança:** "PN" nunca foi termo usado por operador de chão
+de fábrica; "Código" já era o termo exigido pela interface desde
+`knowledge/BASELINE_OPERACIONAL_NEXOTFE_1_0.md` (27/06/2026). Esta
+consolidação remove a ambiguidade residual e fecha a decisão como
+definitiva, por instrução direta do usuário em 2026-08-07.
+
+**Supera, especificamente neste ponto:**
+
+- `ESTUDO_TECNICO_001.md`, `docs/FUNDACAO_INDUSTRIAL_NEXOTFE.md`,
+  `PLANO_DIRETOR_IMPLEMENTACAO_NEXOTFE_1_0.md` e
+  `PLANO_EXECUTIVO_IMPLEMENTACAO_NEXOTFE_1_0.md` — que usam "PN"
+  livremente como termo de interface/negócio. Continuam válidos para os
+  demais assuntos que tratam.
+- `src/modules/projetos/README.md` — descrevia "PN" como "a identidade
+  técnica única"; corrigido nesta mesma sessão para usar "Código".
+
+---
+
 ## Notas para revisão futura (não são decisões fechadas)
 
 Os pontos abaixo foram identificados durante o levantamento de
@@ -205,13 +242,6 @@ sessão. Ficam sinalizados aqui como pendência de revisão — **não são
 decisões vigentes**, apenas notas para quem for arbitrar isso no
 futuro.
 
-- **"PN" vs. "Código".** Documentos de ~19/06/2026 (`ESTUDO_TECNICO_001.md`,
-  `docs/FUNDACAO_INDUSTRIAL_NEXOTFE.md`, os planos Diretor/Executivo)
-  usam "PN" livremente como termo técnico. Documentos de 27/06/2026
-  (`knowledge/BASELINE_OPERACIONAL_NEXOTFE_1_0.md`,
-  `knowledge/PADROES_DESENVOLVIMENTO_NEXOTFE_1_0.md`) instruem
-  explicitamente evitar "PN" na interface em favor de "Código". Os mais
-  antigos nunca foram atualizados.
 - **Estados oficiais de Projeto.** Pelo menos três conjuntos de valores
   diferentes coexistem na base para o mesmo campo: os de
   `docs/FUNDACAO_INDUSTRIAL_NEXOTFE.md`, os da migration real (citados em

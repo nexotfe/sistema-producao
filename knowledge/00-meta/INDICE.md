@@ -57,6 +57,7 @@ Todos os caminhos abaixo são os caminhos **reais atuais** do repositório.
 | Arquitetura funcional de OF e Operações | `knowledge/livro-arquitetura-funcional/ESTUDO 002 Arquitetura Funcional das Ordens de Fabricação e Operações` |
 | Roteiro de desenvolvimento (v2) | `knowledge/arquitetura-tecnica/2026-07-15-arquitetura-roteiro-desenvolvimento-v2.md` (replicado também dentro de ARQUITETURA_VIGENTE §15) |
 | Regra de OF Operacional / Grupo de Trabalho (só em rascunho, ver STATUS_FONTES) | `knowledge/discussoes/2026-06-28-grupos e of operacionais.md`, `knowledge/discussoes/2026-06-28-flexibilidade operacional.md` |
+| Exclusão lógica de Roteiro (admin, subconjunto, orçamento, locks) | `knowledge/arquitetura-tecnica/DEC-005_Exclusao_Logica_Roteiro.md` |
 
 ## 03 · Projetos / Orçamento
 
@@ -84,6 +85,7 @@ Todos os caminhos abaixo são os caminhos **reais atuais** do repositório.
 | Política de exclusão (soft delete) | `knowledge/arquitetura-tecnica/PAD-004_Politica_Exclusao_Registros.md` |
 | Auditoria pontual do soft delete | `knowledge/arquitetura-tecnica/AUD-2026-07-19_Soft_Delete.md` |
 | Implementação de referência do soft delete | `knowledge/arquitetura-tecnica/IMP-SoftDelete.md` |
+| Exclusão lógica de Roteiro/BOM (especialização da política geral) | `knowledge/arquitetura-tecnica/DEC-005_Exclusao_Logica_Roteiro.md` |
 | Segurança de functions SQL | `knowledge/arquitetura-tecnica/PAD-005_Seguranca_Functions_SQL.md` |
 | Ordem de precedência normativa de banco | `knowledge/BASELINE_NEXOTFE_1_0.md` |
 | Schema "definitivo" reconstruído (não aplicado ao remoto) | `supabase/baseline/README.md` |

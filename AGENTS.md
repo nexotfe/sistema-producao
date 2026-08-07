@@ -131,3 +131,13 @@ use:
 fundamentam sozinhos uma decisão de arquitetura, dado ou implementação** —
 confirme contra o documento vigente correspondente ou pergunte ao usuário
 antes de agir.
+
+**Regra de fallback:** para comportamento **implementado recentemente**,
+migrations reais (`supabase/migrations/`) e código vigente
+(`src/modules/`, `src/app/`) prevalecem sobre documentação desatualizada
+ou ausente. Se o índice não apontar para nenhum documento sobre o tema,
+ou o documento encontrado parecer defasado frente ao que se está
+perguntando, verifique diretamente esses dois caminhos antes de recorrer
+a busca ampla (Grep/Glob irrestrito) — a maioria das mudanças recentes
+tem nome de arquivo autoexplicativo (migration com nome da feature,
+módulo com o nome do domínio).

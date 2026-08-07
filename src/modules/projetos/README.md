@@ -7,8 +7,11 @@ Fundação industrial do módulo de Projetos da NEXOTFE.
 - Todo orçamento é um Projeto.
 - Projeto usa numeração `AANNNN`.
 - Projeto possui itens.
-- Cada item referencia um PN existente.
-- PN é a identidade técnica única da peça/produto.
+- Cada item referencia um Código (produto/peça) existente.
+- Código é a identidade técnica única da peça/produto. "PN" é legado
+  técnico — permanece só como nome da coluna física `projeto_itens.pn`,
+  nunca como termo de interface (ver
+  `../../../knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md` item 6).
 - Ao aprovar projeto, cada item poderá gerar uma OF futuramente.
 
 ## Fora do escopo atual
@@ -23,7 +26,7 @@ Fundação industrial do módulo de Projetos da NEXOTFE.
 
 ```text
 Projeto = contexto comercial/orçamento
-PN = identidade técnica única
+Código = identidade técnica única (PN é legado técnico, não usar na interface)
 Item do projeto = linha do orçamento
 OF = fabricação futura da peça dentro do projeto
 ```
