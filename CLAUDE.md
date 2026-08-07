@@ -111,3 +111,23 @@ para SQL Editor manual (que continua sendo a opção padrão quando a
 leitura de verificação for mais simples de o próprio usuário conferir
 visualmente) — a escolha da via técnica é secundária; a autorização
 explícita por ação é o que não pode ser inferida.
+
+## Base de conhecimento — navegação (Fase 0)
+
+Os documentos de `knowledge/` ainda vivem nos caminhos originais — nenhum
+arquivo foi movido, mesclado ou apagado nesta fase. Para navegar por tema,
+use:
+
+- `knowledge/00-meta/INDICE.md` — índice completo por assunto (Produto,
+  Roteiros/BOM, Projetos/Orçamento, Simulação Comercial, Banco, Operação,
+  Setup, Histórico).
+- `knowledge/00-meta/STATUS_FONTES.md` — classificação de cada documento
+  (vigente / histórico / ambíguo / candidato a fusão / desatualizado
+  confirmado).
+- `knowledge/CONSOLIDACAO_VIGENTE_NEXOTFE.md` — tem precedência sobre
+  qualquer documento mais antigo que a contradiga (ver Regra 6).
+
+**Documentos marcados como histórico ou ambíguo em STATUS_FONTES.md nunca
+fundamentam sozinhos uma decisão de arquitetura, dado ou implementação** —
+confirme contra o documento vigente correspondente ou pergunte ao usuário
+antes de agir.
