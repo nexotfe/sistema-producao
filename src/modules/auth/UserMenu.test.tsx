@@ -10,20 +10,22 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 const replaceMock = vi.fn();
 const refreshMock = vi.fn();
 
+// Referencia estavel entre renders - reflete o comportamento real do
+// useRouter do Next (memoizado), diferente de retornar um objeto novo
+// a cada chamada.
+const routerMock = { replace: replaceMock, refresh: refreshMock };
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: replaceMock, refresh: refreshMock }),
+  useRouter: () => routerMock,
 }));
 
-vi.mock("@/lib/supabaseClient", () => ({
-  supabase: { auth: { signOut: vi.fn() } },
+vi.mock("@/modules/auth/lib/signOutLocal", () => ({
+  signOutLocal: vi.fn(),
 }));
 
-import { supabase } from "@/lib/supabaseClient";
+import { signOutLocal } from "@/modules/auth/lib/signOutLocal";
 import { UserMenu } from "./UserMenu";
 
-const supabaseMock = supabase as unknown as {
-  auth: { signOut: ReturnType<typeof vi.fn> };
-};
+const signOutLocalMock = signOutLocal as unknown as ReturnType<typeof vi.fn>;
 
 function criarDeferido<T>() {
   let resolve!: (valor: T) => void;
@@ -43,13 +45,13 @@ afterEach(() => {
 
 describe("UserMenu", () => {
   it("mostra o e-mail da sessão", () => {
-    supabaseMock.auth.signOut.mockResolvedValue({ error: null });
+    signOutLocalMock.mockResolvedValue({ error: null });
     render(<UserMenu email="usuario@nexotfe.com" />);
     expect(screen.getByText("usuario@nexotfe.com")).toBeTruthy();
   });
 
   it("sucesso: signOut local, depois router.replace('/') e router.refresh()", async () => {
-    supabaseMock.auth.signOut.mockResolvedValue({ error: null });
+    signOutLocalMock.mockResolvedValue({ error: null });
     render(<UserMenu email="usuario@nexotfe.com" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
@@ -58,13 +60,13 @@ describe("UserMenu", () => {
       await Promise.resolve();
     });
 
-    expect(supabaseMock.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(signOutLocalMock).toHaveBeenCalledTimes(1);
     expect(replaceMock).toHaveBeenCalledWith("/");
     expect(refreshMock).toHaveBeenCalledTimes(1);
   });
 
   it("erro: mensagem visível, permanece na página, botão volta a ficar clicável", async () => {
-    supabaseMock.auth.signOut.mockResolvedValue({
+    signOutLocalMock.mockResolvedValue({
       error: { message: "network error" },
     });
     render(<UserMenu email="usuario@nexotfe.com" />);
@@ -85,7 +87,7 @@ describe("UserMenu", () => {
 
   it("clique duplo: signOut chamado uma única vez mesmo com dois cliques antes da resposta", async () => {
     const deferido = criarDeferido<{ error: null }>();
-    supabaseMock.auth.signOut.mockReturnValue(deferido.promise);
+    signOutLocalMock.mockReturnValue(deferido.promise);
 
     render(<UserMenu email="usuario@nexotfe.com" />);
     const botao = screen.getByRole("button", { name: /sair/i });
@@ -104,7 +106,7 @@ describe("UserMenu", () => {
       await Promise.resolve();
     });
 
-    expect(supabaseMock.auth.signOut).toHaveBeenCalledTimes(1);
+    expect(signOutLocalMock).toHaveBeenCalledTimes(1);
     expect(replaceMock).toHaveBeenCalledTimes(1);
   });
 });

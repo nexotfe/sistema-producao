@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { signOutLocal } from "@/modules/auth/lib/signOutLocal";
 import { Button } from "@/modules/shared/ui/Button";
 
 type UserMenuProps = {
@@ -26,7 +26,7 @@ export function UserMenu({ email }: UserMenuProps) {
     setErrorMessage(null);
     setIsSigningOut(true);
 
-    const { error } = await supabase.auth.signOut({ scope: "local" });
+    const { error } = await signOutLocal();
 
     if (error) {
       setIsSigningOut(false);
