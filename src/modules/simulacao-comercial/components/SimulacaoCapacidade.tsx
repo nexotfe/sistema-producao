@@ -3,11 +3,13 @@
 // feedback rápido de UX - nenhuma dessas chamadas persiste nada. A
 // aprovação em si (persistência real) vai pela Server Action
 // aprovarSimulacaoComercialAction, que recalcula de novo no servidor
-// antes de persistir (PAD-008, seções 7-8). Fase 3 do rollout da
-// Entrega 2: a persistência vai nativamente pela RPC v4 (distribuição
-// parcial completa, sem a limitação de "só 1 recurso" da ponte v3 da
-// Fase 2, já removida) - v3/v2/v1 permanecem intactas no banco como
-// caminho de rollback técnico, não chamadas por este componente.
+// antes de persistir (PAD-008, seções 7-8). Fase 2 do rollout de
+// DEC-006: a persistência vai nativamente pela RPC v5 (acrescenta os 4
+// campos do Calculador Reverso ao snapshot, distribuição parcial
+// completa, sem a limitação de "só 1 recurso" da ponte v3, já
+// removida) - v4/v3/v2/v1 permanecem intactas no banco só como caminho
+// de rollback técnico manual, sem fallback automático, não chamadas
+// por este componente.
 // Sem lógica de busca/transformação de dado neste componente: quem
 // enriquece o resultado para exibição é prepararResultadoParaExibicao
 // (lib/), consumido pronto aqui.
@@ -40,6 +42,7 @@ import {
   calcularEstimativaInicioNecessarioComContexto,
 } from "@/modules/simulacao-comercial/lib/prepararCalculadorReverso";
 import type { ResultadoEstimativaInicioNecessario } from "@/modules/simulacao-comercial/lib/estimarInicioNecessario";
+import { prepararExibicaoEstimativaSnapshot } from "@/modules/simulacao-comercial/lib/prepararExibicaoEstimativaSnapshot";
 import { aprovarSimulacaoComercialAction } from "@/modules/simulacao-comercial/actions/aprovarSimulacaoComercialAction";
 import {
   prepararResultadoParaExibicao,
@@ -126,6 +129,15 @@ type SimulacaoAprovadaExistente = {
   janelaFim: string;
   totalOperacoes: number;
   totalEmDeficit: number;
+  // Fase 3 (DEC-006): os 4 campos do Calculador Reverso congelados no
+  // snapshot - NULL nos 4 juntos em snapshots anteriores a esta
+  // ativação (ver constraint simulacoes_comerciais_estimativa_coerente_chk).
+  // Nunca recalculados aqui - prepararExibicaoEstimativaSnapshot só
+  // formata o que já está persistido.
+  estimativaInicioNecessario: string | null;
+  estimativaEstado: string | null;
+  estimativaMetodoVersao: number | null;
+  folgaDiasProdutivos: number | null;
 };
 
 function mensagemDeErro(erro: unknown): string {
@@ -281,7 +293,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     const { data: vigente } = await supabase
       .from("simulacoes_comerciais")
       .select(
-        "id,cenario_demanda,modo_producao,data_necessidade,margem_seguranca_dias,data_prevista_aprovacao_pedido,data_chegada_prevista,janela_inicio,janela_fim,aprovado_em,aprovado_por",
+        "id,cenario_demanda,modo_producao,data_necessidade,margem_seguranca_dias,data_prevista_aprovacao_pedido,data_chegada_prevista,janela_inicio,janela_fim,aprovado_em,aprovado_por,estimativa_inicio_necessario,estimativa_estado,estimativa_metodo_versao,folga_dias_produtivos",
       )
       .eq("projeto_id", projetoId)
       .eq("vigente", true)
@@ -323,6 +335,10 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       janelaFim: vigente.janela_fim,
       totalOperacoes: detalhamento.length,
       totalEmDeficit: detalhamento.filter((item) => item.deficit > 0).length,
+      estimativaInicioNecessario: vigente.estimativa_inicio_necessario,
+      estimativaEstado: vigente.estimativa_estado,
+      estimativaMetodoVersao: vigente.estimativa_metodo_versao,
+      folgaDiasProdutivos: vigente.folga_dias_produtivos,
     });
   }, [projetoId]);
 
@@ -746,6 +762,18 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
         janelaInicio: janelaComercial.janelaInicio,
         janelaFim: janelaComercial.janelaFim,
         chaveIdempotencia: chaveIdempotenciaRef.current,
+        // DEC-006 §2 - sinal de que o usuário passou pelo modal de
+        // confirmação de risco (o mesmo já usado para déficit,
+        // precisaConfirmarRisco). Seguro derivar assim: o botão que
+        // chama confirmarAprovacao SEM passar pelo modal só é
+        // renderizado quando !precisaConfirmarRisco, que já exclui
+        // janela_insuficiente - logo, se o estado é janela_insuficiente
+        // neste ponto, só se chegou aqui pelo botão do modal
+        // ("Aprovar com risco assumido"). O servidor RECALCULA e
+        // EXIGE este sinal de novo (orquestrarAprovacaoAutoritativa.ts)
+        // - isto não é a autorização, só o sinal de que o usuário viu o
+        // aviso desta vez.
+        confirmarJanelaInsuficiente: resultadoEstimativa?.estado === "janela_insuficiente",
       });
 
       if (!resultadoAcao.ok) {
@@ -761,6 +789,37 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           setStatusAprovacao({
             tipo: "erro",
             mensagem: mensagemAusenciaJanela(resultadoAcao.detalhe),
+          });
+          return;
+        }
+
+        if (resultadoAcao.motivo === "estimativa_bloqueada") {
+          // DEC-006: segunda camada de defesa - o preview do cliente já
+          // bloqueia estes 2 estados antes de chamar a action (ver
+          // iniciarAprovacao acima), mas o recálculo autoritativo pode
+          // divergir do preview (dado mudou entre a última revalidação e
+          // o clique). Mesmo texto do bloqueio do preview, por
+          // consistência.
+          setStatusAprovacao({
+            tipo: "erro",
+            mensagem:
+              resultadoAcao.detalhe.estado === "dados_insuficientes"
+                ? "Não é possível aprovar: dados insuficientes para calcular a Estimativa de Início Necessário. Corrija o cadastro (capacidade dos recursos envolvidos) antes de prosseguir."
+                : "Não é possível aprovar: a Estimativa de Início Necessário não pôde ser determinada dentro do horizonte técnico de busca.",
+          });
+          return;
+        }
+
+        if (resultadoAcao.motivo === "confirmacao_necessaria") {
+          // DEC-006 §2: não deveria acontecer no uso normal (o cliente
+          // já envia o sinal derivado do próprio modal, acima) - só
+          // ocorre se o estado mudou entre a última revalidação e o
+          // clique. Pede para refazer a simulação, para passar pelo
+          // modal de novo com dado atualizado.
+          setStatusAprovacao({
+            tipo: "erro",
+            mensagem:
+              "Não é possível aprovar: é necessário confirmar que está ciente de que a janela produtiva é insuficiente. Execute a simulação novamente e confirme o risco antes de aprovar.",
           });
           return;
         }
@@ -845,6 +904,10 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   }
 
   if (simulacaoAprovadaExistente) {
+    // Fase 3 (DEC-006): só formata o que já está congelado no snapshot -
+    // nunca recalcula o Calculador Reverso para uma simulação já aprovada.
+    const exibicaoEstimativa = prepararExibicaoEstimativaSnapshot(simulacaoAprovadaExistente);
+
     return (
       <section className="rounded-md border border-emerald-200 bg-app-card p-4">
         <div className="mb-4">
@@ -928,6 +991,35 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
             Em déficit:{" "}
             <strong>{simulacaoAprovadaExistente.totalEmDeficit}</strong>
           </span>
+        </div>
+
+        <div className="mt-5 border-t border-emerald-200 pt-4">
+          <h3 className="text-sm font-bold text-emerald-900">
+            Estimativa de Início Necessário
+          </h3>
+
+          {exibicaoEstimativa.tipo === "nao_registrada" ? (
+            <p className="mt-1 text-sm text-slate-600">
+              Estimativa não registrada nesta simulação.
+            </p>
+          ) : null}
+
+          {exibicaoEstimativa.tipo === "indisponivel" ? (
+            <p className="mt-1 text-sm text-slate-600">Indisponível.</p>
+          ) : null}
+
+          {exibicaoEstimativa.tipo === "disponivel" ? (
+            <dl className="mt-2 grid gap-x-3 gap-y-1 text-sm text-slate-700 sm:grid-cols-2">
+              <dt className="text-slate-500">Estimativa de Início Necessário</dt>
+              <dd>{formatarDataBr(exibicaoEstimativa.dataEstimadaInicioNecessario)}</dd>
+              <dt className="text-slate-500">Estado</dt>
+              <dd>{exibicaoEstimativa.estadoAmigavel}</dd>
+              <dt className="text-slate-500">Folga (dias produtivos)</dt>
+              <dd>{exibicaoEstimativa.folgaDiasProdutivos}</dd>
+              <dt className="text-slate-500">Versão do método</dt>
+              <dd>{exibicaoEstimativa.metodoVersao}</dd>
+            </dl>
+          ) : null}
         </div>
 
         {detalhamentoSnapshot && detalhamentoSnapshot.length > 0 ? (

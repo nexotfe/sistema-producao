@@ -14,9 +14,11 @@ import {
   MENSAGEM_ERRO_GENERICA,
   orquestrarAprovacaoAutoritativa,
   type DependenciasAprovacaoAutoritativa,
+  type BaseAutoritativaSimulacao,
 } from "./orquestrarAprovacaoAutoritativa";
 import type { ItemSimulacaoOperacao, ResultadoSimulacao } from "../lib/executarSimulacao";
 import type { JanelaComercialValida, JanelaComercialInvalida } from "../lib/prepararJanelaComercial";
+import type { ResultadoEstimativaInicioNecessario } from "../lib/estimarInicioNecessario";
 import type { PayloadAprovacao } from "./validarPayloadAprovacao";
 import { EstruturaFabricacaoIncompletaError } from "../lib/errors";
 import { SubconjuntoSemBomError } from "@/modules/bom/lib/errors";
@@ -72,9 +74,23 @@ function criarPayload(overrides: Partial<PayloadAprovacao> = {}): PayloadAprovac
     janelaInicio: JANELA_SERVIDOR.janelaInicio,
     janelaFim: JANELA_SERVIDOR.janelaFim,
     chaveIdempotencia: "11111111-1111-1111-1111-111111111111",
+    confirmarJanelaInsuficiente: false,
     ...overrides,
   };
 }
+
+const ESTIMATIVA_VIAVEL: ResultadoEstimativaInicioNecessario = {
+  estado: "viavel",
+  dataEstimadaInicioNecessario: "2026-11-18",
+  folgaDiasProdutivos: 3,
+  metodoVersao: 1,
+};
+
+// Conteúdo real não importa para os testes deste arquivo (nível
+// orquestrador - executarMotor/estimarInicioNecessario são mockados e
+// não inspecionam a base de verdade) - só a IDENTIDADE do objeto
+// importa, para o teste de "preparação única" (DEC-006, correção 1).
+const BASE_AUTORITATIVA_PADRAO = {} as BaseAutoritativaSimulacao;
 
 function criarDependenciasFelizes(
   overrides: Partial<DependenciasAprovacaoAutoritativa> = {},
@@ -83,7 +99,9 @@ function criarDependenciasFelizes(
     autenticar: vi.fn(async () => "usuario-1"),
     buscarEmpresaId: vi.fn(async () => "empresa-1"),
     prepararJanela: vi.fn(async () => JANELA_SERVIDOR),
+    prepararBaseAutoritativa: vi.fn(async () => BASE_AUTORITATIVA_PADRAO),
     executarMotor: vi.fn(async (): Promise<ResultadoSimulacao> => ({ itensPorOperacao: [criarItem()] })),
+    estimarInicioNecessario: vi.fn(async () => ESTIMATIVA_VIAVEL),
     persistir: vi.fn(async () => ({ simulacaoComercialId: "snapshot-1", erro: null })),
     ...overrides,
   };
@@ -240,6 +258,195 @@ describe("orquestrarAprovacaoAutoritativa — correção 5: fronteira autoritati
     expect(deps.buscarEmpresaId).not.toHaveBeenCalled();
     expect(deps.prepararJanela).not.toHaveBeenCalled();
     expect(deps.persistir).not.toHaveBeenCalled();
+  });
+});
+
+describe("orquestrarAprovacaoAutoritativa — DEC-006: Calculador Reverso (orquestrador, RPC-agnóstico - a versão da RPC é decidida em aprovarSimulacaoComercialAction.ts/montarPayloadV5.ts, não aqui)", () => {
+  it("dados_insuficientes: bloqueia antes do hash e da persistência, mesmo que janela e itens estejam consistentes", async () => {
+    const estimativa: ResultadoEstimativaInicioNecessario = {
+      estado: "dados_insuficientes",
+      causa: "capacidade_cadastral_zero",
+      operacaoAfetada: "op-1",
+      recursosAfetados: ["recurso-1"],
+    };
+    const payload = criarPayload();
+    const deps = criarDependenciasFelizes({
+      estimarInicioNecessario: vi.fn(async () => estimativa),
+    });
+
+    const resultado = await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(resultado).toEqual({ ok: false, motivo: "estimativa_bloqueada", detalhe: estimativa });
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  it("horizonte_tecnico_excedido: bloqueia antes do hash e da persistência", async () => {
+    const estimativa: ResultadoEstimativaInicioNecessario = {
+      estado: "horizonte_tecnico_excedido",
+      diasCivisExaminados: 10000,
+      avaliacaoNoLimiteTecnico: { deficitTotal: 5, resultadoPorOperacao: [] },
+    };
+    const payload = criarPayload();
+    const deps = criarDependenciasFelizes({
+      estimarInicioNecessario: vi.fn(async () => estimativa),
+    });
+
+    const resultado = await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(resultado).toEqual({ ok: false, motivo: "estimativa_bloqueada", detalhe: estimativa });
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  it("DEC-006 correção 1: baseFixa/contexto são preparados UMA ÚNICA VEZ, compartilhados entre Motor e Calculador Reverso", async () => {
+    const payload = criarPayload();
+    const prepararBaseMock = vi.fn<DependenciasAprovacaoAutoritativa["prepararBaseAutoritativa"]>(
+      async () => BASE_AUTORITATIVA_PADRAO,
+    );
+    const executarMotorMock = vi.fn<DependenciasAprovacaoAutoritativa["executarMotor"]>(
+      async () => ({ itensPorOperacao: [criarItem()] }),
+    );
+    const estimarMock = vi.fn<DependenciasAprovacaoAutoritativa["estimarInicioNecessario"]>(
+      async () => ESTIMATIVA_VIAVEL,
+    );
+    const deps = criarDependenciasFelizes({
+      prepararBaseAutoritativa: prepararBaseMock,
+      executarMotor: executarMotorMock,
+      estimarInicioNecessario: estimarMock,
+    });
+
+    await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    // Preparada uma única vez.
+    expect(prepararBaseMock).toHaveBeenCalledTimes(1);
+
+    // E é a MESMA referência recebida tanto pelo Motor quanto pelo
+    // Calculador Reverso - nunca duas preparações separadas que
+    // poderiam combinar dados de momentos diferentes.
+    const baseRecebidaPeloMotor = executarMotorMock.mock.calls[0][1];
+    const baseRecebidaPelaEstimativa = estimarMock.mock.calls[0][1];
+    expect(baseRecebidaPeloMotor).toBe(BASE_AUTORITATIVA_PADRAO);
+    expect(baseRecebidaPelaEstimativa).toBe(BASE_AUTORITATIVA_PADRAO);
+  });
+
+  it("DEC-006 correção 2: janela_insuficiente SEM confirmação explícita bloqueia antes do hash/RPC - persistir recebe zero chamadas", async () => {
+    const estimativa: ResultadoEstimativaInicioNecessario = {
+      estado: "janela_insuficiente",
+      dataEstimadaInicioNecessario: "2026-11-20",
+      dataDisponibilidadeProducao: "2026-11-25",
+      folgaDiasProdutivos: -3,
+      avaliacaoNaJanelaRealmentePermitida: { deficitTotal: 2, resultadoPorOperacao: [] },
+      metodoVersao: 1,
+    };
+    const payload = criarPayload({ confirmarJanelaInsuficiente: false });
+    const deps = criarDependenciasFelizes({
+      estimarInicioNecessario: vi.fn(async () => estimativa),
+    });
+
+    const resultado = await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(resultado).toEqual({ ok: false, motivo: "confirmacao_necessaria", detalhe: estimativa });
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  it("DEC-006 correção 2: janela_insuficiente COM confirmação explícita prossegue e persiste", async () => {
+    const estimativa: ResultadoEstimativaInicioNecessario = {
+      estado: "janela_insuficiente",
+      dataEstimadaInicioNecessario: "2026-11-20",
+      dataDisponibilidadeProducao: "2026-11-25",
+      folgaDiasProdutivos: -3,
+      avaliacaoNaJanelaRealmentePermitida: { deficitTotal: 2, resultadoPorOperacao: [] },
+      metodoVersao: 1,
+    };
+    const payload = criarPayload({ confirmarJanelaInsuficiente: true });
+    const deps = criarDependenciasFelizes({
+      estimarInicioNecessario: vi.fn(async () => estimativa),
+    });
+
+    const resultado = await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(resultado).toEqual({ ok: true, simulacaoComercialId: "snapshot-1" });
+    expect(deps.persistir).toHaveBeenCalledTimes(1);
+  });
+
+  it("Fase 2: persistir recebe a MESMA estimativa devolvida por estimarInicioNecessario (nunca um valor do payload/cliente)", async () => {
+    const payload = criarPayload();
+    const persistirMock = vi.fn<DependenciasAprovacaoAutoritativa["persistir"]>(async () => ({
+      simulacaoComercialId: "snapshot-1",
+      erro: null,
+    }));
+    const deps = criarDependenciasFelizes({ persistir: persistirMock });
+
+    await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(persistirMock.mock.calls[0][0].estimativa).toEqual(ESTIMATIVA_VIAVEL);
+  });
+
+  it("estimarInicioNecessario é chamado com a base PREPARADA e a janela RECALCULADA no servidor, nunca com valores do payload", async () => {
+    const payload = criarPayload();
+    const estimarMock = vi.fn(async () => ESTIMATIVA_VIAVEL);
+    const deps = criarDependenciasFelizes({ estimarInicioNecessario: estimarMock });
+
+    await orquestrarAprovacaoAutoritativa(payload, deps);
+
+    expect(estimarMock).toHaveBeenCalledWith(
+      "empresa-1",
+      BASE_AUTORITATIVA_PADRAO,
+      JANELA_SERVIDOR.prazoInterno,
+      JANELA_SERVIDOR.dataDisponibilidadeProducao,
+    );
+  });
+
+  it("hash de idempotência muda quando a estimativa recalculada muda, mesmo com janela/itens idênticos (replay: mesma chave, conteúdo diferente)", async () => {
+    const payload = criarPayload();
+
+    const persistirMock1 = vi.fn<DependenciasAprovacaoAutoritativa["persistir"]>(async () => ({
+      simulacaoComercialId: "snapshot-a",
+      erro: null,
+    }));
+    const deps1 = criarDependenciasFelizes({
+      persistir: persistirMock1,
+      estimarInicioNecessario: vi.fn(async () => ESTIMATIVA_VIAVEL),
+    });
+    await orquestrarAprovacaoAutoritativa(payload, deps1);
+
+    const persistirMock2 = vi.fn<DependenciasAprovacaoAutoritativa["persistir"]>(async () => ({
+      simulacaoComercialId: "snapshot-b",
+      erro: null,
+    }));
+    const deps2 = criarDependenciasFelizes({
+      persistir: persistirMock2,
+      estimarInicioNecessario: vi.fn(async () => ({
+        ...ESTIMATIVA_VIAVEL,
+        folgaDiasProdutivos: 999, // única diferença
+      })),
+    });
+    await orquestrarAprovacaoAutoritativa(payload, deps2);
+
+    const hash1 = persistirMock1.mock.calls[0][0].hashSolicitacao;
+    const hash2 = persistirMock2.mock.calls[0][0].hashSolicitacao;
+    expect(hash1).not.toBe(hash2);
+  });
+
+  it("hash de idempotência é idêntico quando a estimativa recalculada é idêntica (replay: mesma chave, mesmo conteúdo)", async () => {
+    const payload = criarPayload();
+
+    const persistirMock1 = vi.fn<DependenciasAprovacaoAutoritativa["persistir"]>(async () => ({
+      simulacaoComercialId: "snapshot-a",
+      erro: null,
+    }));
+    const deps1 = criarDependenciasFelizes({ persistir: persistirMock1 });
+    await orquestrarAprovacaoAutoritativa(payload, deps1);
+
+    const persistirMock2 = vi.fn<DependenciasAprovacaoAutoritativa["persistir"]>(async () => ({
+      simulacaoComercialId: "snapshot-b",
+      erro: null,
+    }));
+    const deps2 = criarDependenciasFelizes({ persistir: persistirMock2 });
+    await orquestrarAprovacaoAutoritativa(payload, deps2);
+
+    const hash1 = persistirMock1.mock.calls[0][0].hashSolicitacao;
+    const hash2 = persistirMock2.mock.calls[0][0].hashSolicitacao;
+    expect(hash1).toBe(hash2);
   });
 });
 

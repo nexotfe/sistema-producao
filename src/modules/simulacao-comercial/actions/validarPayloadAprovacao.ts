@@ -54,6 +54,17 @@ export type PayloadAprovacao = {
   /** = prazoInterno calculado pelo cliente na última revalidação - mesma ressalva de janelaInicio. */
   janelaFim: string;
   chaveIdempotencia: string;
+  /**
+   * DEC-006 §2 - confirmação explícita do usuário (modal) de que está
+   * ciente de que a janela produtiva é insuficiente e deseja aprovar
+   * mesmo assim. Só é um sinal de CONSENTIMENTO, não um dado calculado -
+   * diferente dos demais campos deste payload, o servidor não recalcula
+   * isto, só EXIGE que esteja `true` quando o Calculador Reverso
+   * (recalculado no servidor) resultar em `janela_insuficiente`; sem
+   * isso, a aprovação para antes do hash/RPC
+   * (orquestrarAprovacaoAutoritativa.ts).
+   */
+  confirmarJanelaInsuficiente: boolean;
 };
 
 export type ResultadoValidacao =
@@ -121,6 +132,7 @@ const CAMPOS_PAYLOAD = new Set([
   "janelaInicio",
   "janelaFim",
   "chaveIdempotencia",
+  "confirmarJanelaInsuficiente",
 ]);
 
 const CAMPOS_RESULTADO = new Set(["itensPorOperacao"]);
@@ -230,6 +242,10 @@ export function validarPayloadAprovacao(payload: unknown): ResultadoValidacao {
     return { valido: false, motivo: "chaveIdempotencia inválida" };
   }
 
+  if (typeof registro.confirmarJanelaInsuficiente !== "boolean") {
+    return { valido: false, motivo: "confirmarJanelaInsuficiente inválido" };
+  }
+
   if (!ehDataIsoValida(registro.janelaInicio)) {
     return { valido: false, motivo: "janelaInicio inválida" };
   }
@@ -314,6 +330,7 @@ export function validarPayloadAprovacao(payload: unknown): ResultadoValidacao {
       janelaInicio: registro.janelaInicio as string,
       janelaFim: registro.janelaFim as string,
       chaveIdempotencia: registro.chaveIdempotencia as string,
+      confirmarJanelaInsuficiente: registro.confirmarJanelaInsuficiente as boolean,
     },
   };
 }

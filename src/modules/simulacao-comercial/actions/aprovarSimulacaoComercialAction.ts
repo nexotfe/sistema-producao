@@ -9,12 +9,13 @@
 // assíncronas, então tipos/constantes do orquestrador vivem lá, não
 // aqui.
 //
-// Fase 3 do rollout da Entrega 2 (PAD-008 v2.0 §19): persiste
-// nativamente via RPC v4 - a ponte v3 da Fase 2 (adaptarParaV3.ts,
-// motivo "distribuicao_nao_suportada_nesta_fase") foi removida junto
-// com esta troca. v3/v2/v1 permanecem intactas no banco, sem EXECUTE
-// para authenticated (nunca tiveram), como caminho de rollback técnico
-// - não chamadas por este componente.
+// Fase 2 do rollout de DEC-006: persiste nativamente via RPC v5
+// (aprovar_projeto_com_simulacao_v5), que acrescenta os 4 campos do
+// Calculador Reverso ao snapshot. v4/v3/v2/v1 permanecem intactas no
+// banco, sem EXECUTE para authenticated (nunca tiveram), só como
+// caminho de rollback técnico manual - não há fallback automático para
+// v4 nesta função: falha na chamada da v5 é sempre um erro visível ao
+// usuário, nunca uma persistência silenciosa por outra via.
 //
 // auth.getUser() (não getSession()) porque revalida o token contra o
 // servidor de autenticação do Supabase - não é falsificável só
@@ -25,9 +26,14 @@
 // Server Action chega pela rede como qualquer outra chamada).
 import { createSupabaseServerClient } from "@/lib/supabaseServerClient";
 import { createSupabaseServiceClient } from "@/lib/supabaseServiceClient";
-import { simularCapacidadeProjeto } from "../lib/executarSimulacao";
+import { simularCapacidadeProjetoComBaseFixa } from "../lib/executarSimulacao";
 import { prepararJanelaComercial } from "../lib/prepararJanelaComercial";
-import { montarItensParaV4 } from "../lib/montarPayloadV4";
+import { prepararBaseFixaMotor } from "../lib/prepararEntradasMotor";
+import {
+  prepararContextoCalculadorReverso,
+  calcularEstimativaInicioNecessarioComContexto,
+} from "../lib/prepararCalculadorReverso";
+import { persistirViaRpcV5 } from "../lib/persistirViaRpcV5";
 import { validarPayloadAprovacao, type PayloadAprovacao } from "./validarPayloadAprovacao";
 import {
   orquestrarAprovacaoAutoritativa,
@@ -85,40 +91,69 @@ export async function aprovarSimulacaoComercialAction(
     prepararJanela: (empresaId, premissas) =>
       prepararJanelaComercial(serverClient, empresaId, premissas),
 
-    executarMotor: (empresaId, projetoId, janelaInicio, janelaFim) =>
-      simularCapacidadeProjeto(serverClient, empresaId, projetoId, janelaInicio, janelaFim),
+    // DEC-006 (correção): prepara a base fixa (roteiro/recursos/
+    // comprometido) e o contexto de calendário UMA ÚNICA VEZ,
+    // sequencialmente - mesmo padrão já usado no preview do cliente
+    // (SimulacaoCapacidade.tsx). Compartilhada entre executarMotor e
+    // estimarInicioNecessario logo abaixo, nunca preparada duas vezes.
+    prepararBaseAutoritativa: async (empresaId, projetoId, prazoInterno) => {
+      const baseFixa = await prepararBaseFixaMotor(serverClient, empresaId, projetoId);
+      const { P, contexto, diasCivisExaminados } = await prepararContextoCalculadorReverso(
+        serverClient,
+        empresaId,
+        prazoInterno,
+      );
+      return { baseFixa, contexto, P, diasCivisExaminados };
+    },
 
-    // `p.itens` aqui é sempre revalidacaoServidor.itensPorOperacao
-    // (ver orquestrarAprovacaoAutoritativa.ts) - o resultado RECALCULADO
-    // no servidor, nunca o que o navegador enviou. O cliente privilegiado
-    // (service_role) só é criado aqui dentro, nunca exposto ao módulo
-    // client-side.
-    persistir: async (p) => {
+    executarMotor: (empresaId, base, janelaInicio, janelaFim) =>
+      simularCapacidadeProjetoComBaseFixa(serverClient, empresaId, base.baseFixa, janelaInicio, janelaFim, {
+        contexto: base.contexto,
+      }),
+
+    // DEC-006 - recálculo autoritativo do Calculador Reverso, sobre a
+    // MESMA base/contexto já preparados por prepararBaseAutoritativa.
+    estimarInicioNecessario: (empresaId, base, prazoInterno, dataDisponibilidadeProducao) =>
+      calcularEstimativaInicioNecessarioComContexto(
+        serverClient,
+        empresaId,
+        base.baseFixa,
+        base.P,
+        base.contexto,
+        prazoInterno,
+        dataDisponibilidadeProducao,
+        base.diasCivisExaminados,
+      ),
+
+    // `p.itens` aqui é sempre revalidacaoServidor.itensPorOperacao e
+    // `p.estimativa` é sempre o resultadoEstimativa recalculado (ver
+    // orquestrarAprovacaoAutoritativa.ts) - nunca o que o navegador
+    // enviou. O cliente privilegiado (service_role) só é criado aqui
+    // dentro, nunca exposto ao módulo client-side. persistirViaRpcV5
+    // isola a chamada de rede à RPC v5 (mapeamento dos 17 parâmetros +
+    // chamada) atrás de um client injetável, testável com um client
+    // Supabase simulado (persistirViaRpcV5.test.ts) - correção 4
+    // (error.message nunca repassado ao usuário) continua valendo, só
+    // que agora dentro do helper.
+    persistir: (p) => {
       const serviceClient = createSupabaseServiceClient();
 
-      const { data, error } = await serviceClient.rpc("aprovar_projeto_com_simulacao_v4", {
-        p_aprovado_por: p.aprovadoPor,
-        p_projeto_id: p.projetoId,
-        p_cenario_demanda: p.cenarioDemanda,
-        p_modo_producao: p.modoProducao,
-        p_data_necessidade: p.dataNecessidade,
-        p_margem_seguranca_dias: p.margemSegurancaDias,
-        p_data_prevista_aprovacao_pedido: p.dataPrevistaAprovacaoPedido,
-        p_data_chegada_prevista: p.dataChegadaPrevista,
-        p_janela_inicio: p.janelaInicio,
-        p_janela_fim: p.janelaFim,
-        p_itens: montarItensParaV4(p.itens),
-        p_chave_idempotencia: p.chaveIdempotencia,
-        p_hash_solicitacao: p.hashSolicitacao,
+      return persistirViaRpcV5(serviceClient, {
+        aprovadoPor: p.aprovadoPor,
+        projetoId: p.projetoId,
+        cenarioDemanda: p.cenarioDemanda,
+        modoProducao: p.modoProducao,
+        dataNecessidade: p.dataNecessidade,
+        margemSegurancaDias: p.margemSegurancaDias,
+        dataPrevistaAprovacaoPedido: p.dataPrevistaAprovacaoPedido,
+        dataChegadaPrevista: p.dataChegadaPrevista,
+        janelaInicio: p.janelaInicio,
+        janelaFim: p.janelaFim,
+        estimativa: p.estimativa,
+        itens: p.itens,
+        chaveIdempotencia: p.chaveIdempotencia,
+        hashSolicitacao: p.hashSolicitacao,
       });
-
-      return {
-        // Correção 4 (herdada): error.message nunca é repassado ao
-        // usuário - só volta aqui para o orquestrador logar no
-        // servidor (console.error) e devolver MENSAGEM_ERRO_GENERICA.
-        simulacaoComercialId: error ? null : (data as string),
-        erro: error ? error.message : null,
-      };
     },
   };
 
