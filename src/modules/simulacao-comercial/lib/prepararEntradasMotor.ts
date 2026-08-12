@@ -93,7 +93,15 @@ async function coletarOperacoesDoProjeto(
 // capacidade ausente ou nula ainda lança RecursoSemCapacidadeCadastradaError
 // para o PRIMEIRO recurso (na ordem de `recursoIds`, já determinística)
 // que falhar, idêntico ao comportamento do loop sequencial anterior.
-async function capacidadesDiariasDosRecursos(
+//
+// Exportada (Fase 8a, DEC-007 §6.2) para carregarBaseCenarios.ts
+// reaproveitar - única fonte de capacidade/produtividade/comprometido/
+// compatibilidade por recurso, nunca duplicada entre o motor antigo e o
+// motor de cenários (mesmo risco de divergência já registrado no
+// cabeçalho de coletarEstruturaBom.ts). Comportamento desta função e
+// de prepararBaseFixaMotor/prepararEntradasMotor (motor antigo)
+// permanece inalterado - só a visibilidade mudou.
+export async function capacidadesDiariasDosRecursos(
   client: SupabaseClient,
   recursoIds: string[],
 ): Promise<Record<string, number>> {
@@ -183,7 +191,7 @@ async function comprometidoDoRecurso(
 // erro relatado é sempre o do PRIMEIRO da lista `recursoIds` (ordem já
 // determinística) - nunca o que "chegou primeiro" da rede, que seria
 // não determinístico com execução paralela via Promise.all puro.
-async function produtividadesEComprometidosDosRecursos(
+export async function produtividadesEComprometidosDosRecursos(
   client: SupabaseClient,
   recursoIds: string[],
   projetoId: string,
@@ -226,7 +234,7 @@ type CompatibilidadeRow = {
   prioridade: number;
 };
 
-async function compatibilidadesDosRecursos(
+export async function compatibilidadesDosRecursos(
   client: SupabaseClient,
   recursoIds: string[],
 ): Promise<Record<string, CandidatoRecurso[]>> {

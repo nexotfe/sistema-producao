@@ -1,0 +1,257 @@
+// DEC-007 §6.2/§18 - Fase 8a: "base congelada uma vez" - carrega, para
+// UM projeto (todos os seus projeto_itens combinados), tudo que
+// avaliarCenario.ts precisa para rodar N cenários sem tocar a rede de
+// novo: grafo de ocorrências completo (via coletarGrafoOcorrenciasBom.ts,
+// um por projeto_item, combinados aqui) + capacidade/produtividade/
+// comprometido/compatibilidade por recurso (reaproveitando os mesmos
+// helpers de prepararEntradasMotor.ts - motor antigo - nunca duplicados,
+// ver comentário lá).
+//
+// Simplificação conhecida do recorte 8b, registrada no DEC-007 §6.2:
+// comprometidoInicialPorRecurso é AGREGADO (calcular_comprometido_v2,
+// não por dia) - avaliarCenario.ts precisa descontar esse total ANTES
+// de disponibilizar qualquer hora normal/extra ao escalonador, e a
+// interface precisa marcar todo resultado como estimativa preliminar.
+// 8c substitui isso por reconstrução real por dia (multiprojeto/FIFO).
+//
+// Sessão autenticada obrigatória (DEC-007 §6.2): coletarGrafoOcorrenciasBom.ts
+// chama lista_tecnica_nos_alcancaveis, que depende de empresa_atual_id()
+// (por sua vez de auth.uid()) - o `client` recebido aqui precisa carregar
+// uma sessão real (navegador autenticado, ou client de servidor com a
+// sessão do usuário). Sem isso, a RPC devolve falso "sem BOM" (tem_bom=false)
+// para todo nó, sem nenhum erro explícito - já observado e documentado
+// na validação com dado real (produto 6158-02, §6.2).
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ChaveOcorrencia } from "./chaveOcorrencia";
+import { chaveOcorrenciaParaString } from "./chaveOcorrencia";
+import {
+  caminhoBomItemIdsParaChave,
+  coletarGrafoOcorrenciasBom,
+} from "./coletarGrafoOcorrenciasBom";
+import {
+  construirGrafoOcorrencias,
+  type BomOperacaoRow,
+  type DependenciaOcorrencia,
+  type OcorrenciaComContexto,
+  type SubconjuntoUsado,
+  type VinculoSubconjuntoOperacaoConsumidora,
+} from "./grafoPrecedencia";
+import {
+  capacidadesDiariasDosRecursos,
+  compatibilidadesDosRecursos,
+  produtividadesEComprometidosDosRecursos,
+} from "../prepararEntradasMotor";
+import type { CandidatoRecurso } from "../motorAvaliacaoSequencial";
+import { validarEstruturaFabricacaoProjeto } from "../validarEstruturaFabricacaoProjeto";
+import { ProjetoSemItensError } from "../errors";
+import { OperacaoSemRecursoError } from "@/modules/bom/lib/errors";
+
+type ProjetoItemRow = { id: string; produto_id: string; quantidade: number };
+type BomOperacaoDetalheRow = { id: string; tempo_estimado_minutos: number; recurso_produtivo_id: string | null };
+
+export interface OcorrenciaComTamanho {
+  ocorrencia: OcorrenciaComContexto;
+  /** (tempoEstimadoMinutos / 60) × quantidadeAcumulada - mesma fórmula de motorAvaliacaoSequencial.ts. */
+  necessarioHorasPadrao: number;
+  recursoOriginalId: string;
+}
+
+export interface BaseCenarios {
+  empresaId: string;
+  projetoId: string;
+  ocorrencias: OcorrenciaComTamanho[];
+  dependencias: DependenciaOcorrencia[];
+  /** Ocorrências sem nenhuma predecessora - recebem a data candidata a cada tentativa do Calculador Reverso (§8). */
+  chavesRaizOrcamentoNovo: ChaveOcorrencia[];
+  /** Ocorrências sem nenhuma sucessora - cuja conclusão determina viabilidade do orçamento. */
+  chavesFinaisOrcamentoNovo: ChaveOcorrencia[];
+  recursoIds: string[];
+  compatibilidades: Record<string, CandidatoRecurso[]>;
+  capacidadeDiariaPorRecurso: Record<string, number>;
+  produtividadePorRecurso: Record<string, number>;
+  /**
+   * AGREGADO (calcular_comprometido_v2), não por dia - simplificação
+   * conhecida do recorte 8b (DEC-007 §6.2). avaliarCenario.ts consome
+   * isto como desconto inicial, nunca como capacidade líquida já pronta.
+   */
+  comprometidoInicialPorRecurso: Record<string, number>;
+}
+
+function mergeOperacoesPorBomId(
+  destino: Record<string, BomOperacaoRow[]>,
+  origem: Record<string, BomOperacaoRow[]>,
+): void {
+  for (const [bomId, operacoes] of Object.entries(origem)) {
+    if (!destino[bomId]) {
+      destino[bomId] = [];
+    }
+    const idsExistentes = new Set(destino[bomId].map((op) => op.id));
+    for (const op of operacoes) {
+      if (!idsExistentes.has(op.id)) {
+        destino[bomId].push(op);
+        idsExistentes.add(op.id);
+      }
+    }
+  }
+}
+
+function mergeSubconjuntosUsados(destino: SubconjuntoUsado[], origem: SubconjuntoUsado[]): void {
+  const existentes = new Set(destino.map((s) => s.bomItemId));
+  for (const subconjunto of origem) {
+    if (!existentes.has(subconjunto.bomItemId)) {
+      destino.push(subconjunto);
+      existentes.add(subconjunto.bomItemId);
+    }
+  }
+}
+
+function mergeVinculosMestres(
+  destino: VinculoSubconjuntoOperacaoConsumidora[],
+  origem: VinculoSubconjuntoOperacaoConsumidora[],
+): void {
+  const existentes = new Set(destino.map((v) => v.bomItemIdSubconjunto));
+  for (const vinculo of origem) {
+    if (!existentes.has(vinculo.bomItemIdSubconjunto)) {
+      destino.push(vinculo);
+      existentes.add(vinculo.bomItemIdSubconjunto);
+    }
+  }
+}
+
+export async function carregarBaseCenarios(
+  client: SupabaseClient,
+  empresaId: string,
+  projetoId: string,
+): Promise<BaseCenarios> {
+  await validarEstruturaFabricacaoProjeto(client, projetoId);
+
+  const { data: itensData, error: erroItens } = await client
+    .from("projeto_itens")
+    .select("id,produto_id,quantidade")
+    .eq("empresa_id", empresaId)
+    .eq("projeto_id", projetoId)
+    .eq("ativo", true)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+
+  if (erroItens) {
+    throw new Error(`Erro ao consultar projeto_itens para projeto_id=${projetoId}: ${erroItens.message}`);
+  }
+
+  const itens = (itensData ?? []) as ProjetoItemRow[];
+  if (itens.length === 0) {
+    throw new ProjetoSemItensError(projetoId);
+  }
+
+  // --- 1. Grafo de ocorrências por item, combinados (dedupe por chave estável de cada estrutura). ---
+  const operacoesPorBomId: Record<string, BomOperacaoRow[]> = {};
+  const subconjuntosUsados: SubconjuntoUsado[] = [];
+  const vinculosMestres: VinculoSubconjuntoOperacaoConsumidora[] = [];
+  const ocorrenciasComQuantidade: { ocorrencia: OcorrenciaComContexto; quantidadeAcumulada: number }[] = [];
+
+  for (const item of itens) {
+    const grafo = await coletarGrafoOcorrenciasBom(client, {
+      empresaId,
+      projetoItemId: item.id,
+      produtoRaizId: item.produto_id,
+      quantidadeRaiz: Number(item.quantidade),
+    });
+
+    mergeOperacoesPorBomId(operacoesPorBomId, grafo.operacoesPorBomId);
+    mergeSubconjuntosUsados(subconjuntosUsados, grafo.subconjuntosUsados);
+    mergeVinculosMestres(vinculosMestres, grafo.vinculosMestres);
+
+    for (const ocorrencia of grafo.ocorrencias) {
+      const chaveCaminho = caminhoBomItemIdsParaChave(ocorrencia.chave.caminhoBomItemIds);
+      const quantidadeAcumulada = grafo.quantidadeAcumuladaPorCaminho[chaveCaminho];
+      if (quantidadeAcumulada === undefined) {
+        // Defensivo - nunca deveria acontecer, coletarGrafoOcorrenciasBom sempre preenche
+        // quantidadeAcumuladaPorCaminho para todo caminho que aparece em ocorrencias.
+        throw new RangeError(
+          `Inconsistência interna: quantidadeAcumuladaPorCaminho não tem entrada para o caminho "${chaveCaminho}" (projetoItemId="${item.id}").`,
+        );
+      }
+      ocorrenciasComQuantidade.push({ ocorrencia, quantidadeAcumulada });
+    }
+  }
+
+  // --- 2. Detalhe (tempo estimado + recurso) de cada operação referenciada - 1 consulta em lote, IDs globalmente únicos (PK). ---
+  const bomOperacaoIds = Array.from(new Set(ocorrenciasComQuantidade.map((o) => o.ocorrencia.bomOperacaoId)));
+  const { data: detalheData, error: erroDetalhe } = await client
+    .from("bom_operacoes")
+    .select("id,tempo_estimado_minutos,recurso_produtivo_id")
+    .eq("empresa_id", empresaId)
+    .in("id", bomOperacaoIds);
+
+  if (erroDetalhe) {
+    throw new Error(`Erro ao consultar detalhe de bom_operacoes para projeto_id=${projetoId}: ${erroDetalhe.message}`);
+  }
+
+  const detalhePorBomOperacaoId = new Map<string, { tempoEstimadoMinutos: number; recursoProdutivoId: string | null }>(
+    ((detalheData ?? []) as BomOperacaoDetalheRow[]).map((linha) => [
+      linha.id,
+      { tempoEstimadoMinutos: Number(linha.tempo_estimado_minutos), recursoProdutivoId: linha.recurso_produtivo_id },
+    ]),
+  );
+
+  const ocorrencias: OcorrenciaComTamanho[] = ocorrenciasComQuantidade.map(({ ocorrencia, quantidadeAcumulada }) => {
+    const detalhe = detalhePorBomOperacaoId.get(ocorrencia.bomOperacaoId);
+    if (!detalhe) {
+      throw new RangeError(
+        `Operação ausente: bom_operacoes.id="${ocorrencia.bomOperacaoId}" não foi encontrada na consulta de detalhe (empresa_id="${empresaId}").`,
+      );
+    }
+    if (!detalhe.recursoProdutivoId) {
+      throw new OperacaoSemRecursoError(ocorrencia.bomOperacaoId);
+    }
+
+    return {
+      ocorrencia,
+      necessarioHorasPadrao: (detalhe.tempoEstimadoMinutos / 60) * quantidadeAcumulada,
+      recursoOriginalId: detalhe.recursoProdutivoId,
+    };
+  });
+
+  // --- 3. Grafo de dependências - construído UMA VEZ, reaproveitado por todo cenário depois. ---
+  const { dependencias } = construirGrafoOcorrencias({
+    ocorrencias: ocorrencias.map((o) => o.ocorrencia),
+    operacoesPorBomId,
+    subconjuntosUsados,
+    vinculosMestres,
+  });
+
+  const chavesComPredecessora = new Set(dependencias.map((d) => chaveOcorrenciaParaString(d.sucessora)));
+  const chavesComSucessora = new Set(dependencias.map((d) => chaveOcorrenciaParaString(d.predecessora)));
+
+  const chavesRaizOrcamentoNovo = ocorrencias
+    .map((o) => o.ocorrencia.chave)
+    .filter((chave) => !chavesComPredecessora.has(chaveOcorrenciaParaString(chave)));
+  const chavesFinaisOrcamentoNovo = ocorrencias
+    .map((o) => o.ocorrencia.chave)
+    .filter((chave) => !chavesComSucessora.has(chaveOcorrenciaParaString(chave)));
+
+  // --- 4. Capacidade/produtividade/comprometido/compatibilidade - mesmos helpers do motor antigo, nunca duplicados. ---
+  const recursosOriginais = Array.from(new Set(ocorrencias.map((o) => o.recursoOriginalId))).sort();
+  const compatibilidades = await compatibilidadesDosRecursos(client, recursosOriginais);
+  const recursosDestino = Object.values(compatibilidades).flatMap((lista) => lista.map((c) => c.recursoId));
+  const recursoIds = Array.from(new Set([...recursosOriginais, ...recursosDestino])).sort();
+
+  const [capacidadeDiariaPorRecurso, { produtividadePorRecurso, comprometidoInicialPorRecurso }] = await Promise.all([
+    capacidadesDiariasDosRecursos(client, recursoIds),
+    produtividadesEComprometidosDosRecursos(client, recursoIds, projetoId),
+  ]);
+
+  return {
+    empresaId,
+    projetoId,
+    ocorrencias,
+    dependencias,
+    chavesRaizOrcamentoNovo,
+    chavesFinaisOrcamentoNovo,
+    recursoIds,
+    compatibilidades,
+    capacidadeDiariaPorRecurso,
+    produtividadePorRecurso,
+    comprometidoInicialPorRecurso,
+  };
+}
