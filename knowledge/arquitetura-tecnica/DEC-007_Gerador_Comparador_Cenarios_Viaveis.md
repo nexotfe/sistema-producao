@@ -301,6 +301,63 @@ já existente, fechado, não muda) cobre a construção do grafo em memória; Ti
 das 3 camadas, nem a soma delas, prova a integração fim-a-fim - essa prova só existe quando a fase de
 integração do motor conectar as três.
 
+## 6.2 Fase 8a — ponte dado real → grafo de ocorrências (implementação local)
+
+Primeiro incremento da Fase 8 (§18): `mapearVinculosSubconjunto.ts` (§6.1) ganhou seu primeiro chamador
+real. `coletarGrafoOcorrenciasBom.ts` (`src/modules/simulacao-comercial/lib/cenarios/`) é a ponte entre
+dado real do roteiro e `construirGrafoOcorrencias` (Fase 1, §6) - função **irmã** de
+`coletarEstruturaBom.ts` (motor antigo, `motorAvaliacaoSequencial.ts`, intocado). Decisão de desenho:
+em vez de reimplementar a travessia recursiva de subconjuntos pela terceira vez (`calcular_custo_bom`
+em SQL e `coletarEstruturaBom.ts` em TypeScript já são duas implementações independentes da mesma
+regra - risco de divergência já registrado no cabeçalho de `coletarEstruturaBom.ts`), reaproveita
+`lista_tecnica_nos_alcancaveis` (RPC SQL já existente, `202608040003_lista_tecnica_consolidada.sql`) -
+cobre ciclo/produto ausente/excluído e devolve `caminho_bom_item_ids` por nó em 1 chamada ao servidor,
+não N+1. Leitura (`coletarGrafoOcorrenciasBom`, cliente injetado) e transformação (`montarGrafoOcorrenciasBom`,
+pura) são exportadas separadamente. Erros nunca ignorados silenciosamente: roteiro/operação ausente,
+ciclo, subconjunto sem roteiro resolvível, IDs repetidos/inconsistentes, vínculo apontando para
+operação inválida ou de outro bom, divergência de empresa (filtrada explicitamente nas consultas de
+`bom_operacoes`/vínculos, nunca só por RLS). 20 testes com fixtures espelhando o caso real conhecido
+(abaixo) - inclusive prova de que o fallback conservador e o vínculo mestre específico produzem grafos
+diferentes, e que a chave completa da ocorrência nunca colide entre raiz e subconjunto.
+
+**Achado da validação com dado real (produto `6158-02`, empresa `f835684a-0400-43a5-ba54-dd4629230c3c`,
+BOM `1831dac5-a475-4987-8caf-3e74238c7df2`) - condição operacional importante para lembrar em qualquer
+validação futura desta RPC (inclusive em `carregarBaseCenarios.ts`, Fase 8b em diante)**:
+`lista_tecnica_nos_alcancaveis` é `security invoker`, e `empresa_atual_id()` (usada internamente para
+escopar toda junção) depende de `auth.uid()` - só resolve corretamente sob sessão autenticada. A
+primeira tentativa de validação, rodada direto no SQL Editor sem contexto de sessão (superusuário,
+sem JWT), devolveu `tem_bom=false`/`bom_resolvido_id=null` para o produto `6158-02` - um **falso
+negativo**: o produto e o BOM existem de verdade (confirmado por consulta direta às tabelas), mas toda
+junção interna da RPC, escopada por `= empresa_atual_id()`, silenciosamente não bateu com nada porque
+`empresa_atual_id()` resolveu `null` sem uma sessão real. Repetindo a mesma consulta com JWT simulado
+(`SET LOCAL ROLE authenticated` + `set_config('request.jwt.claim.sub', ...)`, técnica já estabelecida
+nos testes da Fase 6/7) de um usuário real da Enifer, a RPC devolveu corretamente os dois níveis (raiz
++ subconjunto `02-6158-03-01`). `coletarGrafoOcorrenciasBom.ts` em si não precisa de nenhum tratamento
+especial - ela só repassa o `SupabaseClient` injetado, e herda a sessão que ele carrega, exatamente
+como qualquer outra chamada de RPC deste projeto; evidência de que isso já funciona sob sessão real de
+navegador em produção: `gerar_lista_tecnica_projeto` (que chama a mesma `lista_tecnica_nos_alcancaveis`
+por baixo) já é usada hoje por `ListaTecnicaProjetoModal.tsx`, em produção desde 2026-08-05.
+
+**Decisão confirmada com o usuário para o recorte 8b (hora extra) - comprometido de outros pedidos**:
+o motor novo (`escalonadorConjunto.ts`) modela concorrência por ocorrências explícitas na mesma grade,
+não por desconto agregado (diferente do motor antigo, `calcular_comprometido_v2`) - mas construir a
+reconstrução real de outros projetos concorrentes (via `ordens_producao`/`operacoes_producao` ou
+estimativa FIFO, §9) é trabalho da Fase 8c, não do recorte 8b. Ignorar comprometido inteiramente no
+8b superestimaria a capacidade livre e produziria datas enganosas - inaceitável mesmo como
+provisório. Solução para o 8b, com condições explícitas:
+- `carregarBaseCenarios.ts` reaproveita `calcular_comprometido_v2` (mesma RPC do motor antigo, total
+  agregado por recurso, não por dia) e desconta esse total **antes** de disponibilizar qualquer hora
+  normal ou extra ao candidato do escalonador - consumido a partir dos dias produtivos mais próximos
+  do início da janela (assunção conservadora: capacidade de curto prazo é a mais provável já estar
+  comprometida).
+- A interface (8b) precisa identificar todo resultado como **estimativa preliminar** - o comprometido
+  usado não está distribuído dia a dia de verdade, só agregado.
+- **Nenhuma aprovação definitiva pode se basear só neste recorte.**
+- 8c substitui esta aproximação pela reconstrução multiprojeto/FIFO com impacto diário real (mesmo
+  mecanismo de `estimarDistribuicaoFifoLegada`/`construirImpactosProjetosDeslocados`, §9).
+- **A Fase 8 não é considerada encerrada enquanto essa substituição não estiver pronta e validada** -
+  reforça a condição já registrada em §18: 8c é parte do critério de conclusão, não backlog futuro.
+
 ## 7. Escalonador conjunto — fila de prontos
 
 Uma lista estática "prioridade + precedência" pode colocar uma sucessora antes dela estar
@@ -1299,7 +1356,7 @@ permanece trabalho de uma fase de integração do motor ainda não desenhada.
 | **5 — Troca de prioridade** | `encontrarProjetosConectados` (travessia com `visited`, §9.1); `construirImpactosProjetosDeslocados` (`ImpactoProjetoDeslocado`, `dStarAnterior`/`dStarNovo` injetados por fora); `estimarDistribuicaoFifoLegada` (`{ fonte: "estimativa_fifo_legado", resultados, statusGlobal }` — só a aritmética, leitura de `ordens_producao` e confirmação de UI ficam para a Fase 9) | Fase 2-4 | Testes: estado nunca melhora ao perder capacidade (exemplo concreto, não invariante de runtime); travessia com `visited` sem corte arbitrário (cadeia real de 50 projetos resolve por inteiro); déficit da estimativa FIFO nunca escondido; `fonte` presente em toda saída (completa ou parcial); `statusGlobal="parcial"` bloqueia aprovação independente de confirmação de proveniência; exemplo B×Y adaptado como regressão fixa |
 | **6 — Migration de schema** | `empresa_capacidade_versoes`+backfill, `bom_operacao_dependencias_subconjunto` (índice único parcial por empresa+`deleted_at`, RLS, FK composta), extensão de `simulacao_comercial_item_distribuicoes` (CHECKs completos por `origem`, capacidade nullable) + `simulacao_comercial_item_distribuicao_dias` (com `contratacao_id` própria e trigger rejeitando dia quando o pai é `TERCEIRIZADO`) (§11), `ajuste_cenario`/`custo_adicional_total` + estados v1/v2 (§12), triggers de versão (inventário nominal §14, corrigido contra o schema real - 19 triggers, não 20: item "operacoes_producao" removido, tabela não existe) e de imutabilidade (marca transacional + comparação por `to_jsonb`), compatibilização de **v4 e v5** com o trigger de marca (trava por projeto + re-checagem de idempotência sob a trava + insert já vigente=true), `search_path`/ACL em tudo, **uma única transação** - decisões e correções completas em §17.1/§17.2/§17.3 | Fase 1+5 (schema reflete o que os testes já provaram necessário) | **Aplicada em produção em 2026-08-12 (§17.3), após validação completa no remoto via BEGIN...ROLLBACK (§17.2).** Roteiro de testes dividido em 4 scripts independentes (`supabase/tests/fase6_cenarios_teste_1_estrutura.sql` a `_4_integracao_rpc.sql`), todos executados com sucesso contra o banco remoto antes da aplicação real: UPDATE direto de `vigente` rejeitado tanto sem marca quanto tentando reativar com marca; UPDATE/DELETE rejeitado nas 3 tabelas filhas (itens/distribuições/dias); dia rejeitado quando a distribuição pai é `TERCEIRIZADO`; teste específico provando que a comparação de imutabilidade cobre uma coluna nova adicionada de propósito no teste, sem editar o trigger; `calendario_oficial_feriados` incrementa todas as empresas; FK composta rejeita vínculo cross-tenant; 19 triggers de versão confirmados nominalmente; testes de regressão de ponta a ponta chamando as RPCs reais `aprovar_projeto_com_simulacao_v5` **e** `v4` (rollback) após o schema instalado (snapshot novo vigente=true, antigo desativado, replay idêntico sem nenhuma escrita - contagens e `aprovado_em` confirmados -, replay conflitante rejeitado); resíduo zero confirmado após cada rollback. Pós-aplicação real: 3 tabelas + coluna `ajuste_cenario` + 19 triggers + backfill 1:1 (2/2) confirmados por leitura. Pendente: `migration repair`, commit, push, deploy (§17.3) |
 | **7 — Cadastro do vínculo no Roteiro** | Seleção "Necessário antes de" na linha do subconjunto (`RoteiroForm.tsx`/`useRoteiro.ts`) — no máximo 1 operação por subconjunto, troca por `UPDATE` atômico, remoção lógica por `UPDATE` (dono ou admin, nunca `DELETE` físico), `ativo` sempre `true` (`CHECK`), trigger de imutabilidade de auditoria, índice único mais forte substituindo o da Fase 6, `mapearVinculosSubconjunto.ts` (contrato de leitura testado, decisões completas em §6.1) | Fase 6 | **Migration `202608120001` aplicada em produção em 2026-08-12 (§17.4, aplicação acidental via SQL Editor, auditada em 2 rodadas de leitura — schema aplicado bate exatamente com o arquivo, 0 linhas, sem resíduo). Tier A (`fase7_dependencia_subconjunto_teste.sql`, reescrito para testar o schema já aplicado, sem replicar DDL) executado com sucesso pelo usuário: os 10 cenários passaram — CHECK/trigger/índice/RLS/unicidade/auditoria cobertos, 0/0 linhas antes/depois.** Tier C (`mapearVinculosSubconjunto.test.ts`): tradução linha crua→motor testada isoladamente. **Não é critério desta fase** que o motor leia vínculos reais em produção — essa integração fim-a-fim é de uma fase futura ainda não desenhada (ver §6.1). **Validação E2E real concluída em 2026-08-12 (§17.5) — só o caminho de criação**: produto `6158-02`, subconjunto `02-6158-03-01`, criar vínculo com OP30 — soldar estrutura pela interface real, recarregar (F5), confirmar seleção mantida e 1 linha ativa no banco. Troca e remoção lógica **não foram exercitadas pela interface real** — continuam cobertas só pelos testes automatizados (Tier A SQL + `trocarVinculoSubconjunto.test.ts`). Correção dos 2 nomes de policy truncados (`202608120002`) aplicada e auditada (§17.4); `migration repair` das duas migrations concluído. **Pendente**: commit, push, deploy |
-| **8 — Frontend: geração/comparação** | Base congelada uma vez, N cálculos puros, grid de comparação, seleção. **Contratações `por_dia_contratado` (§10) exibem dias contratados, utilização real e ociosidade lado a lado** — decisão registrada na Fase 4, não pode se perder aqui; o cálculo monetário em si não muda, é dado exibido a mais, cruzando `datas` com o uso real | Fase 0-7 (schema já existe) | Zero consulta de rede extra por cenário adicional; UI mostra as 4 datas + estado + custo + impacto; contratação `por_dia_contratado` mostra os 3 números (contratado/usado/ocioso), não só o valor; teste manual E2E read-only |
+| **8 — Frontend: geração/comparação** | Sub-fases (decisão confirmada com o usuário): **8a** camada de orquestração (`avaliarCenario`/`carregarBaseCenarios`, sem UI - base congelada uma vez, N cálculos puros); **8b** tela builder single-projeto (hora extra, terceirização, recurso temporário) + grid de comparação; **8c** incremento multiprojeto (troca de prioridade + grid de impacto), obrigatório antes de encerrar a fase, não backlog futuro. **Contratações `por_dia_contratado` (§10) exibem dias contratados, utilização real e ociosidade lado a lado** — decisão registrada na Fase 4, não pode se perder aqui | Fase 0-7 (schema já existe) | Zero consulta de rede extra por cenário adicional; UI mostra as 4 datas + estado + custo + impacto; contratação `por_dia_contratado` mostra os 3 números; teste manual E2E read-only. **8a em andamento**: `coletarGrafoOcorrenciasBom.ts` fechado e validado com dado real (produto `6158-02`, §6.2) — ponte dado real→grafo pronta; `carregarBaseCenarios.ts`/`avaliarCenario.ts` (recorte hora extra) seguem em implementação |
 | **9 — RPC v6 + aprovação** | `aprovar_projeto_com_simulacao_v6_cenario`, `ajuste_cenario` versionado (§12), recálculo autoritativo completo, versão consistente na aprovação, hash cobrindo o cenário inteiro (§13) | Fase 6+8 | Mesmo rigor do DEC-006: testes comportamentais (client simulado), payload completo, chamada única, replay idempotente e conflitante testados. **Teste de concorrência real (2 aprovações simultâneas disputando o mesmo recurso, uma vence e a outra é rejeitada com mensagem clara) pertence a esta fase — só a RPC real permite esse teste, não a migration isolada** |
 | **10 — E2E real** | Fixture dedicado, aprovação real, leitura do snapshot completo | Fase 9 | Checkpoint humano antes de cada escrita real, verificação por leitura antes/depois, auditoria de diff antes de commit — mesmo protocolo já usado nesta sessão |
 
