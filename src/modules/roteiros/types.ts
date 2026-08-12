@@ -42,6 +42,10 @@ export type BomItemSubconjunto = {
   unidade: string;
   ordem: number;
   observacoes: string | null;
+  /** id da linha em bom_operacao_dependencias_subconjunto (DEC-007 §6/§7) - null = sem vínculo (fallback conservador se aplica a este subconjunto). */
+  vinculoId: string | null;
+  /** bom_operacao_id atualmente vinculado a este subconjunto - null = nenhum (ver vinculoId). */
+  vinculoOperacaoId: string | null;
 };
 
 export type NovoSubconjuntoInput = {
@@ -65,6 +69,7 @@ export type BomOperacao = {
   tipo: "engenharia" | "producao";
   tempoEstimadoMinutos: number;
   observacoes: string | null;
+  ativo: boolean;
 };
 
 export type NovaOperacaoInput = {

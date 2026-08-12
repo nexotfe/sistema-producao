@@ -39,6 +39,7 @@ const operacaoA: BomOperacao = {
   tipo: "producao",
   tempoEstimadoMinutos: 120,
   observacoes: "cuidado com rebarba",
+  ativo: true,
 };
 
 const operacaoB: BomOperacao = {
@@ -50,6 +51,7 @@ const operacaoB: BomOperacao = {
   tipo: "engenharia",
   tempoEstimadoMinutos: 45,
   observacoes: null,
+  ativo: true,
 };
 
 // Ordem no JSX: Ordem (OP), Tempo estimado (min), Descricao.

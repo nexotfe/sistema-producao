@@ -8,6 +8,7 @@ import {
 } from "@/modules/shared/data/excluirRegistro";
 import { editarMaterial as editarMaterialLib } from "../lib/editarMaterial";
 import { excluirBom as excluirBomLib } from "../lib/excluirBom";
+import { trocarVinculoSubconjunto as trocarVinculoSubconjuntoLib } from "../lib/trocarVinculoSubconjunto";
 import type {
   Bom,
   BomItemMateriaPrima,
@@ -95,6 +96,12 @@ type ItemIndustrialRow = {
   descricao: string;
 };
 
+type DependenciaSubconjuntoRow = {
+  id: string;
+  bom_item_id: string;
+  bom_operacao_id: string;
+};
+
 type BomOperacaoRow = {
   id: string;
   ordem: number;
@@ -103,6 +110,7 @@ type BomOperacaoRow = {
   tipo: "engenharia" | "producao";
   tempo_estimado_minutos: number;
   observacoes: string | null;
+  ativo: boolean;
 };
 
 type RecursoProdutivoRow = {
@@ -255,6 +263,30 @@ export function useRoteiro(pn: string) {
       });
     }
 
+    // Vínculo "necessário antes de" (DEC-007 §6/§7) - no máximo 1 vínculo
+    // vivo por bom_item_id (garantido pelo índice único da migration
+    // 202608120001), então o Map nunca precisa desempatar.
+    const bomItemIds = linhas.map((linha) => linha.id);
+    const vinculoPorBomItemId = new Map<
+      string,
+      { id: string; bomOperacaoId: string }
+    >();
+
+    if (bomItemIds.length > 0) {
+      const { data: vinculosData } = await supabase
+        .from("bom_operacao_dependencias_subconjunto")
+        .select("id,bom_item_id,bom_operacao_id")
+        .in("bom_item_id", bomItemIds)
+        .is("deleted_at", null);
+
+      ((vinculosData ?? []) as DependenciaSubconjuntoRow[]).forEach((vinculo) => {
+        vinculoPorBomItemId.set(vinculo.bom_item_id, {
+          id: vinculo.id,
+          bomOperacaoId: vinculo.bom_operacao_id,
+        });
+      });
+    }
+
     setSubconjuntos(
       linhas.map((linha) => ({
         id: linha.id,
@@ -266,6 +298,8 @@ export function useRoteiro(pn: string) {
         unidade: linha.unidade,
         ordem: linha.ordem,
         observacoes: linha.observacoes,
+        vinculoId: vinculoPorBomItemId.get(linha.id)?.id ?? null,
+        vinculoOperacaoId: vinculoPorBomItemId.get(linha.id)?.bomOperacaoId ?? null,
       })),
     );
   }, []);
@@ -274,7 +308,7 @@ export function useRoteiro(pn: string) {
     const { data, error } = await supabase
       .from("bom_operacoes")
       .select(
-        "id,ordem,descricao,recurso_produtivo_id,tipo,tempo_estimado_minutos,observacoes",
+        "id,ordem,descricao,recurso_produtivo_id,tipo,tempo_estimado_minutos,observacoes,ativo",
       )
       .eq("bom_id", bomId)
       .is("deleted_at", null)
@@ -315,6 +349,7 @@ export function useRoteiro(pn: string) {
       tipo: linha.tipo,
       tempoEstimadoMinutos: Number(linha.tempo_estimado_minutos),
       observacoes: linha.observacoes,
+      ativo: linha.ativo,
     }));
 
     setOperacoesEngenharia(
@@ -778,6 +813,44 @@ export function useRoteiro(pn: string) {
     return resultado;
   }
 
+  /**
+   * "Necessário antes de qual operação" (DEC-007 §6/§7) - seleção vive
+   * do lado do SUBCONJUNTO (no máximo 1 operação por subconjunto,
+   * decisão de negócio confirmada). Regras de INSERT/UPDATE/remoção
+   * lógica ficam em trocarVinculoSubconjuntoLib - aqui só resolve o
+   * subconjunto pelo id, curto-circuita no-op e recarrega em caso de
+   * sucesso (nunca em caso de erro, para a seleção visual voltar ao
+   * valor persistido).
+   */
+  async function trocarVinculoSubconjunto(
+    bomItemId: string,
+    novaOperacaoId: string | null,
+  ): Promise<ResultadoOperacaoRoteiro> {
+    if (!bom) {
+      return { status: "erro", mensagem: "Roteiro não encontrado." };
+    }
+
+    const subconjunto = subconjuntos.find((item) => item.id === bomItemId);
+    if (!subconjunto) {
+      return { status: "erro", mensagem: "Subconjunto não encontrado." };
+    }
+
+    setProcessando(true);
+    const resultado = await trocarVinculoSubconjuntoLib(supabase, {
+      bomItemId,
+      vinculoIdAtual: subconjunto.vinculoId,
+      vinculoOperacaoIdAtual: subconjunto.vinculoOperacaoId,
+      novaOperacaoId,
+    });
+
+    if (resultado.status === "ok") {
+      await carregarSubconjuntos(bom.id);
+    }
+
+    setProcessando(false);
+    return resultado;
+  }
+
   function ordemOperacaoJaExiste(ordemNumero: number, idIgnorar?: string) {
     return [...operacoesEngenharia, ...operacoesProducao].some(
       (op) => op.ordem === ordemNumero && op.id !== idIgnorar,
@@ -987,6 +1060,7 @@ export function useRoteiro(pn: string) {
     subconjuntos,
     adicionarSubconjunto,
     removerSubconjunto,
+    trocarVinculoSubconjunto,
 
     operacoesEngenharia,
     operacoesProducao,

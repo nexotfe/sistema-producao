@@ -38,6 +38,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
     subconjuntos,
     adicionarSubconjunto,
     removerSubconjunto,
+    trocarVinculoSubconjunto,
     operacoesEngenharia,
     operacoesProducao,
     recursosDisponiveis,
@@ -161,6 +162,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
       ) : (
         <RoteiroForm
           bom={bom}
+          processando={processando}
           materiais={materiais}
           onAdicionarMaterial={adicionarMaterial}
           onEditarMaterial={editarMaterial}
@@ -168,6 +170,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
           subconjuntos={subconjuntos}
           onAdicionarSubconjunto={adicionarSubconjunto}
           onRemoverSubconjunto={removerSubconjunto}
+          onTrocarVinculoSubconjunto={trocarVinculoSubconjunto}
           operacoesEngenharia={operacoesEngenharia}
           operacoesProducao={operacoesProducao}
           recursosDisponiveis={recursosDisponiveis}

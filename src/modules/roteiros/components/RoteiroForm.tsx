@@ -27,6 +27,7 @@ import type {
 
 type RoteiroFormProps = {
   bom: Bom;
+  processando: boolean;
 
   materiais: BomItemMateriaPrima[];
   onAdicionarMaterial: (
@@ -43,6 +44,10 @@ type RoteiroFormProps = {
     input: NovoSubconjuntoInput,
   ) => Promise<ResultadoOperacaoRoteiro>;
   onRemoverSubconjunto: (id: string) => Promise<ResultadoExclusao>;
+  onTrocarVinculoSubconjunto: (
+    bomItemId: string,
+    novaOperacaoId: string | null,
+  ) => Promise<ResultadoOperacaoRoteiro>;
 
   operacoesEngenharia: BomOperacao[];
   operacoesProducao: BomOperacao[];
@@ -92,6 +97,7 @@ function mensagemErroExclusao(resultado: ResultadoExclusao): string | null {
 
 export function RoteiroForm({
   bom,
+  processando,
   materiais,
   onAdicionarMaterial,
   onEditarMaterial,
@@ -99,6 +105,7 @@ export function RoteiroForm({
   subconjuntos,
   onAdicionarSubconjunto,
   onRemoverSubconjunto,
+  onTrocarVinculoSubconjunto,
   operacoesEngenharia,
   operacoesProducao,
   recursosDisponiveis,
@@ -159,6 +166,18 @@ export function RoteiroForm({
     setErroSubconjunto(null);
     const resultado = await onRemoverSubconjunto(id);
     setErroSubconjunto(mensagemErroExclusao(resultado));
+  }
+
+  async function handleTrocarVinculoSubconjunto(
+    bomItemId: string,
+    valorSelecionado: string,
+  ) {
+    setErroSubconjunto(null);
+    const novaOperacaoId = valorSelecionado === "" ? null : valorSelecionado;
+    const resultado = await onTrocarVinculoSubconjunto(bomItemId, novaOperacaoId);
+    if (resultado.status === "erro") {
+      setErroSubconjunto(resultado.mensagem);
+    }
   }
 
   function handleEditarOperacao(operacao: BomOperacao) {
@@ -361,7 +380,10 @@ export function RoteiroForm({
             <div>
               <h2 className="text-sm font-bold">Estrutura / Subconjuntos</h2>
               <p className="mt-0.5 text-xs text-slate-500">
-                Produtos que entram como componente deste roteiro.
+                Produtos que entram como componente deste roteiro. &quot;Necessário
+                antes de&quot; define qual operação espera este subconjunto ficar
+                pronto - sem seleção, todas as operações aguardam (regra
+                conservadora).
               </p>
             </div>
 
@@ -382,6 +404,7 @@ export function RoteiroForm({
                   <th className="px-4 py-2 font-semibold">Quantidade</th>
                   <th className="px-4 py-2 font-semibold">Unidade</th>
                   <th className="px-4 py-2 font-semibold">Observações</th>
+                  <th className="px-4 py-2 font-semibold">Necessário antes de</th>
                   <th className="px-4 py-2 font-semibold" />
                 </tr>
               </thead>
@@ -389,7 +412,7 @@ export function RoteiroForm({
                 {subconjuntos.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-4 py-8 text-center text-sm text-slate-500"
                     >
                       Nenhum subconjunto cadastrado neste roteiro.
@@ -414,6 +437,26 @@ export function RoteiroForm({
                       </td>
                       <td className="px-4 py-3 text-slate-500">
                         {item.observacoes || "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={item.vinculoOperacaoId ?? ""}
+                          onChange={(evento) =>
+                            handleTrocarVinculoSubconjunto(item.id, evento.target.value)
+                          }
+                          disabled={processando}
+                          title="Sem seleção: TODAS as operações deste roteiro aguardam este subconjunto terminar (regra conservadora). Selecionar uma operação faz só ela esperar por este subconjunto."
+                          className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <option value="">— (regra conservadora)</option>
+                          {[...operacoesEngenharia, ...operacoesProducao]
+                            .filter((operacao) => operacao.ativo)
+                            .map((operacao) => (
+                              <option key={operacao.id} value={operacao.id}>
+                                {operacao.ordem} — {operacao.descricao}
+                              </option>
+                            ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
