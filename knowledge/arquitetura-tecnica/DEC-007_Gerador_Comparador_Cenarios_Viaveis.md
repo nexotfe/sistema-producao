@@ -247,6 +247,60 @@ após** D (nunca no mesmo dia — limitação real da granularidade diária, dec
 `prazoDiasCorridos` é duração **inclusiva**: início 14/11, prazo=3 dias corridos → cobre 14,15,16
 → fim=16/11.
 
+## 6.1 Fase 7 — cadastro do vínculo pela interface (implementação local)
+
+Investigação factual (sem alterar código) confirmou: `useRoteiro.ts` já carrega `bom_itens`
+(`componente_tipo='subconjunto'`) e `bom_operacoes` do mesmo `bom_id`, mas `RoteiroForm.tsx` não
+tinha nenhuma referência cruzada entre as duas tabelas antes da Fase 7; `grafoPrecedencia.ts`
+(`vinculosMestres.find(...)`) já implicava, antes mesmo de qualquer schema existir, que **no máximo
+1 operação consumidora por subconjunto** é a semântica correta - confirmado como decisão de negócio
+explícita nesta fase, não presumido do código.
+
+**Desenho final** (2 rodadas de revisão com o usuário antes de implementar):
+- Seleção "Necessário antes de" vive na **linha do subconjunto** (tabela Estrutura/Subconjuntos,
+  `RoteiroForm.tsx`), não em modal por operação - um `select` de valor único por subconjunto, sem
+  filtro de opções (uma mesma operação pode aparecer selecionada em várias linhas - um subconjunto só
+  pode ter 1 operação, o inverso não tem essa restrição).
+- Trocar operação = **1 `UPDATE`** atômico só de `bom_operacao_id` na mesma linha - nunca
+  DELETE+INSERT. Remover (voltar para "— regra conservadora") = **`UPDATE`** de
+  `deleted_at`/`deleted_by` - nunca `DELETE` físico, nunca policy/mensagem "somente administrador"
+  (permitido a quem criou o vínculo OU administrador, mesmo nível de permissão de trocar).
+- `ativo` da tabela é **sempre `true`** (`CHECK` incondicional, migration 202608120001) - a interface
+  nunca usa esse campo para remover, só `deleted_at`/`deleted_by`, para nunca existirem dois conceitos
+  de "removido" na mesma tabela. `mapearVinculosSubconjunto.ts` (Fase 7) não trata isso como
+  irrelevante: valida `ativo===true` por linha viva e lança erro explícito se violado, em vez de
+  ignorar silenciosamente - defesa em profundidade, não confia só no `CHECK`.
+- Trigger novo `validar_atualizacao_dependencia_subconjunto` (`before update`, complementar ao
+  `validar_dependencia_subconjunto` da Fase 6): `created_by`/`empresa_id`/`bom_item_id`/`ativo`
+  imutáveis; sem restauração direta de vínculo removido; remoção lógica exige
+  `deleted_by=auth.uid()` sem trocar `bom_operacao_id` no mesmo `UPDATE`; troca de operação não pode
+  tocar `deleted_at`/`deleted_by`; vínculo já removido é imutável.
+- Índice único `(empresa_id, bom_item_id) where deleted_at is null` (mais forte, subsome o índice da
+  Fase 6) substitui `bom_operacao_dependencias_subconjunto_par_vivo_uniq` - a migration primeiro
+  verifica duplicidade real por `bom_item_id`, aborta com mensagem clara se houver (nunca escolhe uma
+  linha sozinha), só então cria o índice novo e remove o antigo.
+- RLS: só `INSERT` (mesma empresa, `created_by=auth.uid()`) e `UPDATE` (dono OU admin) - **nenhuma
+  policy de `DELETE`**, já que a remoção é sempre `UPDATE`.
+
+**Contrato de leitura, não integração real**: `mapearVinculosSubconjunto.ts` traduz linhas cruas de
+`bom_operacao_dependencias_subconjunto` para `VinculoSubconjuntoOperacaoConsumidora[]` (formato de
+`grafoPrecedencia.ts`), testado isoladamente (Vitest, fixtures de linha crua, sem banco). **Não existe
+hoje nenhum código que chame esse mapeador com dado real** - `construirGrafoOcorrencias` não é
+chamado por nenhum módulo do sistema, e `prepararEntradasMotor.ts` (o único wiring real equivalente
+que já existe, para `resolverBomAtivo`) não toca o grafo de precedência. A Fase 7 entrega **cadastro
+completo pela interface + contrato de leitura testado** - a ligação real (consultar a tabela → chamar
+o mapeador → alimentar `construirGrafoOcorrencias` dentro de uma simulação de verdade) é trabalho de
+uma fase de integração do motor ainda não desenhada. Nunca afirmar "o motor lê vínculos reais"
+enquanto essa ligação não existir de fato (correção de linguagem sobre a versão anterior deste
+documento, que overclaimava esse ponto antes da revisão).
+
+**Testes em 3 camadas, deliberadamente separadas**: Tier A (`supabase/tests/fase7_dependencia_subconjunto_teste.sql`,
+SQL real, `BEGIN...ROLLBACK`) cobre a tabela/trigger/RLS/índice; Tier B (`grafoPrecedencia.test.ts`,
+já existente, fechado, não muda) cobre a construção do grafo em memória; Tier C
+(`mapearVinculosSubconjunto.test.ts`, novo) cobre só a tradução linha crua → formato do motor. Nenhuma
+das 3 camadas, nem a soma delas, prova a integração fim-a-fim - essa prova só existe quando a fase de
+integração do motor conectar as três.
+
 ## 7. Escalonador conjunto — fila de prontos
 
 Uma lista estática "prioridade + precedência" pode colocar uma sucessora antes dela estar
@@ -1135,6 +1189,100 @@ sistema. Verificação pós-aplicação, por leitura, confirmou:
 (sincronizar o histórico de migrations do CLI, já que a aplicação foi manual); commit dos arquivos
 (migration + 4 scripts de teste + este documento); push; deploy.
 
+## 17.4 Fase 7 — aplicação acidental, auditoria e teste funcional (2026-08-12)
+
+**Incidente**: durante a preparação do teste `BEGIN...ROLLBACK` da Fase 7, o arquivo colado no SQL
+Editor foi, por engano, a própria migration `202608120001_bom_dependencia_subconjunto_fase7.sql` — não
+o script de teste. A migration tem seu próprio `begin;`/`commit;` (padrão de todas as migrations deste
+projeto); o `commit;` finalizou a transação e persistiu as mudanças de verdade, sem passar pelo
+checkpoint de confirmação por execução (Regra 9) nem por validação prévia em `BEGIN...ROLLBACK`. O
+usuário identificou o problema pela consulta de resíduos (constraint e índice novos presentes, índice
+antigo ausente) antes de qualquer outra ação, e determinou parar imediatamente para auditar antes de
+decidir qualquer correção.
+
+**Auditoria pós-aplicação (só leitura, 2 rodadas)** confirmou que o schema realmente aplicado bate
+**exatamente** com o arquivo da migration, sem nenhum desvio de conteúdo: 9 colunas (idênticas à
+Fase 6); 7 constraints (5 FK + 1 PK + o novo CHECK `ativo_sempre_true_chk`); 5 índices (`pkey`,
+`empresa_idx`, `item_idx`, `operacao_idx` inalterados da Fase 6, `item_vivo_uniq` novo presente,
+`par_vivo_uniq` antigo **ausente**, confirmando a reindexação em 3 passos); 3 triggers (`validar` e
+`bump_capacidade_versao` da Fase 6 inalterados, `validar_atualizacao_dependencia_subconjunto` novo, com
+corpo idêntico byte a byte ao arquivo); 3 policies (`select_tenant` da Fase 6 + `insert`/`update`
+novas, **nenhuma de `DELETE`**, confirmando a decisão de desenho de §6.1); RLS habilitado; 0 linhas na
+tabela (nenhum dado de negócio em risco); nenhuma tabela temporária de teste residual;
+`202608120001` ausente do ledger de migrations do CLI (`supabase migration list --linked` mostra
+Local preenchido, Remote vazio) — esperado, já que a aplicação foi manual via SQL Editor, não
+`supabase db push`.
+
+**Achado colateral, não causado pelo incidente**: os dois nomes de policy novos, como escritos na
+migration, têm 66 bytes (`"nexotfe bom operacao dependencias subconjunto insert/update mesma
+empresa"`) — excedem o limite de identificador do Postgres (`NAMEDATALEN`=64, 63 bytes utilizáveis) e
+foram truncados silenciosamente para 63 bytes na criação (`..."mesma empr"`). Isso teria ocorrido
+exatamente assim mesmo se a migration tivesse sido aplicada pelo fluxo correto — não é efeito da
+aplicação acidental. Sem efeito funcional (RLS continua avaliando `using`/`with check` corretamente,
+os dois nomes truncados continuam distintos entre si) — só cosmético. Correção tratada como migration
+separada (abaixo), nunca editando silenciosamente uma migration já aplicada.
+
+**Teste funcional Tier A reescrito e executado com sucesso.** A versão anterior de
+`fase7_dependencia_subconjunto_teste.sql` reproduzia o corpo inteiro da migration (para testar contra
+DDL ainda não aplicado) — reproduzia, portanto, o próprio `commit;` que causou o incidente. Reescrito
+para **um único `begin;` no topo, um único `rollback;` no fim, zero `commit;` executável**, testando
+diretamente o schema já aplicado (sem replicar DDL nenhum). Executado pelo usuário: os 10 cenários
+passaram (`Success. No rows returned`), cobrindo CHECK `ativo=true`, INSERT/troca/remoção lógica pelo
+criador (JWT simulado), unicidade por subconjunto, proteção de auditoria (`created_by`/`empresa_id`/
+`bom_item_id`/`ativo` imutáveis), rejeição de troca+remoção no mesmo `UPDATE`, rejeição de restauração
+direta, e RLS negando usuário sem permissão. Contagem de linhas antes/depois do teste: 0/0 — nenhum
+resíduo.
+
+**Correção dos nomes de policy — preparada, ainda não aplicada nem testada**: migration
+`202608120002_fix_nomes_policies_fase7.sql` usa `ALTER POLICY ... RENAME TO` (troca só o identificador,
+`using`/`with check`/roles/comando permanecem exatamente os já aplicados, sem risco de divergência de
+uma recriação manual) para os nomes novos, encurtados para 53 bytes cada, mesma convenção
+`"nexotfe {tabela} {ação} mesma empresa"` do resto do schema:
+`"nexotfe dependencias subconjunto insert mesma empresa"` e
+`"...update mesma empresa"`. Teste dedicado `supabase/tests/fase7_fix_policy_names_teste.sql`
+(`BEGIN...ROLLBACK`, único `begin;`/`rollback;`, zero `commit;`) compara `cmd`/`roles`/`qual`/
+`with_check` capturados antes e depois da renomeação, campo a campo, e confirma que o total de
+policies na tabela permanece 3.
+
+**Pendente, cada um com autorização própria, ainda não concedida**: revisão do SQL da correção pelo
+usuário; execução do teste `BEGIN...ROLLBACK` da correção; `supabase migration repair` (cobrindo tanto
+`202608120001` quanto, se aprovada, `202608120002`); commit dos arquivos; push; deploy.
+
+**Atualização (2026-08-12, mesmo dia)**: a correção `202608120002` foi aplicada de fato — por um
+segundo desvio de arquivo colado no SQL Editor (mesma classe do incidente original: a migration, que
+termina em `commit;` real, em vez do script de teste `BEGIN...ROLLBACK`), confirmado pelo usuário após
+notar que a consulta pós-execução já mostrava os nomes novos de forma permanente. Auditoria de leitura
+comparando `cmd`/`roles`/`qual`/`with_check` das duas policies contra os valores capturados antes da
+renomeação confirmou: nenhum campo mudou além do nome, 3 policies no total, nenhuma de `DELETE`, nomes
+antigos truncados ausentes. `supabase migration repair --status applied` executado para as duas
+versões (`202608120001` e `202608120002`), uma de cada vez, cada uma com autorização e verificação por
+leitura (`supabase migration list --linked`) separadas — ledger do CLI hoje alinhado com o estado real
+do banco para as duas.
+
+## 17.5 Fase 7 — validação E2E real pela interface (2026-08-12)
+
+Validação E2E autorizada e executada pelo usuário no roteiro real do produto `6158-02`, subconjunto
+**`02-6158-03-01`** (único subconjunto ativo deste roteiro) — sequência criar → recarregar (F5) →
+trocar → recarregar → remover logicamente → recarregar → recriar → recarregar, pela interface real
+(`RoteiroForm.tsx` / `useRoteiro.ts` / `trocarVinculoSubconjunto.ts`), com persistência confirmada a
+cada etapa por recarga real da página (não estado otimista de tela).
+
+**Diferença do plano original**: o roteiro de teste previa terminar de volta em "regra conservadora"
+(sem vínculo vivo). O usuário ajustou o estado final durante a execução: manteve **1 vínculo ativo**,
+com a operação **OP30 — soldar estrutura**. Não é resíduo de teste não limpo — o vínculo representa o
+processo real deste roteiro (a operação de solda de fato depende deste subconjunto pronto) — decisão
+de negócio do usuário, mantida deliberadamente porque reflete a operação real, não uma decisão da IA
+nem um efeito colateral não revertido.
+
+**Confirmado pelo usuário, por leitura direta do banco**: exatamente **1 linha ativa**
+(`deleted_at is null`) para este subconjunto, vinculada a OP30.
+
+**Isso fecha a Fase 7 na camada de cadastro/interface** (Tier A SQL + Tier C `mapearVinculosSubconjunto.test.ts`
++ agora validação E2E real com dado de produção) — **ainda não fecha integração com o motor**: ver
+§6.1, `mapearVinculosSubconjunto.ts` continua sem nenhum chamador real dentro do sistema; essa ligação
+(consultar a tabela → mapear → alimentar `construirGrafoOcorrencias` numa simulação de verdade)
+permanece trabalho de uma fase de integração do motor ainda não desenhada.
+
 ## 18. Fases de implementação — dependências e critérios objetivos de conclusão
 
 | Fase | Escopo | Depende de | Critério objetivo de conclusão |
@@ -1146,7 +1294,7 @@ sistema. Verificação pós-aplicação, por leitura, confirmou:
 | **4 — Contratos de cenário + custeio** | `Contratacao` + `calcularCustoContratacoes` (fórmula por `abrangencia`, §10); `RecursoTemporarioCenario` + `criarCandidatoRecursoTemporario` (produtividade herdada, disponibilidade diária); `calcularDatasTerceirizacao`. `AjusteDeCenario`/`AjusteCenarioPersistido` completo (com campos de persistência) adiado para a Fase 6, quando o schema real existir | Fase 0-3 | Testes: custo nunca duplicado por contratação; produtividade sempre herdada; disponibilidade diária respeitada; recurso temporário consumível pelo escalonador sem adaptação; terceirização em dias corridos com precedência exata |
 | **5 — Troca de prioridade** | `encontrarProjetosConectados` (travessia com `visited`, §9.1); `construirImpactosProjetosDeslocados` (`ImpactoProjetoDeslocado`, `dStarAnterior`/`dStarNovo` injetados por fora); `estimarDistribuicaoFifoLegada` (`{ fonte: "estimativa_fifo_legado", resultados, statusGlobal }` — só a aritmética, leitura de `ordens_producao` e confirmação de UI ficam para a Fase 9) | Fase 2-4 | Testes: estado nunca melhora ao perder capacidade (exemplo concreto, não invariante de runtime); travessia com `visited` sem corte arbitrário (cadeia real de 50 projetos resolve por inteiro); déficit da estimativa FIFO nunca escondido; `fonte` presente em toda saída (completa ou parcial); `statusGlobal="parcial"` bloqueia aprovação independente de confirmação de proveniência; exemplo B×Y adaptado como regressão fixa |
 | **6 — Migration de schema** | `empresa_capacidade_versoes`+backfill, `bom_operacao_dependencias_subconjunto` (índice único parcial por empresa+`deleted_at`, RLS, FK composta), extensão de `simulacao_comercial_item_distribuicoes` (CHECKs completos por `origem`, capacidade nullable) + `simulacao_comercial_item_distribuicao_dias` (com `contratacao_id` própria e trigger rejeitando dia quando o pai é `TERCEIRIZADO`) (§11), `ajuste_cenario`/`custo_adicional_total` + estados v1/v2 (§12), triggers de versão (inventário nominal §14, corrigido contra o schema real - 19 triggers, não 20: item "operacoes_producao" removido, tabela não existe) e de imutabilidade (marca transacional + comparação por `to_jsonb`), compatibilização de **v4 e v5** com o trigger de marca (trava por projeto + re-checagem de idempotência sob a trava + insert já vigente=true), `search_path`/ACL em tudo, **uma única transação** - decisões e correções completas em §17.1/§17.2/§17.3 | Fase 1+5 (schema reflete o que os testes já provaram necessário) | **Aplicada em produção em 2026-08-12 (§17.3), após validação completa no remoto via BEGIN...ROLLBACK (§17.2).** Roteiro de testes dividido em 4 scripts independentes (`supabase/tests/fase6_cenarios_teste_1_estrutura.sql` a `_4_integracao_rpc.sql`), todos executados com sucesso contra o banco remoto antes da aplicação real: UPDATE direto de `vigente` rejeitado tanto sem marca quanto tentando reativar com marca; UPDATE/DELETE rejeitado nas 3 tabelas filhas (itens/distribuições/dias); dia rejeitado quando a distribuição pai é `TERCEIRIZADO`; teste específico provando que a comparação de imutabilidade cobre uma coluna nova adicionada de propósito no teste, sem editar o trigger; `calendario_oficial_feriados` incrementa todas as empresas; FK composta rejeita vínculo cross-tenant; 19 triggers de versão confirmados nominalmente; testes de regressão de ponta a ponta chamando as RPCs reais `aprovar_projeto_com_simulacao_v5` **e** `v4` (rollback) após o schema instalado (snapshot novo vigente=true, antigo desativado, replay idêntico sem nenhuma escrita - contagens e `aprovado_em` confirmados -, replay conflitante rejeitado); resíduo zero confirmado após cada rollback. Pós-aplicação real: 3 tabelas + coluna `ajuste_cenario` + 19 triggers + backfill 1:1 (2/2) confirmados por leitura. Pendente: `migration repair`, commit, push, deploy (§17.3) |
-| **7 — Integrações de leitura + manutenção dos vínculos no Roteiro** | Tela de Roteiro ganha "esta operação consome estes subconjuntos" — inclusão, edição/exclusão lógica (`deleted_at`), validação (mesma empresa, mesmo BOM pai, `componente_tipo=subconjunto`, registros ativos) | Fase 6 | Teste manual: criar/editar/excluir logicamente um vínculo pela tela; validação rejeita empresa diferente, tipo errado, registro inativo; motor de precedência (Fase 1) lê os vínculos reais criados pela interface, não dado fabricado em teste |
+| **7 — Cadastro do vínculo no Roteiro** | Seleção "Necessário antes de" na linha do subconjunto (`RoteiroForm.tsx`/`useRoteiro.ts`) — no máximo 1 operação por subconjunto, troca por `UPDATE` atômico, remoção lógica por `UPDATE` (dono ou admin, nunca `DELETE` físico), `ativo` sempre `true` (`CHECK`), trigger de imutabilidade de auditoria, índice único mais forte substituindo o da Fase 6, `mapearVinculosSubconjunto.ts` (contrato de leitura testado, decisões completas em §6.1) | Fase 6 | **Migration `202608120001` aplicada em produção em 2026-08-12 (§17.4, aplicação acidental via SQL Editor, auditada em 2 rodadas de leitura — schema aplicado bate exatamente com o arquivo, 0 linhas, sem resíduo). Tier A (`fase7_dependencia_subconjunto_teste.sql`, reescrito para testar o schema já aplicado, sem replicar DDL) executado com sucesso pelo usuário: os 10 cenários passaram — CHECK/trigger/índice/RLS/unicidade/auditoria cobertos, 0/0 linhas antes/depois.** Tier C (`mapearVinculosSubconjunto.test.ts`): tradução linha crua→motor testada isoladamente. **Não é critério desta fase** que o motor leia vínculos reais em produção — essa integração fim-a-fim é de uma fase futura ainda não desenhada (ver §6.1). **Validação E2E real concluída em 2026-08-12 (§17.5)**: produto `6158-02`, subconjunto `02-6158-03-01`, ciclo completo criar/trocar/remover/recriar com persistência confirmada por F5 a cada etapa — estado final mantido com 1 vínculo ativo (OP30 — soldar estrutura), por representar o processo real deste roteiro. Correção dos 2 nomes de policy truncados (`202608120002`) aplicada e auditada (§17.4); `migration repair` das duas migrations concluído. **Pendente**: commit, push, deploy |
 | **8 — Frontend: geração/comparação** | Base congelada uma vez, N cálculos puros, grid de comparação, seleção. **Contratações `por_dia_contratado` (§10) exibem dias contratados, utilização real e ociosidade lado a lado** — decisão registrada na Fase 4, não pode se perder aqui; o cálculo monetário em si não muda, é dado exibido a mais, cruzando `datas` com o uso real | Fase 0-7 (schema já existe) | Zero consulta de rede extra por cenário adicional; UI mostra as 4 datas + estado + custo + impacto; contratação `por_dia_contratado` mostra os 3 números (contratado/usado/ocioso), não só o valor; teste manual E2E read-only |
 | **9 — RPC v6 + aprovação** | `aprovar_projeto_com_simulacao_v6_cenario`, `ajuste_cenario` versionado (§12), recálculo autoritativo completo, versão consistente na aprovação, hash cobrindo o cenário inteiro (§13) | Fase 6+8 | Mesmo rigor do DEC-006: testes comportamentais (client simulado), payload completo, chamada única, replay idempotente e conflitante testados. **Teste de concorrência real (2 aprovações simultâneas disputando o mesmo recurso, uma vence e a outra é rejeitada com mensagem clara) pertence a esta fase — só a RPC real permite esse teste, não a migration isolada** |
 | **10 — E2E real** | Fixture dedicado, aprovação real, leitura do snapshot completo | Fase 9 | Checkpoint humano antes de cada escrita real, verificação por leitura antes/depois, auditoria de diff antes de commit — mesmo protocolo já usado nesta sessão |
