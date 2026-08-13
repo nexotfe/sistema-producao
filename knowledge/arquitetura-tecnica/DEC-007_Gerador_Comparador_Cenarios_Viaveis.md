@@ -358,6 +358,58 @@ provisório. Solução para o 8b, com condições explícitas:
 - **A Fase 8 não é considerada encerrada enquanto essa substituição não estiver pronta e validada** -
   reforça a condição já registrada em §18: 8c é parte do critério de conclusão, não backlog futuro.
 
+### 6.2.1 Fase 8a — extensão: terceirização e recurso temporário/freelancer
+
+`avaliarCenario.ts` estendido para as 3 dimensões single-projeto do recorte 8b (hora extra já fechado
+e auditado, comportamento preservado sem alteração). Decisões de desenho:
+
+- **Terceirização via candidato sintético "1 unidade/dia corrido"** - em vez de modificar
+  `escalonarConjuntoComFilaDeProntos` (Fase 2, fechado) para ter um caminho especial de terceirização,
+  a ocorrência terceirizada recebe `necessarioHorasPadrao := prazoDiasCorridos` e um candidato
+  exclusivo (id único por ocorrência, nunca compartilhado) que sempre oferece exatamente 1 unidade de
+  capacidade por dia. Como `resolverDataMinimaBruta` do escalonador já aplica a MESMA fórmula de
+  `calcularDatasTerceirizacao` (`resolverDataInicioMinima` com calendário identidade) para achar o
+  início a partir da(s) predecessora(s), consumir 1 unidade/dia por N dias corridos consecutivos
+  reproduz exatamente a duração inclusiva de `calcularFimPorDuracaoInclusiva` - sem duplicar nem uma
+  linha da lógica de datas já testada em `terceirizacao.ts`.
+- **Terceirização é exclusiva por ocorrência** - uma ocorrência terceirizada usa SÓ o candidato
+  sintético (nunca combina com hora extra/compatibilidade/recurso temporário na mesma ocorrência,
+  já que terceirizar significa sair inteiramente da capacidade interna). Cenários PODEM combinar
+  terceirização numa operação com hora extra/temporário em outras operações do mesmo cenário - a
+  exclusividade é por ocorrência, não por cenário inteiro.
+- **Recurso temporário como última alternativa** - quando `recursoTemporarioAplicavelA` autoriza,
+  entra em `candidatoIdsPorPrioridade` depois do recurso original e dos compatíveis (decisão de
+  desenho: contratar temporário é tentado só se nada interno bastar). `produtividadeReferencia` é
+  parâmetro explícito, resolvido pelo CHAMADOR (leitura de `recursos_produtivos`) - nunca lida dentro
+  de `avaliarCenario`, preservando "zero I/O" mesmo com a nova dimensão.
+- **Custeio por cruzamento, não por embutimento** - hora extra usa `AlocacaoDiaria.contratacaoId`
+  diretamente (faixa já carrega isso); recurso temporário cruza `AlocacaoDiaria.recursoId` (=
+  `idTemporario`) com `RecursoTemporarioCenario.contratacaoId` por fora (suas faixas nunca têm
+  `contratacaoId` próprio, mesmo contrato de `recursoTemporario.ts`).
+- **Terceirização rejeita abrangência incompatível - nunca custo 0 silencioso** (correção pós-auditoria,
+  achado real: a primeira versão desta extensão deixava `abrangencia="por_hora_utilizada"` numa
+  terceirização silenciosamente resultar em custo 0, já que a unidade sintética "1/dia" não é hora de
+  máquina real). `validarDecisoesTerceirizacao` roda ANTES de qualquer cálculo e rejeita, com erro
+  explícito: contratação ausente (`contratacaoId` sem `Contratacao` correspondente em
+  `decisoes.contratacoes` - o mesmo tipo de bug, por outro caminho) e `abrangencia` fora de
+  `{por_periodo_completo, valor_fixo_unico}` - as únicas duas cujo valor depende só de
+  `Contratacao.valor`, nunca de uso. `por_dia_contratado` também é rejeitada (dependeria de
+  `datas.length` bater com `prazoDiasCorridos`, uma consistência que este módulo não verifica) -
+  preferível recusar a confiar silenciosamente. Isso é uma garantia do PRÓPRIO NÚCLEO, não só da
+  interface (8b) - `avaliarCenario` pode ser chamado fora da tela.
+- **Validação contra dado órfão/duplicado** (mesma disciplina do resto do módulo): id de recurso
+  temporário colidindo com recurso real ou duplicado entre si, e `DecisaoTerceirizacao` apontando
+  para ocorrência inexistente ou duplicada para a mesma ocorrência - todos lançam erro explícito,
+  nunca ignorados silenciosamente.
+
+Testes: 16 novos - terceirização isolada (duração inclusiva + custo, capacidade interna irrelevante);
+rejeição de abrangência incompatível (`por_hora_utilizada`, `por_dia_contratado`) e aceitação de
+`por_periodo_completo`; recurso temporário isolado (aplicável, não aplicável - nunca ofertado, colisão
+de id); recurso temporário + hora extra na mesma ocorrência; as 3 alternativas em operações distintas
+do mesmo cenário com cada contratação custeada exatamente 1 vez (soma individual = total); terceirizar
+uma ocorrência bloqueando capacidade interna/extra/temporária PARA ELA MESMA mesmo com as 3 fartamente
+disponíveis; decisão órfã/duplicada. Suíte completa: 70 arquivos / 700 testes.
+
 ## 7. Escalonador conjunto — fila de prontos
 
 Uma lista estática "prioridade + precedência" pode colocar uma sucessora antes dela estar
