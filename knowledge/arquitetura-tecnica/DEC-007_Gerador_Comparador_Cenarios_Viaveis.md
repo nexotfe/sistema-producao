@@ -410,6 +410,240 @@ do mesmo cenário com cada contratação custeada exatamente 1 vez (soma individ
 uma ocorrência bloqueando capacidade interna/extra/temporária PARA ELA MESMA mesmo com as 3 fartamente
 disponíveis; decisão órfã/duplicada. Suíte completa: 70 arquivos / 700 testes.
 
+### 6.2.2 Fase 8b (desenho) — resultadosPorOcorrencia e prepararResumoCenarioParaExibicao
+
+Antes da tela: `avaliarCenario.ts` ganhou `resultadosPorOcorrencia: readonly ResultadoOcorrenciaCenario[]` no
+retorno - **sem mudar o cálculo** (mesmos 22+16 testes anteriores continuam passando inalterados).
+Decisões de desenho, confirmadas com o usuário:
+
+- **Lista plana congelada, nunca `Map`** - `ReadonlyMap` só impede mutação em tempo de compilação, não
+  em execução; um `Map` também é ruim para serializar, testar e (futuramente) persistir; a interface
+  precisa ordenar/identificar operações, o que uma lista já naturalmente permite.
+  `construirResultadosPorOcorrencia` copia cada campo para um objeto novo (nunca reexpõe os objetos
+  internos do escalonador) e aplica `Object.freeze` em 3 níveis (array externo, cada
+  `ResultadoOcorrenciaCenario`, cada `alocacoes[]` e cada alocação) - imutabilidade real, comprovada em
+  teste (`Object.isFrozen`, e uma tentativa de mutação lançando `TypeError` em modo estrito de módulo
+  ES). Campos também `readonly` no tipo - as duas camadas, nunca só uma.
+- **Populado também nos estados inviáveis, como DIAGNÓSTICO** (revisão desta seção - a primeira versão
+  devolvia `[]` para todo estado != viável, e por isso o déficit era sempre 0; auditoria do usuário
+  encontrou a lacuna: a tela 8b precisa explicar POR QUE um cenário é inviável, não só que é). Novo
+  campo `resultadosSaoDiagnostico: boolean` no retorno - `false` só em `viavel`/`viavel_no_limite`
+  (a candidata vencedora, reexecutada); `true` em `prazo_inviavel`/`horizonte_tecnico_excedido`, onde
+  `resultadosPorOcorrencia` carrega a "melhor tentativa relevante", NUNCA uma programação aceita. Quem
+  exibe isso tem que checar essa flag antes de rotular qualquer data como "Conclusão estimada".
+  - `prazo_inviavel`: refaz a mesma varredura de trás para frente do Calculador Reverso
+    (`encontrarTentativaPrazoInviavel`), procurando a candidata cujas finais concluem TODAS com a maior
+    data batendo exatamente com `dataFimReal` já decidido (`melhorConclusaoTardia`,
+    `calculadorReversoConjunto.ts`) - nunca uma busca nova, é reconstrução do resultado já determinado.
+    **Nuance importante**: por definição de `melhorConclusaoTardia`, essa candidata teve TODAS as finais
+    concluídas (só mais tarde que o prazo) - `deficitResidualHorasPadrao` é 0 em TODO item aqui, sempre.
+    O problema real é ATRASO (`diasCivisDeAtraso`, já no nível superior do resultado), não falta de
+    capacidade - déficit agregado só é genuinamente informativo no estado seguinte.
+  - `horizonte_tecnico_excedido`: nenhuma candidata concluiu (não há "a" melhor - não monotonicidade,
+    DEC-007 §8.1) - usa `datasCandidatas[0]` (a mais generosa) como UM exemplo representativo,
+    explicitamente não provado ótimo. É aqui que `deficitResidualHorasPadrao`/
+    `deficitResidualTotalHorasPadrao` mostram déficit real de capacidade.
+  - `dados_insuficientes`: continua `[]` - a `chave` sem nenhum candidato já vem no próprio resultado,
+    sem detalhamento adicional necessário.
+  - `copiarECongelarChave`: `Object.freeze` no objeto pai é superficial - `chave` (aninhada) e
+    `chave.caminhoBomItemIds` (array dentro dela) precisam ser copiados e congelados explicitamente,
+    achado também na mesma auditoria (o freeze anterior parava no primeiro nível). `ChaveOcorrencia`
+    (`chaveOcorrencia.ts`) tipa os campos como mutáveis - não há proteção de COMPILAÇÃO aqui, só de
+    execução; testado via `Object.isFrozen` + tentativa de mutação lançando `TypeError`.
+  - Ordenação explícita por `chaveOcorrenciaParaString` antes do freeze final, em vez de depender da
+    ordem de inserção do `Map` interno do escalonador (determinística hoje, mas não é contrato que este
+    módulo deva expor) - testado com uma fixture onde a ordem de conclusão (dependência entre 2
+    ocorrências) diverge de propósito da ordem alfabética da chave.
+
+`prepararResumoCenarioParaExibicao.ts` (novo, puro) agrega: horas normais; horas extras separadas por
+`hora_extra`/`sabado`/`domingo`/`feriado`; horas de recurso temporário (nunca somadas com horas normais -
+alocações de um `idTemporario` são identificadas e desviadas ANTES do `switch` por natureza); operações
+terceirizadas (lista `{chave, diasCorridos}` - nunca contam horas, unidade sintética não é hora real);
+operações que usaram cada alternativa; déficit residual total; custo total, por contratação e por
+alternativa (repassado/agregado do resultado, não recalculado).
+
+**"Operações afetadas" - achado real de desenho durante os testes**: a primeira versão comparava
+`dataInicioReal`/`dataFimReal` entre cenário e base, e uma operação SEM nenhuma decisão aplicada a ela
+aparecia como "afetada" só porque o D* do cenário inteiro se deslocou (efeito indireto de OUTRA
+ocorrência do mesmo cenário usar hora extra/terceirização). Corrigido: a assinatura de comparação
+(`assinaturaOcorrencia`) usa só `status` + `terceirizada` + o conjunto (natureza, recurso, horas) das
+alocações - nunca datas. "Recebeu algum ajuste" significa mudança na FONTE de capacidade usada por essa
+operação especificamente, não a operação ter caído em outro dia porque o cenário inteiro mudou de
+cronograma.
+
+### 6.2.3 Fase 8b (desenho) — revisão de terminologia, comparação com o cenário-base e ChaveOcorrencia readonly
+
+Segunda rodada de auditoria do usuário antes da tela 8b, com 3 frentes:
+
+**Terminologia revista (substitui "Conclusão estimada" da rodada anterior)**:
+- **"Término calculado"** = `resumo.terminoCalculado` (`resultado.dataFimReal`, quando existe nos estados
+  `viavel`/`viavel_no_limite`/`prazo_inviavel`; `null` em `horizonte_tecnico_excedido`/`dados_insuficientes`,
+  que não produzem um término de cenário) - o resultado bruto do sistema, SEMPRE que houver, mesmo em
+  diagnóstico (`prazo_inviavel` tem término calculado, só que tardio).
+- **"Data solicitada pelo cliente"** = `resumo.dataSolicitadaCliente` - referência pura, nunca usada para
+  classificar nada. **Correção registrada em §6.2.4**: na primeira versão desta rodada, este campo foi
+  erroneamente derivado de `grade.prazoInterno` - corrigido para parâmetro explícito, ver §6.2.4.
+- **"Prazo proposto"** - reservado para quando o ORÇAMENTISTA escolher uma data/cenário para apresentar ao
+  cliente. Não tem campo correspondente no núcleo/resumo: é estado de SELEÇÃO da UI (Fase 8b/9), não um
+  dado calculável a partir de 1 cenário isolado - documentado aqui para a Fase 8b não inventar outro nome.
+- **O módulo nunca classifica o orçamento como "comercialmente viável" ou "inviável"** - `resultado.estado`
+  é uma classificação TÉCNICA de agendamento (DEC-007 §8), não um veredito comercial; o resumo só expõe
+  fatos (término calculado, diferença vs. solicitado, dias ganhos vs. base, custos, diagnóstico técnico) -
+  a decisão de aceitar/propor é sempre humana. Novos campos, todos calculados a partir de `grade.prazoInterno`
+  e do cenário-base (nunca de um limiar arbitrário de "aceitável"):
+  - `diferencaDiasCivisVsSolicitado` (dias civis entre `dataSolicitadaCliente` e `terminoCalculado`;
+    positivo = término depois do solicitado, negativo = antes) - unifica os 2 campos com sinais opostos
+    que já existiam espalhados (`folgaDiasCivis` em viável, `diasCivisDeAtraso` em prazo_inviavel) num
+    único campo de sinal consistente no resumo.
+  - `diasGanhosVsBase` (término calculado do cenário-base menos término calculado deste cenário, em dias -
+    positivo = este cenário termina mais cedo) - `null` se qualquer um dos dois não tiver término
+    calculável.
+  - `custoPorDiaAntecipado` (`custoAdicionalTotal / diasGanhosVsBase`) - `null` quando não há ganho de dias
+    (`diasGanhosVsBase` nulo ou ≤ 0); dividir por atraso/zero não tem leitura de negócio.
+  - `custoPorAlternativa` (`{horaExtra, terceirizacao, recursoTemporario}`) - agrupa `custoPorContratacaoId`
+    pelas 3 categorias de `DecisoesCenario` (nunca por `Contratacao.tipo` - as categorias já são
+    exatamente as 3 alternativas do 8b).
+
+**Diagnóstico técnico ganhou um formato dedicado** - `resumo.diagnosticos: readonly DiagnosticoOcorrencia[]`
+(`{chave, status, deficitResidualHorasPadrao, recursosConsiderados, recursosUsados}`), construído a partir
+de `resultado.resultadosPorOcorrencia` filtrando só `status != "concluida"` (em `prazo_inviavel` isso dá
+sempre `[]` - todas concluem, o problema é atraso, não déficit) mais um caso especial `status:"sem_candidato"`
+para `dados_insuficientes` (onde `resultadosPorOcorrencia` é `[]` mas a `chave` problemática já vem no
+próprio `ResultadoBuscaDStar`). `recursosConsiderados` é campo NOVO em `ResultadoOcorrenciaCenario`
+(`avaliarCenario.ts`) - o `candidatoIdsPorPrioridade` daquela ocorrência (recursos OFERECIDOS ao
+escalonador, mesmo que insuficientes), distinto de `recursosUsados` (recursoId das alocações reais,
+subconjunto possivelmente vazio de `recursosConsiderados`) - sem isso, um diagnóstico de déficit não tinha
+como explicar "quais recursos foram tentados antes de faltar capacidade".
+
+**`ChaveOcorrencia` (`chaveOcorrencia.ts`) agora é `readonly` no tipo, além do congelamento em runtime**
+(`copiarECongelarChave`, §6.2.2) - as 2 camadas de proteção juntas, igual já valia para
+`AlocacaoDiariaCenario`. `caminhoBomItemIds` passou a `readonly string[]`; único ajuste de fallout no
+resto do módulo foi `caminhoBomItemIdsParaChave` (`coletarGrafoOcorrenciasBom.ts`), que só faz `.join()` e
+teve o parâmetro alargado para aceitar o array readonly.
+
+Testes: 30 em `avaliarCenario.test.ts` (inclui `recursosConsiderados` populado e mutação de `chave` agora
+bloqueada em COMPILAÇÃO, não só em execução) + 14 em `prepararResumoCenarioParaExibicao.test.ts` (inclui
+`terminoCalculado`/`diferencaDiasCivisVsSolicitado`/`diasGanhosVsBase`/`custoPorDiaAntecipado`/
+`custoPorAlternativa` nos 3 estados relevantes, `diagnosticos` nos 3 casos - déficit real, "sem_candidato",
+vazio em `prazo_inviavel`/viável). Suíte completa: 71 arquivos / 722 testes.
+
+### 6.2.4 Fase 8b (desenho) — correção: dataSolicitadaCliente não é prazoInterno; início calculado; unicidade de contratação
+
+Terceira rodada de auditoria do usuário, encontrando um erro real na §6.2.3: `dataSolicitadaCliente` tinha
+sido implementado como `grade.prazoInterno` - **errado**, porque `prazoInterno` normalmente já embute
+margem de segurança (calculado por quem monta a grade, não a data que o cliente de fato pediu). Usar um no
+lugar do outro esconderia a folga/atraso real que o cliente enxergaria.
+
+**Correção**: `prepararResumoCenarioParaExibicao` passa a receber `dataSolicitadaCliente: string` como
+parâmetro EXPLÍCITO (origem: o dado original informado pelo usuário no projeto, ex.: `dataNecessidade` -
+resolver essa origem é responsabilidade do CHAMADOR; este módulo continua sem nenhum I/O). `prazoInterno`
+continua exposto **separadamente** no resumo (`resumo.prazoInterno = grade.prazoInterno`) - as duas datas
+nunca se sobrepõem, a tela pode mostrar as três (`dataSolicitadaCliente`, `prazoInterno`,
+`terminoCalculado`) lado a lado. `diferencaDiasCivisVsSolicitado` passou a ser calculado contra a data
+explícita, não contra `prazoInterno`.
+
+**`inicioCalculado` adicionado** - espelha `terminoCalculado`: o menor `dataInicioReal` entre
+`resultadosPorOcorrencia` (não um alvo/target como `dataEstimadaInicioNecessario`, que só existe em
+`viavel`/`viavel_no_limite` - é o resultado REAL da réplica, disponível em qualquer estado que tenha
+alguma alocação). Por construção do grafo de dependências, o mínimo global é sempre atingido por uma
+ocorrência-raiz, então não precisa filtrar por raiz explicitamente. `null` quando não há nenhuma alocação
+real (`dados_insuficientes`, ou um `horizonte_tecnico_excedido` onde nem a raiz recebeu capacidade).
+Permite a tela comparar início calculado anterior×novo, além de término anterior×novo, ao chamar esta
+função tanto para o cenário quanto para o cenário-base.
+
+**Unicidade de contratação por categoria** - `avaliarCenario.ts` ganhou
+`validarUnicidadeContratacoesPorCategoria`, chamada logo após `validarDecisoesTerceirizacao` (antes de
+qualquer cálculo): rejeita um `contratacaoId` referenciado em mais de 1 categoria de alternativa
+(`hora_extra`/`terceirizacao`/`recurso_temporario`) - erro explícito, nunca silenciosamente contado 2x ou
+resolvido "primeiro que aparece vence". Reaproveitar o mesmo `contratacaoId` várias vezes DENTRO da mesma
+categoria continua permitido (ex.: `capacidadeExtra` em vários dias). Com essa garantia do núcleo,
+`calcularCustoPorAlternativa` (`prepararResumoCenarioParaExibicao.ts`) passa a ter atribuição
+inequívoca por construção - o custo total é sempre a soma de contratos únicos.
+
+Testes: +2 em `avaliarCenario.test.ts` (rejeita `contratacaoId` cruzando categorias; aceita reuso dentro da
+mesma categoria) + 1 em `prepararResumoCenarioParaExibicao.test.ts` (`dataSolicitadaCliente` explícito e
+divergente de `prazoInterno`, provando que a diferença é calculada contra o valor certo). Suíte completa:
+71 arquivos / 725 testes.
+
+### 6.2.5 Fase 8b — antecipação de materiais (4ª alternativa) e o piso de agendamento por ocorrência
+
+Investigação prévia confirmou: o núcleo não modelava disponibilidade de material como restrição de
+agendamento em NENHUM lugar - `dataInicioJanela` de toda ocorrência-raiz era sempre um valor ÚNICO, igual
+para todas, vindo do candidato do Calculador Reverso. Decisão confirmada com o usuário (2 rodadas de
+pergunta, dado o impacto arquitetural):
+
+- **Mecânica**: `DecisaoAntecipacaoMaterial` (`chave`, `dataDisponibilidadeAntecipada`,
+  `dataDisponibilidadeOriginal`, `contratacaoId`) introduz um PISO real por ocorrência específica -
+  `dataInicioJanela = max(piso padrão da candidata testada, dataDisponibilidadeAntecipada)`
+  (`maiorData`, `construirOcorrenciasEscalonaveis`). `dataDisponibilidadeOriginal` é METADADO puramente
+  informativo - nunca realimenta o cálculo, nem aqui nem em nenhuma "2ª simulação" (ver correção em
+  §6.2.6: a primeira versão desta seção sugeria simular o cenário-base com
+  `dataDisponibilidadeAntecipada` igual à original - **errado**, corrigido).
+- **Regra confirmada pelo usuário**: "durante a busca, usar max(pisoDoCenario, candidata)" - nenhuma
+  operação pode ser testada antes do piso definido NAQUELE cenário, e o resultado oficial (estado/D*) e o
+  detalhamento (replay) usam exatamente a mesma regra.
+- **Achado que expandiu o escopo em 1 arquivo**: aplicar o piso só em `avaliarCenario.ts` faria a
+  antecipação afetar o REPLAY (`resultadosPorOcorrencia`) mas não a busca D* oficial
+  (`calculadorReversoConjunto.ts`), que tinha um contrato DOCUMENTADO de sobrescrever
+  incondicionalmente `dataInicioJanela` das raízes a cada candidata testada - e cujo cabeçalho registrava
+  explicitamente "disponibilidade de MATERIAL... um eixo que este módulo não modela". Corrigido
+  (`montarOcorrenciasParaCandidato`, dentro de `buscarDataInicioMaisTardiaViavel`): a sobrescrita virou
+  `max(dataInicioJanela do template, candidata)` - backward-compatible por construção (sem nenhum piso
+  pré-existente, `dataInicioJanela` do template é sempre a data mais cedo da grade, então o `max()` sempre
+  resolve para a candidata, contrato idêntico ao anterior). `replayCandidata` (avaliarCenario.ts) recebeu
+  a mesma correção, para "resultado oficial e detalhamento usarem a mesma regra". Reutilizado também por
+  `impactoProjetoDeslocado.ts` (Fase 6/8c) - regressão confirmada via suíte existente antes de prosseguir.
+- **Não exclusiva**: ao contrário de terceirização, antecipação de material se aplica a QUALQUER ocorrência
+  (terceirizada ou não) e combina livremente com hora extra/recurso temporário na MESMA ocorrência - o
+  piso só define QUANDO pode começar, não COMO a capacidade é consumida depois disso.
+- **Validações** (mesma disciplina de terceirização, função de validação compartilhada
+  `validarContratacoesSemUsoReal`): abrangência restrita a `por_periodo_completo`/`valor_fixo_unico`
+  (sem "horas usadas" mensuráveis, mesma razão da terceirização); `contratacaoId` precisa existir; órfã
+  (chave inexistente) e duplicada (2 decisões pra mesma ocorrência) são erro explícito; `dataDisponibilidadeAntecipada`
+  precisa ser ESTRITAMENTE anterior à `dataDisponibilidadeOriginal` - igual ou posterior é rejeitado ("não
+  é uma antecipação", regra endurecida em §6.2.6). `validarUnicidadeContratacoesPorCategoria` ganhou a 4ª
+  categoria (`antecipacao_material`).
+- `TipoContratacao` (`contratacao.ts`) ganhou o valor `"antecipacao_material"`.
+- `custoPorAlternativa` (`prepararResumoCenarioParaExibicao.ts`) ganhou a 4ª chave `antecipacaoMaterial`,
+  agrupada pela mesma lógica das outras 3 (por categoria de `DecisoesCenario`, nunca por `Contratacao.tipo`).
+
+### 6.2.6 Correção: cenário-base de antecipação de material NUNCA é uma avaliação artificial
+
+Quarta rodada de auditoria do usuário, encontrando uma contradição real na §6.2.5: para comparar "com
+negociação" contra "sem negociação", a versão anterior sugeria o CHAMADOR avaliar o cenário-base com
+`dataDisponibilidadeAntecipada` igual a `dataDisponibilidadeOriginal`. Isso é errado por 4 razões
+apontadas pelo usuário: (1) violaria a própria validação de "estritamente anterior" assim que ela fosse
+endurecida; (2) inventaria uma `DecisaoAntecipacaoMaterial` que não existe de verdade nesse cenário; (3)
+contabilizaria custo de negociação (`Contratacao.valor`) no cenário-base, que nunca negociou nada; (4)
+confundiria a separação entre dado original (metadado) e decisão real (ajuste).
+
+**Contrato corrigido**: o cenário-base de QUALQUER comparação envolvendo antecipação de material é sempre
+o cenário SEM nenhuma `DecisaoAntecipacaoMaterial` - exatamente a mesma semântica de "cenário-base" já
+usada para hora extra/terceirização/recurso temporário em todo o resto do módulo (`semDecisoes`, ou
+`decisoes` com `antecipacoesMaterial: []` para aquela chave). `dataDisponibilidadeOriginal` continua
+existindo só como metadado de exibição - nunca alimenta nenhuma avaliação, nem uma "de comparação".
+Consequência **importante e deliberadamente aceita**: como o cenário-base não tem NENHUM piso de material
+(o núcleo, hoje, não modela material quando a decisão está ausente - é como se fosse sempre disponível),
+`diasGanhosVsBase` de um cenário com antecipação de material pode legitimamente ser **negativo ou zero**
+mesmo após uma negociação bem-sucedida - o ganho real da negociação só é visível comparando contra a
+alternativa de "não negociar" (piso = disponibilidade original), nunca contra o cenário-base irrestrito.
+Isso é intencional e documentado nos testes, não um resultado indesejado a esconder.
+
+Validação também endurecida: `dataDisponibilidadeAntecipada >= dataDisponibilidadeOriginal` (antes só
+`>`) é rejeitada - igual à original não representa nenhum ganho negociado, então não é uma "antecipação"
+de verdade.
+
+Testes: +2 em `calculadorReversoConjunto.test.ts` (candidata anterior ao piso usa o piso; candidata
+posterior ao piso não é afetada - compatibilidade retroativa) + 11 em `avaliarCenario.test.ts` (piso
+altera o cálculo oficial, não só o diagnóstico; cenário-base SEM decisão vs. cenário ajustado - piso nunca
+retrocede; combinação com hora extra na mesma ocorrência; custo nunca duplicado; rejeita antecipação que
+atrasa; rejeita antecipação com data igual à original; órfã/duplicada; cruzamento de categoria;
+`custoAdicionalTotal` = soma exata das 4 categorias, hora extra + terceirização + recurso temporário +
+antecipação de material juntas) + 2 em `prepararResumoCenarioParaExibicao.test.ts` (cenário-base sem
+decisão tem custo de antecipação zero e `diasGanhosVsBase` negativo/honesto no ajustado;
+`bloqueada_por_predecessora` nos diagnósticos, além de `bloqueada_por_deficit`/`sem_candidato` já
+cobertos). Suíte completa: 71 arquivos / 739 testes.
+
 ## 7. Escalonador conjunto — fila de prontos
 
 Uma lista estática "prioridade + precedência" pode colocar uma sucessora antes dela estar
