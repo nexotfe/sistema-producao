@@ -33,6 +33,7 @@ import {
   escalonarConjuntoComFilaDeProntos,
   type CriterioPrioridadeDeNegocio,
   type OcorrenciaEscalonavel,
+  type ResultadoOcorrenciaEscalonada,
 } from "./escalonadorConjunto";
 import { buscarDataInicioMaisTardiaViavel, type ResultadoBuscaDStar } from "./calculadorReversoConjunto";
 import { calcularCustoContratacoes, type AbrangenciaContratacao, type Contratacao } from "./contratacao";
@@ -64,61 +65,169 @@ export interface DecisaoRecursoTemporario {
   produtividadeReferencia: number;
 }
 
+/**
+ * Negociação com fornecedor para antecipar a chegada/disponibilidade de
+ * um material - a 4ª alternativa do 8b (DEC-007 §6.2.4). Ao contrário
+ * de hora extra/terceirização/recurso temporário (que adicionam ou
+ * substituem CAPACIDADE), esta altera a JANELA PRODUTIVA em si: a
+ * ocorrência referenciada não pode começar antes da nova disponibilidade
+ * (ver construirOcorrenciasEscalonaveis/maiorData) - efeito real na
+ * busca D*, não só no diagnóstico/exibição (calculadorReversoConjunto.ts
+ * também respeita esse piso, ver `buscarDataInicioMaisTardiaViavel`).
+ */
+export interface DecisaoAntecipacaoMaterial {
+  /** A ocorrência cujo início mínimo passa a respeitar a nova disponibilidade do material. */
+  chave: ChaveOcorrencia;
+  /**
+   * Nova data de disponibilidade, após negociar - vira PISO real de
+   * `dataInicioJanela` para esta ocorrência: `max(piso padrão da
+   * candidata testada, esta data)`. Precisa ser ESTRITAMENTE anterior a
+   * `dataDisponibilidadeOriginal` (validarDecisoesAntecipacaoMaterial
+   * rejeita igual ou posterior - "isso não é uma antecipação"). Se já
+   * for mais cedo que o piso que já valeria de qualquer forma, a
+   * negociação não tem efeito nenhum no CÁLCULO (custo pago sem ganho
+   * real de agenda - o chamador decide se ainda assim quer manter a
+   * decisão).
+   */
+  dataDisponibilidadeAntecipada: string;
+  /**
+   * Data que valeria SEM negociar - METADADO puramente informativo
+   * (nunca realimenta o cálculo, nem aqui nem em nenhuma "2ª simulação").
+   * O CENÁRIO-BASE usado para comparar (diasGanhosVsBase etc.) é sempre
+   * o cenário SEM esta decisão (`decisoes.antecipacoesMaterial` vazio
+   * para esta chave, exatamente como já vale para hora extra/
+   * terceirização/recurso temporário) - NUNCA uma avaliação artificial
+   * com `dataDisponibilidadeAntecipada` igual à original: isso violaria
+   * a própria validação de "estritamente anterior", inventaria uma
+   * decisão que não existe, e contabilizaria custo de negociação no
+   * cenário-base (achado de auditoria do usuário, corrigido nesta
+   * versão - ver avaliarCenario.test.ts, describe "antecipação de
+   * material").
+   */
+  dataDisponibilidadeOriginal: string;
+  contratacaoId: string;
+}
+
 export interface DecisoesCenario {
   /** Capacidade extra autorizada NESTE cenário - hora extra e/ou sábado/domingo/feriado. */
   capacidadeExtra: CapacidadeExtraDia[];
-  /** Contratações referenciadas por CapacidadeExtraDia.contratacaoId, DecisaoTerceirizacao.contratacaoId ou RecursoTemporarioCenario.contratacaoId - custeio de todas neste cenário. */
+  /** Contratações referenciadas por CapacidadeExtraDia.contratacaoId, DecisaoTerceirizacao.contratacaoId, RecursoTemporarioCenario.contratacaoId ou DecisaoAntecipacaoMaterial.contratacaoId - custeio de todas neste cenário. */
   contratacoes: Contratacao[];
   terceirizacoes: DecisaoTerceirizacao[];
   recursosTemporarios: DecisaoRecursoTemporario[];
+  antecipacoesMaterial: DecisaoAntecipacaoMaterial[];
 }
 
 /**
- * Terceirização não produz `horasUsadas` reais (a unidade sintética
- * "1/dia" do candidato de terceirização - ver `criarCandidatoTerceirizado`
- * - não é hora de máquina, é só um dispositivo para reproduzir a
- * duração inclusiva dentro do escalonador). Por isso só as duas
- * abrangências cujo valor depende exclusivamente de `Contratacao.valor`
- * (nunca de uso) são aceitas - qualquer uma que dependesse de horas ou
- * de `datas.length` correndo o risco de o CHAMADOR informar um número
- * que não bate com `prazoDiasCorridos` (dado não verificado por este
- * módulo) é rejeitada explicitamente, nunca resolvida como custo 0
- * silencioso:
+ * Nem terceirização nem antecipação de material produzem `horasUsadas`
+ * reais (a unidade sintética "1/dia" da terceirização - ver
+ * `criarCandidatoTerceirizado` - não é hora de máquina; antecipação de
+ * material não tem candidato/alocação própria alguma, só desloca
+ * dataInicioJanela). Por isso, para as duas, só as 2 abrangências cujo
+ * valor depende exclusivamente de `Contratacao.valor` (nunca de uso)
+ * são aceitas - qualquer uma que dependesse de horas ou de
+ * `datas.length` correndo o risco de o CHAMADOR informar um número que
+ * não bate com um total não verificável aqui é rejeitada explicitamente,
+ * nunca resolvida como custo 0 silencioso:
  * - `por_periodo_completo` - cobrado uma vez, valor fixo.
  * - `valor_fixo_unico` - idêntico no cálculo, só muda o rótulo.
  * Rejeitadas: `por_hora_utilizada` (não há horas reais para medir) e
- * `por_dia_contratado` (dependeria de `datas.length` bater com
- * `prazoDiasCorridos`, uma consistência que este módulo não pode
- * verificar sozinho - preferível recusar a confiar silenciosamente).
+ * `por_dia_contratado` (dependeria de `datas.length` bater com um total
+ * que este módulo não pode verificar sozinho).
  */
-const ABRANGENCIAS_VALIDAS_TERCEIRIZACAO: ReadonlySet<AbrangenciaContratacao> = new Set([
+const ABRANGENCIAS_SEM_USO_REAL: ReadonlySet<AbrangenciaContratacao> = new Set([
   "por_periodo_completo",
   "valor_fixo_unico",
 ]);
 
 /**
- * Valida, ANTES de qualquer cálculo, que toda DecisaoTerceirizacao
+ * Valida, ANTES de qualquer cálculo, que toda decisão de `itens`
  * referencia uma Contratacao existente em decisoes.contratacoes (nunca
- * uma referência solta, que resultaria em custo 0 silencioso - a
- * mesma classe de bug que motivou esta função) e que sua abrangencia é
- * uma das aceitas para terceirização.
+ * uma referência solta, que resultaria em custo 0 silencioso) e que sua
+ * abrangencia é uma das aceitas para alternativas sem uso real
+ * mensurável (ver ABRANGENCIAS_SEM_USO_REAL). Compartilhada entre
+ * terceirização e antecipação de material - mesma classe de bug, mesma
+ * correção, só o rótulo do erro muda.
  */
-function validarDecisoesTerceirizacao(decisoes: DecisoesCenario): void {
+function validarContratacoesSemUsoReal(
+  itens: readonly { chave: ChaveOcorrencia; contratacaoId: string }[],
+  decisoes: DecisoesCenario,
+  rotulo: string,
+): void {
   const contratacaoPorId = new Map(decisoes.contratacoes.map((c) => [c.id, c]));
 
-  for (const terceirizacao of decisoes.terceirizacoes) {
-    const contratacao = contratacaoPorId.get(terceirizacao.contratacaoId);
+  for (const item of itens) {
+    const contratacao = contratacaoPorId.get(item.contratacaoId);
     if (!contratacao) {
       throw new RangeError(
-        `Terceirização inválida: contratacaoId="${terceirizacao.contratacaoId}" (ocorrência "${chaveOcorrenciaParaString(terceirizacao.chave)}") não corresponde a nenhuma Contratacao em decisoes.contratacoes - sem ela, o custo desta terceirização seria 0 silenciosamente.`,
+        `${rotulo} inválida: contratacaoId="${item.contratacaoId}" (ocorrência "${chaveOcorrenciaParaString(item.chave)}") não corresponde a nenhuma Contratacao em decisoes.contratacoes - sem ela, o custo desta ${rotulo.toLowerCase()} seria 0 silenciosamente.`,
       );
     }
-    if (!ABRANGENCIAS_VALIDAS_TERCEIRIZACAO.has(contratacao.abrangencia)) {
+    if (!ABRANGENCIAS_SEM_USO_REAL.has(contratacao.abrangencia)) {
       throw new RangeError(
-        `Terceirização inválida: contratação "${contratacao.id}" (ocorrência "${chaveOcorrenciaParaString(terceirizacao.chave)}") usa abrangencia="${contratacao.abrangencia}" - terceirização só aceita "por_periodo_completo" ou "valor_fixo_unico" (valor fixo, independente de uso), nunca "por_hora_utilizada" (sem horas de máquina reais) nem "por_dia_contratado" (dependeria de datas.length bater com prazoDiasCorridos, não verificável aqui).`,
+        `${rotulo} inválida: contratação "${contratacao.id}" (ocorrência "${chaveOcorrenciaParaString(item.chave)}") usa abrangencia="${contratacao.abrangencia}" - ${rotulo.toLowerCase()} só aceita "por_periodo_completo" ou "valor_fixo_unico" (valor fixo, independente de uso), nunca "por_hora_utilizada" (sem horas de máquina reais) nem "por_dia_contratado" (dependeria de datas.length bater com um total não verificável aqui).`,
       );
     }
   }
+}
+
+function validarDecisoesTerceirizacao(decisoes: DecisoesCenario): void {
+  validarContratacoesSemUsoReal(decisoes.terceirizacoes, decisoes, "Terceirização");
+}
+
+/**
+ * Além da validação de contratação/abrangência (ver
+ * validarContratacoesSemUsoReal), rejeita uma "antecipação" que na
+ * verdade atrasa (dataDisponibilidadeAntecipada posterior à original) -
+ * contradiria o próprio nome do campo e a intenção da decisão (negociar
+ * para MELHORAR, nunca para piorar silenciosamente).
+ */
+function validarDecisoesAntecipacaoMaterial(decisoes: DecisoesCenario): void {
+  validarContratacoesSemUsoReal(decisoes.antecipacoesMaterial, decisoes, "Antecipação de material");
+
+  for (const antecipacao of decisoes.antecipacoesMaterial) {
+    if (antecipacao.dataDisponibilidadeAntecipada >= antecipacao.dataDisponibilidadeOriginal) {
+      throw new RangeError(
+        `Antecipação de material inválida (ocorrência "${chaveOcorrenciaParaString(antecipacao.chave)}"): dataDisponibilidadeAntecipada="${antecipacao.dataDisponibilidadeAntecipada}" não é ANTERIOR a dataDisponibilidadeOriginal="${antecipacao.dataDisponibilidadeOriginal}" - igual ou posterior não é uma antecipação (nenhum ganho real negociado).`,
+      );
+    }
+  }
+}
+
+/**
+ * Cada contratação pertence a EXATAMENTE 1 categoria de alternativa
+ * (hora_extra/sabado_domingo_feriado, terceirizacao, recurso_temporario)
+ * - nunca contabilizada em duas ao mesmo tempo (custoPorAlternativa,
+ * prepararResumoCenarioParaExibicao.ts, depende dessa garantia para
+ * atribuição inequívoca; sem ela, o mesmo custo poderia aparecer
+ * duplicado em 2 baldes, ou silenciosamente só no primeiro checado).
+ * Reaproveitar o MESMO contratacaoId várias vezes DENTRO da mesma
+ * categoria continua permitido (ex.: capacidadeExtra em vários dias
+ * apontando para a mesma contratação) - só a mistura ENTRE categorias é
+ * rejeitada.
+ */
+function validarUnicidadeContratacoesPorCategoria(decisoes: DecisoesCenario): void {
+  const categoriaPorContratacaoId = new Map<string, string>();
+
+  function registrar(contratacaoId: string, categoria: string): void {
+    const categoriaExistente = categoriaPorContratacaoId.get(contratacaoId);
+    if (categoriaExistente !== undefined && categoriaExistente !== categoria) {
+      throw new RangeError(
+        `Contratação "${contratacaoId}" referenciada em mais de 1 categoria de alternativa ("${categoriaExistente}" e "${categoria}") - cada contratação pertence a exatamente 1 alternativa, nunca contabilizada em duas ao mesmo tempo.`,
+      );
+    }
+    categoriaPorContratacaoId.set(contratacaoId, categoria);
+  }
+
+  for (const c of decisoes.capacidadeExtra) registrar(c.contratacaoId, "hora_extra");
+  for (const t of decisoes.terceirizacoes) registrar(t.contratacaoId, "terceirizacao");
+  for (const rt of decisoes.recursosTemporarios) registrar(rt.recursoTemporario.contratacaoId, "recurso_temporario");
+  for (const am of decisoes.antecipacoesMaterial) registrar(am.contratacaoId, "antecipacao_material");
+}
+
+/** Maior das 2 datas ISO (comparação lexicográfica = cronológica em YYYY-MM-DD). */
+function maiorData(a: string, b: string): string {
+  return a > b ? a : b;
 }
 
 export interface GradeCompartilhada {
@@ -129,9 +238,83 @@ export interface GradeCompartilhada {
   prazoInterno: string;
 }
 
+/**
+ * Cópia plana, congelada (Object.freeze - imutabilidade real, não só de
+ * tipo) de 1 alocação diária. Campos `readonly` no tipo E congelados em
+ * execução - as duas camadas de proteção, nunca só uma.
+ */
+export interface AlocacaoDiariaCenario {
+  readonly data: string;
+  readonly natureza: NaturezaCapacidade;
+  readonly contratacaoId: string | null;
+  readonly horasMaquina: number;
+  readonly horasPadrao: number;
+  readonly recursoId: string;
+}
+
+/**
+ * Resultado por ocorrência, achatado e congelado para exibição/teste/
+ * futura persistência - nunca o Map interno do escalonador (que só é
+ * imutável em tempo de compilação, não em execução) nem os objetos que
+ * ele produziu (mesmo que hoje não sejam mutados depois de criados,
+ * este contrato não deve depender disso continuar verdade para
+ * sempre).
+ */
+export interface ResultadoOcorrenciaCenario {
+  readonly chave: ChaveOcorrencia;
+  readonly status: "concluida" | "bloqueada_por_deficit" | "bloqueada_por_predecessora";
+  readonly dataInicioReal: string | null;
+  readonly dataFimReal: string | null;
+  readonly deficitResidualHorasPadrao: number;
+  readonly alocacoes: readonly AlocacaoDiariaCenario[];
+  readonly terceirizada: boolean;
+  /** Não-nulo se e somente se terceirizada=true. */
+  readonly prazoDiasCorridosTerceirizacao: number | null;
+  /**
+   * candidatoIdsPorPrioridade desta ocorrência (recurso original +
+   * compatíveis + temporários aplicáveis, ou o candidato sintético de
+   * terceirização) - recursos que foram CONSIDERADOS/oferecidos ao
+   * escalonador, mesmo que insuficientes ou nunca usados. Nunca
+   * confundir com os recursos efetivamente USADOS - esses vêm de
+   * `alocacoes[].recursoId` (um subconjunto, possivelmente vazio, de
+   * `recursosConsiderados`). Existe principalmente para diagnóstico de
+   * cenários inviáveis: "quais recursos foram tentados antes do déficit".
+   */
+  readonly recursosConsiderados: readonly string[];
+}
+
 export type ResultadoAvaliacaoCenario = ResultadoBuscaDStar & {
   custoAdicionalTotal: number;
   custoPorContratacaoId: Map<string, number>;
+  /**
+   * viavel/viavel_no_limite: a candidata vencedora, reexecutada (mesma
+   * lógica de sempre). prazo_inviavel: a candidata que produziu
+   * exatamente `dataFimReal` (busca dedicada, replay de
+   * buscarDataInicioMaisTardiaViavel - ver encontrarTentativaPrazoInviavel)
+   * - IMPORTANTE: por definição de `melhorConclusaoTardia` dentro do
+   * Calculador Reverso, essa candidata teve TODAS as finais concluídas
+   * (só mais tarde que o prazo) - `deficitResidualHorasPadrao` será 0
+   * em todo item; o problema aqui é ATRASO (`diasCivisDeAtraso`, já no
+   * nível superior), não falta de capacidade. horizonte_tecnico_excedido:
+   * a candidata mais generosa (datasCandidatas[0], a mais cedo) -
+   * NENHUMA candidata concluiu neste estado, então esta é só UM exemplo
+   * representativo (não provadamente o "melhor" - não monotonicidade,
+   * DEC-007 §8.1), mas é o que mostra o déficit real de capacidade mais
+   * claramente. dados_insuficientes: [] - a `chave` sem nenhum
+   * candidato já vem no próprio ResultadoBuscaDStar, sem precisar de
+   * detalhamento adicional.
+   */
+  resultadosPorOcorrencia: readonly ResultadoOcorrenciaCenario[];
+  /**
+   * true quando resultadosPorOcorrencia vem de uma tentativa
+   * DIAGNÓSTICA (estado != viavel/viavel_no_limite) - a melhor tentativa
+   * relevante para EXPLICAR a inviabilidade, nunca uma programação
+   * aceita. Quem exibe isso NUNCA pode rotular como "Conclusão
+   * estimada" nem qualquer linguagem de compromisso - só como
+   * diagnóstico. false nos estados viavel/viavel_no_limite E em
+   * dados_insuficientes (onde resultadosPorOcorrencia fica vazio).
+   */
+  resultadosSaoDiagnostico: boolean;
 };
 
 /**
@@ -358,7 +541,11 @@ function criarFabricaRegistroCandidatos(
  * temporário, quando aplicável (recursoTemporarioAplicavelA), entra
  * como ÚLTIMA alternativa, depois do original e dos compatíveis -
  * "contratar temporário" é o recurso mais caro/menos preferido entre
- * as opções internas, tentado só se nada interno bastar.
+ * as opções internas, tentado só se nada interno bastar. Antecipação de
+ * material, ao contrário das outras 3, NÃO é exclusiva de terceirização
+ * nem de mais nada - aplica-se como piso de `dataInicioJanela` em
+ * QUALQUER ocorrência (terceirizada ou não), porque mesmo uma operação
+ * terceirizada pode depender de material antes de começar.
  */
 function construirOcorrenciasEscalonaveis(
   base: BaseCenarios,
@@ -376,17 +563,33 @@ function construirOcorrenciasEscalonaveis(
     terceirizacaoPorChave.set(chaveStr, t);
   }
 
+  const antecipacaoPorChave = new Map<string, DecisaoAntecipacaoMaterial>();
+  for (const a of decisoes.antecipacoesMaterial) {
+    const chaveStr = chaveOcorrenciaParaString(a.chave);
+    if (antecipacaoPorChave.has(chaveStr)) {
+      throw new RangeError(
+        `Antecipação de material duplicada: a ocorrência "${chaveStr}" tem mais de uma DecisaoAntecipacaoMaterial neste cenário - qual delas é a real?`,
+      );
+    }
+    antecipacaoPorChave.set(chaveStr, a);
+  }
+
   // "Erro explícito, nunca ignorado silenciosamente" (mesma disciplina
-  // do resto de lib/cenarios/): uma DecisaoTerceirizacao apontando para
-  // uma chave que não existe em base.ocorrencias é dado órfão - quase
-  // sempre um bug de quem montou o cenário (chave errada, ocorrência de
-  // outra base) - detectado abaixo, depois do .map, comparando o que
-  // foi de fato consumido contra o que foi declarado.
+  // do resto de lib/cenarios/): uma DecisaoTerceirizacao/
+  // DecisaoAntecipacaoMaterial apontando para uma chave que não existe
+  // em base.ocorrencias é dado órfão - quase sempre um bug de quem
+  // montou o cenário (chave errada, ocorrência de outra base) -
+  // detectado abaixo, depois do .map, comparando o que foi de fato
+  // consumido contra o que foi declarado.
   const chavesConsumidas = new Set<string>();
+  const chavesComAntecipacaoConsumidas = new Set<string>();
 
   const ocorrenciasEscalonaveis = base.ocorrencias.map(({ ocorrencia, necessarioHorasPadrao, recursoOriginalId }) => {
     const chaveStr = chaveOcorrenciaParaString(ocorrencia.chave);
     const terceirizacao = terceirizacaoPorChave.get(chaveStr);
+    const antecipacao = antecipacaoPorChave.get(chaveStr);
+    if (antecipacao) chavesComAntecipacaoConsumidas.add(chaveStr);
+    const dataInicioJanelaEfetiva = antecipacao ? maiorData(dataInicioJanela, antecipacao.dataDisponibilidadeAntecipada) : dataInicioJanela;
 
     if (terceirizacao) {
       chavesConsumidas.add(chaveStr);
@@ -396,7 +599,7 @@ function construirOcorrenciasEscalonaveis(
         necessarioHorasPadrao: terceirizacao.prazoDiasCorridos,
         candidatoIdsPorPrioridade: [candidatoTerceirizadoId(chaveStr)],
         ehOrcamentoNovo: true,
-        dataInicioJanela,
+        dataInicioJanela: dataInicioJanelaEfetiva,
       };
     }
 
@@ -411,7 +614,7 @@ function construirOcorrenciasEscalonaveis(
       necessarioHorasPadrao,
       candidatoIdsPorPrioridade: [recursoOriginalId, ...compativeis.map((c) => c.recursoId), ...temporariosAplicaveis],
       ehOrcamentoNovo: true,
-      dataInicioJanela,
+      dataInicioJanela: dataInicioJanelaEfetiva,
     };
   });
 
@@ -419,6 +622,13 @@ function construirOcorrenciasEscalonaveis(
     if (!chavesConsumidas.has(chaveStr)) {
       throw new RangeError(
         `Terceirização órfã: DecisaoTerceirizacao referencia a ocorrência "${chaveStr}", que não existe em base.ocorrencias deste cenário.`,
+      );
+    }
+  }
+  for (const chaveStr of antecipacaoPorChave.keys()) {
+    if (!chavesComAntecipacaoConsumidas.has(chaveStr)) {
+      throw new RangeError(
+        `Antecipação de material órfã: DecisaoAntecipacaoMaterial referencia a ocorrência "${chaveStr}", que não existe em base.ocorrencias deste cenário.`,
       );
     }
   }
@@ -482,6 +692,185 @@ function calcularCustoCenario(
 }
 
 /**
+ * Cópia congelada de ChaveOcorrencia - Object.freeze no objeto pai
+ * (ResultadoOcorrenciaCenario) é SUPERFICIAL, não alcança `chave` (um
+ * objeto aninhado) nem `chave.caminhoBomItemIds` (um array dentro
+ * dele). Sem isso, os dois continuariam mutáveis mesmo com o resultado
+ * "congelado" por fora - congela cada nível explicitamente.
+ */
+function copiarECongelarChave(chave: ChaveOcorrencia): ChaveOcorrencia {
+  return Object.freeze({
+    projetoItemId: chave.projetoItemId,
+    produtoRaizId: chave.produtoRaizId,
+    caminhoBomItemIds: Object.freeze([...chave.caminhoBomItemIds]),
+    bomOperacaoId: chave.bomOperacaoId,
+  });
+}
+
+/**
+ * Achata o Map interno do escalonador (mutável em execução, mesmo que
+ * tipado ReadonlyMap) para uma lista plana e congelada de dados puros -
+ * cópia de cada campo (inclusive `chave`, congelada em profundidade -
+ * ver copiarECongelarChave), `Object.freeze` em cada alocação, em cada
+ * `alocacoes[]` e no array final. Nunca reexpõe o Map nem os objetos
+ * originais do escalonador. Ordenada explicitamente por
+ * chaveOcorrenciaParaString - nunca depende da ordem de inserção do
+ * Map (determinística hoje, mas não é um contrato que este módulo deva
+ * expor ao chamador).
+ */
+function construirResultadosPorOcorrencia(
+  resultados: ReadonlyMap<
+    string,
+    {
+      chave: ChaveOcorrencia;
+      status: "concluida" | "bloqueada_por_deficit" | "bloqueada_por_predecessora";
+      dataInicioReal: string | null;
+      dataFimReal: string | null;
+      deficitResidualHorasPadrao: number;
+      alocacoes: { data: string; natureza: NaturezaCapacidade; contratacaoId: string | null; horasMaquina: number; horasPadrao: number; recursoId: string }[];
+    }
+  >,
+  decisoes: DecisoesCenario,
+  ocorrenciasTemplate: readonly OcorrenciaEscalonavel[],
+): readonly ResultadoOcorrenciaCenario[] {
+  const terceirizacaoPorChave = new Map(decisoes.terceirizacoes.map((t) => [chaveOcorrenciaParaString(t.chave), t]));
+  const candidatosPorChaveStr = new Map(
+    ocorrenciasTemplate.map((oc) => [chaveOcorrenciaParaString(oc.chave), oc.candidatoIdsPorPrioridade]),
+  );
+
+  const lista: ResultadoOcorrenciaCenario[] = [];
+  for (const resultado of resultados.values()) {
+    const chaveStr = chaveOcorrenciaParaString(resultado.chave);
+    const terceirizacao = terceirizacaoPorChave.get(chaveStr);
+    const recursosConsiderados = Object.freeze([...(candidatosPorChaveStr.get(chaveStr) ?? [])]);
+
+    const alocacoes = Object.freeze(
+      resultado.alocacoes.map((a) =>
+        Object.freeze({
+          data: a.data,
+          natureza: a.natureza,
+          contratacaoId: a.contratacaoId,
+          horasMaquina: a.horasMaquina,
+          horasPadrao: a.horasPadrao,
+          recursoId: a.recursoId,
+        }),
+      ),
+    );
+
+    lista.push(
+      Object.freeze({
+        chave: copiarECongelarChave(resultado.chave),
+        status: resultado.status,
+        dataInicioReal: resultado.dataInicioReal,
+        dataFimReal: resultado.dataFimReal,
+        deficitResidualHorasPadrao: resultado.deficitResidualHorasPadrao,
+        alocacoes,
+        terceirizada: terceirizacao !== undefined,
+        prazoDiasCorridosTerceirizacao: terceirizacao?.prazoDiasCorridos ?? null,
+        recursosConsiderados,
+      }),
+    );
+  }
+
+  lista.sort((a, b) => {
+    const strA = chaveOcorrenciaParaString(a.chave);
+    const strB = chaveOcorrenciaParaString(b.chave);
+    return strA < strB ? -1 : strA > strB ? 1 : 0;
+  });
+
+  return Object.freeze(lista);
+}
+
+type ResultadosEscalonador = ReadonlyMap<string, ResultadoOcorrenciaEscalonada>;
+
+/**
+ * Reexecuta o escalonador para 1 candidata específica - ocorrências-raiz
+ * recebem `dataInicioJanela = max(piso já no template, candidata)`
+ * (mesma regra de `montarOcorrenciasParaCandidato` dentro de
+ * calculadorReversoConjunto.ts - "resultado oficial e detalhamento usam
+ * a mesma regra", DEC-007 §6.2.4: sem isso, um piso de antecipação de
+ * material aplicado em `construirOcorrenciasEscalonaveis` seria
+ * silenciosamente apagado aqui no replay), registroCandidatos sempre
+ * FRESCO (isolamento entre tentativas, nunca reaproveitado). Usado tanto
+ * para reconstruir a candidata vencedora (viável) quanto para
+ * diagnóstico (inviável).
+ */
+function replayCandidata(params: {
+  ocorrenciasTemplate: OcorrenciaEscalonavel[];
+  chavesRaiz: ChaveOcorrencia[];
+  dependencias: BaseCenarios["dependencias"];
+  criarRegistroCandidatos: () => ReadonlyMap<string, CandidatoComCapacidadeDiaria>;
+  datasGradeCompartilhada: string[];
+  dataCandidata: string;
+}): ResultadosEscalonador {
+  const { ocorrenciasTemplate, chavesRaiz, dependencias, criarRegistroCandidatos, datasGradeCompartilhada, dataCandidata } = params;
+
+  const ocorrenciasParaCandidata = ocorrenciasTemplate.map((oc) =>
+    chavesRaiz.some((raiz) => chaveOcorrenciaParaString(raiz) === chaveOcorrenciaParaString(oc.chave))
+      ? { ...oc, dataInicioJanela: maiorData(oc.dataInicioJanela, dataCandidata) }
+      : oc,
+  );
+
+  return escalonarConjuntoComFilaDeProntos({
+    ocorrencias: ocorrenciasParaCandidata,
+    dependencias,
+    registroCandidatos: criarRegistroCandidatos(),
+    datasGradeCompartilhada,
+    criterioPrioridadeDeNegocio: PRIORIDADE_UNICA,
+  });
+}
+
+/**
+ * prazo_inviavel: buscarDataInicioMaisTardiaViavel já encontrou
+ * `dataFimRealAlvo` (a MELHOR/menor conclusão tardia entre as
+ * candidatas que concluíram POR COMPLETO - ver melhorConclusaoTardia
+ * em calculadorReversoConjunto.ts), mas não expõe QUAL candidata
+ * produziu isso. Refaz a mesma varredura de trás para frente (mesma
+ * ordem do Calculador Reverso), parando na primeira candidata cujas
+ * finais TODAS concluem com a maior data-fim batendo exatamente com o
+ * valor já decidido - nunca uma busca nova, é a reconstrução do
+ * resultado já determinado (mesma disciplina do replay do caminho
+ * viável). Garantido encontrar por construção (o próprio algoritmo
+ * originou esse valor a partir deste mesmo conjunto de candidatas) -
+ * o retorno vazio no fim é só defensivo.
+ */
+function encontrarTentativaPrazoInviavel(params: {
+  ocorrenciasTemplate: OcorrenciaEscalonavel[];
+  chavesRaiz: ChaveOcorrencia[];
+  chavesFinais: ChaveOcorrencia[];
+  dependencias: BaseCenarios["dependencias"];
+  criarRegistroCandidatos: () => ReadonlyMap<string, CandidatoComCapacidadeDiaria>;
+  datasGradeCompartilhada: string[];
+  datasCandidatas: string[];
+  dataFimRealAlvo: string;
+}): ResultadosEscalonador {
+  const { chavesFinais, datasCandidatas, dataFimRealAlvo, ...resto } = params;
+
+  for (let indice = datasCandidatas.length - 1; indice >= 0; indice--) {
+    const resultados = replayCandidata({ ...resto, dataCandidata: datasCandidatas[indice] });
+
+    let todasConcluidas = true;
+    let maiorDataFim: string | null = null;
+    for (const chaveFinal of chavesFinais) {
+      const r = resultados.get(chaveOcorrenciaParaString(chaveFinal));
+      if (!r || r.status !== "concluida") {
+        todasConcluidas = false;
+        break;
+      }
+      if (r.dataFimReal !== null && (maiorDataFim === null || r.dataFimReal > maiorDataFim)) {
+        maiorDataFim = r.dataFimReal;
+      }
+    }
+
+    if (todasConcluidas && maiorDataFim === dataFimRealAlvo) {
+      return resultados;
+    }
+  }
+
+  return new Map();
+}
+
+/**
  * Avalia 1 cenário completo (hora extra, terceirização, recurso
  * temporário/freelancer - combináveis livremente entre operações
  * diferentes do mesmo cenário) sobre a base já carregada - pura, sem
@@ -495,6 +884,8 @@ export function avaliarCenario(
   grade: GradeCompartilhada,
 ): ResultadoAvaliacaoCenario {
   validarDecisoesTerceirizacao(decisoes);
+  validarDecisoesAntecipacaoMaterial(decisoes);
+  validarUnicidadeContratacoesPorCategoria(decisoes);
 
   const ocorrenciasTemplate = construirOcorrenciasEscalonaveis(base, grade.datasGradeCompartilhada[0], decisoes);
   const chavesRaiz = base.chavesRaizOrcamentoNovo;
@@ -517,32 +908,68 @@ export function avaliarCenario(
     prazoInterno: grade.prazoInterno,
   });
 
+  if (resultadoBusca.estado !== "viavel" && resultadoBusca.estado !== "viavel_no_limite") {
+    const custoSemUso = calcularCustoCenario(decisoes, new Map());
+
+    // Diagnóstico: prazo_inviavel e horizonte_tecnico_excedido ganham a
+    // melhor tentativa relevante (ver encontrarTentativaPrazoInviavel e
+    // o comentário de ResultadoAvaliacaoCenario) - dados_insuficientes
+    // fica vazio, a chave sem candidato já vem em resultadoBusca.
+    let resultadosDiagnostico: ResultadosEscalonador = new Map();
+
+    if (resultadoBusca.estado === "prazo_inviavel") {
+      resultadosDiagnostico = encontrarTentativaPrazoInviavel({
+        ocorrenciasTemplate,
+        chavesRaiz,
+        chavesFinais,
+        dependencias: base.dependencias,
+        criarRegistroCandidatos,
+        datasGradeCompartilhada: grade.datasGradeCompartilhada,
+        datasCandidatas: grade.datasCandidatas,
+        dataFimRealAlvo: resultadoBusca.dataFimReal,
+      });
+    } else if (resultadoBusca.estado === "horizonte_tecnico_excedido" && grade.datasCandidatas.length > 0) {
+      resultadosDiagnostico = replayCandidata({
+        ocorrenciasTemplate,
+        chavesRaiz,
+        dependencias: base.dependencias,
+        criarRegistroCandidatos,
+        datasGradeCompartilhada: grade.datasGradeCompartilhada,
+        dataCandidata: grade.datasCandidatas[0],
+      });
+    }
+
+    return {
+      ...resultadoBusca,
+      custoAdicionalTotal: custoSemUso.custoTotal,
+      custoPorContratacaoId: custoSemUso.custoPorContratacaoId,
+      resultadosPorOcorrencia: construirResultadosPorOcorrencia(resultadosDiagnostico, decisoes, ocorrenciasTemplate),
+      resultadosSaoDiagnostico: resultadosDiagnostico.size > 0,
+    };
+  }
+
   // Custeio: horas realmente usadas por contratacaoId exige rodar de
   // novo com a candidata vencedora (a busca em si não devolve as
   // alocações do ponto viável, só a data e o resumo de viabilidade -
   // DEC-007 §8, ResultadoBuscaDStar é deliberadamente enxuto). Reexecuta
   // só 1 vez, com a MESMA dataEstimadaInicioNecessario já encontrada -
   // não é uma busca nova, é a reconstrução do resultado já decidido.
-  if (resultadoBusca.estado !== "viavel" && resultadoBusca.estado !== "viavel_no_limite") {
-    const custoSemUso = calcularCustoCenario(decisoes, new Map());
-    return { ...resultadoBusca, custoAdicionalTotal: custoSemUso.custoTotal, custoPorContratacaoId: custoSemUso.custoPorContratacaoId };
-  }
-
-  const ocorrenciasVencedoras = ocorrenciasTemplate.map((oc) =>
-    chavesRaiz.some((raiz) => chaveOcorrenciaParaString(raiz) === chaveOcorrenciaParaString(oc.chave))
-      ? { ...oc, dataInicioJanela: resultadoBusca.dataEstimadaInicioNecessario }
-      : oc,
-  );
-
-  const resultadosVencedores = escalonarConjuntoComFilaDeProntos({
-    ocorrencias: ocorrenciasVencedoras,
+  const resultadosVencedores = replayCandidata({
+    ocorrenciasTemplate,
+    chavesRaiz,
     dependencias: base.dependencias,
-    registroCandidatos: criarRegistroCandidatos(),
+    criarRegistroCandidatos,
     datasGradeCompartilhada: grade.datasGradeCompartilhada,
-    criterioPrioridadeDeNegocio: PRIORIDADE_UNICA,
+    dataCandidata: resultadoBusca.dataEstimadaInicioNecessario,
   });
 
   const custo = calcularCustoCenario(decisoes, resultadosVencedores);
 
-  return { ...resultadoBusca, custoAdicionalTotal: custo.custoTotal, custoPorContratacaoId: custo.custoPorContratacaoId };
+  return {
+    ...resultadoBusca,
+    custoAdicionalTotal: custo.custoTotal,
+    custoPorContratacaoId: custo.custoPorContratacaoId,
+    resultadosPorOcorrencia: construirResultadosPorOcorrencia(resultadosVencedores, decisoes, ocorrenciasTemplate),
+    resultadosSaoDiagnostico: false,
+  };
 }

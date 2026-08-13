@@ -79,7 +79,7 @@ export interface GrafoOcorrenciasBom {
 }
 
 /** Chave estável para localizar um nó por caminhoBomItemIds - mesma convenção usada internamente neste módulo. */
-export function caminhoBomItemIdsParaChave(caminhoBomItemIds: string[]): string {
+export function caminhoBomItemIdsParaChave(caminhoBomItemIds: readonly string[]): string {
   return caminhoBomItemIds.join(">");
 }
 

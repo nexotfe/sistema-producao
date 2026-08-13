@@ -4,10 +4,10 @@
 // subconjuntos. caminhoBomItemIds reaproveita o mesmo conceito já usado
 // em gerarListaTecnicaProjeto.ts (OrigemMaterialConsolidado.caminhoBomItemIds).
 export interface ChaveOcorrencia {
-  projetoItemId: string;
-  produtoRaizId: string;
-  caminhoBomItemIds: string[];
-  bomOperacaoId: string;
+  readonly projetoItemId: string;
+  readonly produtoRaizId: string;
+  readonly caminhoBomItemIds: readonly string[];
+  readonly bomOperacaoId: string;
 }
 
 export function chaveOcorrenciaParaString(chave: ChaveOcorrencia): string {

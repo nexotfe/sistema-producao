@@ -366,6 +366,84 @@ describe("buscarDataInicioMaisTardiaViavel — limite exato, um dia antes/depois
   });
 });
 
+describe("buscarDataInicioMaisTardiaViavel — piso por ocorrência (dataInicioJanela do template como floor, DEC-007 §6.2.4)", () => {
+  it("candidata testada é anterior ao piso do template - a busca usa max(piso, candidata), nunca a candidata pura", () => {
+    const criarRegistroCandidatos = () =>
+      new Map<string, CandidatoComCapacidadeDiaria>([
+        ["R1", criarCandidato("R1", 1, { "2026-11-09": 4, "2026-11-10": 4, "2026-11-11": 4, "2026-11-12": 4, "2026-11-13": 4 })],
+      ]);
+    // Piso do template (dataInicioJanela) = 11/11 - mais tarde que a
+    // única candidata testada (09/11). Precisa de 8h = 2 dias
+    // consecutivos de 4h - sem respeitar o piso, concluiria 10/11;
+    // respeitando-o, só pode concluir 12/11.
+    const a = ocorrencia({
+      chave: chave("A"),
+      necessarioHorasPadrao: 8,
+      candidatoIdsPorPrioridade: ["R1"],
+      dataInicioJanela: "2026-11-11",
+    });
+
+    const resultado = buscarDataInicioMaisTardiaViavel({
+      ocorrencias: [a],
+      dependencias: [],
+      projetoIdOrcamentoNovo: "orcamento-novo",
+      chavesOrcamentoNovo: [a.chave],
+      chavesRaizOrcamentoNovo: [a.chave],
+      chavesFinaisOrcamentoNovo: [a.chave],
+      criarRegistroCandidatos,
+      datasGradeCompartilhada: datasDe("2026-11-09", 6),
+      datasCandidatas: ["2026-11-09"], // única candidata testada, deliberadamente anterior ao piso
+      criterioPrioridadeDeNegocio: () => 0,
+      prazoInterno: "2026-11-12",
+    });
+
+    expect(resultado.estado).toBe("viavel_no_limite");
+    if (resultado.estado === "viavel_no_limite") {
+      // dataEstimadaInicioNecessario reporta a CANDIDATA testada (09/11),
+      // não o início real (que respeitou o piso) - dataFimReal é quem
+      // prova que o piso foi respeitado de fato no cálculo, não só na exibição.
+      expect(resultado.dataEstimadaInicioNecessario).toBe("2026-11-09");
+      expect(resultado.dataFimReal).toBe("2026-11-12"); // 11/11 + 12/11 (2 dias), nunca 10/11
+      expect(resultado.folgaDiasCivis).toBe(0);
+    }
+  });
+
+  it("candidata testada é posterior ao piso do template - a candidata vence normalmente, piso sem efeito (compatibilidade retroativa)", () => {
+    const criarRegistroCandidatos = () =>
+      new Map<string, CandidatoComCapacidadeDiaria>([
+        ["R1", criarCandidato("R1", 1, { "2026-11-09": 4, "2026-11-10": 4, "2026-11-11": 4, "2026-11-12": 4 })],
+      ]);
+    // Piso (09/11) mais cedo que a candidata testada (11/11) - o piso
+    // nunca "puxa" o início pra trás, só empurra pra frente quando é
+    // mais tarde que a candidata (max, nunca min).
+    const a = ocorrencia({
+      chave: chave("A"),
+      necessarioHorasPadrao: 8,
+      candidatoIdsPorPrioridade: ["R1"],
+      dataInicioJanela: "2026-11-09",
+    });
+
+    const resultado = buscarDataInicioMaisTardiaViavel({
+      ocorrencias: [a],
+      dependencias: [],
+      projetoIdOrcamentoNovo: "orcamento-novo",
+      chavesOrcamentoNovo: [a.chave],
+      chavesRaizOrcamentoNovo: [a.chave],
+      chavesFinaisOrcamentoNovo: [a.chave],
+      criarRegistroCandidatos,
+      datasGradeCompartilhada: datasDe("2026-11-09", 4),
+      datasCandidatas: ["2026-11-11"],
+      criterioPrioridadeDeNegocio: () => 0,
+      prazoInterno: "2026-11-12",
+    });
+
+    expect(resultado.estado).toBe("viavel_no_limite");
+    if (resultado.estado === "viavel_no_limite") {
+      expect(resultado.dataFimReal).toBe("2026-11-12"); // 11/11 + 12/11, igual ao contrato anterior à Fase 8b
+    }
+  });
+});
+
 describe("buscarDataInicioMaisTardiaViavel — déficit e horizonte técnico", () => {
   it("horizonte_tecnico_excedido: nem a candidata mais cedo (mais generosa) conclui", () => {
     const a = ocorrencia({ chave: chave("A"), necessarioHorasPadrao: 100, candidatoIdsPorPrioridade: ["R1"] }); // nunca fecha

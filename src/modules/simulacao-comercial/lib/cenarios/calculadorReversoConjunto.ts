@@ -35,8 +35,15 @@
 //
 // Estados (métodoVersao=2) - NUNCA reutiliza "janela_insuficiente": esse
 // nome já foi persistido pela RPC v5 (método v1) com outro significado
-// (disponibilidade de MATERIAL vs D*, um eixo que este módulo não
-// modela). "prazo_inviavel" é o nome novo, exclusivo do método v2,
+// (disponibilidade de MATERIAL vs D*). Este módulo continua sem SABER
+// nada sobre material (não lê, não calcula, não tem nenhum conceito de
+// "material" no vocabulário) - mas desde a Fase 8b/DEC-007 §6.2.4,
+// respeita um PISO por ocorrência já embutido no `dataInicioJanela` de
+// cada item de `ocorrencias` (`max(piso do template, candidata)` -
+// ver `buscarDataInicioMaisTardiaViavel`), que o CHAMADOR pode usar
+// para representar isso (ou qualquer outra restrição de início externa
+// à capacidade) sem este módulo precisar modelar a origem do piso.
+// "prazo_inviavel" é o nome novo, exclusivo do método v2,
 // significando "a operação tem data-fim real conhecida, só que posterior
 // ao prazo" (DEC-007 §8) - nunca confundido com horizonte_tecnico_excedido
 // (NENHUMA candidata testada produz conclusão alguma).
@@ -127,7 +134,20 @@ interface AvaliacaoCandidato {
 }
 
 export function buscarDataInicioMaisTardiaViavel(params: {
-  /** TEMPLATE fixo (base comprometida + orçamento novo) - as ocorrências-raiz do orçamento têm `dataInicioJanela` SOBRESCRITA por candidata a cada tentativa; todo o resto é reaproveitado como veio. */
+  /**
+   * TEMPLATE fixo (base comprometida + orçamento novo) - a cada
+   * tentativa, as ocorrências-raiz do orçamento recebem
+   * `dataInicioJanela = max(dataInicioJanela ORIGINAL do template,
+   * candidata)` (nunca uma sobrescrita incondicional) - todo o resto é
+   * reaproveitado como veio. Isso permite ao TEMPLATE já carregar um
+   * piso por ocorrência específica (ex.: disponibilidade de material,
+   * negociada ou não - DEC-007 §6.2.4/8b) que a busca NUNCA pode testar
+   * antes de respeitar, mesmo quando a candidata em si seria mais cedo.
+   * Sem nenhum piso pré-existente no template (`dataInicioJanela` igual
+   * à data mais cedo da grade, o caso de sempre até aqui),
+   * `max(..., candidata)` sempre resolve para `candidata` - contrato
+   * idêntico ao anterior, comportamento inalterado.
+   */
   ocorrencias: OcorrenciaEscalonavel[];
   dependencias: DependenciaOcorrencia[];
   /** projetoId do orçamento novo - toda chave em chavesOrcamentoNovo precisa resolver para uma ocorrência com este projetoId e ehOrcamentoNovo=true (nunca uma ocorrência de outro projeto confundida com a que está sendo avaliada). */
@@ -239,7 +259,7 @@ export function buscarDataInicioMaisTardiaViavel(params: {
     if (chavesRaizStr.has(sucStr)) {
       throw new RangeError(
         `Ocorrência "${sucStr}" está em chavesRaizOrcamentoNovo mas tem uma predecessora em "dependencias" - ` +
-          `raízes precisam ser genuinamente sem predecessora, senão a sobrescrita de dataInicioJanela por candidata seria ignorada pelo escalonador (que usa max(dataInicioJanela, fim da predecessora + 1 dia)).`,
+          `raízes precisam ser genuinamente sem predecessora, senão o piso de dataInicioJanela por candidata seria ignorado pelo escalonador (que usa max(dataInicioJanela, fim da predecessora + 1 dia)).`,
       );
     }
   }
@@ -255,7 +275,9 @@ export function buscarDataInicioMaisTardiaViavel(params: {
 
   function montarOcorrenciasParaCandidato(dataCandidata: string): OcorrenciaEscalonavel[] {
     return ocorrencias.map((oc) =>
-      chavesRaizStr.has(chaveOcorrenciaParaString(oc.chave)) ? { ...oc, dataInicioJanela: dataCandidata } : oc,
+      chavesRaizStr.has(chaveOcorrenciaParaString(oc.chave))
+        ? { ...oc, dataInicioJanela: oc.dataInicioJanela > dataCandidata ? oc.dataInicioJanela : dataCandidata }
+        : oc,
     );
   }
 

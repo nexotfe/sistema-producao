@@ -67,7 +67,7 @@ const semDecisoes: DecisoesCenario = {
   capacidadeExtra: [],
   contratacoes: [],
   terceirizacoes: [],
-  recursosTemporarios: [],
+  recursosTemporarios: [], antecipacoesMaterial: [],
 };
 
 function contratacaoTerceirizacaoValida(id: string, valor = 1000): Contratacao {
@@ -143,7 +143,7 @@ describe("avaliarCenario - hora extra preenche o déficit e o custeio reflete o 
 
     const resultado = avaliarCenario(
       base,
-      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [] },
+      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [] },
       grade,
     );
 
@@ -183,7 +183,7 @@ describe("avaliarCenario - hora extra preenche o déficit e o custeio reflete o 
 
     const resultado = avaliarCenario(
       base,
-      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [] },
+      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [] },
       grade,
     );
 
@@ -231,7 +231,7 @@ describe("avaliarCenario - comprometido agregado consumido a partir dos dias mai
 
     const resultado = avaliarCenario(
       base,
-      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [] },
+      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [] },
       grade,
     );
 
@@ -286,7 +286,7 @@ describe("avaliarCenario - hora extra nunca consumida por projeto não elegível
 
     const resultado = avaliarCenario(
       base,
-      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [] },
+      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [] },
       grade,
     );
 
@@ -327,7 +327,7 @@ describe("avaliarCenario - hora extra nunca consumida por projeto não elegível
 
     const resultado = avaliarCenario(
       base,
-      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [] },
+      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [] },
       grade,
     );
 
@@ -363,7 +363,7 @@ describe("avaliarCenario - terceirização opera fora da capacidade interna", ()
         capacidadeExtra: [],
         contratacoes,
         terceirizacoes: [{ chave: chave("op-1"), fornecedor: "Fornecedor Externo Ltda", prazoDiasCorridos: 5, contratacaoId: "terc-1" }],
-        recursosTemporarios: [],
+        recursosTemporarios: [], antecipacoesMaterial: [],
       },
       grade,
     );
@@ -446,7 +446,7 @@ describe("avaliarCenario - terceirização opera fora da capacidade interna", ()
         capacidadeExtra,
         contratacoes,
         terceirizacoes: [{ chave: chave("op-terceirizada"), fornecedor: "Fornecedor Externo", prazoDiasCorridos: 3, contratacaoId: "terc-combo" }],
-        recursosTemporarios: [],
+        recursosTemporarios: [], antecipacoesMaterial: [],
       },
       grade,
     );
@@ -478,7 +478,7 @@ describe("avaliarCenario - terceirização rejeita abrangência incompatível (n
     expect(() =>
       avaliarCenario(
         base,
-        { capacidadeExtra: [], contratacoes, terceirizacoes: [terceirizar("terc-hora")], recursosTemporarios: [] },
+        { capacidadeExtra: [], contratacoes, terceirizacoes: [terceirizar("terc-hora")], recursosTemporarios: [], antecipacoesMaterial: [] },
         grade,
       ),
     ).toThrow(/só aceita "por_periodo_completo" ou "valor_fixo_unico"/);
@@ -493,7 +493,7 @@ describe("avaliarCenario - terceirização rejeita abrangência incompatível (n
     expect(() =>
       avaliarCenario(
         base,
-        { capacidadeExtra: [], contratacoes, terceirizacoes: [terceirizar("terc-dia")], recursosTemporarios: [] },
+        { capacidadeExtra: [], contratacoes, terceirizacoes: [terceirizar("terc-dia")], recursosTemporarios: [], antecipacoesMaterial: [] },
         grade,
       ),
     ).toThrow(/só aceita "por_periodo_completo" ou "valor_fixo_unico"/);
@@ -507,7 +507,7 @@ describe("avaliarCenario - terceirização rejeita abrangência incompatível (n
 
     const resultado = avaliarCenario(
       base,
-      { capacidadeExtra: [], contratacoes, terceirizacoes: [terceirizar("terc-periodo")], recursosTemporarios: [] },
+      { capacidadeExtra: [], contratacoes, terceirizacoes: [terceirizar("terc-periodo")], recursosTemporarios: [], antecipacoesMaterial: [] },
       grade,
     );
 
@@ -550,7 +550,7 @@ describe("avaliarCenario - recurso temporário/freelancer com produtividade e di
         capacidadeExtra: [],
         contratacoes,
         terceirizacoes: [],
-        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 0.8 }],
+        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 0.8 }], antecipacoesMaterial: [],
       },
       grade,
     );
@@ -593,7 +593,7 @@ describe("avaliarCenario - recurso temporário/freelancer com produtividade e di
         capacidadeExtra: [],
         contratacoes,
         terceirizacoes: [],
-        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }],
+        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }], antecipacoesMaterial: [],
       },
       grade,
     );
@@ -623,7 +623,7 @@ describe("avaliarCenario - recurso temporário/freelancer com produtividade e di
           capacidadeExtra: [],
           contratacoes: [],
           terceirizacoes: [],
-          recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }],
+          recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }], antecipacoesMaterial: [],
         },
         grade,
       ),
@@ -686,7 +686,7 @@ describe("avaliarCenario - combinações das 3 alternativas", () => {
         capacidadeExtra,
         contratacoes,
         terceirizacoes: [],
-        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }],
+        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }], antecipacoesMaterial: [],
       },
       grade,
     );
@@ -768,7 +768,7 @@ describe("avaliarCenario - combinações das 3 alternativas", () => {
         capacidadeExtra,
         contratacoes,
         terceirizacoes: [{ chave: chave("op-terceirizada-3way"), fornecedor: "Fornecedor Externo", prazoDiasCorridos: 3, contratacaoId: "terc-3way-contratacao" }],
-        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }],
+        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }], antecipacoesMaterial: [],
       },
       grade,
     );
@@ -839,7 +839,7 @@ describe("avaliarCenario - combinações das 3 alternativas", () => {
         capacidadeExtra,
         contratacoes,
         terceirizacoes: [{ chave: chave("op-1"), fornecedor: "Fornecedor Externo", prazoDiasCorridos: 3, contratacaoId: "terc-bloqueio" }],
-        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }],
+        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }], antecipacoesMaterial: [],
       },
       grade,
     );
@@ -863,7 +863,7 @@ describe("avaliarCenario - decisões órfãs ou duplicadas são erro explícito,
           capacidadeExtra: [],
           contratacoes: [contratacaoTerceirizacaoValida("terc-orfa")],
           terceirizacoes: [{ chave: chave("op-inexistente"), fornecedor: "X", prazoDiasCorridos: 2, contratacaoId: "terc-orfa" }],
-          recursosTemporarios: [],
+          recursosTemporarios: [], antecipacoesMaterial: [],
         },
         grade,
       ),
@@ -884,11 +884,547 @@ describe("avaliarCenario - decisões órfãs ou duplicadas são erro explícito,
             { chave: chave("op-1"), fornecedor: "X", prazoDiasCorridos: 2, contratacaoId: "terc-1" },
             { chave: chave("op-1"), fornecedor: "Y", prazoDiasCorridos: 5, contratacaoId: "terc-2" },
           ],
-          recursosTemporarios: [],
+          recursosTemporarios: [], antecipacoesMaterial: [],
         },
         grade,
       ),
     ).toThrow(/Terceirização duplicada/);
+  });
+});
+
+describe("avaliarCenario - unicidade de contratação por categoria (nunca contabilizada em 2 alternativas)", () => {
+  it("mesmo contratacaoId em hora extra E terceirização (categorias diferentes) lança erro explícito", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 8, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 3);
+
+    const capacidadeExtra: CapacidadeExtraDia[] = [
+      { recursoId: "recurso-A", data: "2026-01-10", horasAdicionaisDisponiveis: 4, natureza: "hora_extra", elegibilidade: { escopo: "somente_orcamento_novo" }, contratacaoId: "contratacao-cruzada" },
+    ];
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        {
+          capacidadeExtra,
+          contratacoes: [contratacaoTerceirizacaoValida("contratacao-cruzada")],
+          terceirizacoes: [{ chave: chave("op-1"), fornecedor: "X", prazoDiasCorridos: 2, contratacaoId: "contratacao-cruzada" }],
+          recursosTemporarios: [], antecipacoesMaterial: [],
+        },
+        grade,
+      ),
+    ).toThrow(/referenciada em mais de 1 categoria/);
+  });
+
+  it("mesmo contratacaoId reaproveitado em vários dias DENTRO da mesma categoria (hora extra) continua permitido", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 8, capacidadeDiaria: 4 });
+    const grade = gradeSimples("2026-01-10", 0, 3);
+
+    const capacidadeExtra: CapacidadeExtraDia[] = [
+      { recursoId: "recurso-A", data: "2026-01-10", horasAdicionaisDisponiveis: 2, natureza: "hora_extra", elegibilidade: { escopo: "somente_orcamento_novo" }, contratacaoId: "contratacao-repetida" },
+      { recursoId: "recurso-A", data: "2026-01-11", horasAdicionaisDisponiveis: 2, natureza: "hora_extra", elegibilidade: { escopo: "somente_orcamento_novo" }, contratacaoId: "contratacao-repetida" },
+    ];
+    const contratacoes: Contratacao[] = [
+      { id: "contratacao-repetida", tipo: "hora_extra", abrangencia: "por_hora_utilizada", valor: 10, moeda: "BRL", fornecedorOuContratado: "Equipe", referenciaProposta: null, justificativa: "teste", datas: ["2026-01-10", "2026-01-11"] },
+    ];
+
+    expect(() =>
+      avaliarCenario(base, { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [] }, grade),
+    ).not.toThrow();
+  });
+});
+
+describe("avaliarCenario - antecipação de material (4ª alternativa, altera a janela produtiva - DEC-007 §6.2.4)", () => {
+  function antecipacao(dataDisponibilidadeAntecipada: string, dataDisponibilidadeOriginal: string, contratacaoId = "mat-1") {
+    return { chave: chave("op-1"), dataDisponibilidadeAntecipada, dataDisponibilidadeOriginal, contratacaoId };
+  }
+
+  function contratacaoAntecipacaoValida(id: string, valor = 500): Contratacao {
+    return {
+      id,
+      tipo: "antecipacao_material",
+      abrangencia: "valor_fixo_unico",
+      valor,
+      moeda: "BRL",
+      fornecedorOuContratado: "Fornecedor Materiais",
+      referenciaProposta: null,
+      justificativa: "fixture",
+      datas: [],
+    };
+  }
+
+  it("piso de material altera o CÁLCULO OFICIAL (estado/dataFimReal), não só o diagnóstico/exibição", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 15); // única candidata testada = 10/01, bem anterior ao piso
+
+    const resultado = avaliarCenario(
+      base,
+      {
+        capacidadeExtra: [],
+        contratacoes: [contratacaoAntecipacaoValida("mat-1")],
+        terceirizacoes: [],
+        recursosTemporarios: [],
+        antecipacoesMaterial: [antecipacao("2026-01-14", "2026-01-15")],
+      },
+      grade,
+    );
+
+    expect(resultado.estado).toBe("prazo_inviavel");
+    if (resultado.estado === "prazo_inviavel") {
+      expect(resultado.dataFimReal).toBe("2026-01-14"); // nunca antes do piso, mesmo a candidata sendo 10/01
+      expect(resultado.diasCivisDeAtraso).toBe(4);
+    }
+  });
+
+  it("cenário-base (SEM decisão de antecipação) vs cenário ajustado (COM DecisaoAntecipacaoMaterial): o ganho é sempre relativo ao cenário-base real, nunca a uma avaliação artificial 'sem negociar'", () => {
+    // Correção de auditoria: a versão anterior deste teste construía um
+    // "cenário-base" chamando avaliarCenario com
+    // dataDisponibilidadeAntecipada == dataDisponibilidadeOriginal -
+    // ERRADO (violaria a própria validação de "estritamente anterior",
+    // inventaria uma decisão que não existe, e contabilizaria custo de
+    // negociação no cenário-base). O cenário-base correto é sempre o
+    // cenário SEM nenhuma DecisaoAntecipacaoMaterial - exatamente a
+    // mesma semântica de "cenário-base" já usada para hora extra/
+    // terceirização/recurso temporário em todo o resto deste arquivo.
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 15);
+    const contratacoes = [contratacaoAntecipacaoValida("mat-1")];
+
+    const resultadoBase = avaliarCenario(base, semDecisoes, grade);
+    const resultadoAjustado = avaliarCenario(
+      base,
+      { capacidadeExtra: [], contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15")] },
+      grade,
+    );
+
+    // Sem NENHUM piso de material, o cenário-base conclui na própria
+    // candidata testada (10/01) - capacidade sobra (4h de 8h/dia).
+    expect(resultadoBase.estado).toBe("viavel_no_limite");
+    if (resultadoBase.estado === "viavel_no_limite" || resultadoBase.estado === "viavel") {
+      expect(resultadoBase.dataFimReal).toBe("2026-01-10");
+    }
+    expect(resultadoBase.custoPorContratacaoId.get("mat-1") ?? 0).toBe(0); // custo de antecipação = 0 no cenário-base
+    expect(resultadoBase.custoAdicionalTotal).toBe(0);
+
+    // Com a decisão, o piso (12/01) empurra o início/término pra depois
+    // do que o cenário-base natural conseguiria (10/01) - a antecipação
+    // de material É uma restrição adicional em relação ao cenário-base
+    // irrestrito, nunca uma vantagem "de graça"; o ganho real dela só
+    // aparece comparada contra a alternativa de NÃO negociar (o piso
+    // teria sido a data original, mais tardia ainda - ver teste anterior).
+    expect(resultadoAjustado.estado).toBe("prazo_inviavel");
+    if (resultadoAjustado.estado === "prazo_inviavel") {
+      expect(resultadoAjustado.dataFimReal).toBe("2026-01-12");
+      expect(resultadoAjustado.dataFimReal >= "2026-01-12").toBe(true); // nunca antes do piso negociado
+    }
+    expect(resultadoAjustado.custoPorContratacaoId.get("mat-1")).toBe(500);
+  });
+
+  it("combinada com hora extra na MESMA ocorrência: o piso define QUANDO pode começar, hora extra define se cabe naquele dia", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 12, capacidadeDiaria: 8 }); // precisa de hora extra pra caber em 1 dia
+    const grade = gradeSimples("2026-01-12", 0, 5); // única candidata = 12/01, igual ao piso negociado
+
+    const capacidadeExtra: CapacidadeExtraDia[] = [
+      { recursoId: "recurso-A", data: "2026-01-12", horasAdicionaisDisponiveis: 4, natureza: "hora_extra", elegibilidade: { escopo: "somente_orcamento_novo" }, contratacaoId: "hextra-material" },
+    ];
+    const contratacoes: Contratacao[] = [
+      contratacaoAntecipacaoValida("mat-1"),
+      { id: "hextra-material", tipo: "hora_extra", abrangencia: "por_hora_utilizada", valor: 30, moeda: "BRL", fornecedorOuContratado: "Equipe", referenciaProposta: null, justificativa: "combo", datas: ["2026-01-12"] },
+    ];
+
+    const resultado = avaliarCenario(
+      base,
+      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-20")] },
+      grade,
+    );
+
+    expect(resultado.estado).toBe("viavel_no_limite");
+    if (resultado.estado === "viavel_no_limite" || resultado.estado === "viavel") {
+      expect(resultado.dataEstimadaInicioNecessario).toBe("2026-01-12");
+      expect(resultado.dataFimReal).toBe("2026-01-12");
+    }
+    // 12h = 8h normais + 4h extra, tudo no mesmo dia (12/01, o piso negociado).
+    expect(resultado.custoPorContratacaoId.get("hextra-material")).toBeCloseTo(30 * 4);
+    expect(resultado.custoPorContratacaoId.get("mat-1")).toBe(500);
+    expect(resultado.custoAdicionalTotal).toBeCloseTo(500 + 30 * 4);
+  });
+
+  it("custo nunca duplicado: 1 entrada por contratação em custoPorContratacaoId, soma bate exatamente com custoAdicionalTotal", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-12", 0, 5);
+    const resultado = avaliarCenario(
+      base,
+      {
+        capacidadeExtra: [],
+        contratacoes: [contratacaoAntecipacaoValida("mat-1", 750)],
+        terceirizacoes: [],
+        recursosTemporarios: [],
+        antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-20")],
+      },
+      grade,
+    );
+    expect(resultado.custoPorContratacaoId.size).toBe(1);
+    expect(resultado.custoPorContratacaoId.get("mat-1")).toBe(750);
+    expect(resultado.custoAdicionalTotal).toBe(750);
+  });
+
+  it("rejeita antecipação que na verdade atrasa (dataDisponibilidadeAntecipada posterior à original)", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 3);
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        {
+          capacidadeExtra: [],
+          contratacoes: [contratacaoAntecipacaoValida("mat-1")],
+          terceirizacoes: [],
+          recursosTemporarios: [],
+          antecipacoesMaterial: [antecipacao("2026-01-20", "2026-01-10")],
+        },
+        grade,
+      ),
+    ).toThrow(/não é uma antecipação/);
+  });
+
+  it("rejeita antecipação com dataDisponibilidadeAntecipada IGUAL à original (não é ganho real, não é antecipação)", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 3);
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        {
+          capacidadeExtra: [],
+          contratacoes: [contratacaoAntecipacaoValida("mat-1")],
+          terceirizacoes: [],
+          recursosTemporarios: [],
+          antecipacoesMaterial: [antecipacao("2026-01-15", "2026-01-15")],
+        },
+        grade,
+      ),
+    ).toThrow(/não é uma antecipação/);
+  });
+
+  it("rejeita abrangência incompatível (mesma classe de bug da terceirização - nunca custo 0 silencioso)", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 3);
+    const contratacoes: Contratacao[] = [{ ...contratacaoAntecipacaoValida("mat-1"), abrangencia: "por_hora_utilizada" }];
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        { capacidadeExtra: [], contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15")] },
+        grade,
+      ),
+    ).toThrow(/só aceita "por_periodo_completo" ou "valor_fixo_unico"/);
+  });
+
+  it("antecipação órfã (chave inexistente) e duplicada (2 decisões pra mesma ocorrência) são erro explícito", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 3);
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        {
+          capacidadeExtra: [],
+          contratacoes: [contratacaoAntecipacaoValida("mat-orfa")],
+          terceirizacoes: [],
+          recursosTemporarios: [],
+          antecipacoesMaterial: [{ chave: chave("op-inexistente"), dataDisponibilidadeAntecipada: "2026-01-12", dataDisponibilidadeOriginal: "2026-01-15", contratacaoId: "mat-orfa" }],
+        },
+        grade,
+      ),
+    ).toThrow(/Antecipação de material órfã/);
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        {
+          capacidadeExtra: [],
+          contratacoes: [contratacaoAntecipacaoValida("mat-1"), contratacaoAntecipacaoValida("mat-2")],
+          terceirizacoes: [],
+          recursosTemporarios: [],
+          antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15", "mat-1"), antecipacao("2026-01-13", "2026-01-16", "mat-2")],
+        },
+        grade,
+      ),
+    ).toThrow(/Antecipação de material duplicada/);
+  });
+
+  it("custoAdicionalTotal é exatamente a soma das 4 categorias (hora extra + terceirização + recurso temporário + antecipação de material), cada uma em operação distinta", () => {
+    const ocTerc = ocorrencia("op-terceirizada-4way", 999, "recurso-C");
+    const ocHextra = ocorrencia("op-hora-extra-4way", 26, "recurso-A");
+    const ocTemp = ocorrencia("op-temporario-4way", 5, "recurso-B");
+    const ocMaterial = ocorrencia("op-material-4way", 4, "recurso-D");
+
+    const base: BaseCenarios = {
+      empresaId: "empresa-1",
+      projetoId: "projeto-1",
+      ocorrencias: [ocTerc, ocHextra, ocTemp, ocMaterial],
+      dependencias: [],
+      chavesRaizOrcamentoNovo: [ocTerc.ocorrencia.chave, ocHextra.ocorrencia.chave, ocTemp.ocorrencia.chave, ocMaterial.ocorrencia.chave],
+      chavesFinaisOrcamentoNovo: [ocTerc.ocorrencia.chave, ocHextra.ocorrencia.chave, ocTemp.ocorrencia.chave, ocMaterial.ocorrencia.chave],
+      recursoIds: ["recurso-A", "recurso-B", "recurso-C", "recurso-D"],
+      compatibilidades: {},
+      capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 0, "recurso-C": 0, "recurso-D": 8 },
+      produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1, "recurso-D": 1 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0, "recurso-D": 0 },
+    };
+    const grade = gradeSimples("2026-01-20", 15, 5);
+
+    const recursoTemporario: RecursoTemporarioCenario = {
+      idTemporario: "temp-4way",
+      tipo: "freelancer",
+      recursoReferenciaId: "recurso-referencia",
+      disponibilidade: [{ data: "2026-01-18", horasDisponiveis: 5 }],
+      contratacaoId: "temp-4way-contratacao",
+      justificativa: "4way",
+      aplicavelAsOperacoes: [chave("op-temporario-4way")],
+    };
+    const capacidadeExtra: CapacidadeExtraDia[] = [
+      { recursoId: "recurso-A", data: "2026-01-20", horasAdicionaisDisponiveis: 4, natureza: "hora_extra", elegibilidade: { escopo: "somente_orcamento_novo" }, contratacaoId: "hextra-4way-contratacao" },
+    ];
+    const contratacoes: Contratacao[] = [
+      contratacaoTerceirizacaoValida("terc-4way-contratacao", 3000),
+      { id: "hextra-4way-contratacao", tipo: "hora_extra", abrangencia: "por_hora_utilizada", valor: 60, moeda: "BRL", fornecedorOuContratado: "Equipe interna", referenciaProposta: null, justificativa: "4way", datas: ["2026-01-20"] },
+      { id: "temp-4way-contratacao", tipo: "freelancer", abrangencia: "por_hora_utilizada", valor: 40, moeda: "BRL", fornecedorOuContratado: "Freelancer", referenciaProposta: null, justificativa: "4way", datas: ["2026-01-18"] },
+      contratacaoAntecipacaoValida("mat-4way-contratacao", 900),
+    ];
+
+    const resultado = avaliarCenario(
+      base,
+      {
+        capacidadeExtra,
+        contratacoes,
+        terceirizacoes: [{ chave: chave("op-terceirizada-4way"), fornecedor: "Fornecedor Externo", prazoDiasCorridos: 3, contratacaoId: "terc-4way-contratacao" }],
+        recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }],
+        antecipacoesMaterial: [{ chave: chave("op-material-4way"), dataDisponibilidadeAntecipada: "2026-01-18", dataDisponibilidadeOriginal: "2026-01-25", contratacaoId: "mat-4way-contratacao" }],
+      },
+      grade,
+    );
+
+    expect(resultado.estado === "viavel" || resultado.estado === "viavel_no_limite").toBe(true);
+    expect(resultado.custoPorContratacaoId.get("terc-4way-contratacao")).toBe(3000);
+    expect(resultado.custoPorContratacaoId.get("hextra-4way-contratacao")).toBeCloseTo(60 * 2);
+    expect(resultado.custoPorContratacaoId.get("temp-4way-contratacao")).toBeCloseTo(40 * 5);
+    expect(resultado.custoPorContratacaoId.get("mat-4way-contratacao")).toBe(900);
+
+    // Cada uma das 4 contratações aparece exatamente 1 vez no mapa de custo, e a soma bate com o total.
+    expect(resultado.custoPorContratacaoId.size).toBe(4);
+    const somaIndividual = Array.from(resultado.custoPorContratacaoId.values()).reduce((a, b) => a + b, 0);
+    expect(resultado.custoAdicionalTotal).toBeCloseTo(somaIndividual);
+  });
+
+  it("cruzar categoria com hora extra (mesmo contratacaoId em antecipacoesMaterial e capacidadeExtra) é rejeitado", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 3);
+    const capacidadeExtra: CapacidadeExtraDia[] = [
+      { recursoId: "recurso-A", data: "2026-01-10", horasAdicionaisDisponiveis: 4, natureza: "hora_extra", elegibilidade: { escopo: "somente_orcamento_novo" }, contratacaoId: "contratacao-cruzada-material" },
+    ];
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        {
+          capacidadeExtra,
+          contratacoes: [contratacaoAntecipacaoValida("contratacao-cruzada-material")],
+          terceirizacoes: [],
+          recursosTemporarios: [],
+          antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15", "contratacao-cruzada-material")],
+        },
+        grade,
+      ),
+    ).toThrow(/referenciada em mais de 1 categoria/);
+  });
+});
+
+describe("avaliarCenario - resultadosPorOcorrencia (lista plana congelada)", () => {
+  it("populada nos estados viável, com chave/status/datas/déficit/alocações corretos", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 5, 5);
+
+    const resultado = avaliarCenario(base, semDecisoes, grade);
+
+    expect(resultado.resultadosPorOcorrencia).toHaveLength(1);
+    const [r] = resultado.resultadosPorOcorrencia;
+    expect(r.chave.bomOperacaoId).toBe("op-1");
+    expect(r.status).toBe("concluida");
+    expect(r.dataInicioReal).toBe("2026-01-10");
+    expect(r.dataFimReal).toBe("2026-01-10");
+    expect(r.deficitResidualHorasPadrao).toBe(0);
+    expect(r.terceirizada).toBe(false);
+    expect(r.prazoDiasCorridosTerceirizacao).toBeNull();
+    expect(r.alocacoes).toHaveLength(1);
+    expect(r.alocacoes[0]).toMatchObject({ natureza: "normal", horasMaquina: 4, recursoId: "recurso-A", contratacaoId: null });
+    // recursosConsiderados = candidatoIdsPorPrioridade desta ocorrência - aqui só o recurso original (sem compatíveis/temporários no fixture).
+    expect(r.recursosConsiderados).toEqual(["recurso-A"]);
+  });
+
+  it("terceirizada=true e prazoDiasCorridosTerceirizacao preenchido só para a ocorrência realmente terceirizada", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 999, capacidadeDiaria: 0 });
+    const grade = gradeSimples("2026-01-20", 15, 5);
+
+    const resultado = avaliarCenario(
+      base,
+      {
+        capacidadeExtra: [],
+        contratacoes: [contratacaoTerceirizacaoValida("terc-flag", 1000)],
+        terceirizacoes: [{ chave: chave("op-1"), fornecedor: "X", prazoDiasCorridos: 4, contratacaoId: "terc-flag" }],
+        recursosTemporarios: [], antecipacoesMaterial: [],
+      },
+      grade,
+    );
+
+    expect(resultado.resultadosPorOcorrencia).toHaveLength(1);
+    const [r] = resultado.resultadosPorOcorrencia;
+    expect(r.terceirizada).toBe(true);
+    expect(r.prazoDiasCorridosTerceirizacao).toBe(4);
+  });
+
+  it("resultadosSaoDiagnostico=false e chave congelada em profundidade (mutar chave.bomOperacaoId lança TypeError)", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 5, 5);
+
+    const resultado = avaliarCenario(base, semDecisoes, grade);
+
+    expect(resultado.resultadosSaoDiagnostico).toBe(false);
+    const [r] = resultado.resultadosPorOcorrencia;
+    expect(Object.isFrozen(r.chave)).toBe(true);
+    expect(Object.isFrozen(r.chave.caminhoBomItemIds)).toBe(true);
+    // ChaveOcorrencia (chaveOcorrencia.ts) agora é readonly no tipo - as 2
+    // linhas abaixo já são erro de COMPILAÇÃO (daí o @ts-expect-error).
+    // Mas tipo readonly sozinho não impede nada em EXECUÇÃO (um cast, ou
+    // JS puro sem TS, ainda mutaria o objeto) - Object.freeze
+    // (copiarECongelarChave) é quem garante a proteção real, e é essa
+    // garantia de runtime que este teste prova, nas duas camadas juntas.
+    expect(() => {
+      // @ts-expect-error - mutação proposital para provar a proteção em runtime; o tipo já bloqueia isso em compilação.
+      r.chave.bomOperacaoId = "outra-operacao";
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error - idem: readonly string[] não tem .push no tipo, mas o array real (congelado) segue existindo em runtime.
+      r.chave.caminhoBomItemIds.push("item-injetado");
+    }).toThrow(TypeError);
+    expect(r.chave.bomOperacaoId).toBe("op-1");
+  });
+
+  it("lista, cada item e cada alocação são genuinamente congelados em tempo de execução (Object.freeze), não só readonly de tipo", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 5, 5);
+
+    const resultado = avaliarCenario(base, semDecisoes, grade);
+
+    expect(Object.isFrozen(resultado.resultadosPorOcorrencia)).toBe(true);
+    expect(Object.isFrozen(resultado.resultadosPorOcorrencia[0])).toBe(true);
+    expect(Object.isFrozen(resultado.resultadosPorOcorrencia[0].alocacoes)).toBe(true);
+    expect(Object.isFrozen(resultado.resultadosPorOcorrencia[0].alocacoes[0])).toBe(true);
+
+    // Módulos ES sempre rodam em modo estrito - atribuir a uma
+    // propriedade congelada lança TypeError (não falha silenciosamente),
+    // prova mais forte ainda de que a mutação é impedida de verdade.
+    const alocacao = resultado.resultadosPorOcorrencia[0].alocacoes[0];
+    expect(() => {
+      // @ts-expect-error - mutação proposital para provar que é impedida, não é o contrato normal de uso.
+      alocacao.horasMaquina = 999;
+    }).toThrow(TypeError);
+    expect(alocacao.horasMaquina).toBe(4);
+  });
+
+  it("ordenada explicitamente pela chave completa (string), não pela ordem de inserção do Map do escalonador", () => {
+    // op-a depende de op-z (predecessora) - op-z é concluída e inserida
+    // no Map do escalonador PRIMEIRO (é raiz, começa antes), op-a só
+    // depois (fica pronta quando op-z termina). Ordem de inserção real:
+    // [op-z, op-a]. Ordem alfabética por chaveOcorrenciaParaString (que
+    // termina em bomOperacaoId, único campo que varia aqui): [op-a, op-z].
+    // As duas divergem de propósito - prova que o resultado não depende
+    // da ordem interna do Map.
+    const ocZ = ocorrencia("op-z", 4, "recurso-A");
+    const ocA = ocorrencia("op-a", 4, "recurso-A");
+    const base: BaseCenarios = {
+      empresaId: "empresa-1",
+      projetoId: "projeto-1",
+      ocorrencias: [ocZ, ocA],
+      dependencias: [{ predecessora: ocZ.ocorrencia.chave, sucessora: ocA.ocorrencia.chave, tipo: "sequencia_roteiro" }],
+      chavesRaizOrcamentoNovo: [ocZ.ocorrencia.chave],
+      chavesFinaisOrcamentoNovo: [ocA.ocorrencia.chave],
+      recursoIds: ["recurso-A"],
+      compatibilidades: {},
+      capacidadeDiariaPorRecurso: { "recurso-A": 8 },
+      produtividadePorRecurso: { "recurso-A": 1 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+    };
+    const grade = gradeSimples("2026-01-10", 5, 5);
+
+    const resultado = avaliarCenario(base, semDecisoes, grade);
+
+    expect(resultado.resultadosPorOcorrencia).toHaveLength(2);
+    expect(resultado.resultadosPorOcorrencia.map((r) => r.chave.bomOperacaoId)).toEqual(["op-a", "op-z"]);
+  });
+});
+
+describe("avaliarCenario - diagnóstico em cenários inviáveis (resultadosPorOcorrencia preserva a melhor tentativa relevante)", () => {
+  it("horizonte_tecnico_excedido: preserva a operação bloqueada e o déficit residual real (nunca 0 nesse estado)", () => {
+    // 20h necessárias, grade só cobre 2 dias × 8h = 16h no máximo -
+    // déficit real de 4h, em toda e qualquer candidata (não há "melhor",
+    // DEC-007 §8.1) - datasCandidatas[0] (única candidata aqui) é usada
+    // como exemplo representativo.
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 20, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 1);
+
+    const resultado = avaliarCenario(base, semDecisoes, grade);
+
+    expect(resultado.estado).toBe("horizonte_tecnico_excedido");
+    expect(resultado.resultadosSaoDiagnostico).toBe(true);
+    expect(resultado.resultadosPorOcorrencia).toHaveLength(1);
+    const [r] = resultado.resultadosPorOcorrencia;
+    expect(r.chave.bomOperacaoId).toBe("op-1");
+    expect(r.status).toBe("bloqueada_por_deficit");
+    expect(r.deficitResidualHorasPadrao).toBe(4); // 20 necessárias - 16 disponíveis na grade (2 dias × 8h)
+    // recursos considerados (candidatoIdsPorPrioridade) vs. usados (recursoId das alocações reais) -
+    // aqui os dois coincidem (só recurso-A, esgotado, sem compatível/temporário no fixture).
+    expect(r.recursosConsiderados).toEqual(["recurso-A"]);
+    expect(new Set(r.alocacoes.map((a) => a.recursoId))).toEqual(new Set(["recurso-A"]));
+  });
+
+  it("prazo_inviavel: a candidata replay conclui TODAS as operações (déficit 0) - o problema é atraso, não capacidade (diasCivisDeAtraso no nível superior)", () => {
+    // 20h necessárias a 8h/dia = 3 dias corridos (8+8+4), só conclui em
+    // 2026-01-12 - 2 dias depois do prazoInterno (2026-01-10). Única
+    // candidata testada (diasAntes=0): sempre "a melhor", sem ambiguidade.
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 20, capacidadeDiaria: 8 });
+    const grade = gradeSimples("2026-01-10", 0, 5);
+
+    const resultado = avaliarCenario(base, semDecisoes, grade);
+
+    expect(resultado.estado).toBe("prazo_inviavel");
+    if (resultado.estado === "prazo_inviavel") {
+      expect(resultado.dataFimReal).toBe("2026-01-12");
+      expect(resultado.diasCivisDeAtraso).toBe(2);
+    }
+    expect(resultado.resultadosSaoDiagnostico).toBe(true);
+    expect(resultado.resultadosPorOcorrencia).toHaveLength(1);
+    const [r] = resultado.resultadosPorOcorrencia;
+    expect(r.status).toBe("concluida");
+    expect(r.dataFimReal).toBe("2026-01-12");
+    // Por definição de melhorConclusaoTardia (calculadorReversoConjunto.ts):
+    // só entra nesse ramo quando TODAS as finais concluem - déficit 0
+    // aqui é esperado e correto, não um bug - NUNCA interpretar
+    // deficitResidualTotalHorasPadrao=0 como "sem problema" neste estado,
+    // o problema real é o atraso já reportado em diasCivisDeAtraso.
+    expect(r.deficitResidualHorasPadrao).toBe(0);
+  });
+
+  it("resultado diagnóstico nunca é confundido com programação aceita: resultadosSaoDiagnostico é false apenas em viável/viável_no_limite", () => {
+    const baseViavel = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const resultadoViavel = avaliarCenario(baseViavel, semDecisoes, gradeSimples("2026-01-10", 5, 5));
+    expect(resultadoViavel.resultadosSaoDiagnostico).toBe(false);
+
+    const baseInviavel = baseComUmaOcorrencia({ necessarioHorasPadrao: 20, capacidadeDiaria: 8 });
+    const resultadoHorizonte = avaliarCenario(baseInviavel, semDecisoes, gradeSimples("2026-01-10", 0, 1));
+    expect(resultadoHorizonte.resultadosSaoDiagnostico).toBe(true);
+
+    const resultadoPrazo = avaliarCenario(baseInviavel, semDecisoes, gradeSimples("2026-01-10", 0, 5));
+    expect(resultadoPrazo.resultadosSaoDiagnostico).toBe(true);
   });
 });
 
