@@ -617,32 +617,98 @@ endurecida; (2) inventaria uma `DecisaoAntecipacaoMaterial` que não existe de v
 contabilizaria custo de negociação (`Contratacao.valor`) no cenário-base, que nunca negociou nada; (4)
 confundiria a separação entre dado original (metadado) e decisão real (ajuste).
 
-**Contrato corrigido**: o cenário-base de QUALQUER comparação envolvendo antecipação de material é sempre
-o cenário SEM nenhuma `DecisaoAntecipacaoMaterial` - exatamente a mesma semântica de "cenário-base" já
-usada para hora extra/terceirização/recurso temporário em todo o resto do módulo (`semDecisoes`, ou
-`decisoes` com `antecipacoesMaterial: []` para aquela chave). `dataDisponibilidadeOriginal` continua
-existindo só como metadado de exibição - nunca alimenta nenhuma avaliação, nem uma "de comparação".
-Consequência **importante e deliberadamente aceita**: como o cenário-base não tem NENHUM piso de material
-(o núcleo, hoje, não modela material quando a decisão está ausente - é como se fosse sempre disponível),
-`diasGanhosVsBase` de um cenário com antecipação de material pode legitimamente ser **negativo ou zero**
-mesmo após uma negociação bem-sucedida - o ganho real da negociação só é visível comparando contra a
-alternativa de "não negociar" (piso = disponibilidade original), nunca contra o cenário-base irrestrito.
-Isso é intencional e documentado nos testes, não um resultado indesejado a esconder.
+**Contrato corrigido (nesta rodada)**: o cenário-base de QUALQUER comparação envolvendo antecipação de
+material é sempre o cenário SEM nenhuma `DecisaoAntecipacaoMaterial` - exatamente a mesma semântica de
+"cenário-base" já usada para hora extra/terceirização/recurso temporário em todo o resto do módulo
+(`semDecisoes`, ou `decisoes` com `antecipacoesMaterial: []` para aquela chave). Validação também
+endurecida nesta rodada: `dataDisponibilidadeAntecipada >= dataDisponibilidadeOriginal` (antes só `>`) é
+rejeitada - igual à original não representa nenhum ganho negociado, então não é uma "antecipação" de
+verdade.
 
-Validação também endurecida: `dataDisponibilidadeAntecipada >= dataDisponibilidadeOriginal` (antes só
-`>`) é rejeitada - igual à original não representa nenhum ganho negociado, então não é uma "antecipação"
-de verdade.
+**Problema real encontrado logo em seguida, numa 5ª rodada de auditoria - ver §6.2.7**: tratar
+`dataDisponibilidadeOriginal` como metadado solto (sem nenhum efeito no cálculo) deixava o cenário-base
+SEM NENHUM piso de material - ele podia começar antes até da disponibilidade original, o que produzia
+`diasGanhosVsBase` **negativo** mesmo após uma negociação bem-sucedida. A primeira versão desta seção
+tratava isso como consequência aceitável e "honesta" - **errado**, corrigido em §6.2.7: o cenário-base
+tem que respeitar a disponibilidade original como restrição operacional de verdade, não só de metadado.
 
-Testes: +2 em `calculadorReversoConjunto.test.ts` (candidata anterior ao piso usa o piso; candidata
-posterior ao piso não é afetada - compatibilidade retroativa) + 11 em `avaliarCenario.test.ts` (piso
-altera o cálculo oficial, não só o diagnóstico; cenário-base SEM decisão vs. cenário ajustado - piso nunca
-retrocede; combinação com hora extra na mesma ocorrência; custo nunca duplicado; rejeita antecipação que
-atrasa; rejeita antecipação com data igual à original; órfã/duplicada; cruzamento de categoria;
-`custoAdicionalTotal` = soma exata das 4 categorias, hora extra + terceirização + recurso temporário +
-antecipação de material juntas) + 2 em `prepararResumoCenarioParaExibicao.test.ts` (cenário-base sem
-decisão tem custo de antecipação zero e `diasGanhosVsBase` negativo/honesto no ajustado;
-`bloqueada_por_predecessora` nos diagnósticos, além de `bloqueada_por_deficit`/`sem_candidato` já
-cobertos). Suíte completa: 71 arquivos / 739 testes.
+### 6.2.7 Correção: o cenário-base precisa de um piso de material de verdade, não metadado solto
+
+Quinta rodada de auditoria do usuário: a §6.2.6 corrigiu QUEM é o cenário-base (sempre sem a decisão), mas
+não resolveu O QUE o cenário-base faz sem nenhuma restrição de material - ele ficava totalmente livre,
+podendo começar cedo demais, o que é tão irrealista quanto o problema original. O sintoma
+(`diasGanhosVsBase` negativo após negociação bem-sucedida) era consequência direta disso, não um
+resultado honesto a aceitar.
+
+**Contrato corrigido**: `BaseCenarios` (`carregarBaseCenarios.ts`) ganhou
+`restricaoMaterialPorChave: Readonly<Record<string, string>>` - piso de disponibilidade de material por
+ocorrência que vale para TODO cenário avaliado sobre esta base, **inclusive o cenário-base** (sem nenhuma
+decisão). `DecisaoAntecipacaoMaterial` perdeu o campo `dataDisponibilidadeOriginal` (não é mais dado da
+decisão) e passou a ter só `chave`/`dataDisponibilidadeAntecipada`/`contratacaoId`:
+
+- Sem decisão: `dataInicioJanela` respeita `base.restricaoMaterialPorChave[chave]` (quando presente) -
+  isso vale IGUALMENTE para o cenário-base.
+- Com `DecisaoAntecipacaoMaterial`: `dataDisponibilidadeAntecipada` SUBSTITUI (nunca combina via `max()`
+  com) o piso original - é o próprio propósito da decisão. O resultado ainda passa por
+  `max(piso ativo, candidata testada)` como qualquer piso, exatamente como antes.
+- `validarDecisoesAntecipacaoMaterial` (agora recebe `base`) exige que exista um piso original registrado
+  para a chave - sem ele, "não há o que antecipar", erro explícito (nunca aceito silenciosamente) - e que
+  `dataDisponibilidadeAntecipada` seja estritamente anterior a esse piso original.
+- `carregarBaseCenarios()` (I/O real) não lê nenhuma fonte de material hoje - devolve
+  `restricaoMaterialPorChave: {}` sempre; popular isso é responsabilidade do CHAMADOR (builder manual da
+  Fase 8b), mesmo padrão já usado para as outras 3 alternativas.
+
+**Consequência agora corrigida**: como o piso original vale também no cenário-base, negociar só pode
+IGUALAR ou MELHORAR o resultado em relação a ele (nunca piorar por causa da modelagem do piso) -
+`diasGanhosVsBase` é sempre ≥ 0 quando a antecipação de material é a única mudança entre os dois
+cenários. Quando a antecipação não muda o cálculo de fato (outra restrição, ex.: a própria candidata
+testada, já é mais tardia que os 2 pisos), `diasGanhosVsBase` fica exatamente 0 - nunca negativo - e o
+custo da contratação continua aparecendo em `custoPorContratacaoId`/`custoPorAlternativa.antecipacaoMaterial`,
+para o usuário perceber que pagou por uma negociação que não trouxe benefício de prazo.
+
+Testes: +2 em `calculadorReversoConjunto.test.ts` (piso por ocorrência) + 13 em `avaliarCenario.test.ts`
+(base nunca inicia antes da disponibilidade original, mesmo sem decisão; cenário antecipado nunca inicia
+antes da nova disponibilidade; cenário antecipado não termina depois do base quando é a única mudança -
+`diasGanhosVsBase` positivo; antecipação sem efeito por outra restrição - zero dias ganhos, custo
+continua registrado; combinação com hora extra; custo nunca duplicado; rejeita atraso; rejeita data igual
+à original; rejeita ausência de piso original para antecipar; abrangência incompatível; órfã/duplicada;
+soma das 4 categorias; cruzamento de categoria) + 3 em `prepararResumoCenarioParaExibicao.test.ts`
+(cenário-base respeita a disponibilidade original - `diasGanhosVsBase` positivo quando antecipação é a
+única mudança; sem efeito no cálculo - zero dias ganhos, custo registrado; `bloqueada_por_predecessora`
+nos diagnósticos, além de `bloqueada_por_deficit`/`sem_candidato` já cobertos). Suíte completa: 71
+arquivos / 743 testes.
+
+### 6.2.8 Correção: a ligação com dado real - `restricaoMaterialPorChave` não pode depender de convenção manual
+
+Sexta rodada de auditoria: a §6.2.7 corrigiu a MATEMÁTICA (o cenário-base passou a respeitar um piso de
+material de verdade), mas `carregarBaseCenarios()` (a função de I/O REAL, não os testes) continuava
+devolvendo `restricaoMaterialPorChave: {}` incondicionalmente - a proteção só existia nos testes, que
+montavam a restrição manualmente. Na Fase 8b real, se quem chamasse `carregarBaseCenarios()` esquecesse
+de anexar as restrições depois, o cenário-base voltaria a ficar sem piso nenhum - o mesmo bug da §6.2.6,
+só que reintroduzido silenciosamente por uma convenção informal (em vez de uma garantia do próprio tipo).
+
+**Contrato corrigido**: `carregarBaseCenarios()` ganhou um 4º parâmetro OBRIGATÓRIO,
+`disponibilidadeOriginalMaterial: string` - a data já calculada pela janela comercial ANTES desta
+chamada (fora deste módulo; `carregarBaseCenarios.ts` continua sem nenhuma fonte própria de material).
+Validada como data ISO genuína (`validarDataIso`) logo na primeira linha da função, antes de qualquer
+consulta - string vazia/inválida lança `RangeError` explícito, nunca silenciosamente vira `{}`. A função
+aplica essa MESMA data a TODA ocorrência-RAIZ do projeto (produção só começa de verdade quando o material
+chega - não faz sentido restringir ocorrências não-raiz diretamente, elas já herdam atraso por precedência
+via o escalonador) e devolve `restricaoMaterialPorChave` copiado para um objeto novo e `Object.freeze`ado
+- a base "nasce completa e segura", sem nenhuma montagem manual posterior por quem chama.
+
+Como o parâmetro é obrigatório no TIPO (TypeScript recusa a chamada em compilação sem os 4 argumentos) E
+validado em EXECUÇÃO (RangeError se a string for vazia/inválida), esquecer de aplicar o piso deixou de
+ser possível por dois caminhos independentes - não depende mais de ninguém lembrar de uma convenção.
+
+Testes: +5 em `carregarBaseCenarios.test.ts` (carregamento realista produz restrições para todas as
+raízes do projeto; múltiplos itens/subconjuntos recebem as restrições corretas sem duplicidade, e
+ocorrências não-raiz nunca ganham entrada direta; alteração externa não modifica a base congelada -
+`Object.isFrozen` + mutação lançando `TypeError`; chamador não consegue esquecer o piso - `@ts-expect-error`
+em compilação E `RangeError` em execução; base sem disponibilidade original, vazia ou inválida, é
+rejeitada) + 1 em `avaliarCenario.test.ts` (múltiplas raízes independentes: negociar uma não remove o
+piso original das demais; ocorrência não-raiz herda atraso só por precedência, nunca por piso de
+material direto). Suíte completa: 71 arquivos / 749 testes.
 
 ## 7. Escalonador conjunto — fila de prontos
 
