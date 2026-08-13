@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { avaliarCenario, type DecisoesCenario, type GradeCompartilhada } from "./avaliarCenario";
 import type { BaseCenarios, OcorrenciaComTamanho } from "./carregarBaseCenarios";
-import type { ChaveOcorrencia } from "./chaveOcorrencia";
+import { chaveOcorrenciaParaString, type ChaveOcorrencia } from "./chaveOcorrencia";
 import type { Contratacao } from "./contratacao";
 import type { CapacidadeExtraDia } from "./capacidadeDia";
 import type { RecursoTemporarioCenario } from "./recursoTemporario";
@@ -51,7 +51,7 @@ function baseComUmaOcorrencia(params: {
     compatibilidades: {},
     capacidadeDiariaPorRecurso: { "recurso-A": params.capacidadeDiaria },
     produtividadePorRecurso: { "recurso-A": params.produtividade ?? 1 },
-    comprometidoInicialPorRecurso: { "recurso-A": params.comprometidoInicial ?? 0 },
+    comprometidoInicialPorRecurso: { "recurso-A": params.comprometidoInicial ?? 0 }, restricaoMaterialPorChave: {},
   };
 }
 
@@ -396,7 +396,7 @@ describe("avaliarCenario - terceirização opera fora da capacidade interna", ()
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 0, "recurso-B": 8 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
 
@@ -713,7 +713,7 @@ describe("avaliarCenario - combinações das 3 alternativas", () => {
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 0, "recurso-C": 0 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
 
@@ -933,9 +933,30 @@ describe("avaliarCenario - unicidade de contratação por categoria (nunca conta
   });
 });
 
-describe("avaliarCenario - antecipação de material (4ª alternativa, altera a janela produtiva - DEC-007 §6.2.4)", () => {
-  function antecipacao(dataDisponibilidadeAntecipada: string, dataDisponibilidadeOriginal: string, contratacaoId = "mat-1") {
-    return { chave: chave("op-1"), dataDisponibilidadeAntecipada, dataDisponibilidadeOriginal, contratacaoId };
+describe("avaliarCenario - antecipação de material (4ª alternativa, altera a janela produtiva - DEC-007 §6.2.7)", () => {
+  // Correção de auditoria (DEC-007 §6.2.7): a disponibilidade ORIGINAL do
+  // material não é mais um campo da decisão - vem de
+  // base.restricaoMaterialPorChave, uma restrição que vale para TODO
+  // cenário avaliado sobre esta base, inclusive o cenário SEM decisão.
+  // Sem isso, o cenário-base ficava sem nenhum piso de material e podia
+  // começar cedo demais, produzindo diasGanhosVsBase negativo mesmo após
+  // negociação bem-sucedida - errado, corrigido.
+  const CHAVE_OP1 = chave("op-1");
+  const CHAVE_STR_OP1 = chaveOcorrenciaParaString(CHAVE_OP1);
+
+  function baseComRestricaoMaterial(params: {
+    necessarioHorasPadrao: number;
+    capacidadeDiaria: number;
+    disponibilidadeOriginal: string;
+  }): BaseCenarios {
+    return {
+      ...baseComUmaOcorrencia({ necessarioHorasPadrao: params.necessarioHorasPadrao, capacidadeDiaria: params.capacidadeDiaria }),
+      restricaoMaterialPorChave: { [CHAVE_STR_OP1]: params.disponibilidadeOriginal },
+    };
+  }
+
+  function antecipacao(dataDisponibilidadeAntecipada: string, contratacaoId = "mat-1") {
+    return { chave: CHAVE_OP1, dataDisponibilidadeAntecipada, contratacaoId };
   }
 
   function contratacaoAntecipacaoValida(id: string, valor = 500): Contratacao {
@@ -952,9 +973,23 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
     };
   }
 
-  it("piso de material altera o CÁLCULO OFICIAL (estado/dataFimReal), não só o diagnóstico/exibição", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
-    const grade = gradeSimples("2026-01-10", 0, 15); // única candidata testada = 10/01, bem anterior ao piso
+  it("base NUNCA inicia antes da disponibilidade original - o piso vale mesmo sem nenhuma decisão de antecipação", () => {
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-15" });
+    const grade = gradeSimples("2026-01-10", 0, 15); // única candidata testada = 10/01, bem anterior ao piso original
+
+    const resultado = avaliarCenario(base, semDecisoes, grade);
+
+    expect(resultado.estado).toBe("prazo_inviavel");
+    if (resultado.estado === "prazo_inviavel") {
+      expect(resultado.dataFimReal).toBe("2026-01-15"); // nunca antes da disponibilidade original, mesmo sem decisão
+      expect(resultado.diasCivisDeAtraso).toBe(5);
+    }
+    expect(resultado.resultadosPorOcorrencia[0]?.dataInicioReal ?? null).toBe("2026-01-15");
+  });
+
+  it("cenário antecipado NUNCA inicia antes da nova disponibilidade - o piso altera o CÁLCULO OFICIAL (estado/dataFimReal), não só o diagnóstico", () => {
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-15" });
+    const grade = gradeSimples("2026-01-10", 0, 15);
 
     const resultado = avaliarCenario(
       base,
@@ -963,64 +998,73 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
         contratacoes: [contratacaoAntecipacaoValida("mat-1")],
         terceirizacoes: [],
         recursosTemporarios: [],
-        antecipacoesMaterial: [antecipacao("2026-01-14", "2026-01-15")],
+        antecipacoesMaterial: [antecipacao("2026-01-14")],
       },
       grade,
     );
 
     expect(resultado.estado).toBe("prazo_inviavel");
     if (resultado.estado === "prazo_inviavel") {
-      expect(resultado.dataFimReal).toBe("2026-01-14"); // nunca antes do piso, mesmo a candidata sendo 10/01
+      expect(resultado.dataFimReal).toBe("2026-01-14"); // nunca antes da nova disponibilidade, mesmo a candidata sendo 10/01
       expect(resultado.diasCivisDeAtraso).toBe(4);
     }
   });
 
-  it("cenário-base (SEM decisão de antecipação) vs cenário ajustado (COM DecisaoAntecipacaoMaterial): o ganho é sempre relativo ao cenário-base real, nunca a uma avaliação artificial 'sem negociar'", () => {
-    // Correção de auditoria: a versão anterior deste teste construía um
-    // "cenário-base" chamando avaliarCenario com
-    // dataDisponibilidadeAntecipada == dataDisponibilidadeOriginal -
-    // ERRADO (violaria a própria validação de "estritamente anterior",
-    // inventaria uma decisão que não existe, e contabilizaria custo de
-    // negociação no cenário-base). O cenário-base correto é sempre o
-    // cenário SEM nenhuma DecisaoAntecipacaoMaterial - exatamente a
-    // mesma semântica de "cenário-base" já usada para hora extra/
-    // terceirização/recurso temporário em todo o resto deste arquivo.
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+  it("cenário antecipado não termina depois do base quando essa é a única mudança - diasGanhosVsBase positivo, nunca negativo", () => {
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-15" });
     const grade = gradeSimples("2026-01-10", 0, 15);
     const contratacoes = [contratacaoAntecipacaoValida("mat-1")];
 
     const resultadoBase = avaliarCenario(base, semDecisoes, grade);
     const resultadoAjustado = avaliarCenario(
       base,
-      { capacidadeExtra: [], contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15")] },
+      { capacidadeExtra: [], contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12")] },
       grade,
     );
 
-    // Sem NENHUM piso de material, o cenário-base conclui na própria
-    // candidata testada (10/01) - capacidade sobra (4h de 8h/dia).
-    expect(resultadoBase.estado).toBe("viavel_no_limite");
-    if (resultadoBase.estado === "viavel_no_limite" || resultadoBase.estado === "viavel") {
-      expect(resultadoBase.dataFimReal).toBe("2026-01-10");
-    }
-    expect(resultadoBase.custoPorContratacaoId.get("mat-1") ?? 0).toBe(0); // custo de antecipação = 0 no cenário-base
-    expect(resultadoBase.custoAdicionalTotal).toBe(0);
-
-    // Com a decisão, o piso (12/01) empurra o início/término pra depois
-    // do que o cenário-base natural conseguiria (10/01) - a antecipação
-    // de material É uma restrição adicional em relação ao cenário-base
-    // irrestrito, nunca uma vantagem "de graça"; o ganho real dela só
-    // aparece comparada contra a alternativa de NÃO negociar (o piso
-    // teria sido a data original, mais tardia ainda - ver teste anterior).
+    expect(resultadoBase.estado).toBe("prazo_inviavel");
     expect(resultadoAjustado.estado).toBe("prazo_inviavel");
-    if (resultadoAjustado.estado === "prazo_inviavel") {
-      expect(resultadoAjustado.dataFimReal).toBe("2026-01-12");
-      expect(resultadoAjustado.dataFimReal >= "2026-01-12").toBe(true); // nunca antes do piso negociado
+    if (resultadoBase.estado === "prazo_inviavel" && resultadoAjustado.estado === "prazo_inviavel") {
+      expect(resultadoBase.dataFimReal).toBe("2026-01-15"); // piso original, respeitado mesmo sem decisão
+      expect(resultadoAjustado.dataFimReal).toBe("2026-01-12"); // piso negociado, mais cedo
+      expect(resultadoAjustado.dataFimReal <= resultadoBase.dataFimReal).toBe(true); // nunca depois do base
+      expect(resultadoBase.diasCivisDeAtraso).toBe(5);
+      expect(resultadoAjustado.diasCivisDeAtraso).toBe(2); // 3 dias genuinamente ganhos vs. o cenário-base
     }
+    expect(resultadoBase.custoPorContratacaoId.get("mat-1") ?? 0).toBe(0); // sem decisão, sem custo de antecipação
     expect(resultadoAjustado.custoPorContratacaoId.get("mat-1")).toBe(500);
   });
 
+  it("antecipação sem efeito no cálculo (outra restrição/candidata já é mais tarde que os dois pisos): zero dias ganhos, nunca negativo - mas o custo continua registrado", () => {
+    // Candidata única (15/01) já é mais tarde que o piso original (12/01)
+    // E que o piso negociado (10/01) - nenhum dos dois jamais chega a
+    // vincular; o cenário-base e o ajustado terminam EXATAMENTE no mesmo
+    // dia. O usuário ainda precisa ver que pagou pela negociação mesmo
+    // sem nenhum ganho de prazo - custoPorContratacaoId continua
+    // registrado no cenário ajustado.
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-12" });
+    const grade = gradeSimples("2026-01-15", 0, 5); // única candidata = 15/01, posterior aos dois pisos
+    const contratacoes = [contratacaoAntecipacaoValida("mat-1")];
+
+    const resultadoBase = avaliarCenario(base, semDecisoes, grade);
+    const resultadoAjustado = avaliarCenario(
+      base,
+      { capacidadeExtra: [], contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-10")] },
+      grade,
+    );
+
+    expect(resultadoBase.estado).toBe("viavel_no_limite");
+    expect(resultadoAjustado.estado).toBe("viavel_no_limite");
+    if (resultadoBase.estado === "viavel_no_limite" && resultadoAjustado.estado === "viavel_no_limite") {
+      expect(resultadoBase.dataFimReal).toBe("2026-01-15");
+      expect(resultadoAjustado.dataFimReal).toBe("2026-01-15"); // idêntico ao base - a negociação não teve efeito real
+    }
+    expect(resultadoAjustado.custoPorContratacaoId.get("mat-1")).toBe(500); // custo registrado mesmo sem ganho de prazo
+    expect(resultadoAjustado.custoAdicionalTotal).toBe(500);
+  });
+
   it("combinada com hora extra na MESMA ocorrência: o piso define QUANDO pode começar, hora extra define se cabe naquele dia", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 12, capacidadeDiaria: 8 }); // precisa de hora extra pra caber em 1 dia
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 12, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-20" }); // precisa de hora extra pra caber em 1 dia
     const grade = gradeSimples("2026-01-12", 0, 5); // única candidata = 12/01, igual ao piso negociado
 
     const capacidadeExtra: CapacidadeExtraDia[] = [
@@ -1033,7 +1077,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
 
     const resultado = avaliarCenario(
       base,
-      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-20")] },
+      { capacidadeExtra, contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12")] },
       grade,
     );
 
@@ -1049,7 +1093,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
   });
 
   it("custo nunca duplicado: 1 entrada por contratação em custoPorContratacaoId, soma bate exatamente com custoAdicionalTotal", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-20" });
     const grade = gradeSimples("2026-01-12", 0, 5);
     const resultado = avaliarCenario(
       base,
@@ -1058,7 +1102,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
         contratacoes: [contratacaoAntecipacaoValida("mat-1", 750)],
         terceirizacoes: [],
         recursosTemporarios: [],
-        antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-20")],
+        antecipacoesMaterial: [antecipacao("2026-01-12")],
       },
       grade,
     );
@@ -1068,7 +1112,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
   });
 
   it("rejeita antecipação que na verdade atrasa (dataDisponibilidadeAntecipada posterior à original)", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-10" });
     const grade = gradeSimples("2026-01-10", 0, 3);
 
     expect(() =>
@@ -1079,7 +1123,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
           contratacoes: [contratacaoAntecipacaoValida("mat-1")],
           terceirizacoes: [],
           recursosTemporarios: [],
-          antecipacoesMaterial: [antecipacao("2026-01-20", "2026-01-10")],
+          antecipacoesMaterial: [antecipacao("2026-01-20")],
         },
         grade,
       ),
@@ -1087,7 +1131,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
   });
 
   it("rejeita antecipação com dataDisponibilidadeAntecipada IGUAL à original (não é ganho real, não é antecipação)", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-15" });
     const grade = gradeSimples("2026-01-10", 0, 3);
 
     expect(() =>
@@ -1098,29 +1142,55 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
           contratacoes: [contratacaoAntecipacaoValida("mat-1")],
           terceirizacoes: [],
           recursosTemporarios: [],
-          antecipacoesMaterial: [antecipacao("2026-01-15", "2026-01-15")],
+          antecipacoesMaterial: [antecipacao("2026-01-15")],
         },
         grade,
       ),
     ).toThrow(/não é uma antecipação/);
   });
 
+  it("rejeita antecipação sem nenhuma disponibilidade original registrada em base.restricaoMaterialPorChave (não há o que antecipar)", () => {
+    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 }); // sem restricaoMaterialPorChave para op-1
+    const grade = gradeSimples("2026-01-10", 0, 3);
+
+    expect(() =>
+      avaliarCenario(
+        base,
+        {
+          capacidadeExtra: [],
+          contratacoes: [contratacaoAntecipacaoValida("mat-1")],
+          terceirizacoes: [],
+          recursosTemporarios: [],
+          antecipacoesMaterial: [antecipacao("2026-01-12")],
+        },
+        grade,
+      ),
+    ).toThrow(/não há nenhum piso original registrado/);
+  });
+
   it("rejeita abrangência incompatível (mesma classe de bug da terceirização - nunca custo 0 silencioso)", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-15" });
     const grade = gradeSimples("2026-01-10", 0, 3);
     const contratacoes: Contratacao[] = [{ ...contratacaoAntecipacaoValida("mat-1"), abrangencia: "por_hora_utilizada" }];
 
     expect(() =>
       avaliarCenario(
         base,
-        { capacidadeExtra: [], contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15")] },
+        { capacidadeExtra: [], contratacoes, terceirizacoes: [], recursosTemporarios: [], antecipacoesMaterial: [antecipacao("2026-01-12")] },
         grade,
       ),
     ).toThrow(/só aceita "por_periodo_completo" ou "valor_fixo_unico"/);
   });
 
   it("antecipação órfã (chave inexistente) e duplicada (2 decisões pra mesma ocorrência) são erro explícito", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const chaveInexistente = chave("op-inexistente");
+    const base: BaseCenarios = {
+      ...baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 }),
+      restricaoMaterialPorChave: {
+        [chaveOcorrenciaParaString(chaveInexistente)]: "2026-01-15", // registrada só pra provar que órfã falha por ausência em base.ocorrencias, não por falta de piso
+        [CHAVE_STR_OP1]: "2026-01-15",
+      },
+    };
     const grade = gradeSimples("2026-01-10", 0, 3);
 
     expect(() =>
@@ -1131,7 +1201,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
           contratacoes: [contratacaoAntecipacaoValida("mat-orfa")],
           terceirizacoes: [],
           recursosTemporarios: [],
-          antecipacoesMaterial: [{ chave: chave("op-inexistente"), dataDisponibilidadeAntecipada: "2026-01-12", dataDisponibilidadeOriginal: "2026-01-15", contratacaoId: "mat-orfa" }],
+          antecipacoesMaterial: [{ chave: chaveInexistente, dataDisponibilidadeAntecipada: "2026-01-12", contratacaoId: "mat-orfa" }],
         },
         grade,
       ),
@@ -1145,7 +1215,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
           contratacoes: [contratacaoAntecipacaoValida("mat-1"), contratacaoAntecipacaoValida("mat-2")],
           terceirizacoes: [],
           recursosTemporarios: [],
-          antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15", "mat-1"), antecipacao("2026-01-13", "2026-01-16", "mat-2")],
+          antecipacoesMaterial: [antecipacao("2026-01-12", "mat-1"), antecipacao("2026-01-13", "mat-2")],
         },
         grade,
       ),
@@ -1170,6 +1240,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
       capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 0, "recurso-C": 0, "recurso-D": 8 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1, "recurso-D": 1 },
       comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0, "recurso-D": 0 },
+      restricaoMaterialPorChave: { [chaveOcorrenciaParaString(ocMaterial.ocorrencia.chave)]: "2026-01-25" },
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
 
@@ -1199,7 +1270,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
         contratacoes,
         terceirizacoes: [{ chave: chave("op-terceirizada-4way"), fornecedor: "Fornecedor Externo", prazoDiasCorridos: 3, contratacaoId: "terc-4way-contratacao" }],
         recursosTemporarios: [{ recursoTemporario, produtividadeReferencia: 1 }],
-        antecipacoesMaterial: [{ chave: chave("op-material-4way"), dataDisponibilidadeAntecipada: "2026-01-18", dataDisponibilidadeOriginal: "2026-01-25", contratacaoId: "mat-4way-contratacao" }],
+        antecipacoesMaterial: [{ chave: ocMaterial.ocorrencia.chave, dataDisponibilidadeAntecipada: "2026-01-18", contratacaoId: "mat-4way-contratacao" }],
       },
       grade,
     );
@@ -1217,7 +1288,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
   });
 
   it("cruzar categoria com hora extra (mesmo contratacaoId em antecipacoesMaterial e capacidadeExtra) é rejeitado", () => {
-    const base = baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 });
+    const base = baseComRestricaoMaterial({ necessarioHorasPadrao: 4, capacidadeDiaria: 8, disponibilidadeOriginal: "2026-01-15" });
     const grade = gradeSimples("2026-01-10", 0, 3);
     const capacidadeExtra: CapacidadeExtraDia[] = [
       { recursoId: "recurso-A", data: "2026-01-10", horasAdicionaisDisponiveis: 4, natureza: "hora_extra", elegibilidade: { escopo: "somente_orcamento_novo" }, contratacaoId: "contratacao-cruzada-material" },
@@ -1231,11 +1302,56 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
           contratacoes: [contratacaoAntecipacaoValida("contratacao-cruzada-material")],
           terceirizacoes: [],
           recursosTemporarios: [],
-          antecipacoesMaterial: [antecipacao("2026-01-12", "2026-01-15", "contratacao-cruzada-material")],
+          antecipacoesMaterial: [antecipacao("2026-01-12", "contratacao-cruzada-material")],
         },
         grade,
       ),
     ).toThrow(/referenciada em mais de 1 categoria/);
+  });
+
+  it("múltiplas raízes independentes: antecipar UMA não remove o piso das demais; ocorrência não-raiz herda o atraso só via precedência, nunca por piso de material direto", () => {
+    const ocA = ocorrencia("op-raiz-a", 4, "recurso-A"); // raiz negociada
+    const ocB = ocorrencia("op-sucessora-b", 4, "recurso-B"); // depende de A - nunca tem piso de material próprio
+    const ocC = ocorrencia("op-raiz-c", 4, "recurso-C"); // raiz independente, NUNCA negociada
+
+    const base: BaseCenarios = {
+      empresaId: "empresa-1",
+      projetoId: "projeto-1",
+      ocorrencias: [ocA, ocB, ocC],
+      dependencias: [{ predecessora: ocA.ocorrencia.chave, sucessora: ocB.ocorrencia.chave, tipo: "sequencia_roteiro" }],
+      chavesRaizOrcamentoNovo: [ocA.ocorrencia.chave, ocC.ocorrencia.chave],
+      chavesFinaisOrcamentoNovo: [ocB.ocorrencia.chave, ocC.ocorrencia.chave],
+      recursoIds: ["recurso-A", "recurso-B", "recurso-C"],
+      compatibilidades: {},
+      capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 8, "recurso-C": 8 },
+      produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 },
+      restricaoMaterialPorChave: {
+        [chaveOcorrenciaParaString(ocA.ocorrencia.chave)]: "2026-01-15",
+        [chaveOcorrenciaParaString(ocC.ocorrencia.chave)]: "2026-01-12",
+      },
+    };
+    const grade = gradeSimples("2026-01-10", 0, 10); // única candidata testada = 10/01, anterior aos 2 pisos
+
+    const resultado = avaliarCenario(
+      base,
+      {
+        capacidadeExtra: [],
+        contratacoes: [contratacaoAntecipacaoValida("mat-a")],
+        terceirizacoes: [],
+        recursosTemporarios: [],
+        antecipacoesMaterial: [{ chave: ocA.ocorrencia.chave, dataDisponibilidadeAntecipada: "2026-01-10", contratacaoId: "mat-a" }],
+      },
+      grade,
+    );
+
+    const porBomOperacaoId = new Map(resultado.resultadosPorOcorrencia.map((r) => [r.chave.bomOperacaoId, r]));
+    // A: negociada - piso ativo agora é 10/01 (substituiu o original 15/01).
+    expect(porBomOperacaoId.get("op-raiz-a")?.dataInicioReal).toBe("2026-01-10");
+    // B: nunca teve piso de material próprio - começa só depois de A concluir (11/01), por PRECEDÊNCIA.
+    expect(porBomOperacaoId.get("op-sucessora-b")?.dataInicioReal).toBe("2026-01-11");
+    // C: raiz independente, NUNCA negociada - mantém o piso ORIGINAL (12/01) intacto, negociar A não a afetou.
+    expect(porBomOperacaoId.get("op-raiz-c")?.dataInicioReal).toBe("2026-01-12");
   });
 });
 
@@ -1352,7 +1468,7 @@ describe("avaliarCenario - resultadosPorOcorrencia (lista plana congelada)", () 
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8 },
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-10", 5, 5);
 

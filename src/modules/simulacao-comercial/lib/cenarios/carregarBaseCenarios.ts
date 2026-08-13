@@ -43,6 +43,7 @@ import {
 } from "../prepararEntradasMotor";
 import type { CandidatoRecurso } from "../motorAvaliacaoSequencial";
 import { validarEstruturaFabricacaoProjeto } from "../validarEstruturaFabricacaoProjeto";
+import { validarDataIso } from "./validacoes";
 import { ProjetoSemItensError } from "../errors";
 import { OperacaoSemRecursoError } from "@/modules/bom/lib/errors";
 
@@ -75,6 +76,22 @@ export interface BaseCenarios {
    * isto como desconto inicial, nunca como capacidade líquida já pronta.
    */
   comprometidoInicialPorRecurso: Record<string, number>;
+  /**
+   * Piso de disponibilidade de material por ocorrência-RAIZ
+   * (chaveOcorrenciaParaString → data ISO) - restrição OPERACIONAL que
+   * vale para TODO cenário avaliado sobre esta base, inclusive o
+   * cenário-base (sem nenhuma decisão) - DEC-007 §6.2.7. Preenchido por
+   * `carregarBaseCenarios()` a partir de `disponibilidadeOriginalMaterial`
+   * (parâmetro OBRIGATÓRIO da função - nunca opcional, nunca `{}` por
+   * omissão - ver comentário de `carregarBaseCenarios`), aplicado a TODA
+   * ocorrência-raiz do projeto (produção só começa de verdade quando o
+   * material chega). Ocorrências não-raiz nunca têm entrada aqui - o
+   * piso delas continua vindo inteiramente da predecessora (escalonador,
+   * `max(dataInicioJanela, fim da predecessora + 1 dia)`), nunca
+   * diretamente de material. Copiado e congelado (`Object.freeze`) antes
+   * de entrar na base - runtime, não só tipo.
+   */
+  restricaoMaterialPorChave: Readonly<Record<string, string>>;
 }
 
 function mergeOperacoesPorBomId(
@@ -118,11 +135,25 @@ function mergeVinculosMestres(
   }
 }
 
+/**
+ * "Base congelada uma vez" (DEC-007 §18/§6.2.7). `disponibilidadeOriginalMaterial`
+ * é OBRIGATÓRIO - a data (calculada pela janela comercial, ANTES desta
+ * chamada, fora deste módulo) que vira o piso de TODA ocorrência-raiz do
+ * projeto (`restricaoMaterialPorChave`). Nunca opcional, nunca `{}` por
+ * omissão: sem essa restrição, o cenário-base ficaria livre para
+ * começar cedo demais, o que já causou um resultado incorreto
+ * (diasGanhosVsBase negativo após negociação bem-sucedida - DEC-007
+ * §6.2.6/§6.2.7) quando a restrição só existia como convenção manual
+ * nos testes. Validada como data ISO genuína - string vazia/inválida
+ * lança RangeError explícito, nunca silenciosamente ignorada.
+ */
 export async function carregarBaseCenarios(
   client: SupabaseClient,
   empresaId: string,
   projetoId: string,
+  disponibilidadeOriginalMaterial: string,
 ): Promise<BaseCenarios> {
+  validarDataIso(disponibilidadeOriginalMaterial, "disponibilidadeOriginalMaterial");
   await validarEstruturaFabricacaoProjeto(client, projetoId);
 
   const { data: itensData, error: erroItens } = await client
@@ -241,6 +272,18 @@ export async function carregarBaseCenarios(
     produtividadesEComprometidosDosRecursos(client, recursoIds, projetoId),
   ]);
 
+  // --- 5. Piso de material - a MESMA disponibilidadeOriginalMaterial em
+  // TODA ocorrência-raiz (produção só começa de verdade quando o
+  // material chega, independente de qual raiz é) - chavesRaizOrcamentoNovo
+  // já veio deduplicada por chave (projetoItemId distingue itens
+  // diferentes que reaproveitam o mesmo bomId), então nunca há colisão
+  // aqui. Copiado para um objeto novo e congelado - nunca reexpõe um
+  // Record mutável, mesma disciplina de imutabilidade em runtime do
+  // resto do módulo (ver copiarECongelarChave em avaliarCenario.ts).
+  const restricaoMaterialPorChave = Object.freeze(
+    Object.fromEntries(chavesRaizOrcamentoNovo.map((chave) => [chaveOcorrenciaParaString(chave), disponibilidadeOriginalMaterial])),
+  );
+
   return {
     empresaId,
     projetoId,
@@ -253,5 +296,6 @@ export async function carregarBaseCenarios(
     capacidadeDiariaPorRecurso,
     produtividadePorRecurso,
     comprometidoInicialPorRecurso,
+    restricaoMaterialPorChave,
   };
 }

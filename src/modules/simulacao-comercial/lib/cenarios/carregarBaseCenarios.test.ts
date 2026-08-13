@@ -5,6 +5,10 @@ import { chaveOcorrenciaParaString } from "./chaveOcorrencia";
 import { ProjetoSemItensError } from "../errors";
 import { OperacaoSemRecursoError } from "@/modules/bom/lib/errors";
 
+// Data fixa de disponibilidadeOriginalMaterial usada nos testes que não
+// investigam especificamente essa restrição - qualquer data ISO válida serve.
+const DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO = "2026-01-15";
+
 type NoFixture = {
   produto_id: string;
   caminho: string[];
@@ -203,7 +207,7 @@ describe("carregarBaseCenarios - caso feliz (topologia real conhecida)", () => {
       capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
     });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1");
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
 
     const op30 = base.ocorrencias.find((o) => o.ocorrencia.bomOperacaoId === "op-30")!;
     expect(op30.necessarioHorasPadrao).toBeCloseTo((120 / 60) * 2); // 4h
@@ -219,7 +223,7 @@ describe("carregarBaseCenarios - caso feliz (topologia real conhecida)", () => {
     const cfg = cenarioBase();
     const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1");
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
 
     // Raiz: OP10 (sem predecessora) e a operação do subconjunto (sem predecessora dentro do próprio caminho).
     const raizIds = base.chavesRaizOrcamentoNovo.map((c) => c.bomOperacaoId).sort();
@@ -239,7 +243,7 @@ describe("carregarBaseCenarios - caso feliz (topologia real conhecida)", () => {
       comprometidoPorRecurso: { "recurso-B": 12 },
     });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1");
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
 
     expect(base.recursoIds.sort()).toEqual(["recurso-A", "recurso-B"]);
     expect(base.capacidadeDiariaPorRecurso["recurso-B"]).toBe(6);
@@ -284,7 +288,7 @@ describe("carregarBaseCenarios - múltiplos projeto_itens combinados", () => {
       },
     } as unknown as SupabaseClient;
 
-    const base = await carregarBaseCenarios(clienteComQuantidadeReal, "empresa-1", "projeto-1");
+    const base = await carregarBaseCenarios(clienteComQuantidadeReal, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
 
     // 5 ocorrências do item-1 (quantidade=2) + 5 do item-2 (quantidade=5) = 10, chaves distintas por projetoItemId.
     expect(base.ocorrencias).toHaveLength(10);
@@ -305,6 +309,77 @@ describe("carregarBaseCenarios - múltiplos projeto_itens combinados", () => {
     // operacoesPorBomId não duplica a mesma operação (mesmo bomId reaproveitado pelos 2 itens).
     expect(base.dependencias.length).toBeGreaterThan(0);
   });
+
+  it("múltiplos itens/subconjuntos recebem as restrições de material corretas, sem duplicidade", async () => {
+    const cfg = cenarioBase();
+    const item2 = { id: "item-2", produto_id: "produto-raiz", quantidade: 5 };
+    const { client } = criarClienteFalso({
+      ...cfg,
+      projetoItens: [...cfg.projetoItens, item2],
+      capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
+    });
+
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", "2026-02-01");
+
+    // 2 raízes por item (OP10 + OP-sub-10) × 2 itens = 4 entradas, nenhuma a mais nem a menos.
+    expect(base.chavesRaizOrcamentoNovo).toHaveLength(4);
+    expect(Object.keys(base.restricaoMaterialPorChave)).toHaveLength(4);
+
+    for (const chaveRaiz of base.chavesRaizOrcamentoNovo) {
+      const chaveStr = chaveOcorrenciaParaString(chaveRaiz);
+      expect(base.restricaoMaterialPorChave[chaveStr]).toBe("2026-02-01");
+    }
+
+    // Ocorrências NÃO-raiz (ex.: OP20/22/30, dependentes de predecessora) nunca ganham entrada direta -
+    // o piso delas continua vindo inteiramente da predecessora, nunca de material.
+    const chavesRaizStr = new Set(base.chavesRaizOrcamentoNovo.map(chaveOcorrenciaParaString));
+    for (const { ocorrencia } of base.ocorrencias) {
+      const chaveStr = chaveOcorrenciaParaString(ocorrencia.chave);
+      if (!chavesRaizStr.has(chaveStr)) {
+        expect(base.restricaoMaterialPorChave[chaveStr]).toBeUndefined();
+      }
+    }
+  });
+});
+
+describe("carregarBaseCenarios - piso de material (restricaoMaterialPorChave)", () => {
+  it("carregamento realista produz restrições para todas as raízes do projeto", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
+
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", "2026-03-10");
+
+    // Mesmas 2 raízes do teste de topologia (OP10 + OP-sub-10) - as 2 recebem a mesma disponibilidadeOriginalMaterial.
+    expect(base.chavesRaizOrcamentoNovo).toHaveLength(2);
+    for (const chaveRaiz of base.chavesRaizOrcamentoNovo) {
+      expect(base.restricaoMaterialPorChave[chaveOcorrenciaParaString(chaveRaiz)]).toBe("2026-03-10");
+    }
+  });
+
+  it("alteração externa não modifica a base congelada - restricaoMaterialPorChave é genuinamente imutável em runtime", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
+
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
+
+    expect(Object.isFrozen(base.restricaoMaterialPorChave)).toBe(true);
+    const [algumaChaveStr] = Object.keys(base.restricaoMaterialPorChave);
+    expect(() => {
+      // @ts-expect-error - mutação proposital para provar que é impedida em runtime, não é o contrato normal de uso.
+      base.restricaoMaterialPorChave[algumaChaveStr] = "2099-01-01";
+    }).toThrow(TypeError);
+    expect(base.restricaoMaterialPorChave[algumaChaveStr]).toBe(DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
+  });
+
+  it("chamador não consegue esquecer de aplicar o piso - disponibilidadeOriginalMaterial é obrigatório em compilação E em execução", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
+
+    await expect(
+      // @ts-expect-error - disponibilidadeOriginalMaterial omitido de propósito para provar que é obrigatório, não é o contrato normal de uso.
+      carregarBaseCenarios(client, "empresa-1", "projeto-1"),
+    ).rejects.toThrow(RangeError);
+  });
 });
 
 describe("carregarBaseCenarios - erros explícitos", () => {
@@ -312,7 +387,7 @@ describe("carregarBaseCenarios - erros explícitos", () => {
     const cfg = cenarioBase();
     const { client } = criarClienteFalso({ ...cfg, projetoItens: [] });
 
-    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1")).rejects.toThrow(ProjetoSemItensError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO)).rejects.toThrow(ProjetoSemItensError);
   });
 
   it("operação sem recurso produtivo vinculado", async () => {
@@ -325,6 +400,14 @@ describe("carregarBaseCenarios - erros explícitos", () => {
       capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
     });
 
-    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1")).rejects.toThrow(OperacaoSemRecursoError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO)).rejects.toThrow(OperacaoSemRecursoError);
+  });
+
+  it("base sem disponibilidade original (string vazia/inválida) é rejeitada - nunca vira {} silenciosamente", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
+
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", "")).rejects.toThrow(RangeError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", "não-é-uma-data")).rejects.toThrow(RangeError);
   });
 });

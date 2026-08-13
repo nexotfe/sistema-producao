@@ -67,44 +67,36 @@ export interface DecisaoRecursoTemporario {
 
 /**
  * Negociação com fornecedor para antecipar a chegada/disponibilidade de
- * um material - a 4ª alternativa do 8b (DEC-007 §6.2.4). Ao contrário
- * de hora extra/terceirização/recurso temporário (que adicionam ou
- * substituem CAPACIDADE), esta altera a JANELA PRODUTIVA em si: a
- * ocorrência referenciada não pode começar antes da nova disponibilidade
- * (ver construirOcorrenciasEscalonaveis/maiorData) - efeito real na
- * busca D*, não só no diagnóstico/exibição (calculadorReversoConjunto.ts
+ * um material - a 4ª alternativa do 8b (DEC-007 §6.2.4/§6.2.7). Ao
+ * contrário de hora extra/terceirização/recurso temporário (que
+ * adicionam ou substituem CAPACIDADE), esta altera a JANELA PRODUTIVA em
+ * si: a ocorrência referenciada não pode começar antes da disponibilidade
+ * vigente (ver construirOcorrenciasEscalonaveis/maiorData) - efeito real
+ * na busca D*, não só no diagnóstico/exibição (calculadorReversoConjunto.ts
  * também respeita esse piso, ver `buscarDataInicioMaisTardiaViavel`).
+ *
+ * A disponibilidade ORIGINAL não é campo desta decisão - vem de
+ * `BaseCenarios.restricaoMaterialPorChave` (DEC-007 §6.2.7, correção de
+ * auditoria: um metadado dentro da decisão deixava o cenário-base SEM
+ * NENHUM piso, produzindo `diasGanhosVsBase` negativo mesmo após negociar
+ * com sucesso - errado). O cenário-base (sem esta decisão) já respeita o
+ * piso original automaticamente, via `base.restricaoMaterialPorChave`;
+ * esta decisão só existe para SUBSTITUIR esse piso por um mais cedo.
  */
 export interface DecisaoAntecipacaoMaterial {
   /** A ocorrência cujo início mínimo passa a respeitar a nova disponibilidade do material. */
   chave: ChaveOcorrencia;
   /**
-   * Nova data de disponibilidade, após negociar - vira PISO real de
-   * `dataInicioJanela` para esta ocorrência: `max(piso padrão da
-   * candidata testada, esta data)`. Precisa ser ESTRITAMENTE anterior a
-   * `dataDisponibilidadeOriginal` (validarDecisoesAntecipacaoMaterial
-   * rejeita igual ou posterior - "isso não é uma antecipação"). Se já
-   * for mais cedo que o piso que já valeria de qualquer forma, a
-   * negociação não tem efeito nenhum no CÁLCULO (custo pago sem ganho
-   * real de agenda - o chamador decide se ainda assim quer manter a
-   * decisão).
+   * Nova data de disponibilidade, após negociar - SUBSTITUI (não
+   * combina via max) o piso de `base.restricaoMaterialPorChave` para
+   * esta ocorrência; o resultado ainda passa por
+   * `max(piso ativo, candidata testada)` como qualquer outro piso (ver
+   * construirOcorrenciasEscalonaveis). Precisa ser ESTRITAMENTE anterior
+   * ao piso original em `base.restricaoMaterialPorChave` para esta chave
+   * (validarDecisoesAntecipacaoMaterial rejeita igual, posterior, ou
+   * ausência de piso original para negociar - "não há o que antecipar").
    */
   dataDisponibilidadeAntecipada: string;
-  /**
-   * Data que valeria SEM negociar - METADADO puramente informativo
-   * (nunca realimenta o cálculo, nem aqui nem em nenhuma "2ª simulação").
-   * O CENÁRIO-BASE usado para comparar (diasGanhosVsBase etc.) é sempre
-   * o cenário SEM esta decisão (`decisoes.antecipacoesMaterial` vazio
-   * para esta chave, exatamente como já vale para hora extra/
-   * terceirização/recurso temporário) - NUNCA uma avaliação artificial
-   * com `dataDisponibilidadeAntecipada` igual à original: isso violaria
-   * a própria validação de "estritamente anterior", inventaria uma
-   * decisão que não existe, e contabilizaria custo de negociação no
-   * cenário-base (achado de auditoria do usuário, corrigido nesta
-   * versão - ver avaliarCenario.test.ts, describe "antecipação de
-   * material").
-   */
-  dataDisponibilidadeOriginal: string;
   contratacaoId: string;
 }
 
@@ -177,18 +169,28 @@ function validarDecisoesTerceirizacao(decisoes: DecisoesCenario): void {
 
 /**
  * Além da validação de contratação/abrangência (ver
- * validarContratacoesSemUsoReal), rejeita uma "antecipação" que na
- * verdade atrasa (dataDisponibilidadeAntecipada posterior à original) -
- * contradiria o próprio nome do campo e a intenção da decisão (negociar
- * para MELHORAR, nunca para piorar silenciosamente).
+ * validarContratacoesSemUsoReal), exige que exista um piso ORIGINAL
+ * registrado em `base.restricaoMaterialPorChave` para a ocorrência (sem
+ * ele, não há "antecipar" coisa nenhuma - a antecipação existe para
+ * SUBSTITUIR um piso já conhecido, nunca para inventar um do zero) e que
+ * a nova data seja ESTRITAMENTE anterior a esse piso original - igual ou
+ * posterior contradiria o próprio nome do campo (negociar para MELHORAR,
+ * nunca para piorar ou empatar silenciosamente).
  */
-function validarDecisoesAntecipacaoMaterial(decisoes: DecisoesCenario): void {
+function validarDecisoesAntecipacaoMaterial(decisoes: DecisoesCenario, base: BaseCenarios): void {
   validarContratacoesSemUsoReal(decisoes.antecipacoesMaterial, decisoes, "Antecipação de material");
 
   for (const antecipacao of decisoes.antecipacoesMaterial) {
-    if (antecipacao.dataDisponibilidadeAntecipada >= antecipacao.dataDisponibilidadeOriginal) {
+    const chaveStr = chaveOcorrenciaParaString(antecipacao.chave);
+    const disponibilidadeOriginal = base.restricaoMaterialPorChave[chaveStr];
+    if (disponibilidadeOriginal === undefined) {
       throw new RangeError(
-        `Antecipação de material inválida (ocorrência "${chaveOcorrenciaParaString(antecipacao.chave)}"): dataDisponibilidadeAntecipada="${antecipacao.dataDisponibilidadeAntecipada}" não é ANTERIOR a dataDisponibilidadeOriginal="${antecipacao.dataDisponibilidadeOriginal}" - igual ou posterior não é uma antecipação (nenhum ganho real negociado).`,
+        `Antecipação de material inválida (ocorrência "${chaveStr}"): não há nenhum piso original registrado em base.restricaoMaterialPorChave para esta ocorrência - sem uma disponibilidade original conhecida, não há o que antecipar.`,
+      );
+    }
+    if (antecipacao.dataDisponibilidadeAntecipada >= disponibilidadeOriginal) {
+      throw new RangeError(
+        `Antecipação de material inválida (ocorrência "${chaveStr}"): dataDisponibilidadeAntecipada="${antecipacao.dataDisponibilidadeAntecipada}" não é ANTERIOR ao piso original ("${disponibilidadeOriginal}", base.restricaoMaterialPorChave) - igual ou posterior não é uma antecipação (nenhum ganho real negociado).`,
       );
     }
   }
@@ -589,7 +591,17 @@ function construirOcorrenciasEscalonaveis(
     const terceirizacao = terceirizacaoPorChave.get(chaveStr);
     const antecipacao = antecipacaoPorChave.get(chaveStr);
     if (antecipacao) chavesComAntecipacaoConsumidas.add(chaveStr);
-    const dataInicioJanelaEfetiva = antecipacao ? maiorData(dataInicioJanela, antecipacao.dataDisponibilidadeAntecipada) : dataInicioJanela;
+    // Piso de material ATIVO para esta ocorrência: a decisão de
+    // antecipação (quando presente) SUBSTITUI o piso original da base -
+    // nunca combinado via max() com ele (max(original, antecipada) só
+    // devolveria o original, já que antecipada é sempre anterior, por
+    // validação - "substituir" é o próprio propósito da decisão). Sem
+    // decisão, o piso original da base já vale sozinho - é ele quem
+    // garante que o cenário-base também respeita a disponibilidade
+    // conhecida do material, não só o cenário com decisão (DEC-007
+    // §6.2.7).
+    const pisoMaterialAtivo = antecipacao?.dataDisponibilidadeAntecipada ?? base.restricaoMaterialPorChave[chaveStr];
+    const dataInicioJanelaEfetiva = pisoMaterialAtivo !== undefined ? maiorData(dataInicioJanela, pisoMaterialAtivo) : dataInicioJanela;
 
     if (terceirizacao) {
       chavesConsumidas.add(chaveStr);
@@ -884,7 +896,7 @@ export function avaliarCenario(
   grade: GradeCompartilhada,
 ): ResultadoAvaliacaoCenario {
   validarDecisoesTerceirizacao(decisoes);
-  validarDecisoesAntecipacaoMaterial(decisoes);
+  validarDecisoesAntecipacaoMaterial(decisoes, base);
   validarUnicidadeContratacoesPorCategoria(decisoes);
 
   const ocorrenciasTemplate = construirOcorrenciasEscalonaveis(base, grade.datasGradeCompartilhada[0], decisoes);

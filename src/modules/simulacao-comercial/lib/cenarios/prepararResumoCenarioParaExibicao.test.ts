@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { avaliarCenario, type DecisoesCenario, type GradeCompartilhada, type ResultadoAvaliacaoCenario } from "./avaliarCenario";
 import { prepararResumoCenarioParaExibicao } from "./prepararResumoCenarioParaExibicao";
 import type { BaseCenarios, OcorrenciaComTamanho } from "./carregarBaseCenarios";
-import type { ChaveOcorrencia } from "./chaveOcorrencia";
+import { chaveOcorrenciaParaString, type ChaveOcorrencia } from "./chaveOcorrencia";
 import type { Contratacao } from "./contratacao";
 import type { CapacidadeExtraDia } from "./capacidadeDia";
 import type { RecursoTemporarioCenario } from "./recursoTemporario";
@@ -75,7 +75,7 @@ function baseUmaOcorrencia(necessarioHorasPadrao: number, capacidadeDiaria = 8):
     compatibilidades: {},
     capacidadeDiariaPorRecurso: { "recurso-A": capacidadeDiaria },
     produtividadePorRecurso: { "recurso-A": 1 },
-    comprometidoInicialPorRecurso: { "recurso-A": 0 },
+    comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
   };
 }
 
@@ -93,7 +93,7 @@ function baseDuasOcorrencias(): BaseCenarios {
     compatibilidades: {},
     capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 8 },
     produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1 },
-    comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 },
+    comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 }, restricaoMaterialPorChave: {},
   };
 }
 
@@ -130,7 +130,7 @@ describe("prepararResumoCenarioParaExibicao - agregação básica", () => {
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 0 }, // só extras contam - normal zerada
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-13", 5, 5);
 
@@ -175,7 +175,7 @@ describe("prepararResumoCenarioParaExibicao - agregação básica", () => {
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8 },
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-10", 5, 5);
 
@@ -217,7 +217,7 @@ describe("prepararResumoCenarioParaExibicao - agregação básica", () => {
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8 },
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
     const decisoes: DecisoesCenario = {
@@ -251,7 +251,7 @@ describe("prepararResumoCenarioParaExibicao - diagnóstico de cenário inviável
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8 },
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
     };
   }
 
@@ -292,7 +292,7 @@ describe("prepararResumoCenarioParaExibicao - diagnóstico de cenário inviável
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8 },
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-10", 0, 5); // 6 dias × 8h = 48h no máximo, para 100h necessárias em A
 
@@ -454,7 +454,7 @@ describe("prepararResumoCenarioParaExibicao - Término calculado / Data solicita
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 0, "recurso-C": 0 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
 
@@ -493,15 +493,19 @@ describe("prepararResumoCenarioParaExibicao - Término calculado / Data solicita
     expect(somaBaldes).toBeCloseTo(resumo.custoAdicionalTotal);
   });
 
-  it("antecipação de material: cenário-base é SEMPRE o cenário sem a decisão (custo zero, sem piso) - nunca uma avaliação artificial 'antecipada=original'", () => {
-    // Correção de auditoria: a versão anterior deste teste construía o
-    // "cenário-base" chamando avaliarCenario com uma DecisaoAntecipacaoMaterial
-    // cuja dataDisponibilidadeAntecipada == dataDisponibilidadeOriginal -
-    // ERRADO (violaria a validação de "estritamente anterior", inventaria
-    // uma decisão inexistente, e contabilizaria custo de negociação no
-    // cenário-base). O cenário-base correto é semDecisoes, exatamente como
-    // já vale para as outras 3 alternativas.
-    const base = baseUmaOcorrencia(4, 8);
+  it("antecipação de material: cenário-base RESPEITA a disponibilidade original (não é irrestrito) - diasGanhosVsBase positivo quando a antecipação é a única mudança", () => {
+    // Correção de auditoria (DEC-007 §6.2.7): a disponibilidade original
+    // não é mais campo da decisão nem metadado solto - vem de
+    // base.restricaoMaterialPorChave, respeitada por QUALQUER cenário
+    // avaliado sobre esta base, inclusive o cenário-base (semDecisoes).
+    // Antes desta correção, o cenário-base ficava irrestrito e podia
+    // começar antes até da disponibilidade original, produzindo
+    // diasGanhosVsBase NEGATIVO mesmo após negociação bem-sucedida -
+    // errado, corrigido.
+    const base: BaseCenarios = {
+      ...baseUmaOcorrencia(4, 8),
+      restricaoMaterialPorChave: { [chaveOcorrenciaParaString(chave("op-1"))]: "2026-01-15" },
+    };
     const grade = gradeSimples("2026-01-10", 0, 15);
     const contratacoes: Contratacao[] = [
       {
@@ -521,7 +525,7 @@ describe("prepararResumoCenarioParaExibicao - Término calculado / Data solicita
       contratacoes,
       terceirizacoes: [],
       recursosTemporarios: [],
-      antecipacoesMaterial: [{ chave: chave("op-1"), dataDisponibilidadeAntecipada: "2026-01-12", dataDisponibilidadeOriginal: "2026-01-15", contratacaoId: "mat-1" }],
+      antecipacoesMaterial: [{ chave: chave("op-1"), dataDisponibilidadeAntecipada: "2026-01-12", contratacaoId: "mat-1" }],
     };
 
     const resultadoBase = avaliarCenario(base, semDecisoes, grade);
@@ -529,25 +533,61 @@ describe("prepararResumoCenarioParaExibicao - Término calculado / Data solicita
     const resumoBase = prepararResumoCenarioParaExibicao({ resultado: resultadoBase, decisoes: semDecisoes, resultadoBase, grade, dataSolicitadaCliente: grade.prazoInterno });
     const resumoAjustado = prepararResumoCenarioParaExibicao({ resultado: resultadoAjustado, decisoes: decisoesAjustado, resultadoBase, grade, dataSolicitadaCliente: grade.prazoInterno });
 
-    // Cenário-base: sem NENHUM piso de material, conclui na própria
-    // candidata testada (10/01) - custo de antecipação zero.
-    expect(resumoBase.terminoCalculado).toBe("2026-01-10");
-    expect(resumoBase.inicioCalculado).toBe("2026-01-10");
+    // Cenário-base: respeita o piso ORIGINAL (15/01) mesmo sem decisão -
+    // custo de antecipação zero (nenhuma Contratacao referenciada).
+    expect(resumoBase.terminoCalculado).toBe("2026-01-15");
+    expect(resumoBase.inicioCalculado).toBe("2026-01-15");
     expect(resumoBase.custoPorAlternativa).toEqual({ horaExtra: 0, terceirizacao: 0, recursoTemporario: 0, antecipacaoMaterial: 0 });
     expect(resumoBase.custoAdicionalTotal).toBe(0);
 
-    // Cenário ajustado: piso (12/01) empurra o início/término pra depois
-    // do que o cenário-base irrestrito conseguiria - a antecipação de
-    // material é uma restrição adicional em relação ao cenário-base
-    // SEM restrição alguma, nunca uma vantagem "de graça". diasGanhosVsBase
-    // fica NEGATIVO aqui (honesto: o ganho real da negociação só aparece
-    // comparado contra "não negociar", nunca contra o cenário-base
-    // irrestrito - ver avaliarCenario.test.ts para essa comparação).
+    // Cenário ajustado: piso negociado (12/01) SUBSTITUI o original -
+    // termina antes do cenário-base, nunca depois - diasGanhosVsBase
+    // positivo (3 dias genuinamente ganhos), custo aparece registrado.
     expect(resumoAjustado.terminoCalculado).toBe("2026-01-12");
     expect(resumoAjustado.inicioCalculado).toBe("2026-01-12"); // nunca antes do piso negociado
-    expect(resumoAjustado.diasGanhosVsBase).toBe(-2);
-    expect(resumoAjustado.custoPorDiaAntecipado).toBeNull(); // sem ganho de dias vs. o cenário-base, não faz sentido dividir
+    expect(resumoAjustado.diasGanhosVsBase).toBe(3);
+    expect(resumoAjustado.custoPorDiaAntecipado).toBeCloseTo(500 / 3);
     expect(resumoAjustado.custoPorAlternativa).toEqual({ horaExtra: 0, terceirizacao: 0, recursoTemporario: 0, antecipacaoMaterial: 500 });
+  });
+
+  it("antecipação sem efeito no cálculo (outra restrição já é mais tarde que os 2 pisos): diasGanhosVsBase é zero, nunca negativo - custo continua registrado para o usuário perceber a falta de benefício", () => {
+    const base: BaseCenarios = {
+      ...baseUmaOcorrencia(4, 8),
+      restricaoMaterialPorChave: { [chaveOcorrenciaParaString(chave("op-1"))]: "2026-01-12" },
+    };
+    const grade = gradeSimples("2026-01-15", 0, 5); // única candidata (15/01) já é mais tarde que os 2 pisos
+    const contratacoes: Contratacao[] = [
+      {
+        id: "mat-1",
+        tipo: "antecipacao_material",
+        abrangencia: "valor_fixo_unico",
+        valor: 500,
+        moeda: "BRL",
+        fornecedorOuContratado: "Fornecedor Materiais",
+        referenciaProposta: null,
+        justificativa: "fixture",
+        datas: [],
+      },
+    ];
+    const decisoesAjustado: DecisoesCenario = {
+      capacidadeExtra: [],
+      contratacoes,
+      terceirizacoes: [],
+      recursosTemporarios: [],
+      antecipacoesMaterial: [{ chave: chave("op-1"), dataDisponibilidadeAntecipada: "2026-01-10", contratacaoId: "mat-1" }],
+    };
+
+    const resultadoBase = avaliarCenario(base, semDecisoes, grade);
+    const resultadoAjustado = avaliarCenario(base, decisoesAjustado, grade);
+    const resumoBase = prepararResumoCenarioParaExibicao({ resultado: resultadoBase, decisoes: semDecisoes, resultadoBase, grade, dataSolicitadaCliente: grade.prazoInterno });
+    const resumoAjustado = prepararResumoCenarioParaExibicao({ resultado: resultadoAjustado, decisoes: decisoesAjustado, resultadoBase, grade, dataSolicitadaCliente: grade.prazoInterno });
+
+    expect(resumoBase.terminoCalculado).toBe("2026-01-15");
+    expect(resumoAjustado.terminoCalculado).toBe("2026-01-15"); // idêntico ao base - negociação sem efeito real
+    expect(resumoAjustado.diasGanhosVsBase).toBe(0); // zero, nunca negativo
+    expect(resumoAjustado.custoPorDiaAntecipado).toBeNull(); // sem ganho de dias, não faz sentido dividir
+    expect(resumoAjustado.custoPorAlternativa.antecipacaoMaterial).toBe(500); // custo registrado mesmo sem benefício
+    expect(resumoAjustado.custoAdicionalTotal).toBe(500);
   });
 });
 
@@ -578,7 +618,7 @@ describe("prepararResumoCenarioParaExibicao - operações afetadas (comparação
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 8 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-10", 5, 5);
 
@@ -611,7 +651,7 @@ describe("prepararResumoCenarioParaExibicao - operações afetadas (comparação
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8 },
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 },
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
     const decisoes: DecisoesCenario = {
