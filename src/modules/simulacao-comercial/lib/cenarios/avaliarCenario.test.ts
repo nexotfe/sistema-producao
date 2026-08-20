@@ -51,7 +51,7 @@ function baseComUmaOcorrencia(params: {
     compatibilidades: {},
     capacidadeDiariaPorRecurso: { "recurso-A": params.capacidadeDiaria },
     produtividadePorRecurso: { "recurso-A": params.produtividade ?? 1 },
-    comprometidoInicialPorRecurso: { "recurso-A": params.comprometidoInicial ?? 0 }, restricaoMaterialPorChave: {},
+    comprometidoInicialPorRecurso: { "recurso-A": params.comprometidoInicial ?? 0 }, valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: {},
   };
 }
 
@@ -396,7 +396,7 @@ describe("avaliarCenario - terceirização opera fora da capacidade interna", ()
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 0, "recurso-B": 8 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 }, restricaoMaterialPorChave: {},
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0 }, valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
 
@@ -713,7 +713,7 @@ describe("avaliarCenario - combinações das 3 alternativas", () => {
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 0, "recurso-C": 0 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 }, restricaoMaterialPorChave: {},
+      comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 }, valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
 
@@ -951,7 +951,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
   }): BaseCenarios {
     return {
       ...baseComUmaOcorrencia({ necessarioHorasPadrao: params.necessarioHorasPadrao, capacidadeDiaria: params.capacidadeDiaria }),
-      restricaoMaterialPorChave: { [CHAVE_STR_OP1]: params.disponibilidadeOriginal },
+      valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: { [CHAVE_STR_OP1]: params.disponibilidadeOriginal },
     };
   }
 
@@ -1186,7 +1186,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
     const chaveInexistente = chave("op-inexistente");
     const base: BaseCenarios = {
       ...baseComUmaOcorrencia({ necessarioHorasPadrao: 4, capacidadeDiaria: 8 }),
-      restricaoMaterialPorChave: {
+      valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: {
         [chaveOcorrenciaParaString(chaveInexistente)]: "2026-01-15", // registrada só pra provar que órfã falha por ausência em base.ocorrencias, não por falta de piso
         [CHAVE_STR_OP1]: "2026-01-15",
       },
@@ -1240,7 +1240,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
       capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 0, "recurso-C": 0, "recurso-D": 8 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1, "recurso-D": 1 },
       comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0, "recurso-D": 0 },
-      restricaoMaterialPorChave: { [chaveOcorrenciaParaString(ocMaterial.ocorrencia.chave)]: "2026-01-25" },
+      valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: { [chaveOcorrenciaParaString(ocMaterial.ocorrencia.chave)]: "2026-01-25" },
     };
     const grade = gradeSimples("2026-01-20", 15, 5);
 
@@ -1326,7 +1326,7 @@ describe("avaliarCenario - antecipação de material (4ª alternativa, altera a 
       capacidadeDiariaPorRecurso: { "recurso-A": 8, "recurso-B": 8, "recurso-C": 8 },
       produtividadePorRecurso: { "recurso-A": 1, "recurso-B": 1, "recurso-C": 1 },
       comprometidoInicialPorRecurso: { "recurso-A": 0, "recurso-B": 0, "recurso-C": 0 },
-      restricaoMaterialPorChave: {
+      valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: {
         [chaveOcorrenciaParaString(ocA.ocorrencia.chave)]: "2026-01-15",
         [chaveOcorrenciaParaString(ocC.ocorrencia.chave)]: "2026-01-12",
       },
@@ -1468,7 +1468,7 @@ describe("avaliarCenario - resultadosPorOcorrencia (lista plana congelada)", () 
       compatibilidades: {},
       capacidadeDiariaPorRecurso: { "recurso-A": 8 },
       produtividadePorRecurso: { "recurso-A": 1 },
-      comprometidoInicialPorRecurso: { "recurso-A": 0 }, restricaoMaterialPorChave: {},
+      comprometidoInicialPorRecurso: { "recurso-A": 0 }, valorHoraPorRecurso: {}, convencoesHorasAdicionais: [], restricaoMaterialPorChave: {},
     };
     const grade = gradeSimples("2026-01-10", 5, 5);
 

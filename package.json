@@ -30,6 +30,7 @@
     "autoprefixer": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "fast-check": "^4.9.0",
     "jsdom": "^30.0.1",
     "postcss": "latest",
     "supabase": "^2.105.0",

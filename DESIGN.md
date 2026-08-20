@@ -49,6 +49,11 @@ typography:
     fontSize: "12.5px"
     fontWeight: 600
     lineHeight: 1.3
+  label-dado:
+    fontFamily: "Arial, Helvetica, sans-serif"
+    fontSize: "11.5px"
+    fontWeight: 600
+    lineHeight: 1.3
 rounded:
   sm: "10px"
   md: "12px"
@@ -258,7 +263,7 @@ escolhida. Essa escolha é uma decisão futura, com etapa própria.
 - **Display** (600, 30px, 1.2): título de página (`<h1>` do ModuleHeader plano).
 - **Title** (600, 15px, 1.4): cabeçalho de card/modal.
 - **Body** (400, 13–13.5px, 1.5): texto de formulário, botão, célula de tabela.
-- **Label** (600, 11–12.5px, 1.3): rótulo de campo, badge; cabeçalho de tabela usa a mesma faixa em versal com `tracking-[0.05em]`.
+- **Label** (600, 1.3), duas variantes concretas conforme densidade do contexto: **12.5px** (token `typography.label`) para rótulo de campo, link acionável (ex.: "Ver detalhes") e badge; cabeçalho de tabela usa a mesma faixa em versal com `tracking-[0.05em]`. **11.5px** (token `typography.label-dado`) para rótulo estático de dado em `dt`/`dl` dentro de cartões densos de dados (ex.: cartões de resumo financeiro e capacidade em Simulação Comercial) — mesma família Label, tamanho reduzido pela quantidade de pares rótulo/valor por cartão, nunca uma hierarquia tipográfica adicional.
 
 ## Layout
 

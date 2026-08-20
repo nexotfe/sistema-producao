@@ -51,6 +51,7 @@ export default function CommercialProposalPage() {
     valorTecnicoProposta,
     valorDescontoProposta,
     valorTotalProposta,
+    ajusteComercial,
     revisao,
     salvandoRevisao,
     avancarRevisao,
@@ -310,6 +311,20 @@ export default function CommercialProposalPage() {
                     </td>
                   </tr>
                 ))}
+                {ajusteComercial ? (
+                  <tr className="italic transition hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium text-slate-800">
+                      {ajusteComercial.descricao}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-slate-500">—</td>
+                    <td className="px-4 py-4 text-slate-500">—</td>
+                    <td className="px-4 py-4 text-center text-slate-500">—</td>
+                    <td className="px-4 py-4 text-right text-slate-500">—</td>
+                    <td className="px-6 py-4 text-right font-semibold text-slate-900">
+                      {formatarMoeda(ajusteComercial.valorTotal)}
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>

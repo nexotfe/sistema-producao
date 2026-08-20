@@ -54,6 +54,20 @@ describe("calcularCustoContratacoes — fórmula por abrangência", () => {
   });
 });
 
+describe("calcularCustoContratacoes — tipo nunca influencia o custo (só abrangencia/valor/uso)", () => {
+  it.each(["maquina_alugada", "equipamento_adicional", "freelancer"] as const)(
+    "tipo=%s produz exatamente o mesmo custo que qualquer outro tipo, para a mesma abrangencia/valor/uso",
+    (tipo) => {
+      const c = contratacao({ id: "CT-TIPO", tipo, abrangencia: "por_hora_utilizada", valor: 40 });
+      const resultado = calcularCustoContratacoes({
+        contratacoes: [c],
+        horasUsadasPorContratacaoId: new Map([["CT-TIPO", 3]]),
+      });
+      expect(resultado.custoTotal).toBe(120);
+    },
+  );
+});
+
 describe("calcularCustoContratacoes — custo nunca duplicado por contratação", () => {
   it("soma o custo de cada contratação da lista exatamente uma vez", () => {
     const contratacoes = [

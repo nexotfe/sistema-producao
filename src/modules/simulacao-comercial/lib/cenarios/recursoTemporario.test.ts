@@ -94,6 +94,21 @@ describe("criarCandidatoRecursoTemporario — disponibilidade diária respeitada
   });
 });
 
+describe("criarCandidatoRecursoTemporario — os 3 tipos (maquina_alugada/equipamento_adicional/freelancer) testados separadamente", () => {
+  it.each(["maquina_alugada", "equipamento_adicional", "freelancer"] as const)(
+    "tipo=%s não influencia produtividade nem capacidade diária - candidato idêntico em tudo, exceto o rótulo",
+    (tipo) => {
+      const temp = recursoTemporario({ tipo, disponibilidade: [{ data: "2026-11-09", horasDisponiveis: 6 }] });
+      const candidato = criarCandidatoRecursoTemporario(temp, 0.9);
+
+      expect(candidato.produtividade).toBe(0.9);
+      expect(candidato.faixasDoDia("2026-11-09")).toEqual([
+        { natureza: "normal", horasDisponiveis: 6, contratacaoId: null, elegibilidade: null },
+      ]);
+    },
+  );
+});
+
 describe("recursoTemporarioAplicavelA", () => {
   it("verdadeiro quando a chave está em aplicavelAsOperacoes", () => {
     const alvo = chave("OP-1");

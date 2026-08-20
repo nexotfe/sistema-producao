@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { calcularResumoOrcamento } from "../lib/calcularResumoOrcamento";
+import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
 
 export type ClienteProposta = {
   nome: string;
@@ -17,6 +18,11 @@ export type ItemProposta = {
   ncm: string | null;
   quantidade: number;
   valorUnitario: number;
+  valorTotal: number;
+};
+
+export type AjusteComercialProposta = {
+  descricao: string;
   valorTotal: number;
 };
 
@@ -60,6 +66,24 @@ export function useProposta(idProjeto: string | null) {
   const [valorTecnicoProposta, setValorTecnicoProposta] = useState(0);
   const [valorDescontoProposta, setValorDescontoProposta] = useState(0);
   const [valorTotalProposta, setValorTotalProposta] = useState(0);
+  // DEC-007 §6.2/Fase 8b - null = nenhum cenário comercial aprovado
+  // vigente (comportamento atual da Proposta preservado: valor-base =
+  // soma bruta dos itens). Quando presente, novoCustoTecnico (congelado
+  // na aprovação) substitui essa soma como entrada da MESMA
+  // calcularResumoOrcamento (nunca uma fórmula nova), e prazoProposto
+  // fica disponível para a tela usar como prazo da proposta.
+  const [cenarioComercialAprovado, setCenarioComercialAprovado] =
+    useState<CenarioComercialAprovadoResumo | null>(null);
+  // DEC-007 §6.2/Fase 8b (correção 2 de 6, teste visual real 260011) -
+  // linha separada na Proposta, nunca redistribuída entre os itens (o
+  // custo adicional do cenário não é atribuível a nenhum item
+  // específico). Calculada como DIFERENÇA entre dois resumos agregados
+  // (custo original congelado + ajuste) − (custo original congelado),
+  // nunca recalculando o ajuste isolado, para bater exatamente com
+  // valorTecnicoProposta/valorTotalProposta apesar de qualquer
+  // arredondamento interno de calcularResumoOrcamento.
+  const [ajusteComercial, setAjusteComercial] =
+    useState<AjusteComercialProposta | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -90,6 +114,9 @@ export function useProposta(idProjeto: string | null) {
         setLoading(false);
         return;
       }
+
+      const cenarioAprovado = await buscarCenarioComercialAprovado(supabase, projeto.id);
+      setCenarioComercialAprovado(cenarioAprovado);
 
       // Proposta nao tem numeracao propria: usa o numero_projeto direto.
       setNumeroProjetoCarregado(projeto.numero_projeto);
@@ -234,18 +261,54 @@ export function useProposta(idProjeto: string | null) {
       // somado (nao item a item), para os dois "Valor Total" baterem. O
       // desconto comercial tambem so entra aqui, nunca no breakdown por
       // item acima (mesmo criterio de useOrcamento.ts).
+      //
+      // CORREÇÃO (DEC-007 §6.2/Fase 8b, aprovação do cenário comercial):
+      // havendo cenário aprovado vigente, o valor-base vira
+      // novoCustoTecnico (congelado na aprovação: custo técnico + custo
+      // adicional do cenário) em vez da soma bruta dos itens - mesma
+      // calcularResumoOrcamento, nunca uma segunda fórmula. O breakdown
+      // por item acima NUNCA é alterado por isso (o custo adicional não
+      // é atribuível a nenhum item específico) - só o total muda.
+      const custoTotalEfetivo = cenarioAprovado ? cenarioAprovado.novoCustoTecnico : custoTotalSoma;
       const { valorTecnico, valorDesconto, valorComercial: totalProposta } =
         calcularResumoOrcamento({
-          custoTotal: custoTotalSoma,
+          custoTotal: custoTotalEfetivo,
           margemLucroPercent: margem,
           cargaTributariaPercent: cargaEfetiva,
           descontoPercent: descontoPercentual,
         });
 
+      // Ajuste comercial (correção 2 de 6): diferença entre os dois
+      // resumos agregados, usando SEMPRE custoTecnicoAtual congelado na
+      // aprovação como base "sem ajuste" (nunca custoTotalSoma ao vivo -
+      // o snapshot é o que foi aprovado, não o estado atual dos itens).
+      let ajusteComercialCalculado: AjusteComercialProposta | null = null;
+
+      if (cenarioAprovado) {
+        const { valorComercial: valorComAjuste } = calcularResumoOrcamento({
+          custoTotal: cenarioAprovado.custoTecnicoAtual + cenarioAprovado.custoAdicionalTotal,
+          margemLucroPercent: margem,
+          cargaTributariaPercent: cargaEfetiva,
+          descontoPercent: descontoPercentual,
+        });
+        const { valorComercial: valorSemAjuste } = calcularResumoOrcamento({
+          custoTotal: cenarioAprovado.custoTecnicoAtual,
+          margemLucroPercent: margem,
+          cargaTributariaPercent: cargaEfetiva,
+          descontoPercent: descontoPercentual,
+        });
+
+        ajusteComercialCalculado = {
+          descricao: "Ajuste comercial — cenário aprovado",
+          valorTotal: valorComAjuste - valorSemAjuste,
+        };
+      }
+
       setItens(itensCalculados);
       setValorTecnicoProposta(valorTecnico);
       setValorDescontoProposta(valorDesconto);
       setValorTotalProposta(totalProposta);
+      setAjusteComercial(ajusteComercialCalculado);
       setLoading(false);
     }
 
@@ -314,6 +377,8 @@ export function useProposta(idProjeto: string | null) {
     valorTecnicoProposta,
     valorDescontoProposta,
     valorTotalProposta,
+    cenarioComercialAprovado,
+    ajusteComercial,
     revisao,
     salvandoRevisao,
     avancarRevisao,

@@ -59,6 +59,7 @@ import type {
   ResultadoAvaliacaoCenario,
   ResultadoOcorrenciaCenario,
 } from "./avaliarCenario";
+import type { DependenciaOcorrencia } from "./grafoPrecedencia";
 
 export interface OperacaoTerceirizadaResumo {
   readonly chave: ChaveOcorrencia;
@@ -73,26 +74,182 @@ export interface CustoPorAlternativaResumo {
   readonly antecipacaoMaterial: number;
 }
 
+/** 1 operação dentro da Cadeia precedente observada - mesmos dados reais já usados no diagnóstico (nunca uma 2ª fonte). */
+export interface EloCadeiaObservada {
+  readonly chave: ChaveOcorrencia;
+  readonly recursosUsados: readonly string[];
+  readonly inicioReal: string | null;
+  readonly terminoReal: string | null;
+}
+
 /**
- * Diagnóstico técnico de 1 ocorrência problemática - só existe quando
- * resultadosSaoDiagnostico=true (cenário inviável) E a ocorrência não
- * concluiu (status != "concluida"), ou quando não havia nenhum candidato
- * disponível para ela ("sem_candidato", origem: estado dados_insuficientes,
- * onde resultadosPorOcorrencia nem chega a ser calculado). Nunca inclui
- * ocorrências que concluíram (mesmo tarde - prazo_inviavel sempre conclui
- * todas, ver avaliarCenario.ts; o problema ali é atraso, já reportado em
- * ResultadoAvaliacaoCenario.diasCivisDeAtraso, não uma ocorrência
- * individual para diagnosticar).
+ * 1 passo da Cadeia precedente observada, em ordem de EXECUÇÃO (raiz →
+ * nó final) - nunca a ordem em que o rastreamento a percorreu (que é
+ * para trás). Nomenclatura deliberadamente sem causalidade (nunca
+ * "origem do atraso"/"operação causadora" - pedido explícito do
+ * usuário): a cadeia mostra a SEQUÊNCIA observada, não uma conclusão.
+ * - "raiz": ocorrência sem nenhuma predecessora - início da cadeia.
+ * - "elo": ocorrência com uma única predecessora identificável (a de
+ *   maior terminoReal entre as candidatas, ver reconstruirCadeiaObservada).
+ *   `gapNaoAtribuivel` descreve a relação desta operação com O QUE VEM
+ *   ANTES dela na lista (raiz→...→esta): `false` = inicioReal desta
+ *   operação é exatamente 1 dia civil após o terminoReal de referência
+ *   (imediato, atribuível à cadeia); `true` = há um intervalo maior -
+ *   NUNCA afirmar que a cadeia determinou o início aqui (pode ser
+ *   disponibilidade de material, disputa por recurso, etc. - não
+ *   determinável por estes dados); `null` = não há nenhuma data de
+ *   referência confiável para comparar (a entrada anterior da lista é
+ *   um passo "empate" ou "indisponivel").
+ * - "empate": 2+ predecessoras empatadas no maior terminoReal - a
+ *   cadeia NUNCA escolhe uma arbitrariamente; lista todas e para de
+ *   rastrear further atrás deste ponto.
+ * - "indisponivel": não foi possível continuar (dependência aponta para
+ *   uma ocorrência sem resultado calculado, ou nenhuma predecessora tem
+ *   terminoReal) - motivo explícito, a cadeia para aqui SEM se
+ *   apresentar como completa.
+ */
+export type PassoCadeiaObservada =
+  | { readonly tipo: "raiz"; readonly operacao: EloCadeiaObservada }
+  | { readonly tipo: "elo"; readonly operacao: EloCadeiaObservada; readonly gapNaoAtribuivel: boolean | null }
+  | { readonly tipo: "empate"; readonly operacoesEmpatadas: readonly EloCadeiaObservada[] }
+  | { readonly tipo: "indisponivel"; readonly motivo: string };
+
+/**
+ * "Cadeia precedente observada" (nunca "origem do atraso" nem "operação
+ * causadora" - ver PassoCadeiaObservada). Reconstruída SÓ com dados já
+ * produzidos pelo motor (dataInicioReal/dataFimReal/alocacoes de
+ * resultadosPorOcorrencia + dependencias de BaseCenarios) - nenhum
+ * cálculo novo, nenhuma consulta ao banco. Existe apenas para nós FINAIS
+ * atrasados (ver construirDiagnosticos) - null nos demais diagnósticos.
+ */
+export interface CadeiaObservada {
+  readonly passos: readonly PassoCadeiaObservada[];
+}
+
+function paraElo(r: ResultadoOcorrenciaCenario): EloCadeiaObservada {
+  return {
+    chave: r.chave,
+    recursosUsados: Object.freeze(Array.from(new Set(r.alocacoes.map((a) => a.recursoId)))),
+    inicioReal: r.dataInicioReal,
+    terminoReal: r.dataFimReal,
+  };
+}
+
+/**
+ * Anda para trás pelas dependencias a partir de `chaveFinal`, sempre
+ * seguindo a predecessora de MAIOR terminoReal (a que, nos dados reais,
+ * mais tarde liberou capacidade para a sucessora) - nunca uma escolha
+ * arbitrária em caso de empate (para o rastreamento e lista todas as
+ * empatadas). Predecessoras sem terminoReal são excluídas da comparação
+ * (nunca comparáveis a uma data real) - só bloqueiam o rastreamento
+ * quando TODAS as predecessoras de um passo carecem de terminoReal.
+ */
+function reconstruirCadeiaObservada(
+  chaveFinal: ChaveOcorrencia,
+  resultadosPorChave: ReadonlyMap<string, ResultadoOcorrenciaCenario>,
+  predecessorasPorChave: ReadonlyMap<string, readonly ChaveOcorrencia[]>,
+): CadeiaObservada {
+  const passosInvertidos: PassoCadeiaObservada[] = [];
+  let atual = resultadosPorChave.get(chaveOcorrenciaParaString(chaveFinal));
+
+  if (!atual) {
+    return { passos: [{ tipo: "indisponivel", motivo: "Resultado da operação final não foi encontrado - cadeia indisponível." }] };
+  }
+
+  while (true) {
+    const predecessorasChaves = predecessorasPorChave.get(chaveOcorrenciaParaString(atual.chave)) ?? [];
+
+    if (predecessorasChaves.length === 0) {
+      passosInvertidos.push({ tipo: "raiz", operacao: paraElo(atual) });
+      break;
+    }
+
+    const predecessorasResultados = predecessorasChaves.map((c) => resultadosPorChave.get(chaveOcorrenciaParaString(c)));
+    if (predecessorasResultados.some((r) => r === undefined)) {
+      passosInvertidos.push({ tipo: "elo", operacao: paraElo(atual), gapNaoAtribuivel: null });
+      passosInvertidos.push({
+        tipo: "indisponivel",
+        motivo: "Uma dependência aponta para uma operação sem resultado calculado - cadeia interrompida aqui.",
+      });
+      break;
+    }
+
+    const predecessorasValidas = predecessorasResultados as ResultadoOcorrenciaCenario[];
+    const comTermino = predecessorasValidas.filter((r) => r.dataFimReal !== null);
+
+    if (comTermino.length === 0) {
+      passosInvertidos.push({ tipo: "elo", operacao: paraElo(atual), gapNaoAtribuivel: null });
+      passosInvertidos.push({
+        tipo: "indisponivel",
+        motivo: "Nenhuma predecessora tem término real registrado - cadeia interrompida aqui.",
+      });
+      break;
+    }
+
+    const maiorTermino = comTermino.reduce((maior, r) => ((r.dataFimReal as string) > maior ? (r.dataFimReal as string) : maior), comTermino[0].dataFimReal as string);
+    const empatadas = comTermino.filter((r) => r.dataFimReal === maiorTermino);
+    const gapNaoAtribuivel = atual.dataInicioReal === null || diasCivisEntreDatas(maiorTermino, atual.dataInicioReal) !== 1;
+
+    if (empatadas.length > 1) {
+      passosInvertidos.push({ tipo: "elo", operacao: paraElo(atual), gapNaoAtribuivel });
+      passosInvertidos.push({ tipo: "empate", operacoesEmpatadas: Object.freeze(empatadas.map(paraElo)) });
+      break;
+    }
+
+    passosInvertidos.push({ tipo: "elo", operacao: paraElo(atual), gapNaoAtribuivel });
+    atual = empatadas[0];
+  }
+
+  return { passos: Object.freeze(passosInvertidos.reverse()) };
+}
+
+/**
+ * Diagnóstico técnico de 1 ocorrência problemática - entra quando:
+ * (a) a ocorrência não concluiu (status != "concluida" - bloqueada por
+ * déficit ou por predecessora), OU (b) é uma ocorrência FINAL da cadeia
+ * (chavesFinaisOrcamentoNovo) cujo terminoReal ficou depois do
+ * prazoInterno do cenário (cobre prazo_inviavel: todas as ocorrências
+ * concluem, só tarde - ver ResultadoAvaliacaoCenario, ninguém teria
+ * déficit ali, então o critério (a) sozinho nunca capturaria esse caso).
+ * Ocorrências INTERMEDIÁRIAS concluídas tarde, mas que não são nó final,
+ * ficam de fora deliberadamente - o atraso delas chega ao diagnóstico
+ * através do nó final que herda o atraso pela precedência (nunca
+ * duplicado aqui). Também existe para "sem_candidato" (origem: estado
+ * dados_insuficientes, onde resultadosPorOcorrencia nem chega a ser
+ * calculado).
  */
 export interface DiagnosticoOcorrencia {
   readonly chave: ChaveOcorrencia;
   readonly status: ResultadoOcorrenciaCenario["status"] | "sem_candidato";
+  /** É uma das chavesFinaisOrcamentoNovo (nó sem nenhuma sucessora) - determina se um atraso aqui reflete o atraso da entrega do cenário inteiro. */
+  readonly ehOcorrenciaFinal: boolean;
   /** null só em "sem_candidato" (nunca chegou a calcular déficit - não há candidatoIdsPorPrioridade para tentar). */
   readonly deficitResidualHorasPadrao: number | null;
   /** candidatoIdsPorPrioridade desta ocorrência - recursos OFERECIDOS ao escalonador, mesmo que insuficientes. [] em "sem_candidato". */
   readonly recursosConsiderados: readonly string[];
   /** recursoId distintos que de fato receberam alguma alocação (subconjunto de recursosConsiderados, possivelmente vazio). */
   readonly recursosUsados: readonly string[];
+  /** dataInicioReal, passthrough - null quando a ocorrência nunca chegou a começar. */
+  readonly inicioReal: string | null;
+  /** dataFimReal, passthrough - null quando a ocorrência nunca concluiu. */
+  readonly terminoReal: string | null;
+  /**
+   * Maior `data` entre as próprias alocações desta ocorrência - "Último
+   * dia com capacidade utilizada", NUNCA "semana necessária": não indica
+   * quando a hora extra deveria ser configurada (isso exigiria uma regra
+   * comprovada, fora do escopo deste diagnóstico de leitura) - só relevante
+   * quando há déficit (quem exibe decide o gate). null quando a ocorrência
+   * nunca recebeu nenhuma alocação.
+   */
+  readonly ultimoDiaComCapacidadeUtilizada: string | null;
+  /** dias CIVIS entre prazoInterno e terminoReal (positivo = terminoReal depois do prazo/atraso). null quando terminoReal é null. */
+  readonly diasAtrasoVsPrazoInterno: number | null;
+  /**
+   * "Cadeia precedente observada" - só reconstruída quando ehOcorrenciaFinal
+   * && diasAtrasoVsPrazoInterno > 0 (mesmo gate do bloco de atraso); null
+   * em todos os outros diagnósticos (não se aplica).
+   */
+  readonly cadeiaObservada: CadeiaObservada | null;
 }
 
 export interface ResumoCenarioParaExibicao {
@@ -102,6 +259,15 @@ export interface ResumoCenarioParaExibicao {
   readonly horasDomingo: number;
   readonly horasFeriado: number;
   readonly horasRecursoTemporario: number;
+  /**
+   * Soma de `decisoes.capacidadeExtra[].horasAdicionaisDisponiveis` -
+   * quanto foi AUTORIZADO pelas regras de hora adicional (potencial),
+   * nunca o quanto foi de fato usado pelo escalonador (isso é
+   * `horasHoraExtra + horasSabado + horasDomingo + horasFeriado`, acima -
+   * as duas podem divergir porque o escalonador só usa capacidade extra
+   * quando realmente precisa, mesmo que mais tenha sido disponibilizado).
+   */
+  readonly horasAdicionaisDisponibilizadas: number;
   /** 1 entrada por ocorrência terceirizada - quantidade = .length, total de dias = soma de diasCorridos. */
   readonly operacoesTerceirizadas: readonly OperacaoTerceirizadaResumo[];
   readonly operacoesComHoraExtra: readonly ChaveOcorrencia[];
@@ -249,28 +415,75 @@ function calcularCustoPorAlternativa(
   return Object.freeze({ horaExtra, terceirizacao, recursoTemporario, antecipacaoMaterial });
 }
 
-function construirDiagnosticos(resultado: ResultadoAvaliacaoCenario): DiagnosticoOcorrencia[] {
+function ultimaDataEntre(datas: readonly string[]): string | null {
+  if (datas.length === 0) return null;
+  return datas.reduce((maior, atual) => (atual > maior ? atual : maior));
+}
+
+function construirDiagnosticos(
+  resultado: ResultadoAvaliacaoCenario,
+  chavesFinais: readonly ChaveOcorrencia[],
+  prazoInterno: string,
+  dependencias: readonly DependenciaOcorrencia[],
+): DiagnosticoOcorrencia[] {
+  const chavesFinaisSet = new Set(chavesFinais.map(chaveOcorrenciaParaString));
+
   if (resultado.estado === "dados_insuficientes") {
     return [
       {
         chave: resultado.chave,
         status: "sem_candidato",
+        ehOcorrenciaFinal: chavesFinaisSet.has(chaveOcorrenciaParaString(resultado.chave)),
         deficitResidualHorasPadrao: null,
         recursosConsiderados: [],
         recursosUsados: [],
+        inicioReal: null,
+        terminoReal: null,
+        ultimoDiaComCapacidadeUtilizada: null,
+        diasAtrasoVsPrazoInterno: null,
+        cadeiaObservada: null,
       },
     ];
   }
 
+  const resultadosPorChave = new Map(resultado.resultadosPorOcorrencia.map((r) => [chaveOcorrenciaParaString(r.chave), r]));
+  const predecessorasPorChave = new Map<string, ChaveOcorrencia[]>();
+  for (const dep of dependencias) {
+    const chaveSucessora = chaveOcorrenciaParaString(dep.sucessora);
+    const lista = predecessorasPorChave.get(chaveSucessora);
+    if (lista) {
+      lista.push(dep.predecessora);
+    } else {
+      predecessorasPorChave.set(chaveSucessora, [dep.predecessora]);
+    }
+  }
+
   return resultado.resultadosPorOcorrencia
-    .filter((r) => r.status !== "concluida")
-    .map((r) => ({
-      chave: r.chave,
-      status: r.status,
-      deficitResidualHorasPadrao: r.deficitResidualHorasPadrao,
-      recursosConsiderados: r.recursosConsiderados,
-      recursosUsados: Object.freeze(Array.from(new Set(r.alocacoes.map((a) => a.recursoId)))),
-    }));
+    .filter((r) => {
+      if (r.status !== "concluida") return true;
+      const ehFinal = chavesFinaisSet.has(chaveOcorrenciaParaString(r.chave));
+      return ehFinal && r.dataFimReal !== null && r.dataFimReal > prazoInterno;
+    })
+    .map((r) => {
+      const ehOcorrenciaFinal = chavesFinaisSet.has(chaveOcorrenciaParaString(r.chave));
+      const diasAtrasoVsPrazoInterno = r.dataFimReal !== null ? diasCivisEntreDatas(prazoInterno, r.dataFimReal) : null;
+      const temAtraso = diasAtrasoVsPrazoInterno !== null && diasAtrasoVsPrazoInterno > 0;
+
+      return {
+        chave: r.chave,
+        status: r.status,
+        ehOcorrenciaFinal,
+        deficitResidualHorasPadrao: r.deficitResidualHorasPadrao,
+        recursosConsiderados: r.recursosConsiderados,
+        recursosUsados: Object.freeze(Array.from(new Set(r.alocacoes.map((a) => a.recursoId)))),
+        inicioReal: r.dataInicioReal,
+        terminoReal: r.dataFimReal,
+        ultimoDiaComCapacidadeUtilizada: ultimaDataEntre(r.alocacoes.map((a) => a.data)),
+        diasAtrasoVsPrazoInterno,
+        cadeiaObservada:
+          ehOcorrenciaFinal && temAtraso ? reconstruirCadeiaObservada(r.chave, resultadosPorChave, predecessorasPorChave) : null,
+      };
+    });
 }
 
 export function prepararResumoCenarioParaExibicao(params: {
@@ -280,8 +493,12 @@ export function prepararResumoCenarioParaExibicao(params: {
   grade: GradeCompartilhada;
   /** Data original pedida pelo usuário (ex.: dataNecessidade do projeto) - responsabilidade do CHAMADOR resolver essa origem; nunca derivado de grade.prazoInterno aqui dentro (ver cabeçalho do módulo). */
   dataSolicitadaCliente: string;
+  /** BaseCenarios.chavesFinaisOrcamentoNovo - obrigatório (nunca default `[]`): sem isto, diagnosticos nunca capturaria o caso prazo_inviavel (nó final concluído tarde, sem déficit - ver DiagnosticoOcorrencia). */
+  chavesFinais: readonly ChaveOcorrencia[];
+  /** BaseCenarios.dependencias - obrigatório: sem isto, a "Cadeia precedente observada" nunca poderia ser reconstruída para nenhum nó final atrasado. */
+  dependencias: readonly DependenciaOcorrencia[];
 }): ResumoCenarioParaExibicao {
-  const { resultado, decisoes, resultadoBase, grade, dataSolicitadaCliente } = params;
+  const { resultado, decisoes, resultadoBase, grade, dataSolicitadaCliente, chavesFinais, dependencias } = params;
 
   const idsRecursosTemporarios = new Set(decisoes.recursosTemporarios.map((rt) => rt.recursoTemporario.idTemporario));
 
@@ -355,6 +572,11 @@ export function prepararResumoCenarioParaExibicao(params: {
   const custoPorDiaAntecipado =
     diasGanhosVsBase !== null && diasGanhosVsBase > 0 ? resultado.custoAdicionalTotal / diasGanhosVsBase : null;
 
+  const horasAdicionaisDisponibilizadas = decisoes.capacidadeExtra.reduce(
+    (soma, c) => soma + c.horasAdicionaisDisponiveis,
+    0,
+  );
+
   return Object.freeze({
     horasNormais,
     horasHoraExtra,
@@ -362,6 +584,7 @@ export function prepararResumoCenarioParaExibicao(params: {
     horasDomingo,
     horasFeriado,
     horasRecursoTemporario,
+    horasAdicionaisDisponibilizadas,
     operacoesTerceirizadas: Object.freeze(operacoesTerceirizadas),
     operacoesComHoraExtra: Object.freeze(Array.from(operacoesComHoraExtraPorChave.values())),
     operacoesComRecursoTemporario: Object.freeze(Array.from(operacoesComRecursoTemporarioPorChave.values())),
@@ -380,6 +603,6 @@ export function prepararResumoCenarioParaExibicao(params: {
     diferencaDiasCivisVsSolicitado,
     diasGanhosVsBase,
     custoPorDiaAntecipado,
-    diagnosticos: Object.freeze(construirDiagnosticos(resultado)),
+    diagnosticos: Object.freeze(construirDiagnosticos(resultado, chavesFinais, grade.prazoInterno, dependencias)),
   });
 }

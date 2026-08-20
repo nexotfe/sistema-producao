@@ -25,7 +25,14 @@
 //   de forma idêntica no cálculo (diferem só na rotulagem/relatório).
 import { validarDataIso, validarHorasFinitasNaoNegativas } from "./validacoes";
 
-export type TipoContratacao = "hora_extra" | "sabado_domingo_feriado" | "maquina_alugada" | "freelancer" | "terceirizacao" | "antecipacao_material";
+export type TipoContratacao =
+  | "hora_extra"
+  | "sabado_domingo_feriado"
+  | "maquina_alugada"
+  | "equipamento_adicional"
+  | "freelancer"
+  | "terceirizacao"
+  | "antecipacao_material";
 export type AbrangenciaContratacao = "por_hora_utilizada" | "por_dia_contratado" | "por_periodo_completo" | "valor_fixo_unico";
 
 export interface Contratacao {

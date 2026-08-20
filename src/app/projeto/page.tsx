@@ -227,6 +227,22 @@ export default function ProjetoPage() {
               Simulação
             </span>
           )}
+
+          {projetoId ? (
+            <Link
+              href={`/projetos/${projetoId}/cenarios`}
+              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Cenários
+            </Link>
+          ) : (
+            <span
+              title="Salve o projeto antes de avaliar cenários."
+              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-400"
+            >
+              Cenários
+            </span>
+          )}
         </div>
 
         {(erro || mensagemSalvar) && (

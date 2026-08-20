@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font-size",
+        "value": "11.5px",
+        "createdAt": "2026-08-20T13:44:43.317Z",
+        "reason": "Valor dentro da faixa documentada em DESIGN.md para o passo Label (600, 11-12.5px) - usado de forma consistente em toda a familia de cards de Cenarios (dt/badge/link), confirmado como intencional pelo usuario em 2026-08-20"
+      }
+    ]
+  }
+}

@@ -46,6 +46,7 @@ import { validarEstruturaFabricacaoProjeto } from "../validarEstruturaFabricacao
 import { validarDataIso } from "./validacoes";
 import { ProjetoSemItensError } from "../errors";
 import { OperacaoSemRecursoError } from "@/modules/bom/lib/errors";
+import type { ConvencaoHorasAdicionaisVigencia } from "./resolverConvencaoParaData";
 
 type ProjetoItemRow = { id: string; produto_id: string; quantidade: number };
 type BomOperacaoDetalheRow = { id: string; tempo_estimado_minutos: number; recurso_produtivo_id: string | null };
@@ -76,6 +77,24 @@ export interface BaseCenarios {
    * isto como desconto inicial, nunca como capacidade líquida já pronta.
    */
   comprometidoInicialPorRecurso: Record<string, number>;
+  /**
+   * recursos_produtivos.valor_hora por recurso (DEC-007, redesenho Fase
+   * 8b - regras semanais/convenção coletiva) - base do custo automático
+   * de hora adicional de recurso INTERNO (calcularValorHoraAdicional.ts).
+   * Nunca usado para recurso externo/temporário (custeio próprio,
+   * manual).
+   */
+  valorHoraPorRecurso: Record<string, number>;
+  /**
+   * TODAS as convenções coletivas cujo intervalo de vigência cruza
+   * [disponibilidadeOriginalMaterial, prazoInterno] (nunca só "a vigente
+   * agora" - o cenário pode atravessar uma mudança de vigência).
+   * Resolução por data em memória via resolverConvencaoParaData.ts.
+   * Array vazio = nenhuma convenção cadastrada cobrindo este período -
+   * bloqueia regras de hora adicional em recurso interno, nunca assume
+   * custo zero.
+   */
+  convencoesHorasAdicionais: ConvencaoHorasAdicionaisVigencia[];
   /**
    * Piso de disponibilidade de material por ocorrência-RAIZ
    * (chaveOcorrenciaParaString → data ISO) - restrição OPERACIONAL que
@@ -136,6 +155,68 @@ function mergeVinculosMestres(
 }
 
 /**
+ * recursos_produtivos.valor_hora por recurso (DEC-007, redesenho Fase
+ * 8b) - consulta local, nova, não reaproveita prepararEntradasMotor.ts
+ * (o motor antigo/Simulação Comercial não precisa de valor-hora para
+ * custeio de capacidade - isso é um conceito exclusivo do redesenho de
+ * Cenários). Mesmo padrão de 1 consulta em lote já usado no resto deste
+ * módulo.
+ */
+async function valoresHoraPorRecurso(client: SupabaseClient, recursoIds: string[]): Promise<Record<string, number>> {
+  if (recursoIds.length === 0) return {};
+
+  const { data, error } = await client.from("recursos_produtivos").select("id,valor_hora").in("id", recursoIds);
+  if (error) {
+    throw new Error(`Erro ao consultar valor_hora de recursos_produtivos: ${error.message}`);
+  }
+
+  const resultado: Record<string, number> = {};
+  for (const linha of (data ?? []) as { id: string; valor_hora: number }[]) {
+    resultado[linha.id] = Number(linha.valor_hora);
+  }
+  return resultado;
+}
+
+type ConvencaoHorasAdicionaisRow = {
+  percentual_segunda_sexta: number;
+  percentual_sabado: number;
+  percentual_domingo: number;
+  percentual_feriado: number;
+  vigente_desde: string;
+  vigente_ate: string | null;
+};
+
+/**
+ * Todas as convenções coletivas cujo intervalo de vigência cruza
+ * [dataInicio, dataFim] - RPC `convencoes_horas_adicionais_no_periodo`
+ * (migration 202608130001), nunca um SELECT ad-hoc duplicando a mesma
+ * lógica de interseção de intervalo aqui - single source of truth no
+ * banco, reaproveitada também pela tela administrativa da convenção.
+ */
+async function convencoesHorasAdicionaisNoPeriodo(
+  client: SupabaseClient,
+  dataInicio: string,
+  dataFim: string,
+): Promise<ConvencaoHorasAdicionaisVigencia[]> {
+  const { data, error } = await client.rpc("convencoes_horas_adicionais_no_periodo", {
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  });
+  if (error) {
+    throw new Error(`Erro ao consultar convenções de horas adicionais: ${error.message}`);
+  }
+
+  return ((data ?? []) as ConvencaoHorasAdicionaisRow[]).map((linha) => ({
+    percentualSegundaSexta: Number(linha.percentual_segunda_sexta),
+    percentualSabado: Number(linha.percentual_sabado),
+    percentualDomingo: Number(linha.percentual_domingo),
+    percentualFeriado: Number(linha.percentual_feriado),
+    vigenteDesde: linha.vigente_desde,
+    vigenteAte: linha.vigente_ate,
+  }));
+}
+
+/**
  * "Base congelada uma vez" (DEC-007 §18/§6.2.7). `disponibilidadeOriginalMaterial`
  * é OBRIGATÓRIO - a data (calculada pela janela comercial, ANTES desta
  * chamada, fora deste módulo) que vira o piso de TODA ocorrência-raiz do
@@ -146,14 +227,23 @@ function mergeVinculosMestres(
  * §6.2.6/§6.2.7) quando a restrição só existia como convenção manual
  * nos testes. Validada como data ISO genuína - string vazia/inválida
  * lança RangeError explícito, nunca silenciosamente ignorada.
+ *
+ * `prazoInterno` (DEC-007, redesenho Fase 8b) também é OBRIGATÓRIO -
+ * junto com `disponibilidadeOriginalMaterial` (o início da janela
+ * produtiva), delimita o período usado para carregar TODAS as
+ * convenções coletivas de hora adicional que cruzam o cenário
+ * (`convencoesHorasAdicionais` - nunca só "a vigente agora", o cenário
+ * pode atravessar uma mudança de vigência).
  */
 export async function carregarBaseCenarios(
   client: SupabaseClient,
   empresaId: string,
   projetoId: string,
   disponibilidadeOriginalMaterial: string,
+  prazoInterno: string,
 ): Promise<BaseCenarios> {
   validarDataIso(disponibilidadeOriginalMaterial, "disponibilidadeOriginalMaterial");
+  validarDataIso(prazoInterno, "prazoInterno");
   await validarEstruturaFabricacaoProjeto(client, projetoId);
 
   const { data: itensData, error: erroItens } = await client
@@ -267,9 +357,16 @@ export async function carregarBaseCenarios(
   const recursosDestino = Object.values(compatibilidades).flatMap((lista) => lista.map((c) => c.recursoId));
   const recursoIds = Array.from(new Set([...recursosOriginais, ...recursosDestino])).sort();
 
-  const [capacidadeDiariaPorRecurso, { produtividadePorRecurso, comprometidoInicialPorRecurso }] = await Promise.all([
+  const [
+    capacidadeDiariaPorRecurso,
+    { produtividadePorRecurso, comprometidoInicialPorRecurso },
+    valorHoraPorRecurso,
+    convencoesHorasAdicionais,
+  ] = await Promise.all([
     capacidadesDiariasDosRecursos(client, recursoIds),
     produtividadesEComprometidosDosRecursos(client, recursoIds, projetoId),
+    valoresHoraPorRecurso(client, recursoIds),
+    convencoesHorasAdicionaisNoPeriodo(client, disponibilidadeOriginalMaterial, prazoInterno),
   ]);
 
   // --- 5. Piso de material - a MESMA disponibilidadeOriginalMaterial em
@@ -296,6 +393,8 @@ export async function carregarBaseCenarios(
     capacidadeDiariaPorRecurso,
     produtividadePorRecurso,
     comprometidoInicialPorRecurso,
+    valorHoraPorRecurso,
+    convencoesHorasAdicionais,
     restricaoMaterialPorChave,
   };
 }

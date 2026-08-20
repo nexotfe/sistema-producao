@@ -79,3 +79,47 @@ export function calcularResumoOrcamento({
     margemEfetiva,
   };
 }
+
+export type ResumoOrcamentoProjetoCalculado = ResumoOrcamentoCalculado & { custoTotal: number };
+
+/**
+ * Orquestração "custoTotal (soma dos itens) + fallback de carga
+ * tributária (projeto -> sugerida) + calcularResumoOrcamento" - extraída
+ * de useOrcamento.ts (useMemo `resumoOrcamento`) para ser a fonte ÚNICA
+ * usada tanto pela tela de Orçamento quanto por qualquer outra tela que
+ * precise do "valor atual do orçamento" de um projeto (ex.: Cenários,
+ * DEC-007 §6.2) - nunca uma segunda montagem dos mesmos parâmetros em
+ * outro lugar. Não faz nenhuma consulta - os itens/percentuais já
+ * resolvidos são responsabilidade do chamador (ver buscarDadosOrcamento.ts).
+ */
+export function calcularValorComercialProjeto(params: {
+  itens: readonly { custo: number }[];
+  margemLucroPercent: number;
+  cargaTributariaPercent: number | null;
+  cargaTributariaSugerida: number;
+  descontoPercentual: number | null;
+}): ResumoOrcamentoProjetoCalculado {
+  const custoTotal = params.itens.reduce((acc, item) => acc + item.custo, 0);
+  const cargaTributariaEfetiva = params.cargaTributariaPercent ?? params.cargaTributariaSugerida;
+
+  const resumo = calcularResumoOrcamento({
+    custoTotal,
+    margemLucroPercent: params.margemLucroPercent,
+    cargaTributariaPercent: cargaTributariaEfetiva,
+    descontoPercent: params.descontoPercentual,
+  });
+
+  return { custoTotal, ...resumo };
+}
+
+/**
+ * "Novo valor do orçamento" = valor atual do orçamento + custo adicional
+ * EFETIVAMENTE UTILIZADO (nunca o potencial máximo das horas
+ * disponibilizadas - ver ResumoCenarioParaExibicao.custoAdicionalTotal,
+ * que já é o custo real sobre uso real). Extraída como função própria
+ * (em vez de soma inline no componente) para ter cobertura de teste
+ * automatizada - DEC-007 §6.2, tela de Cenários.
+ */
+export function calcularNovoValorOrcamento(valorAtualOrcamento: number, custoAdicionalEfetivamenteUtilizado: number): number {
+  return valorAtualOrcamento + custoAdicionalEfetivamenteUtilizado;
+}

@@ -16,7 +16,7 @@ import { chaveOcorrenciaParaString, type ChaveOcorrencia } from "./chaveOcorrenc
 import type { CandidatoComCapacidadeDiaria, FaixaCapacidadeDia } from "./alocarOperacaoDiaAdia";
 import { validarDataIso, validarHorasFinitasNaoNegativas, validarProdutividade } from "./validacoes";
 
-export type TipoRecursoTemporario = "maquina_alugada" | "freelancer";
+export type TipoRecursoTemporario = "maquina_alugada" | "equipamento_adicional" | "freelancer";
 
 export interface DisponibilidadeDiaRecursoTemporario {
   data: string;

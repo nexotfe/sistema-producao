@@ -20,6 +20,13 @@ export function validarHorasFinitasNaoNegativas(horas: number, nomeParametro: st
   }
 }
 
+/** Mais estrita que validarHorasFinitasNaoNegativas: rejeita também zero. Um compromisso de capacidade com 0h não representa nenhum trabalho real - deveria nunca ter sido construído, não silenciosamente aceito. */
+export function validarHorasFinitasPositivas(horas: number, nomeParametro: string): void {
+  if (!Number.isFinite(horas) || horas <= 0) {
+    throw new RangeError(`${nomeParametro} precisa ser finito e maior que zero - recebido: ${horas}`);
+  }
+}
+
 const REGEX_DATA_ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 // Date.parse/`new Date(string)` são inconsistentes para rejeitar datas

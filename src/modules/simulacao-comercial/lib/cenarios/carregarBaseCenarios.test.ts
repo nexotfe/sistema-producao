@@ -8,6 +8,9 @@ import { OperacaoSemRecursoError } from "@/modules/bom/lib/errors";
 // Data fixa de disponibilidadeOriginalMaterial usada nos testes que não
 // investigam especificamente essa restrição - qualquer data ISO válida serve.
 const DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO = "2026-01-15";
+// prazoInterno padrão - generosamente posterior a qualquer
+// disponibilidadeOriginalMaterial usada nos testes deste arquivo.
+const PRAZO_INTERNO_PADRAO = "2026-06-30";
 
 type NoFixture = {
   produto_id: string;
@@ -97,6 +100,15 @@ function criarClienteFalso(config: {
   produtividadePorRecurso?: Record<string, number>;
   comprometidoPorRecurso?: Record<string, number>;
   compatibilidades?: { recurso_origem_id: string; recurso_destino_id: string; prioridade: number }[];
+  valorHoraPorRecurso?: Record<string, number>;
+  convencoesHorasAdicionais?: {
+    percentual_segunda_sexta: number;
+    percentual_sabado: number;
+    percentual_domingo: number;
+    percentual_feriado: number;
+    vigente_desde: string;
+    vigente_ate: string | null;
+  }[];
 }) {
   const chamadas: { rpcs: { nome: string; params: unknown }[] } = { rpcs: [] };
 
@@ -117,6 +129,9 @@ function criarClienteFalso(config: {
       if (nome === "calcular_comprometido_v2") {
         const recursoId = params.p_recurso_produtivo_id as string;
         return Promise.resolve({ data: config.comprometidoPorRecurso?.[recursoId] ?? 0, error: null });
+      }
+      if (nome === "convencoes_horas_adicionais_no_periodo") {
+        return Promise.resolve({ data: config.convencoesHorasAdicionais ?? [], error: null });
       }
       return Promise.resolve({ data: null, error: { message: `RPC não mockada nesta fake: ${nome}` } });
     },
@@ -176,19 +191,23 @@ function criarClienteFalso(config: {
         return builder;
       }
       if (tabela === "recursos_produtivos") {
+        let colunas = "";
         const builder = {
-          select: () => builder,
+          select: (cols: string) => {
+            colunas = cols;
+            return builder;
+          },
           in: () => builder,
-          then: (resolve: (v: unknown) => unknown) =>
-            Promise.resolve(
-              resolve({
-                data: Object.entries(config.capacidadePorRecurso ?? {}).map(([id, capacidade_horas_dia]) => ({
+          then: (resolve: (v: unknown) => unknown) => {
+            const ehValorHora = colunas.includes("valor_hora");
+            const data = ehValorHora
+              ? Object.entries(config.valorHoraPorRecurso ?? {}).map(([id, valor_hora]) => ({ id, valor_hora }))
+              : Object.entries(config.capacidadePorRecurso ?? {}).map(([id, capacidade_horas_dia]) => ({
                   id,
                   capacidade_horas_dia,
-                })),
-                error: null,
-              }),
-            ),
+                }));
+            return Promise.resolve(resolve({ data, error: null }));
+          },
         };
         return builder;
       }
@@ -207,7 +226,7 @@ describe("carregarBaseCenarios - caso feliz (topologia real conhecida)", () => {
       capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
     });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
 
     const op30 = base.ocorrencias.find((o) => o.ocorrencia.bomOperacaoId === "op-30")!;
     expect(op30.necessarioHorasPadrao).toBeCloseTo((120 / 60) * 2); // 4h
@@ -223,7 +242,7 @@ describe("carregarBaseCenarios - caso feliz (topologia real conhecida)", () => {
     const cfg = cenarioBase();
     const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
 
     // Raiz: OP10 (sem predecessora) e a operação do subconjunto (sem predecessora dentro do próprio caminho).
     const raizIds = base.chavesRaizOrcamentoNovo.map((c) => c.bomOperacaoId).sort();
@@ -243,7 +262,7 @@ describe("carregarBaseCenarios - caso feliz (topologia real conhecida)", () => {
       comprometidoPorRecurso: { "recurso-B": 12 },
     });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
 
     expect(base.recursoIds.sort()).toEqual(["recurso-A", "recurso-B"]);
     expect(base.capacidadeDiariaPorRecurso["recurso-B"]).toBe(6);
@@ -288,7 +307,7 @@ describe("carregarBaseCenarios - múltiplos projeto_itens combinados", () => {
       },
     } as unknown as SupabaseClient;
 
-    const base = await carregarBaseCenarios(clienteComQuantidadeReal, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
+    const base = await carregarBaseCenarios(clienteComQuantidadeReal, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
 
     // 5 ocorrências do item-1 (quantidade=2) + 5 do item-2 (quantidade=5) = 10, chaves distintas por projetoItemId.
     expect(base.ocorrencias).toHaveLength(10);
@@ -319,7 +338,7 @@ describe("carregarBaseCenarios - múltiplos projeto_itens combinados", () => {
       capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
     });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", "2026-02-01");
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", "2026-02-01", PRAZO_INTERNO_PADRAO);
 
     // 2 raízes por item (OP10 + OP-sub-10) × 2 itens = 4 entradas, nenhuma a mais nem a menos.
     expect(base.chavesRaizOrcamentoNovo).toHaveLength(4);
@@ -347,7 +366,7 @@ describe("carregarBaseCenarios - piso de material (restricaoMaterialPorChave)", 
     const cfg = cenarioBase();
     const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", "2026-03-10");
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", "2026-03-10", PRAZO_INTERNO_PADRAO);
 
     // Mesmas 2 raízes do teste de topologia (OP10 + OP-sub-10) - as 2 recebem a mesma disponibilidadeOriginalMaterial.
     expect(base.chavesRaizOrcamentoNovo).toHaveLength(2);
@@ -360,7 +379,7 @@ describe("carregarBaseCenarios - piso de material (restricaoMaterialPorChave)", 
     const cfg = cenarioBase();
     const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
 
-    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO);
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
 
     expect(Object.isFrozen(base.restricaoMaterialPorChave)).toBe(true);
     const [algumaChaveStr] = Object.keys(base.restricaoMaterialPorChave);
@@ -387,7 +406,7 @@ describe("carregarBaseCenarios - erros explícitos", () => {
     const cfg = cenarioBase();
     const { client } = criarClienteFalso({ ...cfg, projetoItens: [] });
 
-    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO)).rejects.toThrow(ProjetoSemItensError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO)).rejects.toThrow(ProjetoSemItensError);
   });
 
   it("operação sem recurso produtivo vinculado", async () => {
@@ -400,14 +419,73 @@ describe("carregarBaseCenarios - erros explícitos", () => {
       capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
     });
 
-    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO)).rejects.toThrow(OperacaoSemRecursoError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO)).rejects.toThrow(OperacaoSemRecursoError);
   });
 
   it("base sem disponibilidade original (string vazia/inválida) é rejeitada - nunca vira {} silenciosamente", async () => {
     const cfg = cenarioBase();
     const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
 
-    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", "")).rejects.toThrow(RangeError);
-    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", "não-é-uma-data")).rejects.toThrow(RangeError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", "", PRAZO_INTERNO_PADRAO)).rejects.toThrow(RangeError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", "não-é-uma-data", PRAZO_INTERNO_PADRAO)).rejects.toThrow(RangeError);
+    await expect(carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, "")).rejects.toThrow(RangeError);
+  });
+});
+
+describe("carregarBaseCenarios - valor-hora e convenção coletiva (DEC-007, redesenho Fase 8b)", () => {
+  it("carrega valorHoraPorRecurso a partir de recursos_produtivos.valor_hora, por recursoId", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({
+      ...cfg,
+      capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
+      valorHoraPorRecurso: { "recurso-A": 25.5, "recurso-B": 18 },
+    });
+
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
+
+    expect(base.valorHoraPorRecurso).toEqual({ "recurso-A": 25.5, "recurso-B": 18 });
+  });
+
+  it("nenhuma convenção cadastrada -> convencoesHorasAdicionais fica vazio, nunca inventado", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
+
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
+
+    expect(base.convencoesHorasAdicionais).toEqual([]);
+  });
+
+  it("troca de convenção durante a mesma janela: carrega TODAS as vigências que cruzam [disponibilidadeOriginalMaterial, prazoInterno], não só a mais recente", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({
+      ...cfg,
+      capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 },
+      convencoesHorasAdicionais: [
+        {
+          percentual_segunda_sexta: 0.2,
+          percentual_sabado: 0.4,
+          percentual_domingo: 0.8,
+          percentual_feriado: 0.8,
+          vigente_desde: "2025-01-01",
+          vigente_ate: "2026-02-28",
+        },
+        {
+          percentual_segunda_sexta: 0.35,
+          percentual_sabado: 0.5,
+          percentual_domingo: 1,
+          percentual_feriado: 1,
+          vigente_desde: "2026-03-01",
+          vigente_ate: null,
+        },
+      ],
+    });
+
+    // Janela do cenário (15/01 a 30/06/2026) atravessa a troca de vigência em 01/03/2026.
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
+
+    expect(base.convencoesHorasAdicionais).toHaveLength(2);
+    expect(base.convencoesHorasAdicionais.map((c) => c.vigenteDesde).sort()).toEqual(["2025-01-01", "2026-03-01"]);
+    expect(base.convencoesHorasAdicionais.find((c) => c.vigenteDesde === "2025-01-01")?.percentualSegundaSexta).toBe(0.2);
+    expect(base.convencoesHorasAdicionais.find((c) => c.vigenteDesde === "2026-03-01")?.percentualSegundaSexta).toBe(0.35);
   });
 });

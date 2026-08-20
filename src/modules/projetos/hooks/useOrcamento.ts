@@ -5,37 +5,27 @@ import { supabase } from "@/lib/supabaseClient";
 import type { ProjectStatus, ProjectType } from "../types";
 import { calcularResumoOrcamento } from "../lib/calcularResumoOrcamento";
 import {
-  calcularResumoProdutivoProjeto,
-  type ResultadoResumoProdutivoProjeto,
-} from "../lib/calcularResumoProdutivoProjeto";
+  buscarDadosOrcamento,
+  type ClienteOrcamento,
+  type DadosOrcamentoProjeto,
+  type ItemOrcamentoBase,
+} from "../lib/buscarDadosOrcamento";
+import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
+import type { ResultadoResumoProdutivoProjeto } from "../lib/calcularResumoProdutivoProjeto";
 
-export type ClienteOrcamento = {
-  id: string;
-  nome: string;
-  cnpj: string | null;
-  email: string | null;
-};
+export type { CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
 
-export type ItemOrcamento = {
-  id: string;
-  produtoId: string;
-  pn: string;
-  descricao: string;
-  revisao: string | null;
-  quantidade: number;
-  temEstrutura: boolean;
-  custo: number;
-  custoCongelado: boolean;
+export type { ClienteOrcamento } from "../lib/buscarDadosOrcamento";
+
+export type ItemOrcamento = ItemOrcamentoBase & {
   impostos: number;
   lucro: number;
   total: number;
 };
 
-type ItemBase = Omit<ItemOrcamento, "impostos" | "lucro" | "total">;
+type ItemBase = ItemOrcamentoBase;
 
 export type { LinhaResumoProdutivoRecurso as LinhaResumoProdutivo } from "../lib/calcularResumoProdutivoProjeto";
-
-type BomEscolhaRow = { id: string; status: string; created_at: string };
 
 const RESUMO_PRODUTIVO_VAZIO: ResultadoResumoProdutivoProjeto = {
   estado: "calculado",
@@ -49,216 +39,12 @@ const RESUMO_PRODUTIVO_VAZIO: ResultadoResumoProdutivoProjeto = {
 // dadosValidos for false.
 const ITENS_BASE_VAZIO: ItemBase[] = [];
 
-const CARGA_TRIBUTARIA_CHAVE = "carga_tributaria_por_natureza";
-
 type ResultadoAdicionarItem =
   | { status: "ok" }
   | { status: "erro"; mensagem: string };
 
 const MENSAGEM_CARGA_INVALIDA =
   "Carga Tributária não pode ser 100% ou mais.";
-
-type DadosOrcamentoProjeto = {
-  projeto: {
-    id: string;
-    numeroProjeto: string;
-    nomeProjeto: string;
-    tipoProjeto: ProjectType;
-    statusProjeto: ProjectStatus;
-    dataObjetivo: string | null;
-    criadoEm: string;
-    margemLucroPercent: number;
-    cargaTributariaPercent: number | null;
-    descontoPercentual: number | null;
-    descontoMotivo: string | null;
-  };
-  responsavelNome: string | null;
-  cargaTributariaSugerida: number;
-  cliente: ClienteOrcamento | null;
-  itensCalculados: ItemBase[];
-  resumoProdutivoResultado: ResultadoResumoProdutivoProjeto;
-  erroResumoProdutivo: string | null;
-};
-
-// Busca pura (sem setState) de todos os dados do orcamento de um projeto.
-// Compartilhada entre a carga inicial (efeito) e as recargas apos
-// mutacao (adicionarItem/editarQuantidadeItem/editarCustoItem) - cada
-// chamador decide como e quando aplicar o resultado ao estado.
-async function buscarDadosOrcamento(
-  idProjeto: string,
-): Promise<DadosOrcamentoProjeto | null> {
-  const { data: projeto, error } = await supabase
-    .from("projetos")
-    .select(
-      "id,numero_projeto,nome,tipo_projeto,status,cliente_id,data_objetivo,created_at,margem_lucro_percent,carga_tributaria_percent,desconto_percentual,desconto_motivo",
-    )
-    .eq("id", idProjeto)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (error || !projeto) {
-    return null;
-  }
-
-  // Responsavel: nao existe coluna persistida em projetos (mesmo limite
-  // de useProjeto) - usa o usuario logado como aproximacao.
-  let responsavelNome: string | null = null;
-  const { data: userData } = await supabase.auth.getUser();
-
-  if (userData.user) {
-    const { data: usuario } = await supabase
-      .from("usuarios")
-      .select("nome")
-      .eq("id", userData.user.id)
-      .single();
-
-    if (usuario?.nome) {
-      responsavelNome = usuario.nome;
-    }
-  }
-
-  const { data: config } = await supabase
-    .from("configuracoes_empresa")
-    .select("valor")
-    .eq("chave", CARGA_TRIBUTARIA_CHAVE)
-    .maybeSingle();
-
-  const tabela = (config?.valor ?? {}) as Record<string, number>;
-  const cargaTributariaSugerida = Number(tabela[projeto.tipo_projeto] ?? 0);
-
-  let cliente: ClienteOrcamento | null = null;
-
-  if (projeto.cliente_id) {
-    const { data: clienteData } = await supabase
-      .from("clientes")
-      .select("id,nome,cnpj,email")
-      .eq("id", projeto.cliente_id)
-      .single();
-
-    if (clienteData) {
-      cliente = {
-        id: clienteData.id,
-        nome: clienteData.nome ?? "",
-        cnpj: clienteData.cnpj,
-        email: clienteData.email,
-      };
-    }
-  }
-
-  const { data: itens } = await supabase
-    .from("projeto_itens")
-    .select("id,produto_id,pn,descricao,revisao,quantidade,custo_congelado")
-    .eq("projeto_id", projeto.id)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true });
-
-  const linhas = (itens ?? []) as {
-    id: string;
-    produto_id: string;
-    pn: string;
-    descricao: string;
-    revisao: string | null;
-    quantidade: number;
-    custo_congelado: number | null;
-  }[];
-
-  const excluirMateriaPrima = projeto.tipo_projeto === "industrializacao";
-  const itensCalculados: ItemBase[] = [];
-
-  for (const item of linhas) {
-    const { data: boms } = await supabase
-      .from("boms")
-      .select("id,status,created_at")
-      .eq("produto_id", item.produto_id)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
-
-    const bomsLista = (boms ?? []) as BomEscolhaRow[];
-    const bomEscolhido =
-      bomsLista.find((bom) => bom.status === "ativo") ?? bomsLista[0];
-
-    let custoUnitario =
-      item.custo_congelado !== null ? Number(item.custo_congelado) : 0;
-
-    if (bomEscolhido && item.custo_congelado === null) {
-      const { data: custo } = await supabase.rpc("calcular_custo_bom", {
-        p_bom_id: bomEscolhido.id,
-        p_excluir_materia_prima: excluirMateriaPrima,
-      });
-
-      const total = (
-        (custo ?? []) as { categoria: string; valor: number }[]
-      ).find((linha) => linha.categoria === "total")?.valor;
-
-      custoUnitario = Number(total ?? 0);
-    }
-
-    itensCalculados.push({
-      id: item.id,
-      produtoId: item.produto_id,
-      pn: item.pn,
-      descricao: item.descricao,
-      revisao: item.revisao,
-      quantidade: item.quantidade,
-      temEstrutura: Boolean(bomEscolhido),
-      custo: custoUnitario * item.quantidade,
-      custoCongelado: item.custo_congelado !== null,
-    });
-  }
-
-  // Resumo Produtivo: uma unica chamada para o projeto inteiro
-  // (calcular_resumo_produtivo_projeto, migration 202608060001) -
-  // substitui a soma manual de bom_operacoes do BOM de topo de cada
-  // item, que nunca descia em subconjuntos. A RPC ja percorre a
-  // arvore inteira (inclusive subconjuntos), nunca lanca excecao por
-  // item sem roteiro/com ciclo/profundidade excedida - devolve esses
-  // casos em "itens" e sinaliza estado="incompleto" para a tela nunca
-  // apresentar minutos parciais como se fossem o total real.
-  let resumoProdutivoResultado: ResultadoResumoProdutivoProjeto;
-  let erroResumoProdutivo: string | null;
-
-  try {
-    resumoProdutivoResultado = await calcularResumoProdutivoProjeto(
-      supabase,
-      projeto.id,
-    );
-    erroResumoProdutivo = null;
-  } catch (erro) {
-    resumoProdutivoResultado = RESUMO_PRODUTIVO_VAZIO;
-    erroResumoProdutivo =
-      erro instanceof Error
-        ? erro.message
-        : "Não foi possível calcular o resumo produtivo.";
-  }
-
-  return {
-    projeto: {
-      id: projeto.id,
-      numeroProjeto: projeto.numero_projeto,
-      nomeProjeto: projeto.nome,
-      tipoProjeto: projeto.tipo_projeto,
-      statusProjeto: projeto.status,
-      dataObjetivo: projeto.data_objetivo,
-      criadoEm: projeto.created_at,
-      margemLucroPercent: Number(projeto.margem_lucro_percent),
-      cargaTributariaPercent:
-        projeto.carga_tributaria_percent !== null
-          ? Number(projeto.carga_tributaria_percent)
-          : null,
-      descontoPercentual:
-        projeto.desconto_percentual !== null
-          ? Number(projeto.desconto_percentual)
-          : null,
-      descontoMotivo: projeto.desconto_motivo ?? null,
-    },
-    responsavelNome,
-    cargaTributariaSugerida,
-    cliente,
-    itensCalculados,
-    resumoProdutivoResultado,
-    erroResumoProdutivo,
-  };
-}
 
 export function useOrcamento(idProjeto: string | null) {
   const [projetoId, setProjetoId] = useState<string | null>(null);
@@ -288,6 +74,14 @@ export function useOrcamento(idProjeto: string | null) {
   const [erroResumoProdutivo, setErroResumoProdutivo] = useState<string | null>(
     null,
   );
+  // DEC-007 §6.2/Fase 8b - null = nenhum cenário comercial aprovado
+  // vigente (comportamento atual do Orçamento preservado). Quando
+  // presente, novoCustoTecnico substitui a soma de itens como entrada de
+  // resumoOrcamento (abaixo) - mudanças posteriores no orçamento NUNCA
+  // alteram esse valor congelado (só uma nova aprovação de cenário o
+  // substitui).
+  const [cenarioComercialAprovado, setCenarioComercialAprovado] =
+    useState<CenarioComercialAprovadoResumo | null>(null);
 
   // idProjetoCarregado rastreia para qual projeto os dados acima
   // realmente correspondem. Enquanto for diferente de idProjeto,
@@ -322,8 +116,9 @@ export function useOrcamento(idProjeto: string | null) {
   // resultado obsoleto em vez de aplica-lo.
   const geracaoCargaRef = useRef(0);
 
-  function aplicarDadosOrcamento(dados: DadosOrcamentoProjeto) {
+  function aplicarDadosOrcamento(dados: DadosOrcamentoProjeto, cenarioAprovado: CenarioComercialAprovadoResumo | null) {
     setProjetoId(dados.projeto.id);
+    setCenarioComercialAprovado(cenarioAprovado);
     setNumero(dados.projeto.numeroProjeto);
     setNomeProjeto(dados.projeto.nomeProjeto);
     setTipoProjeto(dados.projeto.tipoProjeto);
@@ -364,14 +159,17 @@ export function useOrcamento(idProjeto: string | null) {
 
     setIdProjetoCarregado(null);
 
-    const dados = await buscarDadosOrcamento(idProjetoAlvo);
+    const [dados, cenarioAprovado] = await Promise.all([
+      buscarDadosOrcamento(supabase, idProjetoAlvo),
+      buscarCenarioComercialAprovado(supabase, idProjetoAlvo),
+    ]);
 
     if (geracaoCargaRef.current !== minhaGeracao) {
       return;
     }
 
     if (dados) {
-      aplicarDadosOrcamento(dados);
+      aplicarDadosOrcamento(dados, cenarioAprovado);
     } else {
       setErro("Projeto não encontrado.");
     }
@@ -392,7 +190,10 @@ export function useOrcamento(idProjeto: string | null) {
     const idProjetoAtual = idProjeto;
 
     async function rodar() {
-      const dados = await buscarDadosOrcamento(idProjetoAtual);
+      const [dados, cenarioAprovado] = await Promise.all([
+        buscarDadosOrcamento(supabase, idProjetoAtual),
+        buscarCenarioComercialAprovado(supabase, idProjetoAtual),
+      ]);
       if (geracaoCargaRef.current !== minhaGeracao) return;
 
       if (!dados) {
@@ -401,7 +202,7 @@ export function useOrcamento(idProjeto: string | null) {
         return;
       }
 
-      aplicarDadosOrcamento(dados);
+      aplicarDadosOrcamento(dados, cenarioAprovado);
       setIdProjetoCarregado(idProjetoAtual);
     }
 
@@ -445,6 +246,7 @@ export function useOrcamento(idProjeto: string | null) {
     ? resumoProdutivoResultado
     : RESUMO_PRODUTIVO_VAZIO;
   const erroResumoProdutivoExibido = dadosValidos ? erroResumoProdutivo : null;
+  const cenarioComercialAprovadoExibido = dadosValidos ? cenarioComercialAprovado : null;
 
   // Breakdown por item: cada linha aplica a formula individualmente
   // sobre o proprio custo (exibicao da tabela de itens).
@@ -468,28 +270,31 @@ export function useOrcamento(idProjeto: string | null) {
   // calcularResumoOrcamento, para os dois "Valor Total" baterem sempre.
   // O desconto comercial (DEC-001) tambem e aplicado so aqui, sobre o
   // Valor Tecnico agregado - nunca no breakdown por item acima.
+  //
+  // CORREÇÃO (DEC-007 §6.2/Fase 8b, aprovação do cenário comercial):
+  // quando existe um cenário comercial aprovado vigente, o valor-base
+  // ("custoTotal" aqui) passa a ser `novoCustoTecnico` (congelado no
+  // momento da aprovação - já soma o custo adicional do cenário), nunca
+  // mais a soma bruta dos itens - continua sendo a MESMA
+  // calcularResumoOrcamento (nunca uma segunda fórmula), só a entrada
+  // muda. Sem cenário aprovado, comportamento idêntico ao anterior.
   const resumoOrcamento = useMemo(() => {
-    const custoTotal = itensBaseExibidos.reduce(
-      (acc, item) => acc + item.custo,
-      0,
-    );
-    const {
-      valorTecnico,
-      valorDesconto,
-      valorComercial,
-      impostos,
-      lucro,
-      margemTecnica,
-      margemEfetiva,
-    } = calcularResumoOrcamento({
-      custoTotal,
-      margemLucroPercent: margemLucroPercentExibido,
-      cargaTributariaPercent: cargaTributariaEfetivaExibida,
-      descontoPercent: descontoPercentualExibido,
-    });
+    const custoTotalItens = itensBaseExibidos.reduce((acc, item) => acc + item.custo, 0);
+    const custoTotalEfetivo = cenarioComercialAprovadoExibido
+      ? cenarioComercialAprovadoExibido.novoCustoTecnico
+      : custoTotalItens;
+    const cargaTributariaEfetivaCalculo = cargaTributariaPercentExibido ?? cargaTributariaSugeridaExibida;
+
+    const { valorTecnico, valorDesconto, valorComercial, impostos, lucro, margemTecnica, margemEfetiva } =
+      calcularResumoOrcamento({
+        custoTotal: custoTotalEfetivo,
+        margemLucroPercent: margemLucroPercentExibido,
+        cargaTributariaPercent: cargaTributariaEfetivaCalculo,
+        descontoPercent: descontoPercentualExibido,
+      });
 
     return {
-      custoTotal,
+      custoTotal: custoTotalEfetivo,
       impostosTotal: impostos,
       lucroTotal: lucro,
       valorTecnico,
@@ -501,8 +306,10 @@ export function useOrcamento(idProjeto: string | null) {
   }, [
     itensBaseExibidos,
     margemLucroPercentExibido,
-    cargaTributariaEfetivaExibida,
+    cargaTributariaPercentExibido,
+    cargaTributariaSugeridaExibida,
     descontoPercentualExibido,
+    cenarioComercialAprovadoExibido,
   ]);
 
   const resumoProdutivo = useMemo(() => {
@@ -706,6 +513,7 @@ export function useOrcamento(idProjeto: string | null) {
     itens,
     resumoOrcamento,
     resumoProdutivo,
+    cenarioComercialAprovado: cenarioComercialAprovadoExibido,
 
     salvando,
     salvar,

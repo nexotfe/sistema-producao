@@ -87,6 +87,7 @@ function projetoRow(id: string, overrides: Record<string, unknown> = {}) {
 // para simular respostas atrasadas nos testes de corrida).
 function configurarMock(
   respostaProjeto: (id: string | undefined) => Resultado | Promise<Resultado>,
+  respostaCenarioAprovado: Resultado = VAZIO,
 ) {
   supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null } });
   supabaseMock.rpc.mockResolvedValue({
@@ -111,6 +112,10 @@ function configurarMock(
 
     if (tabela === "projeto_itens") {
       return criarFakeQuery(LISTA_VAZIA);
+    }
+
+    if (tabela === "cenarios_comerciais_aprovados") {
+      return criarFakeQuery(respostaCenarioAprovado);
     }
 
     return criarFakeQuery(VAZIO);
@@ -430,5 +435,313 @@ describe("useOrcamento", () => {
 
     expect(resultadoOk).toEqual({ status: "ok" });
     expect(updateChamado).toHaveBeenCalledWith({ quantidade: 5 });
+  });
+});
+
+// =====================================================================
+// Caracterização do CÁLCULO (buscarDadosOrcamento + resumoOrcamento) -
+// referência escrita ANTES da extração de buscarDadosOrcamento/
+// calcularValorComercialProjeto para um lib compartilhado (consumido
+// também pela tela de Cenários, DEC-007 §6.2). Cobre exatamente o que o
+// usuário pediu para preservar: consultas, filtros, fallback tributário,
+// arredondamento (nenhum arredondamento manual - números crus), mensagens
+// de erro e quantidade de acessos ao banco. Estes testes precisam
+// continuar passando SEM NENHUMA MUDANÇA depois da extração - qualquer
+// alteração de resultado aqui é uma regressão de comportamento.
+// =====================================================================
+describe("useOrcamento - caracterização do cálculo (referência para a extração compartilhada)", () => {
+  type ItemRow = {
+    id: string;
+    produto_id: string;
+    pn: string;
+    descricao: string;
+    revisao: string | null;
+    quantidade: number;
+    custo_congelado: number | null;
+  };
+  type BomRow = { id: string; status: string; created_at: string; produto_id: string };
+
+  function configurarMockCompleto(params: {
+    projeto?: Record<string, unknown>;
+    itens: ItemRow[];
+    boms: BomRow[];
+    configuracaoCargaTributaria?: Record<string, number> | null;
+    custoBomPorId?: Record<string, { categoria: string; valor: number }[]>;
+  }) {
+    const chamadasRpc: { nome: string; args: unknown }[] = [];
+    const chamadasBoms: string[] = []; // produto_id consultado, em ordem
+
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null } });
+
+    supabaseMock.rpc.mockImplementation((nome: string, args: unknown) => {
+      chamadasRpc.push({ nome, args });
+      if (nome === "calcular_resumo_produtivo_projeto") {
+        return Promise.resolve({
+          data: { estado: "calculado", mensagem: null, recursos: [], itens: [] },
+          error: null,
+        });
+      }
+      if (nome === "calcular_custo_bom") {
+        const bomId = (args as { p_bom_id: string }).p_bom_id;
+        return Promise.resolve({ data: params.custoBomPorId?.[bomId] ?? [], error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "projetos") {
+        return criarFakeQuery({ data: projetoRow("projeto-a", params.projeto ?? {}), error: null });
+      }
+      if (tabela === "projeto_itens") {
+        return criarFakeQuery({ data: params.itens, error: null });
+      }
+      if (tabela === "boms") {
+        const builder: unknown = {
+          select: () => builder,
+          eq: (_coluna: string, produtoId: string) => {
+            chamadasBoms.push(produtoId);
+            return builder;
+          },
+          is: () => builder,
+          order: () =>
+            Promise.resolve({
+              data: params.boms.filter((b) => b.produto_id === chamadasBoms[chamadasBoms.length - 1]),
+              error: null,
+            }),
+        };
+        return builder;
+      }
+      if (tabela === "configuracoes_empresa") {
+        return criarFakeQuery({
+          data:
+            params.configuracaoCargaTributaria === null || params.configuracaoCargaTributaria === undefined
+              ? null
+              : { valor: params.configuracaoCargaTributaria },
+          error: null,
+        });
+      }
+      return criarFakeQuery(VAZIO);
+    });
+
+    return { chamadasRpc, chamadasBoms };
+  }
+
+  it("item com custo_congelado usa o valor congelado diretamente - nunca chama calcular_custo_bom para ele", async () => {
+    const { chamadasRpc } = configurarMockCompleto({
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 2, custo_congelado: 100 },
+      ],
+      boms: [],
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.itens).toHaveLength(1);
+    expect(result.current.itens[0].custo).toBe(200); // 100 (congelado) * 2
+    expect(result.current.itens[0].custoCongelado).toBe(true);
+    expect(chamadasRpc.some((c) => c.nome === "calcular_custo_bom")).toBe(false);
+  });
+
+  it("item sem custo_congelado busca o BOM ativo mais recente e chama calcular_custo_bom com p_bom_id/p_excluir_materia_prima corretos", async () => {
+    const { chamadasRpc } = configurarMockCompleto({
+      projeto: { tipo_projeto: "fabricacao" },
+      itens: [
+        { id: "item-2", produto_id: "produto-2", pn: "PN-2", descricao: "Item 2", revisao: null, quantidade: 3, custo_congelado: null },
+      ],
+      boms: [
+        { id: "bom-antigo", status: "obsoleto", created_at: "2025-01-01T00:00:00.000Z", produto_id: "produto-2" },
+        { id: "bom-ativo", status: "ativo", created_at: "2025-06-01T00:00:00.000Z", produto_id: "produto-2" },
+      ],
+      custoBomPorId: { "bom-ativo": [{ categoria: "total", valor: 50 }] },
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.itens[0].custo).toBe(150); // 50 (RPC) * 3
+    expect(result.current.itens[0].custoCongelado).toBe(false);
+    const chamada = chamadasRpc.find((c) => c.nome === "calcular_custo_bom");
+    expect(chamada?.args).toEqual({ p_bom_id: "bom-ativo", p_excluir_materia_prima: false }); // fabricacao -> nunca exclui matéria-prima
+  });
+
+  it("tipo_projeto='industrializacao' chama calcular_custo_bom com p_excluir_materia_prima=true", async () => {
+    const { chamadasRpc } = configurarMockCompleto({
+      projeto: { tipo_projeto: "industrializacao" },
+      itens: [
+        { id: "item-3", produto_id: "produto-3", pn: "PN-3", descricao: "Item 3", revisao: null, quantidade: 1, custo_congelado: null },
+      ],
+      boms: [{ id: "bom-3", status: "ativo", created_at: "2025-01-01T00:00:00.000Z", produto_id: "produto-3" }],
+      custoBomPorId: { "bom-3": [{ categoria: "total", valor: 10 }] },
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const chamada = chamadasRpc.find((c) => c.nome === "calcular_custo_bom");
+    expect(chamada?.args).toEqual({ p_bom_id: "bom-3", p_excluir_materia_prima: true });
+  });
+
+  it("nenhum BOM para o produto -> custo 0, nenhuma chamada a calcular_custo_bom", async () => {
+    const { chamadasRpc } = configurarMockCompleto({
+      itens: [
+        { id: "item-4", produto_id: "produto-4", pn: "PN-4", descricao: "Item 4", revisao: null, quantidade: 5, custo_congelado: null },
+      ],
+      boms: [],
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.itens[0].custo).toBe(0);
+    expect(chamadasRpc.some((c) => c.nome === "calcular_custo_bom")).toBe(false);
+  });
+
+  it("carga tributária: usa carga_tributaria_percent do projeto quando presente, ignora a sugerida", async () => {
+    configurarMockCompleto({
+      projeto: { margem_lucro_percent: 20, carga_tributaria_percent: 15, tipo_projeto: "fabricacao" },
+      itens: [
+        { id: "item-5", produto_id: "p5", pn: "PN-5", descricao: "d", revisao: null, quantidade: 1, custo_congelado: 100 },
+      ],
+      boms: [],
+      configuracaoCargaTributaria: { fabricacao: 999 }, // nunca deveria ser usado
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.cargaTributariaEfetiva).toBe(15);
+  });
+
+  it("carga tributária: usa a sugerida (configuracoes_empresa, por tipo_projeto) quando o projeto não tem carga definida", async () => {
+    configurarMockCompleto({
+      projeto: { margem_lucro_percent: 20, carga_tributaria_percent: null, tipo_projeto: "fabricacao" },
+      itens: [],
+      boms: [],
+      configuracaoCargaTributaria: { fabricacao: 10, industrializacao: 5 },
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.cargaTributariaSugerida).toBe(10);
+    expect(result.current.cargaTributariaEfetiva).toBe(10);
+  });
+
+  it("resumoOrcamento.custoTotal = soma exata dos custos de todos os itens (custo unitário × quantidade)", async () => {
+    configurarMockCompleto({
+      itens: [
+        { id: "item-6", produto_id: "p6", pn: "PN-6", descricao: "d", revisao: null, quantidade: 2, custo_congelado: 100 },
+        { id: "item-7", produto_id: "p7", pn: "PN-7", descricao: "d", revisao: null, quantidade: 3, custo_congelado: 50 },
+      ],
+      boms: [],
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.resumoOrcamento.custoTotal).toBe(350); // 200 + 150
+  });
+
+  it("resumoOrcamento.valorComercial aplica a fórmula do DEC-001 (margem por fora, carga por dentro, desconto por cima) - valor exato conferido", async () => {
+    configurarMockCompleto({
+      projeto: { margem_lucro_percent: 20, carga_tributaria_percent: null, tipo_projeto: "fabricacao", desconto_percentual: 5 },
+      itens: [
+        { id: "item-8", produto_id: "p8", pn: "PN-8", descricao: "d", revisao: null, quantidade: 2, custo_congelado: 100 },
+        { id: "item-9", produto_id: "p9", pn: "PN-9", descricao: "d", revisao: null, quantidade: 3, custo_congelado: 50 },
+      ],
+      boms: [],
+      configuracaoCargaTributaria: { fabricacao: 10 },
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // custoTotal=350; lucro=350*0.20=70; subtotal=420; carga=0.10;
+    // valorTecnico=420/0.90=466.666...; desconto=466.666...*0.05=23.333...;
+    // valorComercial=466.666...-23.333...=443.333...
+    expect(result.current.resumoOrcamento.custoTotal).toBe(350);
+    expect(result.current.resumoOrcamento.valorTecnico).toBeCloseTo(466.6666667, 5);
+    expect(result.current.resumoOrcamento.valorComercial).toBeCloseTo(443.3333333, 5);
+  });
+
+  it("quantidade de acessos ao banco: 1 select em boms + 1 rpc calcular_custo_bom por item SEM custo_congelado; 0 chamadas extras para item COM custo_congelado", async () => {
+    const { chamadasRpc, chamadasBoms } = configurarMockCompleto({
+      itens: [
+        { id: "item-10", produto_id: "p10", pn: "PN-10", descricao: "d", revisao: null, quantidade: 1, custo_congelado: 100 }, // congelado
+        { id: "item-11", produto_id: "p11", pn: "PN-11", descricao: "d", revisao: null, quantidade: 1, custo_congelado: null }, // não congelado
+      ],
+      boms: [{ id: "bom-11", status: "ativo", created_at: "2025-01-01T00:00:00.000Z", produto_id: "p11" }],
+      custoBomPorId: { "bom-11": [{ categoria: "total", valor: 20 }] },
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // boms é consultado para OS DOIS itens (para saber se temEstrutura),
+    // mas calcular_custo_bom só é chamado para o item sem custo_congelado.
+    expect(chamadasBoms).toEqual(["p10", "p11"]);
+    expect(chamadasRpc.filter((c) => c.nome === "calcular_custo_bom")).toHaveLength(1);
+  });
+
+  it("projeto não encontrado: mesma mensagem de erro exata de antes da extração", async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null } });
+    supabaseMock.rpc.mockResolvedValue({ data: null, error: null });
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "projetos") return criarFakeQuery({ data: null, error: null });
+      return criarFakeQuery(VAZIO);
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-inexistente"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.erro).toBe("Projeto não encontrado.");
+  });
+
+  it("sem cenário comercial aprovado: comportamento idêntico ao anterior (custoTotal vem da soma de itens)", async () => {
+    configurarMock((id) => ({ data: projetoRow(id as string), error: null }));
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.cenarioComercialAprovado).toBeNull();
+    expect(result.current.resumoOrcamento.custoTotal).toBe(0); // projeto_itens mockado vazio neste helper
+  });
+
+  it("com cenário comercial aprovado vigente: resumoOrcamento usa novoCustoTecnico como valor-base, nunca a soma bruta de itens", async () => {
+    configurarMock(
+      (id) => ({ data: projetoRow(id as string), error: null }),
+      {
+        data: {
+          id: "cenario-1",
+          tipo_cenario: "ajustado",
+          data_solicitada_cliente: "2026-09-01",
+          prazo_proposto: "2026-09-15",
+          diferenca_em_dias: 14,
+          custo_tecnico_atual: 50000,
+          custo_adicional_total: 5000,
+          novo_custo_tecnico: 55000,
+          aprovado_em: "2026-08-18T10:00:00Z",
+        },
+        error: null,
+      },
+    );
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.cenarioComercialAprovado).toEqual({
+      id: "cenario-1",
+      tipoCenario: "ajustado",
+      dataSolicitadaCliente: "2026-09-01",
+      prazoProposto: "2026-09-15",
+      diferencaEmDias: 14,
+      custoTecnicoAtual: 50000,
+      custoAdicionalTotal: 5000,
+      novoCustoTecnico: 55000,
+      aprovadoEm: "2026-08-18T10:00:00Z",
+    });
+    // custoTotal (soma de itens) é 0 neste helper - se o resumo ainda
+    // usasse a soma bruta, custoTotal seria 0, não 55000.
+    expect(result.current.resumoOrcamento.custoTotal).toBe(55000);
   });
 });

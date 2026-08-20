@@ -134,7 +134,8 @@ export async function capacidadesDiariasDosRecursos(
   return resultado;
 }
 
-async function produtividadeEfetivaDoRecurso(
+/** Exportada para reuso pelo carregador da previsão comercial flexível (nunca uma segunda chamada à mesma RPC reimplementada). */
+export async function produtividadeEfetivaDoRecurso(
   client: SupabaseClient,
   recursoId: string,
 ): Promise<number> {
