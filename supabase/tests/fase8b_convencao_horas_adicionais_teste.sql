@@ -2,62 +2,57 @@
 -- - NÃO É UMA MIGRATION - vive em supabase/tests/, fora do padrão de
 -- nome de migration, NUNCA deve ser aplicado em produção.
 --
--- Revisão 2 (auditoria estática pedida pelo usuário, ainda sem
--- execução): a Revisão 1 deste arquivo tinha 3 problemas encontrados na
--- auditoria, corrigidos abaixo:
--- 1. A cópia da migration (PARTE 1) omitia os `comment on table/column/
---    function` da migration real - o cabeçalho antigo afirmava "cópia
---    INTEGRAL... idêntica", o que não era literalmente verdade. Corrigido:
---    os comentários agora estão incluídos, cópia byte-a-byte das
---    instruções SQL da migration real (só os comentários DESTE arquivo,
---    fora da PARTE 1, são novos). NENHUMA mudança na migration real foi
---    feita por causa disto - só a cópia neste script.
--- 2. Ponto crítico verificado: a migration real (202608130001) NÃO
---    contém nenhum BEGIN/COMMIT/ROLLBACK (confirmado por grep) - não
---    havia nenhum delimitador de transação para remover da cópia. A
---    contagem exigida está no relatório de auditoria, não neste
---    comentário.
--- 3. A Revisão 1 só cobria 9 dos 14 cenários pedidos, e 2 dos 9 (TESTE 4,
---    "vigência retroativa") eram fracos (aceitavam qualquer exceção,
---    sem checar a mensagem - não distinguiam "rejeitado pelo motivo
---    certo" de "falhou por outro motivo"). TESTES 5-13 são novos;
---    TESTE 4 foi reforçado para checar o texto da mensagem.
+-- Revisão 4 (correção pedida pelo usuário, 2026-08-20): convertido de
+-- teste PRÉ-aplicação para teste PÓS-migration. A migration
+-- 202608130001 já está aplicada em produção (confirmado por
+-- introspecção somente-leitura: tabela, constraints, índices, policy
+-- RLS, trigger e as 3 functions batem byte a byte com o arquivo da
+-- migration) - a Revisão 3 deste arquivo ainda recriava a tabela/
+-- functions/trigger/policies do zero (cópia da migration, "PARTE 1"),
+-- o que agora FALHA de imediato (`relation already exists`) contra
+-- qualquer banco onde a migration já rodou. Este arquivo NUNCA MAIS
+-- recria schema - assume que tabela, functions, trigger e policies já
+-- existem (criados pela migration real) e só cria/valida DADOS de
+-- teste (linhas em empresa_convencao_horas_adicionais, e um
+-- rebaixamento TEMPORÁRIO de profiles.nivel_acesso no TESTE 13) dentro
+-- de uma transação, sempre desfeitos pelo ROLLBACK final - nunca a
+-- estrutura em si. Os valores inseridos (0.99, -0.10, 0.20, 0.40 etc.)
+-- são deliberadamente reconhecíveis como dado de teste (nunca uma
+-- convenção coletiva real plausível), e nenhuma linha sobrevive ao
+-- ROLLBACK de qualquer forma.
 --
--- Revisão 3 (execução real do BEGIN...ROLLBACK no projeto remoto
--- vinculado encontrou um bug real, não corrigida ainda nesta versão do
--- arquivo até agora): a checagem explícita de sobreposição em
--- registrar_convencao_horas_adicionais rodava ANTES de fechar a
--- convenção aberta atual, comparando contra TODAS as linhas da empresa -
--- inclusive a própria linha aberta que estava sendo substituída. Como
--- toda linha aberta tem vigente_ate=null (range até o infinito), ela
--- sempre "sobrepunha" a nova vigência futura, rejeitando por engano todo
--- fluxo normal de sucessão (TESTE 6 original). Corrigido na migration
--- real (202608130001) e replicado aqui na PARTE 1: a ordem passa a ser
--- localizar a aberta -> validar posterioridade -> FECHAR -> só então
--- checar sobreposição contra o ESTADO FINAL resultante (nunca contra o
--- estado anterior ao fechamento) - se a checagem rejeitar depois do
--- fechamento, a exceção desfaz o fechamento junto, mesma transação, sem
--- nenhuma lógica de desfazimento manual. TESTES novos desta revisão:
--- 6c (fechamento efetivo confirmado na tabela), 9B (3ª convenção sucede
--- a 2ª aberta - o cenário exato que revelou o bug), 9C (fronteira exata
--- entre vigências, sem lacuna nem sobreposição), 9D (janela cobrindo as
--- 3 vigências), 9E (erro de rejeição PRECOCE - monotonicidade - não
--- deixa resíduo), 10B (erro de rejeição TARDIA - depois do fechamento
--- parcial - desfaz o fechamento junto, prova direta do mecanismo).
+-- AMBIENTE DE EXECUÇÃO (pedido explícito do usuário): este arquivo deve
+-- rodar em ambiente local/scratch (ex.: `supabase start` local via
+-- Docker, ou um projeto Supabase descartável) - NUNCA rotineiramente
+-- contra o projeto vinculado de produção, mesmo estando dentro de
+-- BEGIN...ROLLBACK. A introspecção somente-leitura já confirmou que o
+-- schema do projeto vinculado bate com a migration; este arquivo existe
+-- para provar o COMPORTAMENTO (RPC, trigger, RLS) de forma executável e
+-- repetível, não para validar o schema remoto de novo a cada rodada.
 --
--- Escopo agora: estrutura, imutabilidade de conteúdo, checagem de
--- sobreposição (operador isolado E via RPC com cenário fora de ordem),
--- vigência nunca retroativa (mensagem específica), cadastro inicial via
--- RPC, convenção futura agendada, resolução por data consultada
--- (nunca pelo atalho "vigente_ate is null"), janela atravessando duas
--- vigências, lacuna de vigência detectada, INSERT/UPDATE/DELETE diretos
--- bloqueados por RLS (role authenticated de verdade, não só superusuário),
--- isolamento entre empresas, e admin-only.
+-- Revisões anteriores (histórico, mantido para contexto):
+-- Revisão 1: 3 problemas encontrados na auditoria estática (cópia da
+-- migration incompleta, contagem de BEGIN/COMMIT/ROLLBACK, só 9 dos 14
+-- cenários pedidos, 2 deles fracos) - todos corrigidos na Revisão 2.
+-- Revisão 3: execução real do BEGIN...ROLLBACK (então ainda contra um
+-- banco SEM a migration aplicada) encontrou um bug real na RPC
+-- (checagem de sobreposição rodava ANTES do fechamento da vigência
+-- aberta, rejeitando por engano todo fluxo normal de sucessão) -
+-- corrigido na migration real (202608130001) e a cópia deste arquivo
+-- (então ainda existente) foi atualizada para refletir a correção.
 --
--- Estrutura: BEGIN; conteúdo INTEGRAL da migration; só então os cenários
--- deste script; ROLLBACK obrigatório no final - nenhuma linha fica de
--- fato gravada (mesmo padrão dos scripts fase6/fase7 já existentes em
--- supabase/tests/).
+-- Escopo (inalterado desde a Revisão 2): estrutura, imutabilidade de
+-- conteúdo, checagem de sobreposição (operador isolado E via RPC com
+-- cenário fora de ordem), vigência nunca retroativa (mensagem
+-- específica), cadastro inicial via RPC, convenção futura agendada,
+-- resolução por data consultada (nunca pelo atalho "vigente_ate is
+-- null"), janela atravessando duas vigências, lacuna de vigência
+-- detectada, INSERT/UPDATE/DELETE diretos bloqueados por RLS (role
+-- authenticated de verdade, não só superusuário), isolamento entre
+-- empresas, e admin-only.
+--
+-- Estrutura: BEGIN; só cenários de teste (nenhuma recriação de schema);
+-- ROLLBACK obrigatório no final - nenhuma linha fica de fato gravada.
 --
 -- NOTA sobre autenticação: `set_config('request.jwt.claims', ...)` +
 -- `set_config('role', 'authenticated', true)` simulam auth.uid()/
@@ -79,271 +74,11 @@
 -- 'operador' (valor de ENUM confirmado por introspecção prévia, nunca
 -- inventado) só para o teste negativo, e nunca restaurado manualmente -
 -- o ROLLBACK final desfaz o rebaixamento junto com todo o resto. Não
--- fica PULADO nesta configuração de dados.
+-- fica PULADO nesta configuração de dados. Um ambiente local/scratch
+-- recém-provisionado (sem esses fixtures) fará os TESTES que dependem
+-- deles reportar PULADO explicitamente - nunca falhar silenciosamente.
 
 begin;
-
--- =====================================================================
--- PARTE 1: conteúdo INTEGRAL da migration 202608130001 (idêntico,
--- incluindo comentários - corrigido nesta revisão)
--- =====================================================================
-
-create table public.empresa_convencao_horas_adicionais (
-  id uuid primary key default gen_random_uuid(),
-  empresa_id uuid not null references public.empresas(id),
-  percentual_segunda_sexta numeric not null check (percentual_segunda_sexta >= 0),
-  percentual_sabado numeric not null check (percentual_sabado >= 0),
-  percentual_domingo numeric not null check (percentual_domingo >= 0),
-  percentual_feriado numeric not null check (percentual_feriado >= 0),
-  vigente_desde date not null,
-  vigente_ate date,
-  created_at timestamptz not null default now(),
-  created_by uuid not null references auth.users(id),
-  constraint empresa_convencao_horas_adicionais_vigencia_chk
-    check (vigente_ate is null or vigente_ate >= vigente_desde)
-);
-
-comment on table public.empresa_convencao_horas_adicionais is
-  'Percentuais de acréscimo de hora adicional (fração, ex.: 0.30 = 30%) por natureza de dia, globais por empresa, com vigência histórica real (DEC-007, redesenho Fase 8b). 1 linha por vigência, layout largo (4 percentuais juntos, já que uma convenção coletiva nova normalmente muda os 4 ao mesmo tempo). Append-only por natureza: nenhuma linha já vigente (vigente_ate preenchido) pode ser alterada; toda escrita passa por registrar_convencao_horas_adicionais (seção 3).';
-comment on column public.empresa_convencao_horas_adicionais.percentual_segunda_sexta is
-  'Acréscimo sobre valor_hora para hora adicional em dia útil (natureza=hora_extra no motor em memória) - fração, não percentual inteiro (0.30, não 30).';
-comment on column public.empresa_convencao_horas_adicionais.vigente_desde is
-  'Data em que esta convenção passa a valer - nunca retroativa (registrar_convencao_horas_adicionais exige >= current_date no momento do cadastro), mas pode ser uma data FUTURA (agendamento permitido).';
-comment on column public.empresa_convencao_horas_adicionais.vigente_ate is
-  'NULL enquanto esta é a convenção mais recente cadastrada ("aberta") - preenchido automaticamente pela function de transição quando uma convenção mais nova é registrada. Nunca editável diretamente (trigger de imutabilidade, seção 2).';
-
-create unique index empresa_convencao_horas_adicionais_aberta_uniq
-  on public.empresa_convencao_horas_adicionais (empresa_id)
-  where vigente_ate is null;
-
-create index empresa_convencao_horas_adicionais_empresa_periodo_idx
-  on public.empresa_convencao_horas_adicionais (empresa_id, vigente_desde);
-
--- =====================================================================
--- 2. RLS - só SELECT direto para authenticated; toda escrita via a
---    function SECURITY DEFINER da seção 3 (mesmo padrão de
---    simulacoes_comerciais - histórico crítico não fica exposto a
---    INSERT/UPDATE/DELETE direto, mesmo de admin).
--- =====================================================================
-
-alter table public.empresa_convencao_horas_adicionais enable row level security;
-
-create policy empresa_convencao_horas_adicionais_select_tenant
-  on public.empresa_convencao_horas_adicionais
-  for select to authenticated
-  using (empresa_id = public.empresa_atual_id());
-
-revoke all on public.empresa_convencao_horas_adicionais from public, anon, authenticated;
-grant select on public.empresa_convencao_horas_adicionais to authenticated;
-
--- =====================================================================
--- 3. Imutabilidade de conteúdo (mesmo idioma de
---    impedir_alteracao_conteudo_snapshot, 202608110001) - nenhuma coluna
---    pode mudar depois de gravada, exceto vigente_ate, e mesmo assim só
---    de NULL para uma data (nunca reaberta).
--- =====================================================================
-
-create or replace function public.impedir_alteracao_convencao_horas_adicionais()
-returns trigger
-language plpgsql
-security definer
-set search_path to 'public'
-as $function$
-begin
-  if old.vigente_ate is not null then
-    raise exception 'Convenção já encerrada (vigente_ate=%) - não pode ser alterada.', old.vigente_ate;
-  end if;
-  if (to_jsonb(old) - 'vigente_ate') is distinct from (to_jsonb(new) - 'vigente_ate') then
-    raise exception 'Conteúdo de uma convenção já vigente é imutável - só vigente_ate pode ser preenchido, e só pela function de transição (registrar_convencao_horas_adicionais).';
-  end if;
-  return new;
-end;
-$function$;
-
-comment on function public.impedir_alteracao_convencao_horas_adicionais() is
-  'Trava de imutabilidade: uma linha já encerrada (vigente_ate not null) nunca pode ser tocada de novo; uma linha aberta só pode ter vigente_ate preenchido (fechamento), nenhuma outra coluna. Mesmo idioma de impedir_alteracao_conteudo_snapshot (202608110001).';
-
-revoke execute on function public.impedir_alteracao_convencao_horas_adicionais() from public, anon, authenticated;
-
-drop trigger if exists empresa_convencao_horas_adicionais_impedir_alteracao on public.empresa_convencao_horas_adicionais;
-create trigger empresa_convencao_horas_adicionais_impedir_alteracao
-  before update on public.empresa_convencao_horas_adicionais
-  for each row
-  execute function public.impedir_alteracao_convencao_horas_adicionais();
-
--- =====================================================================
--- 4. Leitura centralizada - "quais convenções cruzam o período
---    [p_data_inicio, p_data_fim]" (chamando com data_inicio=data_fim,
---    responde "qual vale NESSA data específica"). SECURITY INVOKER -
---    nunca eleva privilégio para leitura, RLS do chamador já filtra por
---    empresa (o WHERE explícito abaixo é defensivo/redundante com a
---    RLS, não uma segunda fonte de verdade). Usada tanto pela tela
---    administrativa (nunca pelo atalho "linha com vigente_ate is null",
---    que pode ser uma vigência agendada para o futuro - proteção A
---    pedida pelo usuário) quanto pelo carregamento de base de um
---    cenário (todas as vigências que cruzam a janela produtiva).
--- =====================================================================
-
-create or replace function public.convencoes_horas_adicionais_no_periodo(
-  p_data_inicio date,
-  p_data_fim date
-)
-returns setof public.empresa_convencao_horas_adicionais
-language sql
-stable
-security invoker
-set search_path to 'public'
-as $function$
-  select *
-  from public.empresa_convencao_horas_adicionais
-  where empresa_id = public.empresa_atual_id()
-    and vigente_desde <= p_data_fim
-    and (vigente_ate is null or vigente_ate >= p_data_inicio)
-  order by vigente_desde asc;
-$function$;
-
-comment on function public.convencoes_horas_adicionais_no_periodo(date, date) is
-  'Todas as convenções da empresa atual cujo intervalo [vigente_desde, vigente_ate] tem interseção com [p_data_inicio, p_data_fim]. Chamar com p_data_inicio=p_data_fim para "qual convenção vale nesta data específica" - NUNCA usar o atalho "linha com vigente_ate is null" para essa pergunta, pois a linha aberta pode ser uma vigência agendada para o futuro, distinta da que vale hoje.';
-
-revoke execute on function public.convencoes_horas_adicionais_no_periodo(date, date) from public, anon;
-grant execute on function public.convencoes_horas_adicionais_no_periodo(date, date) to authenticated;
-
--- =====================================================================
--- 5. Function de transição (mesmo padrão de registrar_revisao_item,
---    202607070007) - único caminho de escrita. Serializa por empresa
---    (pg_advisory_xact_lock, mesmo padrão de validar_dependencia_subconjunto
---    e aprovar_projeto_com_simulacao_v5, ambas em 202608110001) e rejeita
---    qualquer sobreposição de vigência explicitamente (daterange/&&,
---    nativo do Postgres - reforço além da monotonicidade já garantida
---    pelo fluxo fechar-então-inserir, proteção B pedida pelo usuário,
---    "mesmo sem btree_gist"). Ordem importa: localizar a aberta -> validar
---    posterioridade -> FECHAR -> só então checar sobreposição contra o
---    estado final resultante (nunca antes de fechar - isso rejeitaria por
---    engano toda sucessão normal, já que uma linha aberta se estende até
---    o infinito; corrigido depois de um erro real pego pelo próprio teste
---    reversível, ver TESTE 6/6b abaixo). Segunda correção, mesma causa:
---    "v_atual is not null" (record) é sempre FALSO para a linha que esta
---    própria consulta encontra, porque ela filtra "vigente_ate is null" -
---    e para tipos linha/composto, "IS NOT NULL" só é verdadeiro quando
---    TODOS os campos são não-nulos. Isso fazia o fechamento ser pulado
---    silenciosamente mesmo com uma linha aberta real encontrada - também
---    encontrado pelo teste reversível (TESTE 6 continuava rejeitando
---    mesmo depois da 1ª correção). Testado agora por "v_atual.id is not
---    null" (campo escalar, nunca nulo quando a linha existe).
--- =====================================================================
-
-create or replace function public.registrar_convencao_horas_adicionais(
-  p_percentual_segunda_sexta numeric,
-  p_percentual_sabado numeric,
-  p_percentual_domingo numeric,
-  p_percentual_feriado numeric,
-  p_vigente_desde date
-)
-returns uuid
-language plpgsql
-security definer
-set search_path to 'public'
-as $function$
-declare
-  v_empresa_id uuid := public.empresa_atual_id();
-  v_atual record;
-  v_novo_id uuid;
-begin
-  if not public.usuario_e_admin() then
-    raise exception 'Só administradores podem alterar a convenção coletiva.';
-  end if;
-
-  if v_empresa_id is null then
-    raise exception 'Usuário sem empresa associada.';
-  end if;
-
-  -- Serializa por empresa: só uma transação por vez pode registrar uma
-  -- nova convenção para esta empresa, mesmo sem EXCLUDE constraint
-  -- (btree_gist ausente, confirmado). Lock liberado automaticamente no
-  -- fim da transação (commit ou rollback) - nunca precisa ser liberado
-  -- manualmente.
-  perform pg_advisory_xact_lock(hashtextextended('empresa_convencao_horas_adicionais:' || v_empresa_id::text, 0));
-
-  if p_vigente_desde < current_date then
-    raise exception 'A vigência não pode começar no passado (%) - use uma data igual ou posterior a hoje (%). Agendar para o futuro continua permitido.', p_vigente_desde, current_date;
-  end if;
-
-  select * into v_atual
-  from public.empresa_convencao_horas_adicionais
-  where empresa_id = v_empresa_id and vigente_ate is null;
-
-  -- v_atual.id IS NOT NULL - nunca "v_atual IS NOT NULL" sozinho: v_atual
-  -- é um record e, para tipos linha/composto, "row IS NOT NULL" só é
-  -- verdadeiro quando TODOS os campos são não-nulos (semântica SQL
-  -- padrão para comparação de row). Como esta consulta filtra
-  -- explicitamente "vigente_ate is null", QUALQUER linha encontrada tem,
-  -- por definição, esse campo nulo - "v_atual IS NOT NULL" avaliava
-  -- sempre falso mesmo com uma linha real encontrada, pulando
-  -- silenciosamente o fechamento abaixo (bug real, encontrado pelo
-  -- próprio teste reversível: a linha aberta nunca era fechada, ficando
-  -- sempre com range até o infinito, e por isso colidindo com toda
-  -- tentativa seguinte de sucessão). Testar um campo ESCALAR que nunca é
-  -- nulo quando a linha existe (id) evita a armadilha por completo.
-  if v_atual.id is not null and p_vigente_desde <= v_atual.vigente_desde then
-    raise exception 'A nova vigência (%) precisa ser posterior à vigência atual (%).', p_vigente_desde, v_atual.vigente_desde;
-  end if;
-
-  if v_atual.id is not null then
-    update public.empresa_convencao_horas_adicionais
-    set vigente_ate = p_vigente_desde - 1
-    where id = v_atual.id;
-  end if;
-
-  -- Rejeita qualquer sobreposição com QUALQUER linha existente da
-  -- empresa (não só a que acabou de ser fechada) - reforço explícito
-  -- além da monotonicidade já garantida acima, pedido do usuário como
-  -- proteção independente ("mesmo sem btree_gist"). daterange/&& é
-  -- operador nativo do Postgres (core, sem extensão) - só um EXCLUDE
-  -- CONSTRAINT declarativo exigiria btree_gist, e esse reforço fica fora
-  -- do desenho (extensão confirmada ausente, não instalada).
-  --
-  -- Roda DEPOIS do fechamento acima, contra o ESTADO FINAL que
-  -- resultaria da gravação - nunca contra o estado anterior a ele. Se a
-  -- convenção aberta acabou de ser fechada em p_vigente_desde - 1, seu
-  -- range deixou de se estender até o infinito e passa a ser adjacente
-  -- (nunca sobreposto) ao range [p_vigente_desde, infinity) da nova
-  -- convenção - isso evita o falso positivo que o fluxo normal de
-  -- sucessão (encerrar a atual e abrir a próxima) produzia quando esta
-  -- checagem rodava ANTES do fechamento. Continua pegando qualquer linha
-  -- HISTÓRICA fora de ordem (nunca tocada pelo fechamento acima) sem
-  -- precisar excluir nenhum id explicitamente - testa exatamente o
-  -- estado que ficará gravado. Se detectar sobreposição aqui, a exceção
-  -- propaga e desfaz o UPDATE de fechamento junto, pois está tudo na
-  -- mesma transação.
-  if exists (
-    select 1
-    from public.empresa_convencao_horas_adicionais c
-    where c.empresa_id = v_empresa_id
-      and daterange(c.vigente_desde, coalesce(c.vigente_ate + 1, 'infinity'::date))
-          && daterange(p_vigente_desde, 'infinity'::date)
-  ) then
-    raise exception 'Sobreposição de vigência detectada para esta empresa - já existe uma convenção cobrindo parte do período a partir de %.', p_vigente_desde;
-  end if;
-
-  insert into public.empresa_convencao_horas_adicionais
-    (empresa_id, percentual_segunda_sexta, percentual_sabado, percentual_domingo, percentual_feriado, vigente_desde, created_by)
-  values (v_empresa_id, p_percentual_segunda_sexta, p_percentual_sabado, p_percentual_domingo, p_percentual_feriado, p_vigente_desde, auth.uid())
-  returning id into v_novo_id;
-
-  return v_novo_id;
-end;
-$function$;
-
-comment on function public.registrar_convencao_horas_adicionais(numeric, numeric, numeric, numeric, date) is
-  'Único caminho de escrita para empresa_convencao_horas_adicionais (DEC-007, redesenho Fase 8b) - só admin (usuario_e_admin), serializado por empresa (pg_advisory_xact_lock), rejeita vigência retroativa (vigente_desde >= current_date) e qualquer sobreposição de período (daterange/&&, sem depender de btree_gist). Fecha a convenção aberta anterior (vigente_ate = nova vigente_desde - 1) e insere a nova, atomicamente.';
-
-revoke execute on function public.registrar_convencao_horas_adicionais(numeric, numeric, numeric, numeric, date) from public, anon;
-grant execute on function public.registrar_convencao_horas_adicionais(numeric, numeric, numeric, numeric, date) to authenticated;
-
-
--- =====================================================================
--- PARTE 2: cenários de teste
--- =====================================================================
 
 -- ---------------------------------------------------------------------
 -- TESTE 1: estrutura - CHECK de percentual não-negativo, CHECK de
@@ -476,10 +211,8 @@ $$;
 
 
 -- ---------------------------------------------------------------------
--- TESTE 4: vigência retroativa rejeitada VIA RPC (item 6) - reforçado
--- nesta revisão: checa o TEXTO da mensagem ("passado"), não só
--- "qualquer exceção" (a Revisão 1 não distinguia rejeição pelo motivo
--- certo de falha por outro motivo, ex.: admin/empresa).
+-- TESTE 4: vigência retroativa rejeitada VIA RPC (item 6) - checa o
+-- TEXTO da mensagem ("passado"), não só "qualquer exceção".
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -574,11 +307,9 @@ begin
   end if;
   raise notice 'TESTE 6b OK: convenção agendada aparece ao consultar a data futura correta (id=%).', v_id_futura;
 
-  -- TESTE 6c (regressão pós-correção do bug de falso-positivo de
-  -- sobreposição no fluxo normal de sucessão, encontrado pelo próprio
-  -- teste reversível): confirma que a 1ª convenção foi REALMENTE fechada
-  -- na tabela (vigente_ate = véspera da 2ª), não só que a leitura por
-  -- período "parece certa".
+  -- TESTE 6c (confirma que a 1ª convenção foi REALMENTE fechada na
+  -- tabela, vigente_ate = véspera da 2ª, não só que a leitura por
+  -- período "parece certa").
   select vigente_ate into v_vigente_ate_primeira
   from public.empresa_convencao_horas_adicionais
   where id = v_id_primeira;
@@ -626,14 +357,12 @@ begin
   end if;
   raise notice 'TESTE 9 OK: lacuna de vigência (nenhuma convenção aplicável) devolve 0 linhas, nunca um valor presumido.';
 
-  -- TESTE 9B (regressão pós-correção - registrar uma 3ª convenção
-  -- enquanto a 2ª está aberta: é EXATAMENTE o cenário que revelou o bug
-  -- original de falso-positivo de sobreposição - a checagem explícita
-  -- rodava antes do fechamento e rejeitava por engano qualquer sucessão
-  -- normal). Também confirma o fechamento efetivo da 2ª, igual ao 6c.
+  -- TESTE 9B (registrar uma 3ª convenção enquanto a 2ª está aberta -
+  -- cenário que exercita o fluxo normal de sucessão. Também confirma o
+  -- fechamento efetivo da 2ª, igual ao 6c.)
   v_id_terceira := public.registrar_convencao_horas_adicionais(0.40, 0.60, 1.00, 1.00, current_date + 150);
   if v_id_terceira is null then
-    raise exception 'TESTE 9B FALHOU: registrar uma 3ª convenção enquanto a 2ª está aberta deveria ter sucesso (regressão do bug de sobreposição no fluxo normal de sucessão).';
+    raise exception 'TESTE 9B FALHOU: registrar uma 3ª convenção enquanto a 2ª está aberta deveria ter sucesso.';
   end if;
   raise notice 'TESTE 9B OK: 3ª convenção registrada com sucesso enquanto a 2ª estava aberta (id=%).', v_id_terceira;
 
@@ -645,11 +374,11 @@ begin
   end if;
   raise notice 'TESTE 9B OK: a 2ª convenção foi fechada corretamente em % ao registrar a 3ª.', v_vigente_ate_segunda;
 
-  -- TESTE 9C (item novo - fronteira exata entre 2 vigências não cria
-  -- lacuna nem sobreposição): a véspera da 3ª ainda pertence à 2ª
-  -- (0.35), o próprio dia de início da 3ª já pertence à 3ª (0.40), e uma
-  -- janela cobrindo só esses 2 dias consecutivos devolve exatamente 2
-  -- linhas (nem 0 - lacuna, nem sobrepondo a mesma data 2x).
+  -- TESTE 9C (fronteira exata entre 2 vigências não cria lacuna nem
+  -- sobreposição): a véspera da 3ª ainda pertence à 2ª (0.35), o
+  -- próprio dia de início da 3ª já pertence à 3ª (0.40), e uma janela
+  -- cobrindo só esses 2 dias consecutivos devolve exatamente 2 linhas
+  -- (nem 0 - lacuna, nem sobrepondo a mesma data 2x).
   select percentual_segunda_sexta into v_row
   from public.convencoes_horas_adicionais_no_periodo(current_date + 149, current_date + 149);
   if v_row.percentual_segunda_sexta is distinct from 0.35 then
@@ -678,11 +407,11 @@ begin
   end if;
   raise notice 'TESTE 9D OK: janela cobrindo as 3 vigências devolve as 3 convenções.';
 
-  -- TESTE 9E (item novo - qualquer erro deixa todas as linhas anteriores
-  -- intactas, caminho de rejeição PRECOCE: falha na checagem de
-  -- monotonicidade, antes de qualquer UPDATE de fechamento ser tentado).
-  -- Confirma contagem de linhas da empresa E o fechamento da 2ª->3ª
-  -- inalterados depois do erro.
+  -- TESTE 9E (qualquer erro deixa todas as linhas anteriores intactas,
+  -- caminho de rejeição PRECOCE: falha na checagem de monotonicidade,
+  -- antes de qualquer UPDATE de fechamento ser tentado. Confirma
+  -- contagem de linhas da empresa E o fechamento da 2ª->3ª inalterados
+  -- depois do erro.)
   select count(*) into v_qtd
   from public.empresa_convencao_horas_adicionais
   where empresa_id = v_empresa_id;
@@ -730,9 +459,7 @@ $$;
 -- colidiria com o índice único parcial ao tentar inserir outra linha
 -- aberta aqui. A empresa do TESTE 1/2 termina com exatamente 1 linha
 -- FECHADA (TESTE 2b fecha a única linha aberta que o TESTE 1 criou) -
--- livre para uma nova linha aberta sem colidir com nada (bug de
--- isolamento entre testes encontrado pelo próprio teste reversível,
--- corrigido nesta revisão).
+-- livre para uma nova linha aberta sem colidir com nada.
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -787,13 +514,13 @@ begin
       raise notice 'TESTE 10 OK: sobreposição com linha histórica fora de ordem rejeitada pela checagem explícita (%).', sqlerrm;
   end;
 
-  -- TESTE 10B (item novo - qualquer erro deixa todas as linhas
-  -- anteriores intactas, caminho de rejeição TARDIA: a chamada acima
-  -- passa na checagem de monotonicidade, então a function CHEGA A
-  -- FECHAR a linha aberta, e só DEPOIS disso é rejeitada pela checagem
-  -- de sobreposição contra o estado final - prova direta de que a
-  -- exceção desfaz o fechamento parcial junto, mesma transação, sem
-  -- nenhuma lógica de desfazimento manual na function).
+  -- TESTE 10B (qualquer erro deixa todas as linhas anteriores intactas,
+  -- caminho de rejeição TARDIA: a chamada acima passa na checagem de
+  -- monotonicidade, então a function CHEGA A FECHAR a linha aberta, e
+  -- só DEPOIS disso é rejeitada pela checagem de sobreposição contra o
+  -- estado final - prova direta de que a exceção desfaz o fechamento
+  -- parcial junto, mesma transação, sem nenhuma lógica de desfazimento
+  -- manual na function.)
   select vigente_ate into v_vigente_ate_aberta
   from public.empresa_convencao_horas_adicionais
   where id = v_id_aberta;
@@ -946,19 +673,14 @@ reset role;
 
 
 -- ---------------------------------------------------------------------
--- TESTE 13 (item 11 - só administrador pode registrar): o ambiente não
--- tem nenhum perfil não-admin ATIVO hoje (confirmado por introspecção
--- somente-leitura antes desta revisão), mas tem 3 admins ativos - em vez
--- de pular, usa 2 deles dentro da MESMA transação: um permanece admin
--- (controle positivo, TESTE 13a), o outro é rebaixado TEMPORARIAMENTE
--- para 'operador' (TESTE 13b) - `nivel_acesso` é um ENUM Postgres com
--- exatamente 4 valores, confirmados por introspecção somente-leitura
--- antes de escrever este teste (`select enumlabel from pg_enum join
--- pg_type ... where typname='nivel_acesso'`): admin, gestor, operador,
--- leitura - 'operador' é o próprio valor DEFAULT da coluna, nenhum valor
--- inventado. O rebaixamento NUNCA é restaurado manualmente - o ROLLBACK
--- final (fim deste arquivo) desfaz o UPDATE de nivel_acesso junto com
--- todo o resto, exatamente como qualquer outra escrita deste script.
+-- TESTE 13 (item 11 - só administrador pode registrar): usa 2 admins
+-- reais dentro da MESMA transação: um permanece admin (controle
+-- positivo, TESTE 13a), o outro é rebaixado TEMPORARIAMENTE para
+-- 'operador' (TESTE 13b) - `nivel_acesso` é um ENUM Postgres, 'operador'
+-- é o próprio valor DEFAULT da coluna, nenhum valor inventado. O
+-- rebaixamento NUNCA é restaurado manualmente - o ROLLBACK final (fim
+-- deste arquivo) desfaz o UPDATE de nivel_acesso junto com todo o
+-- resto, exatamente como qualquer outra escrita deste script.
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -978,7 +700,7 @@ begin
   limit 1;
 
   if v_admin_controle_id is null or v_admin_rebaixado_id is null then
-    raise notice 'TESTE 13 PULADO: menos de 2 administradores ativos no ambiente (a introspecção prévia a esta revisão confirmou 3 - se isto disparar, os dados do ambiente mudaram desde então).';
+    raise notice 'TESTE 13 PULADO: menos de 2 administradores ativos no ambiente.';
     return;
   end if;
 
@@ -1019,18 +741,22 @@ end;
 $$;
 
 
--- ROLLBACK obrigatório - nenhuma linha fica de fato gravada.
+-- ROLLBACK obrigatório - nenhuma linha fica de fato gravada, e o schema
+-- (tabela/functions/trigger/policies, nunca tocado por este arquivo)
+-- permanece exatamente como estava antes de rodar.
 rollback;
 
 -- =====================================================================
--- Consulta separada de resíduos (item 14) - rodar DEPOIS deste script,
--- numa NOVA conexão/aba (fora desta transação, já encerrada pelo
--- ROLLBACK acima). As 3 linhas abaixo precisam devolver, respectivamente:
--- "schema NÃO existe" / null (0 linhas) / null (0 linhas).
+-- Consulta separada de resíduos - rodar DEPOIS deste script, numa NOVA
+-- conexão/aba (fora desta transação, já encerrada pelo ROLLBACK acima).
+-- Diferente da versão pré-migration deste arquivo: o schema DEVE
+-- continuar existindo (este teste nunca o cria nem o derruba) - o que
+-- se verifica aqui é ausência de DADOS de teste, nunca do schema.
 -- =====================================================================
 -- select case when to_regclass('public.empresa_convencao_horas_adicionais') is null
---   then 'schema NÃO existe (ROLLBACK ok)' else 'RESÍDUO - tabela existe, ROLLBACK falhou' end as tabela;
--- select case when to_regprocedure('public.registrar_convencao_horas_adicionais(numeric,numeric,numeric,numeric,date)') is null
---   then 'function NÃO existe (ROLLBACK ok)' else 'RESÍDUO - function existe, ROLLBACK falhou' end as function_escrita;
--- select case when to_regprocedure('public.convencoes_horas_adicionais_no_periodo(date,date)') is null
---   then 'function NÃO existe (ROLLBACK ok)' else 'RESÍDUO - function existe, ROLLBACK falhou' end as function_leitura;
+--   then 'RESÍDUO GRAVE - tabela não existe (este teste nunca deveria apagá-la)' else 'schema intacto (esperado)' end as tabela;
+-- select count(*) as linhas_de_teste_residuais
+--   from public.empresa_convencao_horas_adicionais
+--   where percentual_segunda_sexta in (-0.10, 0.30, 0.40, 0.99, 0.20, 0.10, 0.35, 0.11, 0.12)
+--     and created_at > now() - interval '1 hour';
+-- -- linhas_de_teste_residuais precisa ser 0 - qualquer valor > 0 é RESÍDUO (ROLLBACK falhou ou o script rodou fora de uma transação).
