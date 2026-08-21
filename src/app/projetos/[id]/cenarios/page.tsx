@@ -55,7 +55,7 @@ export default function ProjectCenariosPage({ params }: ProjectCenariosPageProps
           className="flex flex-wrap items-center gap-2 text-xs font-semibold text-text-secondary"
         >
           <Link href={`/projetos/${id}`} className="transition hover:text-text-primary">
-            {numeroProjeto ? `Projeto ${numeroProjeto}` : "Orçamento"}
+            {numeroProjeto ? `← Projeto ${numeroProjeto}` : "← Orçamento"}
           </Link>
           <span>&gt;</span>
           <span>Cenários</span>
