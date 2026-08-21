@@ -2,18 +2,28 @@
 
 import { useEffect, type ReactNode } from "react";
 
+type ModalSize = "sm" | "lg" | "full";
+
 type ModalProps = {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** "sm" (default, inalterado) = max-w-[420px]. "lg" = diálogo mais largo (formulários). "full" = quase tela cheia, altura travada em 92vh - o conteúdo interno cuida da própria rolagem (nunca cresce a página por trás). */
+  size?: ModalSize;
+};
+
+const CLASSES_POR_TAMANHO: Record<ModalSize, string> = {
+  sm: "w-full max-w-[420px]",
+  lg: "w-full max-w-[720px]",
+  full: "w-[96vw] h-[92vh] max-w-none flex flex-col",
 };
 
 /**
  * Esqueleto de referencia: IMP-SoftDelete.md secao 5.
  */
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, size = "sm" }: ModalProps) {
   useEffect(() => {
     if (!open) {
       return;
@@ -50,13 +60,21 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-border bg-surface-elevated"
+        className={[
+          CLASSES_POR_TAMANHO[size],
+          "overflow-hidden rounded-2xl border border-border bg-surface-elevated",
+        ].join(" ")}
       >
         <div className="border-b border-border-subtle px-[22px] py-[18px]">
           <h3 className="text-[15px] font-semibold text-text-primary">{title}</h3>
         </div>
 
-        <div className="px-[22px] py-5 text-[13px] leading-[1.6] text-text-secondary">
+        <div
+          className={[
+            "text-[13px] leading-[1.6] text-text-secondary",
+            size === "full" ? "flex-1 overflow-hidden px-[22px] py-4" : "px-[22px] py-5",
+          ].join(" ")}
+        >
           {children}
         </div>
 
