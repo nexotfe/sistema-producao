@@ -65,6 +65,7 @@ const navigationGroups: NavigationGroup[] = [
     description: "Parâmetros operacionais da empresa.",
     links: [
       { label: "Calendário Operacional", href: "/configuracoes/calendario-operacional" },
+      { label: "Convenção coletiva", href: "/configuracoes/convencao-coletiva" },
     ],
   },
   {
