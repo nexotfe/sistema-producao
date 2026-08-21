@@ -313,10 +313,11 @@ customizado. Isso é estado atual confirmado, não aspiração.
 - **Nota:** Card não tem estado de hover — não é elemento interativo, e não carrega nenhuma cor de ação.
 
 ### Inputs / Fields (Field, Select)
-- **Style:** altura 42px, cantos 10px, borda `border`, fundo `surface-elevated`.
-- **Focus:** borda muda para `action-primary` **e** anel de 3px `focus-ring` — os dois juntos, único caso onde borda e anel mudam ao mesmo tempo.
-- **Error (validação de campo, não Badge):** borda muda para `danger-border`; o anel usa `danger-bg` como cor do contorno — **não como preenchimento de fundo do campo** (o campo com erro não ganha um fundo colorido). O indicador semântico real é a mensagem de erro explícita em texto 11.5px (`danger-text`) abaixo do campo; borda e anel sozinhos, sem essa mensagem, não seriam suficientes.
-- **Disabled:** fundo e borda `border-subtle`, texto `text-disabled`, cursor bloqueado.
+- **Style:** altura 42px, cantos 10px.
+- **Exceção temporária de tema — controles nativos:** diferente do resto do Design System, `<input>`/`<select>` usam cores FIXAS (paleta `slate`/`blue`/`red`), não os tokens reativos (`border`, `surface-elevated`, `action-primary`, `focus-ring` etc.). Motivo: `color-scheme: light` está travado no app inteiro (ver `globals.css`) até esses campos serem migrados para primitivos com fundo explícito — a UI nativa desenhada pelo navegador (ícone do seletor de data, seta do `<select>`) assume sempre fundo claro, e ficaria ilegível sobre um fundo reativo escurecido no modo escuro (achado confirmado em teste manual). Revisar esta exceção só quando os campos nativos forem de fato migrados — mesmo critério já registrado em `globals.css` para o body.
+- **Focus:** borda muda para azul fixo (`blue-600`) **e** anel de 3px azul fixo (`blue-400/40`) — os dois juntos, único caso onde borda e anel mudam ao mesmo tempo (equivalente fixo do par `action-primary`/`focus-ring` usado nos demais componentes reativos).
+- **Error (só Field — Select não tem estado de erro):** borda muda para vermelho fixo (`red-200`); o anel usa `red-50` fixo como cor do contorno — **não como preenchimento de fundo do campo** (o campo com erro não ganha um fundo colorido). O indicador semântico real é a mensagem de erro explícita em texto 11.5px (`danger-text`, token reativo — a mensagem em si não é um controle nativo) abaixo do campo; borda e anel sozinhos, sem essa mensagem, não seriam suficientes.
+- **Disabled:** fundo e borda cinza fixo (`slate-100`), texto `slate-400` fixo, cursor bloqueado.
 
 ### Badges
 - **Style:** pílula (`rounded-full`), borda + fundo + texto da mesma família de status (trio completo — diferente da validação de campo, ver acima).
