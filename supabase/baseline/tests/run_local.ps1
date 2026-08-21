@@ -7,7 +7,14 @@ param(
 
   [int]$Port = 55432,
 
-  [string]$DataDirectory = '.local-postgres/data'
+  [string]$DataDirectory = '.local-postgres/data',
+
+  # Aplica supabase/baseline/evolutivas/*.sql (e os testes correspondentes
+  # em supabase/baseline/tests/) depois do baseline 001..015 completo -
+  # nunca faz sentido com um baseline parcial (MaxModule < 15), já que
+  # toda evolução depende do baseline inteiro. Default = $true quando
+  # MaxModule=15 (instalação completa), ignorado com aviso caso contrário.
+  [bool]$IncludeEvolutivas = $true
 )
 
 $ErrorActionPreference = 'Stop'
@@ -103,6 +110,44 @@ try {
   }
 
   Write-Host "Baseline 001..$('{0:D3}' -f $MaxModule): APROVADO"
+
+  # Evolutivas (supabase/baseline/evolutivas/*.sql) - só fazem sentido
+  # sobre o baseline COMPLETO (001..015); um MaxModule parcial nunca as
+  # aplica, mesmo com -IncludeEvolutivas $true, porque falhariam contra
+  # dependências de módulos ainda não instalados - não é um "PULADO"
+  # silencioso, é um aviso explícito de escopo.
+  if ($IncludeEvolutivas -and $MaxModule -eq 15) {
+    $evolutivasDir = Join-Path 'supabase/baseline' 'evolutivas'
+    if (Test-Path $evolutivasDir) {
+      $evolutivaFiles = Get-ChildItem $evolutivasDir -File -Filter '*.sql' | Sort-Object Name
+
+      foreach ($file in $evolutivaFiles) {
+        Write-Host "Evolução: $($file.Name)"
+        Invoke-NativeChecked -Command psql -ArgumentList @(
+          '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-d', $DatabaseName, '-f', $file.FullName
+        )
+
+        # Teste correspondente: mesmo BaseName da evolução, sufixo
+        # "_test.sql", em supabase/baseline/tests/ (mesma convenção dos
+        # módulos 001..015) - nunca concatenação manual.
+        $evolutivaTest = Join-Path 'supabase/baseline/tests' "$($file.BaseName)_test.sql"
+        if (Test-Path $evolutivaTest) {
+          Write-Host "Teste (evolução): $([System.IO.Path]::GetFileName($evolutivaTest))"
+          Invoke-NativeChecked -Command psql -ArgumentList @(
+            '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-d', $DatabaseName, '-f', $evolutivaTest
+          )
+        }
+        else {
+          throw "Evolução $($file.Name) não tem teste correspondente ($evolutivaTest) - toda evolução precisa de teste, sem exceção."
+        }
+      }
+
+      Write-Host "Evolutivas: APROVADO"
+    }
+  }
+  elseif ($IncludeEvolutivas -and $MaxModule -lt 15) {
+    Write-Host "Evolutivas ignoradas: MaxModule=$MaxModule (parcial) - evolutivas só rodam sobre o baseline completo (001..015)."
+  }
 }
 finally {
   & dropdb --if-exists $DatabaseName *> $null
