@@ -168,7 +168,6 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
 
     expect(result.current.cenarioComercialAprovado).toBeNull();
     expect(result.current.valorTotalProposta).toBe(0);
-    expect(result.current.ajusteComercial).toBeNull();
   });
 
   it("item com custo_congelado: usa o valor congelado (mesma fonte de buscarDadosOrcamento), valorUnitario e valorTotal batem com a fórmula de calcularResumoOrcamento", async () => {
@@ -184,11 +183,14 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
 
     // custo = 100 (congelado) * 2 = 200; margem=20%, carga=10%:
     // lucro=40; subtotal=240; valorTecnico=240/0.9=266.6666667 (sem desconto no item).
+    // Com 1 único item, distribuirAjusteProporcional atribui o valor-alvo
+    // inteiro a ele, arredondado a centavos (266.67) - a diferença de
+    // arredondamento é o próprio "ajuste" (zero aqui, sem cenário).
     expect(result.current.itens).toHaveLength(1);
     expect(result.current.itens[0].codigo).toBe("PN-1");
     expect(result.current.itens[0].ncm).toBe("8479.90.90");
-    expect(result.current.itens[0].valorTotal).toBeCloseTo(266.6666667, 4);
-    expect(result.current.itens[0].valorUnitario).toBeCloseTo(133.3333333, 4); // 266.6666667 / 2
+    expect(result.current.itens[0].valorTotal).toBeCloseTo(266.67, 2);
+    expect(result.current.itens[0].valorUnitario).toBeCloseTo(133.335, 3); // 266.67 / 2
 
     // Agregado (custoTotalSoma=200, sem desconto): mesma fórmula, uma única vez.
     expect(result.current.valorTecnicoProposta).toBeCloseTo(266.6666667, 4);
@@ -229,8 +231,11 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     const { result } = renderHook(() => useProposta("projeto-a"));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.itens[0].valorTotal).toBeCloseTo(266.6666667, 4);
-    expect(result.current.itens[1].valorTotal).toBeCloseTo(200, 4);
+    // Sem cenário aprovado, o alvo agregado ≈ soma das bases - a
+    // distribuição só absorve o arredondamento a centavos (item[0] vira
+    // 266.67; item[1] já bate exato em 200, sem sobra a distribuir).
+    expect(result.current.itens[0].valorTotal).toBeCloseTo(266.67, 2);
+    expect(result.current.itens[1].valorTotal).toBeCloseTo(200, 2);
 
     // custoTotalSoma = 200 + 150 = 350; lucro=70; subtotal=420;
     // valorTecnico=420/0.9=466.6666667 - aplicado UMA VEZ sobre a soma,
@@ -286,9 +291,11 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     expect(result.current.erro).toBe("Projeto não encontrado.");
   });
 
-  it("com cenário aprovado vigente: valorTotalProposta usa novo_custo_tecnico (fórmula existente, aplicada uma única vez) e prazoProposto fica disponível", async () => {
+  it("com cenário aprovado vigente e 1 item: valorTotalProposta usa novo_custo_tecnico (fórmula existente, aplicada uma única vez), prazoProposto fica disponível, e o item (único) absorve o ajuste inteiro - nenhuma linha separada de ajuste", async () => {
     configurarMock({
-      itens: [],
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 50000 },
+      ],
       respostaCenarioAprovado: {
         data: {
           id: "cenario-1",
@@ -315,9 +322,86 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     expect(result.current.valorTecnicoProposta).toBeCloseTo(73333.3333333, 4);
     expect(result.current.valorTotalProposta).toBeCloseTo(73333.3333333, 4);
 
-    // Ajuste comercial (correção 2/6): diferença entre resumo(55000) e
-    // resumo(50000), nunca recalculado isoladamente sobre os 5000.
-    expect(result.current.ajusteComercial?.descricao).toBe("Ajuste comercial — cenário aprovado");
-    expect(result.current.ajusteComercial?.valorTotal).toBeCloseTo(6666.6666667, 4);
+    // Nenhuma linha separada de ajuste: com 1 único item, ele absorve o
+    // valor-alvo agregado por inteiro (arredondado a centavos).
+    expect(result.current.itens).toHaveLength(1);
+    expect(result.current.itens[0].valorTotal).toBeCloseTo(73333.33, 2);
+    expect(result.current.itens[0].valorUnitario).toBeCloseTo(73333.33, 2);
+  });
+
+  it("com cenário aprovado e múltiplos itens: o ajuste positivo é distribuído proporcionalmente, soma dos itens bate exata com o Subtotal", async () => {
+    configurarMock({
+      projeto: { margem_lucro_percent: 0, carga_tributaria_percent: 0 },
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 100 },
+        { id: "item-2", produto_id: "produto-2", pn: "PN-2", descricao: "Item 2", revisao: null, quantidade: 1, custo_congelado: 200 },
+      ],
+      respostaCenarioAprovado: {
+        data: {
+          id: "cenario-1",
+          tipo_cenario: "ajustado",
+          data_solicitada_cliente: "2026-09-01",
+          prazo_proposto: "2026-09-20",
+          diferenca_em_dias: 5,
+          custo_tecnico_atual: 300,
+          custo_adicional_total: 60,
+          novo_custo_tecnico: 360,
+          aprovado_em: "2026-08-18T10:00:00Z",
+        },
+        error: null,
+      },
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // margem=0, carga=0: valorComercial = custoTotal, sem arredondamento
+    // a esconder o resultado. Base: item-1=100 (peso 1/3), item-2=200
+    // (peso 2/3), soma=300. Alvo agregado (novo_custo_tecnico)=360
+    // (ajuste de +60, +20%): item-1 -> 120, item-2 -> 240.
+    expect(result.current.valorTecnicoProposta).toBe(360);
+    expect(result.current.itens[0].valorTotal).toBeCloseTo(120, 2);
+    expect(result.current.itens[1].valorTotal).toBeCloseTo(240, 2);
+
+    const somaItens = result.current.itens.reduce((acc, item) => acc + item.valorTotal, 0);
+    expect(Math.round(somaItens * 100) / 100).toBe(result.current.valorTecnicoProposta);
+  });
+
+  it("com cenário aprovado e ajuste negativo (custo atual dos itens maior que o novo_custo_tecnico): itens encolhem proporcionalmente, soma ainda bate exata com o Subtotal", async () => {
+    configurarMock({
+      projeto: { margem_lucro_percent: 0, carga_tributaria_percent: 0 },
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 200 },
+        { id: "item-2", produto_id: "produto-2", pn: "PN-2", descricao: "Item 2", revisao: null, quantidade: 1, custo_congelado: 300 },
+      ],
+      respostaCenarioAprovado: {
+        data: {
+          id: "cenario-1",
+          tipo_cenario: "ajustado",
+          data_solicitada_cliente: "2026-09-01",
+          prazo_proposto: "2026-09-15",
+          diferenca_em_dias: -3,
+          custo_tecnico_atual: 500,
+          custo_adicional_total: -140,
+          novo_custo_tecnico: 360,
+          aprovado_em: "2026-08-18T10:00:00Z",
+        },
+        error: null,
+      },
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Base: item-1=200 (peso 0.4), item-2=300 (peso 0.6), soma=500. Alvo
+    // agregado=360 (ajuste de -140): item-1 -> 144, item-2 -> 216.
+    expect(result.current.valorTecnicoProposta).toBe(360);
+    expect(result.current.itens[0].valorTotal).toBeCloseTo(144, 2);
+    expect(result.current.itens[1].valorTotal).toBeCloseTo(216, 2);
+    expect(result.current.itens[0].valorTotal).toBeLessThan(200);
+    expect(result.current.itens[1].valorTotal).toBeLessThan(300);
+
+    const somaItens = result.current.itens.reduce((acc, item) => acc + item.valorTotal, 0);
+    expect(Math.round(somaItens * 100) / 100).toBe(result.current.valorTecnicoProposta);
   });
 });

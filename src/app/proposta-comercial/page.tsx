@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { proximaRevisao, useProposta } from "@/modules/projetos/hooks/useProposta";
 
@@ -51,7 +52,6 @@ export default function CommercialProposalPage() {
     valorTecnicoProposta,
     valorDescontoProposta,
     valorTotalProposta,
-    ajusteComercial,
     revisao,
     salvandoRevisao,
     avancarRevisao,
@@ -126,6 +126,15 @@ export default function CommercialProposalPage() {
   return (
     <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-5xl space-y-5">
+        {idProjeto ? (
+          <Link
+            href={`/projetos/${idProjeto}`}
+            className="inline-flex w-fit items-center text-sm font-semibold text-slate-500 transition hover:text-slate-800"
+          >
+            ← Voltar ao Orçamento
+          </Link>
+        ) : null}
+
         {(erro || loading) && (
           <p className="text-sm text-slate-500">
             {erro ?? (idProjeto ? "Carregando proposta..." : null)}
@@ -311,20 +320,6 @@ export default function CommercialProposalPage() {
                     </td>
                   </tr>
                 ))}
-                {ajusteComercial ? (
-                  <tr className="italic transition hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-800">
-                      {ajusteComercial.descricao}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-slate-500">—</td>
-                    <td className="px-4 py-4 text-slate-500">—</td>
-                    <td className="px-4 py-4 text-center text-slate-500">—</td>
-                    <td className="px-4 py-4 text-right text-slate-500">—</td>
-                    <td className="px-6 py-4 text-right font-semibold text-slate-900">
-                      {formatarMoeda(ajusteComercial.valorTotal)}
-                    </td>
-                  </tr>
-                ) : null}
               </tbody>
             </table>
           </div>

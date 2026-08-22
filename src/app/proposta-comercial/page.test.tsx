@@ -120,3 +120,22 @@ describe("proposta-comercial/page - nomeVendedor (Padrao 1, regra especial)", ()
     );
   });
 });
+
+describe("proposta-comercial/page - link de retorno ao Orçamento", () => {
+  it("aponta dinamicamente para /projetos/{id do projeto na URL}", () => {
+    useSearchParamsMock.mockReturnValue({ get: () => "outro-projeto-qualquer" });
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    render(<CommercialProposalPage />);
+
+    const link = screen.getByRole("link", { name: "← Voltar ao Orçamento" });
+    expect(link.getAttribute("href")).toBe("/projetos/outro-projeto-qualquer");
+  });
+
+  it("sem projeto na URL: não renderiza o link (evita apontar para /projetos/null)", () => {
+    useSearchParamsMock.mockReturnValue({ get: () => null });
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    render(<CommercialProposalPage />);
+
+    expect(screen.queryByRole("link", { name: "← Voltar ao Orçamento" })).toBeNull();
+  });
+});

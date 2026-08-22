@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { calcularResumoOrcamento } from "../lib/calcularResumoOrcamento";
 import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
 import { buscarDadosOrcamento } from "../lib/buscarDadosOrcamento";
+import { distribuirAjusteProporcional } from "../lib/distribuirAjusteProporcional";
 
 export type ClienteProposta = {
   nome: string;
@@ -19,11 +20,6 @@ export type ItemProposta = {
   ncm: string | null;
   quantidade: number;
   valorUnitario: number;
-  valorTotal: number;
-};
-
-export type AjusteComercialProposta = {
-  descricao: string;
   valorTotal: number;
 };
 
@@ -73,17 +69,6 @@ export function useProposta(idProjeto: string | null) {
   // fica disponível para a tela usar como prazo da proposta.
   const [cenarioComercialAprovado, setCenarioComercialAprovado] =
     useState<CenarioComercialAprovadoResumo | null>(null);
-  // DEC-007 §6.2/Fase 8b (correção 2 de 6, teste visual real 260011) -
-  // linha separada na Proposta, nunca redistribuída entre os itens (o
-  // custo adicional do cenário não é atribuível a nenhum item
-  // específico). Calculada como DIFERENÇA entre dois resumos agregados
-  // (custo original congelado + ajuste) − (custo original congelado),
-  // nunca recalculando o ajuste isolado, para bater exatamente com
-  // valorTecnicoProposta/valorTotalProposta apesar de qualquer
-  // arredondamento interno de calcularResumoOrcamento.
-  const [ajusteComercial, setAjusteComercial] =
-    useState<AjusteComercialProposta | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvandoRevisao, setSalvandoRevisao] = useState(false);
@@ -150,8 +135,10 @@ export function useProposta(idProjeto: string | null) {
       // Itens: mesmo custo já resolvido pelo Orcamento, mas a Proposta
       // so expoe Valor Unitario (= total / quantidade) e Valor Total -
       // nunca Custo/Impostos/Lucro internos.
-      const itensCalculados: ItemProposta[] = [];
       let custoTotalSoma = 0;
+
+      type ItemPropostaBase = Omit<ItemProposta, "valorUnitario">;
+      const itensBase: ItemPropostaBase[] = [];
 
       for (const item of dados.itensCalculados) {
         const { data: produto } = await supabase
@@ -168,30 +155,25 @@ export function useProposta(idProjeto: string | null) {
           cargaTributariaPercent: cargaEfetiva,
         });
 
-        itensCalculados.push({
+        itensBase.push({
           id: item.id,
           descricao: item.descricao,
           codigo: item.pn,
           ncm: (produto?.codigo_ncm as string | null) ?? null,
           quantidade: item.quantidade,
-          valorUnitario: item.quantidade > 0 ? totalItem / item.quantidade : 0,
           valorTotal: totalItem,
         });
       }
 
-      // Total: regra oficial do DEC-001 - mesma formula do
+      // Subtotal: regra oficial do DEC-001 - mesma formula do
       // useOrcamento.ts, aplicada uma UNICA VEZ sobre o custo total
-      // somado (nao item a item), para os dois "Valor Total" baterem. O
-      // desconto comercial tambem so entra aqui, nunca no breakdown por
-      // item acima (mesmo criterio de useOrcamento.ts).
+      // somado (nao item a item). O desconto comercial so entra aqui,
+      // nunca no breakdown por item (mesmo criterio de useOrcamento.ts).
       //
-      // CORREÇÃO (DEC-007 §6.2/Fase 8b, aprovação do cenário comercial):
-      // havendo cenário aprovado vigente, o valor-base vira
+      // Havendo cenário aprovado vigente, o valor-base vira
       // novoCustoTecnico (congelado na aprovação: custo técnico + custo
       // adicional do cenário) em vez da soma bruta dos itens - mesma
-      // calcularResumoOrcamento, nunca uma segunda fórmula. O breakdown
-      // por item acima NUNCA é alterado por isso (o custo adicional não
-      // é atribuível a nenhum item específico) - só o total muda.
+      // calcularResumoOrcamento, nunca uma segunda fórmula.
       const custoTotalEfetivo = cenarioAprovado ? cenarioAprovado.novoCustoTecnico : custoTotalSoma;
       const { valorTecnico, valorDesconto, valorComercial: totalProposta } =
         calcularResumoOrcamento({
@@ -201,37 +183,26 @@ export function useProposta(idProjeto: string | null) {
           descontoPercent: descontoPercentual,
         });
 
-      // Ajuste comercial (correção 2 de 6): diferença entre os dois
-      // resumos agregados, usando SEMPRE custoTecnicoAtual congelado na
-      // aprovação como base "sem ajuste" (nunca custoTotalSoma ao vivo -
-      // o snapshot é o que foi aprovado, não o estado atual dos itens).
-      let ajusteComercialCalculado: AjusteComercialProposta | null = null;
+      // Correção (pedido do usuário, 2026-08-22): a Proposta não mostra
+      // mais uma linha separada "Ajuste comercial" - o ajuste (diferença
+      // entre valorTecnico agregado, que já inclui o cenário aprovado, e
+      // a soma dos valores-base por item) é distribuído proporcionalmente
+      // entre os itens, garantindo soma(itens.valorTotal) === Subtotal
+      // sempre, com qualquer sinal (positivo/negativo). O detalhamento do
+      // ajuste (custoAdicionalTotal etc.) continua só no Orçamento, via
+      // cenarioComercialAprovado - não removido nem duplicado aqui.
+      const itensCalculadosFinal: ItemProposta[] = distribuirAjusteProporcional(
+        itensBase,
+        valorTecnico,
+      ).map((item) => ({
+        ...item,
+        valorUnitario: item.quantidade > 0 ? item.valorTotal / item.quantidade : 0,
+      }));
 
-      if (cenarioAprovado) {
-        const { valorComercial: valorComAjuste } = calcularResumoOrcamento({
-          custoTotal: cenarioAprovado.custoTecnicoAtual + cenarioAprovado.custoAdicionalTotal,
-          margemLucroPercent: margem,
-          cargaTributariaPercent: cargaEfetiva,
-          descontoPercent: descontoPercentual,
-        });
-        const { valorComercial: valorSemAjuste } = calcularResumoOrcamento({
-          custoTotal: cenarioAprovado.custoTecnicoAtual,
-          margemLucroPercent: margem,
-          cargaTributariaPercent: cargaEfetiva,
-          descontoPercent: descontoPercentual,
-        });
-
-        ajusteComercialCalculado = {
-          descricao: "Ajuste comercial — cenário aprovado",
-          valorTotal: valorComAjuste - valorSemAjuste,
-        };
-      }
-
-      setItens(itensCalculados);
+      setItens(itensCalculadosFinal);
       setValorTecnicoProposta(valorTecnico);
       setValorDescontoProposta(valorDesconto);
       setValorTotalProposta(totalProposta);
-      setAjusteComercial(ajusteComercialCalculado);
       setLoading(false);
     }
 
@@ -301,7 +272,6 @@ export function useProposta(idProjeto: string | null) {
     valorDescontoProposta,
     valorTotalProposta,
     cenarioComercialAprovado,
-    ajusteComercial,
     revisao,
     salvandoRevisao,
     avancarRevisao,
