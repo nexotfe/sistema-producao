@@ -128,6 +128,107 @@ describe("prepararJanelaComercial", () => {
   });
 });
 
+// CORREÇÃO DA CAUSA RAIZ (travamento real de "Calcular cenário atual",
+// orçamento 260007, DEC-007): prepararJanelaComercial nunca soube que
+// Industrialização não precisa da folga genérica de +9+1 dias produtivos
+// (material fornecido pelo próprio cliente, disponível já na Data
+// Prevista de Aprovação do Pedido) - modoDisponibilidadeMaterial resolve
+// isso centralizadamente, sem duplicar a decisão nos chamadores.
+describe("prepararJanelaComercial — modoDisponibilidadeMaterial (Industrialização, orçamento 260007)", () => {
+  it("'padrao' (default, sem informar o parâmetro): comportamento idêntico ao de sempre - mesmos números do item 6/7 acima, prova de regressão para fabricacao/desenvolvimento/servico", async () => {
+    const client = clientePadrao();
+
+    const resultado = await prepararJanelaComercial(client, EMPRESA_ID, {
+      dataPrevistaAprovacaoPedido: "2026-11-02",
+      margemSegurancaDiasProdutivos: 0,
+      dataNecessidade: "2026-12-01",
+    });
+
+    expect(resultado.valida).toBe(true);
+    if (resultado.valida) {
+      // Mesmos valores do item 6/7 - +9 dias produtivos de chegada, +1
+      // dia de disponibilidade - nada mudou para esta natureza.
+      expect(resultado.dataChegadaPrevista).toBe("2026-11-13");
+      expect(resultado.dataDisponibilidadeProducao).toBe("2026-11-16");
+    }
+  });
+
+  it("'padrao' informado explicitamente: idêntico a omitir o parâmetro (regressão explícita)", async () => {
+    const client = clientePadrao();
+
+    const resultado = await prepararJanelaComercial(
+      client,
+      EMPRESA_ID,
+      { dataPrevistaAprovacaoPedido: "2026-11-02", margemSegurancaDiasProdutivos: 0, dataNecessidade: "2026-12-01" },
+      "padrao",
+    );
+
+    expect(resultado.valida).toBe(true);
+    if (resultado.valida) {
+      expect(resultado.dataDisponibilidadeProducao).toBe("2026-11-16");
+    }
+  });
+
+  it("'industrializacao': dataChegadaPrevista/dataDisponibilidadeProducao = a própria Data Prevista de Aprovação do Pedido, sem os deslocamentos de +9+1 dias", async () => {
+    const client = clientePadrao();
+
+    const resultado = await prepararJanelaComercial(
+      client,
+      EMPRESA_ID,
+      { dataPrevistaAprovacaoPedido: "2026-11-02", margemSegurancaDiasProdutivos: 0, dataNecessidade: "2026-12-01" },
+      "industrializacao",
+    );
+
+    expect(resultado.valida).toBe(true);
+    if (resultado.valida) {
+      expect(resultado.dataChegadaPrevista).toBe("2026-11-02");
+      expect(resultado.dataDisponibilidadeProducao).toBe("2026-11-02");
+    }
+  });
+
+  it("reprodução real do orçamento 260007: 26/08/2026 (aprovação prevista) + 08/09/2026 (necessidade) + margem 0 - INVÁLIDA em 'padrao' (causa raiz do travamento original), VÁLIDA em 'industrializacao' (correção)", async () => {
+    const client = clientePadrao();
+    const premissas: PremissasJanelaComercial = {
+      dataPrevistaAprovacaoPedido: "2026-08-26",
+      margemSegurancaDiasProdutivos: 0,
+      dataNecessidade: "2026-09-08",
+    };
+
+    const resultadoPadrao = await prepararJanelaComercial(client, EMPRESA_ID, premissas, "padrao");
+    expect(resultadoPadrao.valida).toBe(false);
+    if (!resultadoPadrao.valida) {
+      expect(resultadoPadrao.motivo).toBe("disponibilidade_apos_prazo_interno");
+    }
+
+    const resultadoIndustrializacao = await prepararJanelaComercial(client, EMPRESA_ID, premissas, "industrializacao");
+    expect(resultadoIndustrializacao.valida).toBe(true);
+    if (resultadoIndustrializacao.valida) {
+      expect(resultadoIndustrializacao.dataDisponibilidadeProducao).toBe("2026-08-26");
+    }
+  });
+
+  it("'industrializacao' ainda pode ficar inválida (sem_dia_produtivo_no_intervalo) se a data cair fora de qualquer dia produtivo do intervalo - não é um bypass incondicional", async () => {
+    const client = clientePadrao();
+
+    // 2026-11-07 é sábado (não produtivo); dataNecessidade igual, sem
+    // margem - prazoInterno também cai no mesmo sábado. Sem nenhum
+    // deslocamento (modo industrialização), disponibilidadeProducao fica
+    // exatamente nesse sábado - contarDiasProdutivosNaJanela continua
+    // sendo quem decide, não é ignorado por este modo.
+    const resultado = await prepararJanelaComercial(
+      client,
+      EMPRESA_ID,
+      { dataPrevistaAprovacaoPedido: "2026-11-07", margemSegurancaDiasProdutivos: 0, dataNecessidade: "2026-11-07" },
+      "industrializacao",
+    );
+
+    expect(resultado.valida).toBe(false);
+    if (!resultado.valida) {
+      expect(resultado.motivo).toBe("sem_dia_produtivo_no_intervalo");
+    }
+  });
+});
+
 describe("premissasComerciaisMudaram (item 11 — invalidação por alteração de premissa)", () => {
   const base: PremissasJanelaComercial = {
     dataNecessidade: "2026-11-30",

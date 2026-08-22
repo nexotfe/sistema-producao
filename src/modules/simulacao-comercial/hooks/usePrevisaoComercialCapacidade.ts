@@ -16,10 +16,20 @@
 // GRADE - a grade agora é larga o bastante para cobrir tanto a
 // disponibilidade original de material quanto uma data negociada
 // ANTERIOR, sem nunca precisar recarregar a base. `janelaComercial.dataDisponibilidadeProducao`
-// continua sendo usado para 2 coisas que NUNCA variam por cenário: (1)
-// `dataReferenciaConfirmados` (piso dos projetos já confirmados -
-// material do orçamento novo nunca os afeta) e (2) a disponibilidade
-// ORIGINAL de material do "Cenário atual".
+// continua sendo usado só para `dataReferenciaConfirmados` (piso dos
+// projetos já confirmados - material do orçamento novo nunca os afeta),
+// que NUNCA varia por cenário.
+//
+// CORREÇÃO (projeto de Industrialização, orçamento 260007): a
+// disponibilidade ORIGINAL de material do "Cenário atual" - e o
+// fallback do "Cenário ajustado" quando nenhuma negociação está
+// configurada - deixou de ser sempre `janelaComercial.dataDisponibilidadeProducao`
+// e passou a ser `disponibilidadeMaterialOrcamentoNovo`, resolvido pelo
+// CHAMADOR (GeradorComparadorCenarios.tsx): igual à disponibilidade
+// genérica para as demais naturezas, mas igual à Data Prevista de
+// Aprovação do Pedido (sem negociação possível) para Industrialização -
+// este hook continua agnóstico de natureza de projeto, só consome o
+// valor já resolvido.
 //
 // Sessão autenticada normal (nunca service_role) - mesmo padrão de
 // `buscarEmpresaId` já usado em GeradorComparadorCenarios.tsx (duplicado
@@ -37,6 +47,7 @@ import {
   type SaidaPrevisaoComercial,
 } from "@/modules/simulacao-comercial/lib/cenarios/montarPrevisaoComercialProjeto";
 import { carregarNomesDiagnostico, type NomesDiagnostico } from "@/modules/simulacao-comercial/lib/cenarios/carregarNomesDiagnostico";
+import { executarCarregamentoComTimeout } from "@/modules/simulacao-comercial/lib/executarCarregamentoComTimeout";
 import type { ResultadoJanelaComercial } from "@/modules/simulacao-comercial/lib/prepararJanelaComercial";
 import type { CapacidadeExtraDia } from "@/modules/simulacao-comercial/lib/cenarios/capacidadeDia";
 import type { DecisaoRecursoTemporario } from "@/modules/simulacao-comercial/lib/cenarios/avaliarCenario";
@@ -79,7 +90,10 @@ export interface CenarioAjustadoPrevisao {
 export interface ResultadoPrevisaoComercialCapacidade {
   readonly base: BasePrevisaoComercial | null;
   readonly carregandoBase: boolean;
+  /** Nunca detalhe técnico - sempre MENSAGEM_ERRO_CARREGAMENTO (timeout ou erro real, ambos tratados igual). */
   readonly erroBase: string | null;
+  /** Refaz o carregamento da base do zero - único jeito de sair do estado de erro (timeout ou falha real). */
+  readonly tentarNovamenteBase: () => void;
   /** Cenário sem nenhuma alternativa autorizada, disponibilidade de material ORIGINAL - sempre calculado quando `base` existe. */
   readonly saidaAtual: SaidaPrevisaoComercial | null;
   /** null enquanto `cenarioAjustado` for null (nenhuma alternativa configurada ainda) - nunca um cálculo "vazio" fingido. */
@@ -94,20 +108,52 @@ export function usePrevisaoComercialCapacidade(params: {
   dataSolicitadaCliente: string;
   /** Piso da GRADE (não da disponibilidade de material em si) - resolvido pelo CHAMADOR, tipicamente a aprovação prevista (mais cedo que a disponibilidade original, para cobrir negociação futura sem nova consulta). */
   janelaInicioGrade: string;
+  /** Disponibilidade ORIGINAL de material do orçamento novo, resolvida pelo CHAMADOR: genérica (mesma de sempre) para a maioria dos projetos, ou a Data Prevista de Aprovação do Pedido para Industrialização - ver comentário de topo. */
+  disponibilidadeMaterialOrcamentoNovo: string;
   /** null = nenhuma alternativa configurada ainda (nem material, nem capacidade) - saidaAjustada fica null, nunca 0/false fingidos. */
   cenarioAjustado: CenarioAjustadoPrevisao | null;
 }): ResultadoPrevisaoComercialCapacidade {
-  const { projetoId, janelaComercial, dataSolicitadaCliente, janelaInicioGrade, cenarioAjustado } = params;
+  const { projetoId, janelaComercial, dataSolicitadaCliente, janelaInicioGrade, disponibilidadeMaterialOrcamentoNovo, cenarioAjustado } = params;
 
   // Estado bruto nunca é limpo sincronamente dentro do efeito quando a
   // janela deixa de ser válida (react-hooks/set-state-in-effect) - mesmo
   // padrão já usado em GeradorComparadorCenarios.tsx para carregarBaseCenarios:
   // `base` (derivado abaixo) é quem realmente reflete "há uma base válida
   // para esta janela AGORA".
+  //
+  // CORREÇÃO (travamento real, achado em teste visual - orçamento 260007):
+  // a mesma derivação precisa valer para carregandoBase/erroBase, não só
+  // para base - o efeito abaixo retorna cedo (`if (!janelaComercial?.valida)
+  // return;`) SEM tocar em carregandoBaseBruto quando a janela fica
+  // inválida enquanto uma chamada anterior ainda está em voo. Sem
+  // derivação, essa chamada anterior nunca zera carregandoBaseBruto (seu
+  // próprio finally está protegido por `cancelado`, corretamente, para
+  // nunca sobrescrever um resultado mais novo) - carregandoBaseBruto
+  // ficava travado em `true` para sempre, prendendo "Calcular cenário
+  // atual" desabilitado indefinidamente. Nomes _Bruto/_Efetivo (em vez de
+  // reaproveitar "carregandoBase"/"erroBase" para o estado cru) tornam a
+  // diferença entre estado interno e valor exposto explícita na leitura.
   const [baseCarregada, setBaseCarregada] = useState<BasePrevisaoComercial | null>(null);
-  const [carregandoBase, setCarregandoBase] = useState(false);
-  const [erroBase, setErroBase] = useState<string | null>(null);
+  const [carregandoBaseBruto, setCarregandoBase] = useState(false);
+  const [erroBaseBruto, setErroBase] = useState<string | null>(null);
   const base = janelaComercial?.valida ? baseCarregada : null;
+  const carregandoBase = janelaComercial?.valida ? carregandoBaseBruto : false;
+  const erroBase = janelaComercial?.valida ? erroBaseBruto : null;
+
+  // Proteção de UX (travamento real, achado em teste visual - orçamento
+  // 260007): mesmo com a corrida acima corrigida, uma consulta real que
+  // nunca resolve (rede/trava) ainda deixaria carregandoBase pendurado
+  // para sempre - executarCarregamentoComTimeout garante um timeout com
+  // erro recuperável (ver seu próprio cabeçalho para o contrato
+  // completo). `tentativaBase` é a mesma convenção já usada para
+  // `recarregaResumoFinanceiro` em GeradorComparadorCenarios.tsx - um
+  // contador no array de dependências que "Tentar novamente" incrementa
+  // para forçar uma nova execução deste efeito sem duplicar a lógica de
+  // carregamento.
+  const [tentativaBase, setTentativaBase] = useState(0);
+  function tentarNovamenteBase() {
+    setTentativaBase((v) => v + 1);
+  }
 
   // "Base congelada uma vez": o array de dependências abaixo NUNCA inclui
   // `cenarioAjustado` - é isto que garante, estruturalmente, que
@@ -120,77 +166,73 @@ export function usePrevisaoComercialCapacidade(params: {
       return;
     }
 
-    async function carregar() {
-      setCarregandoBase(true);
-      setErroBase(null);
-      try {
-        const empresaId = await buscarEmpresaId();
-        if (!empresaId) {
-          throw new Error("Usuário não autenticado.");
-        }
-        const novaBase = await carregarBasePrevisaoComercial(
-          supabase,
-          empresaId,
-          projetoId,
-          dataSolicitadaCliente,
-          janelaInicioGrade,
-          janelaComercial!.dataDisponibilidadeProducao,
-          janelaComercial!.prazoInterno,
-        );
-        if (!cancelado) {
-          setBaseCarregada(novaBase);
-        }
-      } catch (erroCapturado) {
-        if (!cancelado) {
-          setBaseCarregada(null);
-          setErroBase(erroCapturado instanceof Error ? erroCapturado.message : "Não foi possível carregar a previsão comercial por capacidade.");
-        }
-      } finally {
-        if (!cancelado) {
-          setCarregandoBase(false);
-        }
+    async function carregar(): Promise<BasePrevisaoComercial> {
+      const empresaId = await buscarEmpresaId();
+      if (!empresaId) {
+        throw new Error("Usuário não autenticado.");
       }
+      return carregarBasePrevisaoComercial(
+        supabase,
+        empresaId,
+        projetoId,
+        dataSolicitadaCliente,
+        janelaInicioGrade,
+        janelaComercial!.dataDisponibilidadeProducao,
+        janelaComercial!.prazoInterno,
+      );
     }
 
-    carregar();
+    executarCarregamentoComTimeout(carregar, {
+      setCarregando: setCarregandoBase,
+      setErro: setErroBase,
+      setDados: setBaseCarregada,
+      foiCancelado: () => cancelado,
+    });
 
     return () => {
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projetoId, janelaComercial?.valida, janelaComercial?.dataDisponibilidadeProducao, janelaComercial?.prazoInterno, dataSolicitadaCliente, janelaInicioGrade]);
+  }, [
+    projetoId,
+    janelaComercial?.valida,
+    janelaComercial?.dataDisponibilidadeProducao,
+    janelaComercial?.prazoInterno,
+    dataSolicitadaCliente,
+    janelaInicioGrade,
+    tentativaBase,
+  ]);
 
   // "Cenário atual": disponibilidade ORIGINAL de material
-  // (janelaComercial.dataDisponibilidadeProducao - a mesma usada como
-  // dataReferenciaConfirmados, nunca a grade larga), nenhuma alternativa
-  // autorizada. Nova instância só quando a disponibilidade original
-  // muda (não a cada render) - preserva "cenários avaliados sobre bases
-  // independentes".
+  // (disponibilidadeMaterialOrcamentoNovo, resolvida pelo chamador -
+  // ver comentário de topo), nenhuma alternativa autorizada. Nova
+  // instância só quando a disponibilidade original muda (não a cada
+  // render) - preserva "cenários avaliados sobre bases independentes".
   const cenarioAtual: CenarioParaPrevisaoComercial | null = useMemo(() => {
     if (!janelaComercial?.valida) return null;
     return {
       capacidadeExtraAutorizada: [],
       temporariosPorPrioridade: [],
-      disponibilidadeMaterialOrcamentoNovo: janelaComercial.dataDisponibilidadeProducao,
+      disponibilidadeMaterialOrcamentoNovo,
       contratacoes: [],
       contratacaoNegociacaoMaterial: null,
     };
-  }, [janelaComercial]);
+  }, [janelaComercial, disponibilidadeMaterialOrcamentoNovo]);
 
   // "Cenário ajustado": usa a disponibilidade NEGOCIADA quando
   // configurada, senão cai para a mesma disponibilidade original do
   // "Cenário atual" (nunca um piso fabricado) - só este hook resolve
-  // esse fallback, porque só ele tem janelaComercial disponível.
+  // esse fallback, porque só ele recebe as duas entradas.
   const cenarioAjustadoResolvido: CenarioParaPrevisaoComercial | null = useMemo(() => {
     if (!cenarioAjustado || !janelaComercial?.valida) return null;
     return {
       capacidadeExtraAutorizada: cenarioAjustado.capacidadeExtraAutorizada,
       temporariosPorPrioridade: cenarioAjustado.temporariosPorPrioridade,
-      disponibilidadeMaterialOrcamentoNovo: cenarioAjustado.disponibilidadeMaterialNegociada ?? janelaComercial.dataDisponibilidadeProducao,
+      disponibilidadeMaterialOrcamentoNovo: cenarioAjustado.disponibilidadeMaterialNegociada ?? disponibilidadeMaterialOrcamentoNovo,
       contratacoes: cenarioAjustado.contratacoes,
       contratacaoNegociacaoMaterial: cenarioAjustado.contratacaoNegociacaoMaterial,
     };
-  }, [cenarioAjustado, janelaComercial]);
+  }, [cenarioAjustado, janelaComercial, disponibilidadeMaterialOrcamentoNovo]);
 
   // Puro e síncrono - reavaliado em memória a cada mudança de
   // cenarioAtual/cenarioAjustadoResolvido, SEMPRE sobre a mesma
@@ -246,5 +288,5 @@ export function usePrevisaoComercialCapacidade(params: {
 
   const nomesRecursos = recursoIds.length === 0 ? {} : nomesRecursosCarregado;
 
-  return { base, carregandoBase, erroBase, saidaAtual, saidaAjustada, nomesRecursos };
+  return { base, carregandoBase, erroBase, tentarNovamenteBase, saidaAtual, saidaAjustada, nomesRecursos };
 }

@@ -19,7 +19,13 @@
 // Nenhum client privilegiado (service_role) é usado neste módulo nem
 // injetado nele - todas as dependências de I/O usam a sessão real do
 // usuário (RLS aplicada normalmente), decisão confirmada com o usuário.
-import type { PremissasJanelaComercial, ResultadoJanelaComercial, JanelaComercialInvalida } from "../lib/prepararJanelaComercial";
+import type {
+  PremissasJanelaComercial,
+  ResultadoJanelaComercial,
+  JanelaComercialInvalida,
+  ModoDisponibilidadeMaterial,
+} from "../lib/prepararJanelaComercial";
+import type { ProjectType } from "@/modules/projetos/types";
 import type { BasePrevisaoComercial, DiagnosticoPrevisaoComercial } from "../lib/cenarios/carregarBasePrevisaoComercial";
 import { montarPrevisaoComercialProjeto, type CenarioParaPrevisaoComercial } from "../lib/cenarios/montarPrevisaoComercialProjeto";
 import { construirSnapshotCenarioComercial } from "../lib/cenarios/cenarioComercialAprovadoSnapshot";
@@ -46,6 +52,14 @@ export interface ValoresOrcamentoAtual {
   readonly custoTecnicoAtual: number;
   /** Só informativo (valorComercial, já com margem/imposto/desconto) - nunca usado na soma que produz o novo valor-base. */
   readonly valorComercialAtualReferencia: number | null;
+  /**
+   * Natureza do projeto (projetos.tipo_projeto) - decide a disponibilidade
+   * de material do orçamento novo (ver montarCenarioParaPrevisao):
+   * Industrialização usa a Data Prevista de Aprovação do Pedido, sem
+   * negociação possível, NUNCA confiando no que o payload do cliente
+   * enviou para essa decisão (mesma disciplina do resto deste módulo).
+   */
+  readonly tipoProjeto: ProjectType;
 }
 
 export interface DependenciasAprovacaoCenarioComercial {
@@ -53,8 +67,12 @@ export interface DependenciasAprovacaoCenarioComercial {
   autenticar: () => Promise<string | null>;
   /** Resolve empresa_id do usuário autenticado. null = não encontrado. */
   buscarEmpresaId: (userId: string) => Promise<string | null>;
-  /** Recalcula a janela comercial a partir das premissas, contra o Calendário Operacional corrente - nunca a do navegador. */
-  prepararJanela: (empresaId: string, premissas: PremissasJanelaComercial) => Promise<ResultadoJanelaComercial>;
+  /** Recalcula a janela comercial a partir das premissas, contra o Calendário Operacional corrente - nunca a do navegador. `modoDisponibilidadeMaterial` é resolvido pelo ORQUESTRADOR (a partir de ValoresOrcamentoAtual.tipoProjeto, buscado antes) - nunca confiado ao payload do cliente. */
+  prepararJanela: (
+    empresaId: string,
+    premissas: PremissasJanelaComercial,
+    modoDisponibilidadeMaterial: ModoDisponibilidadeMaterial,
+  ) => Promise<ResultadoJanelaComercial>;
   /** Recarrega a base da Previsão comercial por capacidade do zero, no servidor - nunca reaproveita nada calculado no navegador. */
   carregarBase: (
     empresaId: string,
@@ -70,9 +88,24 @@ export interface DependenciasAprovacaoCenarioComercial {
   persistir: (params: ParametrosPayloadAprovacaoCenario) => Promise<ResultadoPersistenciaAprovacaoCenario>;
 }
 
+/**
+ * `naturezaIndustrializacao` (projeto de Industrialização, orçamento
+ * 260007, DEC-007): quando true, IGNORA só os 2 campos de MATERIAL do
+ * payload (`disponibilidadeMaterialNegociada`/`contratacaoNegociacaoMaterial`),
+ * mesmo que o cliente os tenha enviado preenchidos - nunca confia no
+ * navegador para decidir se uma negociação de material é permitida
+ * (mesma disciplina de recalcular tudo no servidor já documentada no
+ * cabeçalho deste arquivo). Hora adicional/recurso temporário
+ * (`capacidadeExtraAutorizada`/`temporariosPorPrioridade`/`contratacoes`)
+ * são um eixo INDEPENDENTE, sem nenhuma regra pedida para
+ * Industrialização - continuam seguindo `tipoCenario` normalmente.
+ * `disponibilidadeOriginal` já chega resolvida pelo chamador (Data
+ * Prevista de Aprovação do Pedido para Industrialização).
+ */
 function montarCenarioParaPrevisao(
   params: PayloadAprovacaoCenario,
   disponibilidadeOriginal: string,
+  naturezaIndustrializacao: boolean,
 ): CenarioParaPrevisaoComercial {
   if (params.tipoCenario === "atual") {
     return {
@@ -87,9 +120,11 @@ function montarCenarioParaPrevisao(
   return {
     capacidadeExtraAutorizada: params.capacidadeExtraAutorizada,
     temporariosPorPrioridade: params.temporariosPorPrioridade,
-    disponibilidadeMaterialOrcamentoNovo: params.disponibilidadeMaterialNegociada ?? disponibilidadeOriginal,
+    disponibilidadeMaterialOrcamentoNovo: naturezaIndustrializacao
+      ? disponibilidadeOriginal
+      : (params.disponibilidadeMaterialNegociada ?? disponibilidadeOriginal),
     contratacoes: params.contratacoes,
-    contratacaoNegociacaoMaterial: params.contratacaoNegociacaoMaterial,
+    contratacaoNegociacaoMaterial: naturezaIndustrializacao ? null : params.contratacaoNegociacaoMaterial,
   };
 }
 
@@ -113,13 +148,31 @@ export async function orquestrarAprovacaoCenarioComercial(
       return { ok: false, motivo: "erro", mensagem: MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO };
     }
 
+    // Buscado ANTES de preparar a janela (`tipoProjeto` decide
+    // modoDisponibilidadeMaterial abaixo) - nunca confia em nenhum dado
+    // de natureza enviado pelo cliente para essa decisão.
+    const valoresOrcamento = await deps.buscarValoresOrcamentoAtual(empresaId, params.projetoId);
+    if (!valoresOrcamento) {
+      return { ok: false, motivo: "sem_orcamento_resolvivel" };
+    }
+    const naturezaIndustrializacao = valoresOrcamento.tipoProjeto === "industrializacao";
+
     // Janela comercial recalculada no servidor - nunca a que o navegador
     // exibiu (calendário/premissas podem ter mudado nesse meio-tempo).
-    const janelaServidor = await deps.prepararJanela(empresaId, {
-      dataNecessidade: params.dataNecessidade,
-      margemSegurancaDiasProdutivos: params.margemSegurancaDias,
-      dataPrevistaAprovacaoPedido: params.dataPrevistaAprovacaoPedido,
-    });
+    // CORREÇÃO (projeto de Industrialização, orçamento 260007, DEC-007):
+    // modoDisponibilidadeMaterial centraliza em prepararJanelaComercial a
+    // decisão de qual é a disponibilidade real de material por natureza -
+    // janelaServidor.dataDisponibilidadeProducao já vem correta para
+    // qualquer natureza, sem precisar de um segundo cálculo aqui.
+    const janelaServidor = await deps.prepararJanela(
+      empresaId,
+      {
+        dataNecessidade: params.dataNecessidade,
+        margemSegurancaDiasProdutivos: params.margemSegurancaDias,
+        dataPrevistaAprovacaoPedido: params.dataPrevistaAprovacaoPedido,
+      },
+      naturezaIndustrializacao ? "industrializacao" : "padrao",
+    );
 
     if (!janelaServidor.valida) {
       return { ok: false, motivo: "sem_janela_produtiva", detalhe: janelaServidor };
@@ -137,16 +190,18 @@ export async function orquestrarAprovacaoCenarioComercial(
       janelaServidor.prazoInterno,
     );
 
-    const cenario = montarCenarioParaPrevisao(params, janelaServidor.dataDisponibilidadeProducao);
+    // disponibilidadeOriginal = janelaServidor.dataDisponibilidadeProducao
+    // diretamente (já resolvida corretamente por natureza) -
+    // naturezaIndustrializacao continua necessária aqui só para a OUTRA
+    // decisão de montarCenarioParaPrevisao: nunca confiar em negociação
+    // de material enviada pelo cliente para esta natureza.
+    const disponibilidadeOriginal = janelaServidor.dataDisponibilidadeProducao;
+
+    const cenario = montarCenarioParaPrevisao(params, disponibilidadeOriginal, naturezaIndustrializacao);
 
     // Puro e síncrono - a MESMA função que a tela usa para exibir a
     // previsão, mas rodando aqui sobre a base recarregada no servidor.
     const saidaRecalculada = montarPrevisaoComercialProjeto(base, cenario);
-
-    const valoresOrcamento = await deps.buscarValoresOrcamentoAtual(empresaId, params.projetoId);
-    if (!valoresOrcamento) {
-      return { ok: false, motivo: "sem_orcamento_resolvivel" };
-    }
 
     // Divergência (mesmo princípio de compararResultadosSimulacao.ts) -
     // bloqueia ANTES de qualquer chamada à RPC, nunca aprova "no escuro"
@@ -199,8 +254,8 @@ export async function orquestrarAprovacaoCenarioComercial(
         dataPrevistaAprovacaoPedido: params.dataPrevistaAprovacaoPedido,
       },
       disponibilidadeMaterial: {
-        original: janelaServidor.dataDisponibilidadeProducao,
-        negociada: params.tipoCenario === "ajustado" ? params.disponibilidadeMaterialNegociada : null,
+        original: disponibilidadeOriginal,
+        negociada: params.tipoCenario === "ajustado" && !naturezaIndustrializacao ? params.disponibilidadeMaterialNegociada : null,
       },
       decisoesCapacidade: {
         capacidadeExtraAutorizada: cenario.capacidadeExtraAutorizada,

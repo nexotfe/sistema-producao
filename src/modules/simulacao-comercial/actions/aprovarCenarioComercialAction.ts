@@ -59,7 +59,8 @@ export async function aprovarCenarioComercialAction(
       return error || !usuario?.empresa_id ? null : usuario.empresa_id;
     },
 
-    prepararJanela: (empresaId, premissas) => prepararJanelaComercial(serverClient, empresaId, premissas),
+    prepararJanela: (empresaId, premissas, modoDisponibilidadeMaterial) =>
+      prepararJanelaComercial(serverClient, empresaId, premissas, modoDisponibilidadeMaterial),
 
     carregarBase: (empresaId, projetoId, dataSolicitadaCliente, janelaInicioGrade, dataReferenciaConfirmados, prazoInterno) =>
       carregarBasePrevisaoComercial(
@@ -89,7 +90,7 @@ export async function aprovarCenarioComercialAction(
         descontoPercentual: dados.projeto.descontoPercentual,
       });
 
-      return { custoTecnicoAtual: custoTotal, valorComercialAtualReferencia: valorComercial };
+      return { custoTecnicoAtual: custoTotal, valorComercialAtualReferencia: valorComercial, tipoProjeto: dados.projeto.tipoProjeto };
     },
 
     // Único ponto de escrita - client de SESSÃO (nunca privilegiado). A

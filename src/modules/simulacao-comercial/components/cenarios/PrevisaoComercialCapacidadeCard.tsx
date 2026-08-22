@@ -16,6 +16,7 @@
 // datas quando status="calculado", nunca completa por suposição.
 import { Card } from "@/modules/shared/ui/Card";
 import { Badge } from "@/modules/shared/ui/Badge";
+import { Button } from "@/modules/shared/ui/Button";
 import type { SaidaPrevisaoComercial } from "@/modules/simulacao-comercial/lib/cenarios/montarPrevisaoComercialProjeto";
 
 const ROTULO_PCP = "Previsão comercial por capacidade — não é programação de PCP.";
@@ -50,6 +51,8 @@ export interface PrevisaoComercialCapacidadeCardProps {
   nomesRecursos: Readonly<Record<string, string>>;
   carregando: boolean;
   erro: string | null;
+  /** Proteção de UX (travamento real, orçamento 260007) - refaz o carregamento da base do zero, único jeito de sair do estado de erro/timeout. */
+  onTentarNovamente: () => void;
 }
 
 function BlocoResultado({
@@ -162,6 +165,7 @@ export function PrevisaoComercialCapacidadeCard({
   nomesRecursos,
   carregando,
   erro,
+  onTentarNovamente,
 }: PrevisaoComercialCapacidadeCardProps) {
   return (
     <Card>
@@ -176,7 +180,12 @@ export function PrevisaoComercialCapacidadeCard({
         </div>
 
         {erro ? (
-          <p className="text-[12.5px] text-status-danger-text">{erro}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-[12.5px] text-status-danger-text">{erro}</p>
+            <Button variant="secondary" onClick={onTentarNovamente}>
+              Tentar novamente
+            </Button>
+          </div>
         ) : carregando && !saidaAtual ? (
           <p className="text-[12.5px] text-text-secondary">Calculando previsão comercial por capacidade...</p>
         ) : (

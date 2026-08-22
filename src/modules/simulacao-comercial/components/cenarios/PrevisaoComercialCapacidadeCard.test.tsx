@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { PrevisaoComercialCapacidadeCard } from "./PrevisaoComercialCapacidadeCard";
 import type { SaidaPrevisaoComercial } from "@/modules/simulacao-comercial/lib/cenarios/montarPrevisaoComercialProjeto";
 
@@ -28,7 +28,7 @@ afterEach(cleanup);
 
 describe("PrevisaoComercialCapacidadeCard", () => {
   it("mostra sempre o rótulo fixo 'Previsão comercial por capacidade — não é programação de PCP.'", () => {
-    render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+    render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
     expect(screen.getByText("Previsão comercial por capacidade — não é programação de PCP.")).toBeTruthy();
   });
 
@@ -41,7 +41,7 @@ describe("PrevisaoComercialCapacidadeCard", () => {
       horizonteTecnico: null,
       diagnosticos: [{ empresaId: "e1", projetoId: "p1", motivo: "Simulação vigente sem nenhum item - orçamento novo vazio." }],
     });
-    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaVazia} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaVazia} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
 
     expect(screen.getByText(/Não foi possível calcular: o orçamento não tem itens/)).toBeTruthy();
     expect(screen.getByText(/Simulação vigente sem nenhum item/)).toBeTruthy();
@@ -57,7 +57,7 @@ describe("PrevisaoComercialCapacidadeCard", () => {
       horizonteTecnico: null,
       diagnosticos: [{ empresaId: "e1", projetoId: "p1", motivo: "Projeto sem simulação comercial vigente - orçamento novo não pode ser avaliado, nunca fabricado." }],
     });
-    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaSemSnapshot} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaSemSnapshot} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
 
     expect(screen.getByText(/sem simulação comercial vigente/)).toBeTruthy();
     expect(screen.queryByText(/Primeira entrega possível/)).toBeNull();
@@ -74,7 +74,7 @@ describe("PrevisaoComercialCapacidadeCard", () => {
         { empresaId: "e1", projetoId: "p2", motivo: "PCP cobre parte da carga deste recurso... impossível deduplicar com segurança.", bloqueiaCalculo: true },
       ],
     });
-    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaBloqueada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaBloqueada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
 
     expect(screen.getByText(/revise os diagnósticos abaixo/)).toBeTruthy();
     expect(screen.getByText(/impossível deduplicar com segurança/)).toBeTruthy();
@@ -89,7 +89,7 @@ describe("PrevisaoComercialCapacidadeCard", () => {
       diferencaEmDias: null,
       horizonteTecnico: "insuficiente",
     });
-    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaInsuficiente} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+    render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaInsuficiente} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
 
     expect(screen.getByText(/Não foi possível determinar uma data de entrega dentro do horizonte avaliado/)).toBeTruthy();
     expect(screen.queryByText(/inviável/i)).toBeNull();
@@ -111,6 +111,7 @@ describe("PrevisaoComercialCapacidadeCard", () => {
           nomesRecursos={SEM_NOMES}
           carregando={false}
           erro={null}
+          onTentarNovamente={() => {}}
         />,
       );
       expect(container.textContent?.toLowerCase()).not.toContain("inviável");
@@ -121,21 +122,21 @@ describe("PrevisaoComercialCapacidadeCard", () => {
   describe("sinal correto: positivo = atraso, negativo = antecedência, zero = na data exata", () => {
     it("positivo: 'depois da data solicitada'", () => {
       const saidaAtrasada = saida({ primeiraEntregaPossivel: "2026-09-13", atendeDataSolicitada: false, diferencaEmDias: 3 });
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaAtrasada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaAtrasada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
       expect(screen.getByText("3 dia(s) depois da data solicitada")).toBeTruthy();
       expect(screen.getByText("Não atende a data solicitada")).toBeTruthy();
     });
 
     it("negativo: 'antes da data solicitada'", () => {
       const saidaAdiantada = saida({ primeiraEntregaPossivel: "2026-09-05", atendeDataSolicitada: true, diferencaEmDias: -5 });
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaAdiantada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaAdiantada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
       expect(screen.getByText("5 dia(s) antes da data solicitada")).toBeTruthy();
       expect(screen.getByText("Atende a data solicitada")).toBeTruthy();
     });
 
     it("zero: 'na data solicitada'", () => {
       const saidaExata = saida({ primeiraEntregaPossivel: "2026-09-10", atendeDataSolicitada: true, diferencaEmDias: 0 });
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaExata} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaExata} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
       expect(screen.getByText("Na data solicitada")).toBeTruthy();
     });
   });
@@ -149,6 +150,7 @@ describe("PrevisaoComercialCapacidadeCard", () => {
         nomesRecursos={{ "recurso-A": "REC-A - Recurso A" }}
         carregando={false}
         erro={null}
+        onTentarNovamente={() => {}}
       />,
     );
     expect(screen.getByText("REC-A - Recurso A")).toBeTruthy();
@@ -156,19 +158,40 @@ describe("PrevisaoComercialCapacidadeCard", () => {
   });
 
   it("cenário ajustado null (nenhuma alternativa configurada): mostra mensagem de convite, nunca um cálculo vazio fingido", () => {
-    render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+    render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
     expect(screen.getByText(/Configure horas extras\/recursos temporários/)).toBeTruthy();
   });
 
   it("erro de carregamento é exibido e nunca é confundido com um cálculo", () => {
-    render(<PrevisaoComercialCapacidadeCard saidaAtual={null} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro="Não foi possível carregar a previsão comercial por capacidade." />);
+    render(<PrevisaoComercialCapacidadeCard saidaAtual={null} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro="Não foi possível carregar a previsão comercial por capacidade." onTentarNovamente={() => {}} />);
     expect(screen.getByText("Não foi possível carregar a previsão comercial por capacidade.")).toBeTruthy();
+  });
+
+  // Proteção de UX (travamento real, orçamento 260007): quando erro !=
+  // null, sempre existe uma ação de nova tentativa - nunca um erro sem
+  // saída.
+  it("erro de carregamento sempre vem com um botão 'Tentar novamente' que aciona onTentarNovamente", () => {
+    const onTentarNovamente = vi.fn();
+    render(
+      <PrevisaoComercialCapacidadeCard
+        saidaAtual={null}
+        saidaAjustada={null}
+        nomesRecursos={SEM_NOMES}
+        carregando={false}
+        erro="Não foi possível carregar os dados do cenário."
+        onTentarNovamente={onTentarNovamente}
+      />,
+    );
+
+    const botao = screen.getByRole("button", { name: "Tentar novamente" });
+    fireEvent.click(botao);
+    expect(onTentarNovamente).toHaveBeenCalledTimes(1);
   });
 
   describe("custo adicional", () => {
     it("mostra o total e a quebra por categoria quando genuinamente calculado (custo > 0)", () => {
       const saidaComCusto = saida({ custoAdicional: { negociacaoMaterial: 500, horaAdicional: 40, recursoTemporario: 60, total: 600 } });
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaComCusto} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaComCusto} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
 
       expect(screen.getByText("R$ 600,00")).toBeTruthy();
       expect(screen.getByText(/Negociação de material: R\$ 500,00/)).toBeTruthy();
@@ -177,14 +200,14 @@ describe("PrevisaoComercialCapacidadeCard", () => {
     });
 
     it("Cenário atual (sem alternativas) mostra custo ZERO genuíno - calculado, nunca 'não calculável'", () => {
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
       expect(screen.getByText("R$ 0,00")).toBeTruthy();
       expect(screen.queryByText(/não calculável/i)).toBeNull();
     });
 
     it("custoAdicional=null mostra 'Custo não calculável' - nunca R$ 0,00 fingido (12: interface nunca mostra 0 quando a alternativa nem chegou a ser calculada)", () => {
       const saidaSemCusto = saida({ custoAdicional: null });
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaSemCusto} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaSemCusto} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
       expect(screen.getByText("Custo não calculável.")).toBeTruthy();
       expect(screen.queryByText("R$ 0,00")).toBeNull();
     });
@@ -199,13 +222,13 @@ describe("PrevisaoComercialCapacidadeCard", () => {
         custoAdicional: null,
         diagnosticos: [{ empresaId: "e1", projetoId: "p1", motivo: "diagnóstico de teste" }],
       });
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaBloqueada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saidaBloqueada} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
       expect(screen.queryByText("Custo adicional")).toBeNull();
       expect(screen.queryByText("R$ 0,00")).toBeNull();
     });
 
     it("cenário ajustado não configurado (null): nenhum custo é mostrado para ele - nunca 'R$ 0,00' fingido antes de qualquer alternativa existir", () => {
-      render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} />);
+      render(<PrevisaoComercialCapacidadeCard saidaAtual={saida()} saidaAjustada={null} nomesRecursos={SEM_NOMES} carregando={false} erro={null} onTentarNovamente={() => {}} />);
       // Só 1 "R$ 0,00" na tela (o do Cenário atual, genuíno) - o ajustado nem existe ainda.
       expect(screen.getAllByText("R$ 0,00")).toHaveLength(1);
     });

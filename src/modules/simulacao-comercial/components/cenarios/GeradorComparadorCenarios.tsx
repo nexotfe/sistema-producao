@@ -31,10 +31,12 @@ import {
 } from "@/modules/simulacao-comercial/lib/calcularJanelaComercialParaExibicao";
 import { prepararJanelaComercial, type ResultadoJanelaComercial } from "@/modules/simulacao-comercial/lib/prepararJanelaComercial";
 import { carregarBaseCenarios, type BaseCenarios } from "@/modules/simulacao-comercial/lib/cenarios/carregarBaseCenarios";
+import { executarCarregamentoComTimeout } from "@/modules/simulacao-comercial/lib/executarCarregamentoComTimeout";
 import type { DecisoesCenario } from "@/modules/simulacao-comercial/lib/cenarios/avaliarCenario";
 import { usePrevisaoComercialCapacidade } from "@/modules/simulacao-comercial/hooks/usePrevisaoComercialCapacidade";
 import { PremissasJanelaComercialForm } from "@/modules/simulacao-comercial/components/PremissasJanelaComercialForm";
 import { buscarDadosOrcamento } from "@/modules/projetos/lib/buscarDadosOrcamento";
+import type { ProjectType } from "@/modules/projetos/types";
 import { calcularValorComercialProjeto } from "@/modules/projetos/lib/calcularResumoOrcamento";
 import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "@/modules/projetos/lib/buscarCenarioComercialAprovado";
 import { Modal } from "@/modules/shared/ui/Modal";
@@ -87,10 +89,29 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
   // realmente reflete "há uma base válida para esta janela AGORA" -
   // evita um setState síncrono só para invalidar quando a janela deixa
   // de ser válida.
+  //
+  // CORREÇÃO (travamento real, achado em teste visual - orçamento
+  // 260007): a mesma derivação precisa valer para carregandoBase/
+  // erroBase, não só para base - ver comentário equivalente e mais
+  // detalhado em usePrevisaoComercialCapacidade.ts (mesmo bug, mesmo
+  // fix, motor novo). Sem isto, "Calcular cenário atual" podia ficar
+  // desabilitado para sempre depois de uma sequência de edições de
+  // premissa que fizesse a janela oscilar válida/inválida enquanto
+  // carregarBaseCenarios ainda estava em voo.
   const [baseCarregada, setBaseCarregada] = useState<BaseCenarios | null>(null);
-  const [carregandoBase, setCarregandoBase] = useState(false);
-  const [erroBase, setErroBase] = useState<string | null>(null);
+  const [carregandoBaseBruto, setCarregandoBase] = useState(false);
+  const [erroBaseBruto, setErroBase] = useState<string | null>(null);
   const base = janelaComercial?.valida ? baseCarregada : null;
+  const carregandoBase = janelaComercial?.valida ? carregandoBaseBruto : false;
+  const erroBase = janelaComercial?.valida ? erroBaseBruto : null;
+  // "Tentar novamente" (proteção de UX, orçamento 260007) - mesma
+  // convenção de recarregaResumoFinanceiro, mais abaixo: incrementar
+  // este contador força o efeito de carregarBaseCenarios a rodar de
+  // novo, sem duplicar a lógica de carregamento em si.
+  const [tentativaBase, setTentativaBase] = useState(0);
+  function handleTentarNovamenteBase() {
+    setTentativaBase((v) => v + 1);
+  }
 
   // DEC-007 §6.2/Fase 8b (aprovação do cenário comercial + resumo
   // financeiro) - "valor atual do orçamento" (custo técnico, sem margem/
@@ -101,6 +122,14 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
   // nenhum outro estado desta tela.
   const [custoTecnicoAtualOrcamento, setCustoTecnicoAtualOrcamento] = useState<number | null>(null);
   const [valorComercialAtualReferencia, setValorComercialAtualReferencia] = useState<number | null>(null);
+  // CORREÇÃO (projeto de Industrialização, orçamento 260007, DEC-007):
+  // tipoProjeto vem do MESMO buscarDadosOrcamento já chamado abaixo -
+  // antes era descartado; passa a decidir a disponibilidade de material
+  // (ver dataDisponibilidadeMaterialResolvida, mais abaixo). null =
+  // ainda não carregado - naturezaIndustrializacao fica false nesse
+  // meio-tempo (nunca assume industrialização por omissão).
+  const [tipoProjeto, setTipoProjeto] = useState<ProjectType | null>(null);
+  const naturezaIndustrializacao = tipoProjeto === "industrializacao";
   // CORREÇÃO (achada em teste visual real, projeto 260011): tri-estado -
   // `undefined` = ainda carregando (nunca mostrar "Nenhum cenário
   // aprovado" nesse meio-tempo, CenarioAprovadoVigenteCard trata os 3
@@ -169,11 +198,25 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
       contratacaoNegociacaoMaterial: decisoesAntecipacao?.contratacoes[0] ?? null,
     };
   }, [decisoesCapacidadeExtra, decisoesAntecipacao, dataNegociadaMaterial]);
+
+  // CORREÇÃO (projeto de Industrialização, orçamento 260007, DEC-007):
+  // disponibilidade ORIGINAL de material - já resolvida corretamente por
+  // natureza dentro de prepararJanelaComercial (modoDisponibilidadeMaterial,
+  // ver o efeito que popula janelaComercial, mais abaixo) - não precisa
+  // mais de um branch aqui; janelaComercial.dataDisponibilidadeProducao
+  // já É a Data Prevista de Aprovação do Pedido para Industrialização,
+  // sem os deslocamentos genéricos de +9+1 dias. Único ponto de leitura,
+  // alimenta os dois motores (carregarBaseCenarios abaixo e
+  // usePrevisaoComercialCapacidade) e a exibição em MateriaisConfiguracaoCard
+  // (via disponibilidadeOriginalMaterial, que lê de volta base.restricaoMaterialPorChave).
+  const dataDisponibilidadeMaterialResolvida = janelaComercial?.valida ? janelaComercial.dataDisponibilidadeProducao : "";
+
   const previsaoComercial = usePrevisaoComercialCapacidade({
     projetoId,
     janelaComercial,
     dataSolicitadaCliente: dataNecessidade,
     janelaInicioGrade: dataPrevistaAprovacaoPedido,
+    disponibilidadeMaterialOrcamentoNovo: dataDisponibilidadeMaterialResolvida,
     cenarioAjustado: cenarioAjustadoPrevisao,
   });
 
@@ -246,7 +289,8 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
       margemSegurancaValida,
       {
         buscarEmpresaId,
-        prepararJanela: (empresaId, premissas) => prepararJanelaComercial(supabase, empresaId, premissas),
+        prepararJanela: (empresaId, premissas) =>
+          prepararJanelaComercial(supabase, empresaId, premissas, naturezaIndustrializacao ? "industrializacao" : "padrao"),
       },
       {
         setErro: setErroJanela,
@@ -260,11 +304,20 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataNecessidade, margemSegurancaDias, dataPrevistaAprovacaoPedido]);
+  }, [dataNecessidade, margemSegurancaDias, dataPrevistaAprovacaoPedido, naturezaIndustrializacao]);
 
   // "Base congelada uma vez" por janela válida - carregada de novo só
   // se a disponibilidade de material (que vira o piso da base) mudar,
   // nunca a cada cenário avaliado sobre ela.
+  //
+  // Proteção de UX (travamento real, achado em teste visual - orçamento
+  // 260007): executarCarregamentoComTimeout garante um timeout com erro
+  // recuperável (ver seu cabeçalho para o contrato completo) - sem
+  // isto, uma consulta que nunca resolvesse deixaria carregandoBase
+  // pendurado indefinidamente, mesmo já com a corrida original
+  // corrigida (derivação de carregandoBase/erroBase pela validade da
+  // janela, acima). `tentativaBase` (mesma convenção de
+  // recarregaResumoFinanceiro) é o que "Tentar novamente" incrementa.
   useEffect(() => {
     let cancelado = false;
 
@@ -272,43 +325,26 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
       return;
     }
 
-    async function carregar() {
-      setCarregandoBase(true);
-      setErroBase(null);
-      try {
-        const empresaId = await buscarEmpresaId();
-        if (!empresaId) {
-          throw new Error("Usuário não autenticado.");
-        }
-        const novaBase = await carregarBaseCenarios(
-          supabase,
-          empresaId,
-          projetoId,
-          janelaComercial!.dataDisponibilidadeProducao,
-          janelaComercial!.prazoInterno,
-        );
-        if (!cancelado) {
-          setBaseCarregada(novaBase);
-        }
-      } catch (erroCapturado) {
-        if (!cancelado) {
-          setBaseCarregada(null);
-          setErroBase(erroCapturado instanceof Error ? erroCapturado.message : "Não foi possível carregar os dados do projeto.");
-        }
-      } finally {
-        if (!cancelado) {
-          setCarregandoBase(false);
-        }
+    async function carregar(): Promise<BaseCenarios> {
+      const empresaId = await buscarEmpresaId();
+      if (!empresaId) {
+        throw new Error("Usuário não autenticado.");
       }
+      return carregarBaseCenarios(supabase, empresaId, projetoId, dataDisponibilidadeMaterialResolvida, janelaComercial!.prazoInterno);
     }
 
-    carregar();
+    executarCarregamentoComTimeout(carregar, {
+      setCarregando: setCarregandoBase,
+      setErro: setErroBase,
+      setDados: setBaseCarregada,
+      foiCancelado: () => cancelado,
+    });
 
     return () => {
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projetoId, janelaComercial?.valida, janelaComercial?.dataDisponibilidadeProducao]);
+  }, [projetoId, janelaComercial?.valida, dataDisponibilidadeMaterialResolvida, tentativaBase]);
 
   // "Valor atual do orçamento" (custo técnico) + cenário comercial já
   // aprovado (se houver) - independentes da janela comercial, só de
@@ -338,9 +374,11 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
         });
         setCustoTecnicoAtualOrcamento(custoTotal);
         setValorComercialAtualReferencia(valorComercial);
+        setTipoProjeto(dadosOrcamento.projeto.tipoProjeto);
       } else {
         setCustoTecnicoAtualOrcamento(null);
         setValorComercialAtualReferencia(null);
+        setTipoProjeto(null);
       }
 
       setCenarioJaAprovado(cenarioAprovado);
@@ -377,7 +415,12 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
   // nenhum outro consumidor aqui.
 
   function handleCalcularAntecipacao(decisoes: DecisoesCenario) {
-    if (!base) return;
+    // Defesa em profundidade (projeto de Industrialização, orçamento
+    // 260007): o botão "Configurar" de Materiais já fica desabilitado
+    // para essa natureza (MateriaisConfiguracaoCard/CartaoConfiguracao),
+    // tornando este caminho inalcançável pela UI - guarda aqui mesmo
+    // assim, nunca confiando só no botão desabilitado.
+    if (!base || naturezaIndustrializacao) return;
     setCalculandoAntecipacao(true);
     setAjustadoAntecipacao({ base, decisoes });
     // Síncrono (useMemo acima) - o "calculando" só existe pra dar
@@ -423,6 +466,51 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
   const podeCalcularCenarioBase = Boolean(janelaComercial?.valida) && !calculandoJanela && !carregandoBase;
   const premissasIncompletas = !dataNecessidade || !dataPrevistaAprovacaoPedido || !margemSegurancaValida;
 
+  // CORREÇÃO DE UX (travamento real, orçamento 260007): antes, este
+  // status só existia no cartão de fundo "Premissas comerciais" - com a
+  // modal "Editar premissas" aberta por cima, o usuário nunca via por
+  // que o botão "Calcular cenário atual" estava desabilitado (mensagem
+  // escondida atrás da própria modal que ele tinha aberto para agir).
+  // Extraído para uma função local (closure sobre o estado do
+  // componente, mesmo padrão de handleCalcularCenarioBase etc.) e
+  // renderizado nos DOIS lugares - no cartão (resumo quando a modal está
+  // fechada) e dentro da modal, ao lado do botão (o usuário nunca
+  // precisa fechar a modal para ver o erro ou tentar de novo). Função
+  // simples que devolve JSX (nunca `<StatusPremissas />`) - de propósito,
+  // para não criar um tipo de componente novo a cada render (o que
+  // desmontaria/remontaria o resultado a cada tecla digitada).
+  function renderStatusPremissas() {
+    if (premissasIncompletas) {
+      return <p className="text-[12.5px] text-text-secondary">Preencha as 3 premissas para calcular o cenário atual.</p>;
+    }
+    if (calculandoJanela) {
+      return <p className="text-[12.5px] text-text-secondary">Calculando janela produtiva...</p>;
+    }
+    if (erroJanela) {
+      return <p className="text-[12.5px] text-status-danger-text">{erroJanela}</p>;
+    }
+    if (janelaComercial && !janelaComercial.valida) {
+      return <p className="text-[12.5px] text-status-danger-text">{mensagemErroJanelaComercial(janelaComercial)}</p>;
+    }
+    if (carregandoBase) {
+      return <p className="text-[12.5px] text-text-secondary">Carregando dados do projeto...</p>;
+    }
+    if (erroBase) {
+      return (
+        <div className="flex items-center gap-3">
+          <p className="text-[12.5px] text-status-danger-text">{erroBase}</p>
+          <Button variant="secondary" onClick={handleTentarNovamenteBase}>
+            Tentar novamente
+          </Button>
+        </div>
+      );
+    }
+    if (base && !cenarioBaseConfirmado) {
+      return <p className="text-[12.5px] text-text-secondary">Premissas prontas - clique em &quot;Editar premissas&quot; para calcular.</p>;
+    }
+    return null;
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -455,21 +543,7 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
         </dl>
 
         <div className="mt-3">
-          {premissasIncompletas ? (
-            <p className="text-[12.5px] text-text-secondary">Preencha as 3 premissas para calcular o cenário atual.</p>
-          ) : calculandoJanela ? (
-            <p className="text-[12.5px] text-text-secondary">Calculando janela produtiva...</p>
-          ) : erroJanela ? (
-            <p className="text-[12.5px] text-status-danger-text">{erroJanela}</p>
-          ) : janelaComercial && !janelaComercial.valida ? (
-            <p className="text-[12.5px] text-status-danger-text">{mensagemErroJanelaComercial(janelaComercial)}</p>
-          ) : carregandoBase ? (
-            <p className="text-[12.5px] text-text-secondary">Carregando dados do projeto...</p>
-          ) : erroBase ? (
-            <p className="text-[12.5px] text-status-danger-text">{erroBase}</p>
-          ) : base && !cenarioBaseConfirmado ? (
-            <p className="text-[12.5px] text-text-secondary">Premissas prontas - clique em &quot;Editar premissas&quot; para calcular.</p>
-          ) : null}
+          {renderStatusPremissas()}
         </div>
       </CartaoConfiguracao>
 
@@ -496,10 +570,11 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
             dataPrevistaAprovacaoPedido={dataPrevistaAprovacaoPedido}
             onDataPrevistaAprovacaoPedidoChange={setDataPrevistaAprovacaoPedido}
           />
-          <div>
+          <div className="flex flex-wrap items-center gap-3">
             <Button onClick={handleCalcularCenarioBase} disabled={!podeCalcularCenarioBase}>
               {calculandoJanela || carregandoBase ? "Calculando..." : "Calcular cenário atual"}
             </Button>
+            {renderStatusPremissas()}
           </div>
         </div>
       </Modal>
@@ -512,6 +587,7 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
             nomesRecursos={previsaoComercial.nomesRecursos}
             carregando={previsaoComercial.carregandoBase}
             erro={previsaoComercial.erroBase}
+            onTentarNovamente={previsaoComercial.tentarNovamenteBase}
           />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -548,6 +624,7 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
               base={base}
               disponibilidadeOriginal={disponibilidadeOriginalMaterial}
               dataNegociada={dataNegociadaMaterial}
+              naturezaIndustrializacao={naturezaIndustrializacao}
               // CORREÇÃO (achada em teste visual real, projeto 260011): vem
               // da previsão comercial NOVA (saidaAjustada), nunca mais do
               // motor antigo isolado (resumoMateriais). Sem "ganho de

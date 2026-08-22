@@ -83,6 +83,27 @@ function diasProdutivosMaximosNecessarios(margemSegurancaDiasProdutivos: number)
 }
 
 /**
+ * "padrao" (default, comportamento inalterado para as demais naturezas
+ * e para a tela /simulacao, que nunca passa este parâmetro): Data de
+ * Chegada Prevista = Data Prevista de Aprovação do Pedido + 9 dias
+ * produtivos; Disponibilidade para Produção = Chegada + 1 dia produtivo
+ * (hipótese conservadora, DEC-004 v1.1).
+ *
+ * "industrializacao" (projeto de Industrialização, orçamento 260007,
+ * DEC-007): a folga de +9+1 dias NUNCA se aplicou de verdade a essa
+ * natureza - o material é fornecido pelo próprio cliente, disponível já
+ * na Data Prevista de Aprovação do Pedido, sem etapa de compra/chegada
+ * (mesmo motivo já registrado em buscarDadosOrcamento.ts, que exclui
+ * matéria-prima do custo para esta natureza). Chegada e Disponibilidade
+ * ficam iguais à Data Prevista de Aprovação do Pedido, sem nenhum
+ * deslocamento - causa raiz real do travamento de "Calcular cenário
+ * atual" para premissas realistas de Industrialização (a fórmula
+ * genérica rejeitava como "janela inválida" combinações de data que são
+ * perfeitamente válidas para esta natureza).
+ */
+export type ModoDisponibilidadeMaterial = "padrao" | "industrializacao";
+
+/**
  * Deriva Prazo Interno, Data de Chegada Prevista, Data de Disponibilidade
  * para Produção e a janela produtiva resultante - PAD-008 v2.0 §17.
  * Não executa o núcleo do Motor; só decide SE ele pode ser executado.
@@ -91,6 +112,7 @@ export async function prepararJanelaComercial(
   client: SupabaseClient,
   empresaId: string,
   premissas: PremissasJanelaComercial,
+  modoDisponibilidadeMaterial: ModoDisponibilidadeMaterial = "padrao",
 ): Promise<ResultadoJanelaComercial> {
   if (
     !Number.isInteger(premissas.margemSegurancaDiasProdutivos) ||
@@ -140,23 +162,39 @@ export async function prepararJanelaComercial(
     { contexto },
   );
 
-  const dataChegadaPrevista = await deslocarDiasProdutivos(
-    client,
-    empresaId,
-    premissas.dataPrevistaAprovacaoPedido,
-    DIAS_PRODUTIVOS_ATE_CHEGADA_MATERIAL,
-    { contexto },
-  );
+  let dataChegadaPrevista: string;
+  let dataDisponibilidadeProducao: string;
 
-  // Hipótese conservadora (DEC-004 v1.1): o material pode chegar no fim
-  // do dia - o próprio dia da chegada não tem capacidade utilizável.
-  const dataDisponibilidadeProducao = await deslocarDiasProdutivos(
-    client,
-    empresaId,
-    dataChegadaPrevista,
-    1,
-    { contexto },
-  );
+  if (modoDisponibilidadeMaterial === "industrializacao") {
+    // Sem etapa de compra/chegada para esta natureza - ver comentário de
+    // ModoDisponibilidadeMaterial acima. Nenhum deslocamento de
+    // calendário aplicado (nem a folga de +9 dias, nem o +1 dia
+    // conservador) - a disponibilidade é a própria data informada,
+    // literalmente, mesmo que caia num dia não produtivo (decisão
+    // confirmada com o usuário: contarDiasProdutivosNaJanela, logo
+    // abaixo, continua sendo quem decide se a janela resultante tem
+    // algum dia produtivo utilizável).
+    dataChegadaPrevista = premissas.dataPrevistaAprovacaoPedido;
+    dataDisponibilidadeProducao = premissas.dataPrevistaAprovacaoPedido;
+  } else {
+    dataChegadaPrevista = await deslocarDiasProdutivos(
+      client,
+      empresaId,
+      premissas.dataPrevistaAprovacaoPedido,
+      DIAS_PRODUTIVOS_ATE_CHEGADA_MATERIAL,
+      { contexto },
+    );
+
+    // Hipótese conservadora (DEC-004 v1.1): o material pode chegar no fim
+    // do dia - o próprio dia da chegada não tem capacidade utilizável.
+    dataDisponibilidadeProducao = await deslocarDiasProdutivos(
+      client,
+      empresaId,
+      dataChegadaPrevista,
+      1,
+      { contexto },
+    );
+  }
 
   if (dataDisponibilidadeProducao > prazoInterno) {
     return {

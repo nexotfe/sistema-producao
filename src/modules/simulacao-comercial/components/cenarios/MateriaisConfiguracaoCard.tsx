@@ -15,6 +15,7 @@
 "use client";
 
 import { useState } from "react";
+import { Card } from "@/modules/shared/ui/Card";
 import { Modal } from "@/modules/shared/ui/Modal";
 import { CartaoConfiguracao } from "./CartaoConfiguracao";
 import { PainelAntecipacaoMaterial } from "./PainelAntecipacaoMaterial";
@@ -29,6 +30,16 @@ export interface MateriaisConfiguracaoCardProps {
   custo: number | null;
   onCalcular: (decisoes: DecisoesCenario) => void;
   calculando?: boolean;
+  /**
+   * Projeto de Industrialização (orçamento 260007, DEC-007): disponibilidade
+   * de material é automática (Data Prevista de Aprovação do Pedido) - sem
+   * configuração nem negociação. Estado próprio (ver renderização abaixo):
+   * só título + 1 frase citando a data - nunca "Disponibilidade original"/
+   * "Data negociada"/"Custo"/"Ainda não calculado" nem o botão "Configurar",
+   * para não sugerir que existe negociação de matéria-prima para esta
+   * natureza (decisão confirmada com o usuário).
+   */
+  naturezaIndustrializacao?: boolean;
 }
 
 function formatarDataBr(dataIso: string | null): string {
@@ -48,8 +59,27 @@ export function MateriaisConfiguracaoCard({
   custo,
   onCalcular,
   calculando,
+  naturezaIndustrializacao,
 }: MateriaisConfiguracaoCardProps) {
   const [aberto, setAberto] = useState(false);
+
+  // Estado específico de Industrialização (orçamento 260007, DEC-007) -
+  // internamente o motor já usa a Data Prevista de Aprovação do Pedido
+  // como disponibilidade (ver GeradorComparadorCenarios.tsx/
+  // prepararJanelaComercial.ts); aqui é só a transparência dessa data,
+  // nunca um convite a configurar algo que não existe para esta
+  // natureza. `Card` puro (não `CartaoConfiguracao`) de propósito - sem
+  // isso o botão "Configurar" apareceria sempre, só desabilitado.
+  if (naturezaIndustrializacao) {
+    return (
+      <Card title="Materiais">
+        <p className="text-[13px] leading-[1.6] text-text-secondary">
+          Não se aplica para projetos de Industrialização. O material é considerado disponível em{" "}
+          {formatarDataBr(disponibilidadeOriginal)}, conforme a aprovação prevista do pedido.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <>

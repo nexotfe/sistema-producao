@@ -87,14 +87,27 @@ function payload(overrides: Partial<PayloadAprovacaoCenario> = {}): PayloadAprov
 }
 
 function valoresOrcamento(overrides: Partial<ValoresOrcamentoAtual> = {}): ValoresOrcamentoAtual {
-  return { custoTecnicoAtual: 50000, valorComercialAtualReferencia: 62000, ...overrides };
+  return { custoTecnicoAtual: 50000, valorComercialAtualReferencia: 62000, tipoProjeto: "fabricacao", ...overrides };
 }
 
 function depsBase(overrides: Partial<DependenciasAprovacaoCenarioComercial> = {}): DependenciasAprovacaoCenarioComercial {
   return {
     autenticar: vi.fn().mockResolvedValue("user-1"),
     buscarEmpresaId: vi.fn().mockResolvedValue("empresa-1"),
-    prepararJanela: vi.fn().mockResolvedValue(janelaValida()),
+    // Fiel ao contrato real de prepararJanelaComercial: modo
+    // "industrializacao" devolve dataDisponibilidadeProducao/dataChegadaPrevista
+    // = dataPrevistaAprovacaoPedido, sem os deslocamentos genéricos -
+    // "padrao" (default) mantém a fixture fixa de sempre.
+    prepararJanela: vi.fn().mockImplementation((_empresaId, premissas, modo) =>
+      Promise.resolve(
+        modo === "industrializacao"
+          ? janelaValida({
+              dataDisponibilidadeProducao: premissas.dataPrevistaAprovacaoPedido,
+              dataChegadaPrevista: premissas.dataPrevistaAprovacaoPedido,
+            })
+          : janelaValida(),
+      ),
+    ),
     carregarBase: vi.fn().mockResolvedValue(baseMinima()),
     buscarValoresOrcamentoAtual: vi.fn().mockResolvedValue(valoresOrcamento()),
     persistir: vi.fn().mockResolvedValue({ cenarioComercialAprovadoId: "novo-id", erro: null }),
@@ -236,6 +249,94 @@ describe("orquestrarAprovacaoCenarioComercial", () => {
       expect.objectContaining({
         tipoCenario: "ajustado",
         custoAdicionalPorCategoria: { negociacaoMaterial: 0, horaAdicional: 200, recursoTemporario: 0, terceirizacao: 0 },
+      }),
+    );
+  });
+
+  // CORREÇÃO (causa raiz real do travamento, orçamento 260007, DEC-007):
+  // prepararJanela precisa receber o modo certo por natureza - "padrao"
+  // NUNCA recebe "industrializacao" (regressão para as outras 3
+  // naturezas: fabricacao/desenvolvimento/servico, todas tratadas como
+  // "padrao" - só "industrializacao" é especial).
+  it("chama deps.prepararJanela com modoDisponibilidadeMaterial='industrializacao' só para essa natureza - 'padrao' para as demais (fabricacao/desenvolvimento/servico)", async () => {
+    for (const tipoProjeto of ["fabricacao", "desenvolvimento", "servico"] as const) {
+      const deps = depsBase({ buscarValoresOrcamentoAtual: vi.fn().mockResolvedValue(valoresOrcamento({ tipoProjeto })) });
+      await orquestrarAprovacaoCenarioComercial(payload(), deps);
+      expect(deps.prepararJanela).toHaveBeenCalledWith(expect.anything(), expect.anything(), "padrao");
+    }
+
+    const depsIndustrializacao = depsBase({
+      buscarValoresOrcamentoAtual: vi.fn().mockResolvedValue(valoresOrcamento({ tipoProjeto: "industrializacao" })),
+    });
+    await orquestrarAprovacaoCenarioComercial(payload(), depsIndustrializacao);
+    expect(depsIndustrializacao.prepararJanela).toHaveBeenCalledWith(expect.anything(), expect.anything(), "industrializacao");
+  });
+
+  // disponibilidadeMaterial.original do snapshot precisa ser a Data
+  // Prevista de Aprovação do Pedido (params.dataPrevistaAprovacaoPedido
+  // = "2026-08-20"), NUNCA a disponibilidade genérica que o modo
+  // "padrao" produziria (janelaValida().dataDisponibilidadeProducao =
+  // "2026-09-01", deliberadamente diferente para o teste ser conclusivo) -
+  // prova que o mock fiel de prepararJanela (ver depsBase) resolve
+  // corretamente por modo, e que orquestrarAprovacaoCenarioComercial usa
+  // esse resultado sem reintroduzir um branch próprio.
+  it("projeto de Industrialização: snapshot preserva a Data Prevista de Aprovação do Pedido como disponibilidadeMaterial.original", async () => {
+    const deps = depsBase({
+      buscarValoresOrcamentoAtual: vi.fn().mockResolvedValue(valoresOrcamento({ tipoProjeto: "industrializacao" })),
+    });
+
+    const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
+
+    expect(resultado).toEqual({ ok: true, cenarioComercialAprovadoId: "novo-id" });
+    expect(deps.persistir).toHaveBeenCalledWith(
+      expect.objectContaining({
+        snapshot: expect.objectContaining({
+          disponibilidadeMaterial: { original: "2026-08-20", negociada: null },
+        }),
+      }),
+    );
+  });
+
+  // Prova a defesa em profundidade: mesmo que o payload chegue com uma
+  // negociação de material preenchida (cliente desatualizado/adulterado),
+  // o servidor IGNORA para Industrialização - nunca confia no navegador
+  // para decidir se a negociação é permitida.
+  it("projeto de Industrialização: ignora disponibilidadeMaterialNegociada/contratacaoNegociacaoMaterial enviados pelo cliente, mesmo em tipoCenario=ajustado", async () => {
+    const deps = depsBase({
+      buscarValoresOrcamentoAtual: vi.fn().mockResolvedValue(valoresOrcamento({ tipoProjeto: "industrializacao" })),
+    });
+
+    const resultado = await orquestrarAprovacaoCenarioComercial(
+      payload({
+        tipoCenario: "ajustado",
+        disponibilidadeMaterialNegociada: "2026-08-10",
+        contratacaoNegociacaoMaterial: {
+          id: "contratacao-material-1",
+          tipo: "antecipacao_material",
+          abrangencia: "valor_fixo_unico",
+          valor: 5000,
+          moeda: "BRL",
+          fornecedorOuContratado: "Fornecedor X",
+          referenciaProposta: null,
+          justificativa: "Teste - deveria ser ignorado",
+          datas: ["2026-08-10"],
+        },
+        statusExibido: "calculado",
+        primeiraEntregaPossivelExibida: "2026-09-01",
+        diferencaEmDiasExibida: 0,
+        custoAdicionalExibido: { negociacaoMaterial: 0, horaAdicional: 0, recursoTemporario: 0, total: 0 },
+      }),
+      deps,
+    );
+
+    expect(resultado).toEqual({ ok: true, cenarioComercialAprovadoId: "novo-id" });
+    expect(deps.persistir).toHaveBeenCalledWith(
+      expect.objectContaining({
+        custoAdicionalPorCategoria: expect.objectContaining({ negociacaoMaterial: 0 }),
+        snapshot: expect.objectContaining({
+          disponibilidadeMaterial: { original: "2026-08-20", negociada: null },
+          decisoesCapacidade: expect.objectContaining({ contratacaoNegociacaoMaterial: null }),
+        }),
       }),
     );
   });

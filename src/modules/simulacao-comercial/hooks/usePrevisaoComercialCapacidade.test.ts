@@ -237,6 +237,7 @@ describe("usePrevisaoComercialCapacidade", () => {
           janelaComercial: JANELA_VALIDA,
           dataSolicitadaCliente: "2026-09-10",
           janelaInicioGrade: JANELA_INICIO_GRADE,
+          disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao,
           cenarioAjustado: props.cenarioAjustado,
         }),
       { initialProps: { cenarioAjustado: null as CenarioAjustadoTeste | null } },
@@ -267,6 +268,7 @@ describe("usePrevisaoComercialCapacidade", () => {
           janelaComercial: JANELA_VALIDA,
           dataSolicitadaCliente: "2026-09-10",
           janelaInicioGrade: JANELA_INICIO_GRADE,
+          disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao,
           cenarioAjustado: props.cenarioAjustado,
         }),
       { initialProps: { cenarioAjustado: null as CenarioAjustadoTeste | null } },
@@ -301,6 +303,7 @@ describe("usePrevisaoComercialCapacidade", () => {
           janelaComercial: JANELA_VALIDA,
           dataSolicitadaCliente: "2026-09-10",
           janelaInicioGrade: JANELA_INICIO_GRADE,
+          disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao,
           cenarioAjustado: props.cenarioAjustado,
         }),
       { initialProps: { cenarioAjustado: null as CenarioAjustadoTeste | null } },
@@ -327,6 +330,7 @@ describe("usePrevisaoComercialCapacidade", () => {
         janelaComercial: JANELA_VALIDA,
         dataSolicitadaCliente: "2026-09-10",
         janelaInicioGrade: JANELA_INICIO_GRADE,
+        disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao,
         cenarioAjustado: null,
       }),
     );
@@ -346,6 +350,7 @@ describe("usePrevisaoComercialCapacidade", () => {
         janelaComercial: JANELA_VALIDA,
         dataSolicitadaCliente: "2026-09-10",
         janelaInicioGrade: JANELA_INICIO_GRADE,
+        disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao,
         cenarioAjustado: null,
       }),
     );
@@ -353,5 +358,137 @@ describe("usePrevisaoComercialCapacidade", () => {
     await waitFor(() => expect(result.current.saidaAtual?.recursosQueDeterminamTermino.length).toBeGreaterThan(0));
     await waitFor(() => expect(Object.keys(result.current.nomesRecursos).length).toBeGreaterThan(0));
     expect(result.current.nomesRecursos["recurso-A"]).toBe("REC-A - Recurso A");
+  });
+
+  // CORREÇÃO (projeto de Industrialização, orçamento 260007, DEC-007):
+  // disponibilidadeMaterialOrcamentoNovo é resolvida pelo CHAMADOR
+  // (GeradorComparadorCenarios.tsx) - para Industrialização, o chamador
+  // passa a Data Prevista de Aprovação do Pedido em vez de
+  // janelaComercial.dataDisponibilidadeProducao. Este hook não sabe (nem
+  // precisa saber) o que é "Industrialização" - só precisa usar o valor
+  // recebido, tanto no "Cenário atual" quanto no fallback do "Cenário
+  // ajustado" quando nenhuma negociação está configurada.
+  it("usa disponibilidadeMaterialOrcamentoNovo (não janelaComercial.dataDisponibilidadeProducao) no cenário atual e no fallback do ajustado - calendário 100% produtivo, então antecipar a disponibilidade antecipa a entrega na mesma medida", async () => {
+    instalarMockCompleto();
+    // JANELA_VALIDA.dataDisponibilidadeProducao = "2026-09-01" - simula o
+    // que o chamador resolveria para Industrialização (Data Prevista de
+    // Aprovação do Pedido), 12 dias antes.
+    const dataIndustrializacao = "2026-08-20";
+
+    const { result, rerender } = renderHook(
+      (props: { disponibilidadeMaterialOrcamentoNovo: string }) =>
+        usePrevisaoComercialCapacidade({
+          projetoId: PROJETO_NOVO_ID,
+          janelaComercial: JANELA_VALIDA,
+          dataSolicitadaCliente: "2026-09-10",
+          janelaInicioGrade: JANELA_INICIO_GRADE,
+          disponibilidadeMaterialOrcamentoNovo: props.disponibilidadeMaterialOrcamentoNovo,
+          cenarioAjustado: { ...CENARIO_VAZIO },
+        }),
+      { initialProps: { disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao } },
+    );
+
+    await waitFor(() => expect(result.current.saidaAtual).not.toBeNull());
+    await waitFor(() => expect(result.current.saidaAjustada).not.toBeNull());
+    const primeiraEntregaComDisponibilidadeGenerica = result.current.saidaAtual!.primeiraEntregaPossivel;
+    // CENARIO_VAZIO.disponibilidadeMaterialNegociada = null - o "ajustado"
+    // cai no mesmo fallback do "atual" nesta rodada.
+    expect(result.current.saidaAjustada!.primeiraEntregaPossivel).toBe(primeiraEntregaComDisponibilidadeGenerica);
+
+    act(() => {
+      rerender({ disponibilidadeMaterialOrcamentoNovo: dataIndustrializacao });
+    });
+    await waitFor(() =>
+      expect(result.current.saidaAtual!.primeiraEntregaPossivel).not.toBe(primeiraEntregaComDisponibilidadeGenerica),
+    );
+
+    // Calendário do fixture é 100% produtivo (todos os dias da semana
+    // true) - antecipar a disponibilidade em 12 dias corridos antecipa a
+    // entrega na mesma medida, tanto no atual quanto no fallback do
+    // ajustado (prova que o valor realmente entrou no cálculo, não só
+    // que mudou "alguma coisa").
+    expect(result.current.saidaAtual!.primeiraEntregaPossivel).toBe("2026-08-20");
+    expect(result.current.saidaAjustada!.primeiraEntregaPossivel).toBe("2026-08-20");
+  });
+
+  it("uma negociação configurada ainda vence disponibilidadeMaterialOrcamentoNovo no cenário ajustado (comportamento inalterado para naturezas negociáveis)", async () => {
+    instalarMockCompleto();
+    // Precisa estar dentro da grade (>= JANELA_INICIO_GRADE = "2026-08-15") -
+    // uma data anterior a isso seria clampada pela própria grade, o que
+    // testaria o limite da grade, não o fallback que este teste cobre.
+    const dataNegociada = "2026-08-17";
+
+    const { result } = renderHook(() =>
+      usePrevisaoComercialCapacidade({
+        projetoId: PROJETO_NOVO_ID,
+        janelaComercial: JANELA_VALIDA,
+        dataSolicitadaCliente: "2026-09-10",
+        janelaInicioGrade: JANELA_INICIO_GRADE,
+        disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao,
+        cenarioAjustado: { ...CENARIO_VAZIO, disponibilidadeMaterialNegociada: dataNegociada },
+      }),
+    );
+
+    await waitFor(() => expect(result.current.saidaAjustada).not.toBeNull());
+    expect(result.current.saidaAjustada!.primeiraEntregaPossivel).toBe(dataNegociada);
+  });
+
+  // CORREÇÃO (travamento real, orçamento 260007): reproduz o bug achado
+  // em teste visual - "Calcular cenário atual" ficava desabilitado para
+  // sempre. Causa raiz: o efeito de carregar a base chama
+  // setCarregandoBase(true) de forma SÍNCRONA (antes do primeiro await),
+  // mas retorna cedo (`if (!janelaComercial?.valida) return;`) sem NUNCA
+  // desligar esse estado quando a janela fica inválida enquanto a
+  // consulta anterior ainda está em voo - a consulta antiga, quando
+  // resolver, também não desliga (protegida por `cancelado`, de
+  // propósito, para nunca sobrescrever um resultado mais novo). Sem a
+  // derivação (`carregandoBase = janelaComercial?.valida ? ... : false`),
+  // o estado bruto ficava travado em `true` para sempre.
+  it("não trava carregandoBase=true quando a janela fica inválida enquanto a consulta anterior ainda está em voo", async () => {
+    instalarMockCompleto();
+    const JANELA_INVALIDA = {
+      valida: false,
+      motivo: "disponibilidade_apos_prazo_interno",
+      dataChegadaPrevista: "2026-08-25",
+      dataDisponibilidadeProducao: "2026-09-01",
+      prazoInterno: "2026-09-10",
+    } as unknown as ResultadoJanelaComercial;
+
+    const { result, rerender } = renderHook(
+      (props: { janelaComercial: ResultadoJanelaComercial }) =>
+        usePrevisaoComercialCapacidade({
+          projetoId: PROJETO_NOVO_ID,
+          janelaComercial: props.janelaComercial,
+          dataSolicitadaCliente: "2026-09-10",
+          janelaInicioGrade: JANELA_INICIO_GRADE,
+          disponibilidadeMaterialOrcamentoNovo: JANELA_VALIDA.dataDisponibilidadeProducao,
+          cenarioAjustado: null,
+        }),
+      { initialProps: { janelaComercial: JANELA_VALIDA as ResultadoJanelaComercial } },
+    );
+
+    // O efeito já chamou setCarregandoBase(true) de forma síncrona no
+    // corpo de carregar(), antes do primeiro await - nenhum waitFor
+    // necessário para observar isto, é o estado logo após o mount.
+    expect(result.current.carregandoBase).toBe(true);
+
+    // Premissa "editada" antes da consulta em voo terminar - a janela
+    // recalculada fica inválida (mesmo efeito de uma sequência rápida de
+    // edições na Data Prevista de Aprovação do Pedido).
+    act(() => {
+      rerender({ janelaComercial: JANELA_INVALIDA });
+    });
+
+    // Correção: carregandoBase precisa refletir a janela ATUAL
+    // imediatamente, nunca ficar preso ao estado bruto da consulta
+    // obsoleta ainda em voo.
+    expect(result.current.carregandoBase).toBe(false);
+
+    // Mesmo depois da consulta antiga (obsoleta) eventualmente resolver
+    // em segundo plano, carregandoBase precisa continuar false - nunca
+    // "ressuscitar" true por causa de uma resposta velha.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(result.current.carregandoBase).toBe(false);
+    expect(result.current.erroBase).toBeNull();
   });
 });
