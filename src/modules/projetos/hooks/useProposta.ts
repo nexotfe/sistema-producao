@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { calcularResumoOrcamento } from "../lib/calcularResumoOrcamento";
 import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
+import { buscarDadosOrcamento } from "../lib/buscarDadosOrcamento";
 
 export type ClienteProposta = {
   nome: string;
@@ -25,8 +26,6 @@ export type AjusteComercialProposta = {
   descricao: string;
   valorTotal: number;
 };
-
-type BomEscolhaRow = { id: string; status: string; created_at: string };
 
 const TEXTO_CONSIDERACOES_PADRAO =
   "Apresentamos nossa proposta comercial para fornecimento dos itens " +
@@ -100,147 +99,71 @@ export function useProposta(idProjeto: string | null) {
         return;
       }
 
-      const { data: projeto, error } = await supabase
-        .from("projetos")
-        .select(
-          "id,numero_projeto,tipo_projeto,cliente_id,margem_lucro_percent,carga_tributaria_percent,desconto_percentual,contato_comercial_nome,created_at,proposta_revisao,proposta_consideracoes",
-        )
-        .eq("id", idProjeto)
-        .is("deleted_at", null)
-        .maybeSingle();
+      // Fonte ÚNICA de "custo dos itens do orçamento" (consolidação
+      // pedida pelo usuário, 2026-08-22): antes, esta lógica (preferir
+      // custo_congelado, senão BOM ativo mais recente + calcular_custo_bom)
+      // estava DUPLICADA aqui e em buscarDadosOrcamento.ts - as duas
+      // telas podiam divergir sobre "o que é custo congelado" sem que
+      // nada acusasse. Responsável, cliente, itens (com custo já
+      // resolvido) e carga tributária sugerida vêm todos daqui agora;
+      // só os 3 campos exclusivos da Proposta (abaixo) continuam numa
+      // consulta própria.
+      const dados = await buscarDadosOrcamento(supabase, idProjeto);
 
-      if (error || !projeto) {
+      if (!dados) {
         setErro("Projeto não encontrado.");
         setLoading(false);
         return;
       }
 
-      const cenarioAprovado = await buscarCenarioComercialAprovado(supabase, projeto.id);
+      const { data: propostaCampos } = await supabase
+        .from("projetos")
+        .select("contato_comercial_nome,proposta_revisao,proposta_consideracoes")
+        .eq("id", idProjeto)
+        .maybeSingle();
+
+      const cenarioAprovado = await buscarCenarioComercialAprovado(supabase, idProjeto);
       setCenarioComercialAprovado(cenarioAprovado);
 
       // Proposta nao tem numeracao propria: usa o numero_projeto direto.
-      setNumeroProjetoCarregado(projeto.numero_projeto);
-      setNomeSolicitante(projeto.contato_comercial_nome);
-      setCriadoEm(projeto.created_at);
-      setRevisao(projeto.proposta_revisao ?? "A");
+      setNumeroProjetoCarregado(dados.projeto.numeroProjeto);
+      setNomeSolicitante((propostaCampos?.contato_comercial_nome as string | null) ?? null);
+      setCriadoEm(dados.projeto.criadoEm);
+      setRevisao((propostaCampos?.proposta_revisao as string | null) ?? "A");
       setConsideracoes(
-        projeto.proposta_consideracoes ?? TEXTO_CONSIDERACOES_PADRAO,
+        (propostaCampos?.proposta_consideracoes as string | null) ?? TEXTO_CONSIDERACOES_PADRAO,
       );
+      setResponsavelNome(dados.responsavelNome ?? "");
 
-      const { data: userData } = await supabase.auth.getUser();
-
-      if (userData.user) {
-        const { data: usuario } = await supabase
-          .from("usuarios")
-          .select("nome,empresa_id")
-          .eq("id", userData.user.id)
-          .single();
-
-        if (usuario?.nome) {
-          setResponsavelNome(usuario.nome);
-        }
+      if (dados.cliente) {
+        setCliente({
+          nome: dados.cliente.nome,
+          cnpj: dados.cliente.cnpj,
+          email: dados.cliente.email,
+        });
       }
 
-      if (projeto.cliente_id) {
-        const { data: clienteData } = await supabase
-          .from("clientes")
-          .select("nome,cnpj,email")
-          .eq("id", projeto.cliente_id)
-          .single();
+      const margem = dados.projeto.margemLucroPercent;
+      const descontoPercentual = dados.projeto.descontoPercentual;
+      const cargaEfetiva = dados.projeto.cargaTributariaPercent ?? dados.cargaTributariaSugerida;
 
-        if (clienteData) {
-          setCliente({
-            nome: clienteData.nome ?? "",
-            cnpj: clienteData.cnpj,
-            email: clienteData.email,
-          });
-        }
-      }
-
-      // Itens: mesmo calculo do Orcamento (custo/impostos/lucro/total),
-      // mas so expoe Valor Unitario (= total / quantidade) e Valor Total -
+      // Itens: mesmo custo já resolvido pelo Orcamento, mas a Proposta
+      // so expoe Valor Unitario (= total / quantidade) e Valor Total -
       // nunca Custo/Impostos/Lucro internos.
-      const { data: itensProjeto } = await supabase
-        .from("projeto_itens")
-        .select("id,produto_id,pn,descricao,quantidade,custo_congelado")
-        .eq("projeto_id", projeto.id)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true });
-
-      const linhas = (itensProjeto ?? []) as {
-        id: string;
-        produto_id: string;
-        pn: string;
-        descricao: string;
-        quantidade: number;
-        custo_congelado: number | null;
-      }[];
-
-      const excluirMateriaPrima = projeto.tipo_projeto === "industrializacao";
-      const margem = Number(projeto.margem_lucro_percent);
-      const descontoPercentual =
-        projeto.desconto_percentual !== null &&
-        projeto.desconto_percentual !== undefined
-          ? Number(projeto.desconto_percentual)
-          : null;
-
-      let cargaEfetiva = Number(projeto.carga_tributaria_percent ?? 0);
-
-      if (projeto.carga_tributaria_percent === null) {
-        const { data: config } = await supabase
-          .from("configuracoes_empresa")
-          .select("valor")
-          .eq("chave", "carga_tributaria_por_natureza")
-          .maybeSingle();
-
-        const tabela = (config?.valor ?? {}) as Record<string, number>;
-        cargaEfetiva = Number(tabela[projeto.tipo_projeto] ?? 0);
-      }
-
       const itensCalculados: ItemProposta[] = [];
       let custoTotalSoma = 0;
 
-      for (const item of linhas) {
+      for (const item of dados.itensCalculados) {
         const { data: produto } = await supabase
           .from("itens_industriais")
           .select("codigo_ncm")
-          .eq("id", item.produto_id)
+          .eq("id", item.produtoId)
           .single();
 
-        let custoUnitario =
-          item.custo_congelado !== null ? Number(item.custo_congelado) : 0;
-
-        if (item.custo_congelado === null) {
-          const { data: boms } = await supabase
-            .from("boms")
-            .select("id,status,created_at")
-            .eq("produto_id", item.produto_id)
-            .is("deleted_at", null)
-            .order("created_at", { ascending: false });
-
-          const bomsLista = (boms ?? []) as BomEscolhaRow[];
-          const bomEscolhido =
-            bomsLista.find((bom) => bom.status === "ativo") ?? bomsLista[0];
-
-          if (bomEscolhido) {
-            const { data: custo } = await supabase.rpc("calcular_custo_bom", {
-              p_bom_id: bomEscolhido.id,
-              p_excluir_materia_prima: excluirMateriaPrima,
-            });
-
-            const totalCategoria = (
-              (custo ?? []) as { categoria: string; valor: number }[]
-            ).find((linha) => linha.categoria === "total")?.valor;
-
-            custoUnitario = Number(totalCategoria ?? 0);
-          }
-        }
-
-        const custoItem = custoUnitario * item.quantidade;
-        custoTotalSoma += custoItem;
+        custoTotalSoma += item.custo;
 
         const { valorComercial: totalItem } = calcularResumoOrcamento({
-          custoTotal: custoItem,
+          custoTotal: item.custo,
           margemLucroPercent: margem,
           cargaTributariaPercent: cargaEfetiva,
         });
@@ -249,7 +172,7 @@ export function useProposta(idProjeto: string | null) {
           id: item.id,
           descricao: item.descricao,
           codigo: item.pn,
-          ncm: produto?.codigo_ncm ?? null,
+          ncm: (produto?.codigo_ncm as string | null) ?? null,
           quantidade: item.quantidade,
           valorUnitario: item.quantidade > 0 ? totalItem / item.quantidade : 0,
           valorTotal: totalItem,
