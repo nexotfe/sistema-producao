@@ -22,6 +22,15 @@ vi.mock("@/modules/simulacao-comercial/lib/cenarios/carregarBasePrevisaoComercia
   carregarBasePrevisaoComercial: vi.fn(),
 }));
 
+// Migração 20260822165408: aprovarCenarioComercialAction.ts passou a
+// importar createSupabaseServiceClient (server-only) - este teste
+// (jsdom, via ResumoFinanceiroCard dentro de GeradorComparadorCenarios)
+// não exercita o fluxo de aprovação, só precisa que o módulo carregue
+// sem estourar a guarda de "server-only" fora de um Server Component.
+vi.mock("@/modules/simulacao-comercial/actions/aprovarCenarioComercialAction", () => ({
+  aprovarCenarioComercialAction: vi.fn(),
+}));
+
 import { supabase } from "@/lib/supabaseClient";
 import { carregarBaseCenarios } from "@/modules/simulacao-comercial/lib/cenarios/carregarBaseCenarios";
 import { carregarBasePrevisaoComercial } from "@/modules/simulacao-comercial/lib/cenarios/carregarBasePrevisaoComercial";

@@ -72,7 +72,8 @@ export function ProjectDetailsPageContent({
     itens,
     resumoOrcamento,
     resumoProdutivo,
-    cenarioComercialAprovado,
+    usandoCenarioComercialAprovado,
+    cenarioComercialDesatualizado,
     erro,
     mensagem,
     formulaErro,
@@ -507,8 +508,14 @@ export function ProjectDetailsPageContent({
         </div>
 
         <Card title="Resumo do Orçamento">
+          {cenarioComercialDesatualizado ? (
+            <p className="mb-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-xs font-semibold text-status-warning-text">
+              O Roteiro foi alterado após a aprovação deste cenário. Recalcule e aprove um novo cenário.
+            </p>
+          ) : null}
+
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
-            {cenarioComercialAprovado ? (
+            {usandoCenarioComercialAprovado ? (
               <>
                 <div>
                   <span className="mb-1 block text-xs font-semibold text-slate-600">

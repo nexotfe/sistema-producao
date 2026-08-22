@@ -20,6 +20,24 @@ vi.mock("@/lib/supabaseClient", () => ({
   },
 }));
 
+// DEC-007 §6.2/Fase 8b (invalidação automática) - só os testes que
+// precisam de uma assinatura ao vivo "divergente"/"erro" configuram
+// estes mocks; os demais nem chegam a chamá-los (short-circuit por
+// projeto aprovado ou assinatura_tecnica nula em
+// avaliarCenarioComercialAprovado.ts).
+const buscarDadosAssinaturaTecnicaMock = vi.fn();
+vi.mock("@/modules/simulacao-comercial/lib/cenarios/buscarDadosAssinaturaTecnica", () => ({
+  buscarDadosAssinaturaTecnica: (...args: unknown[]) => buscarDadosAssinaturaTecnicaMock(...args),
+}));
+const construirDocumentoAssinaturaTecnicaMock = vi.fn();
+vi.mock("@/modules/simulacao-comercial/lib/cenarios/construirDocumentoAssinaturaTecnica", () => ({
+  construirDocumentoAssinaturaTecnica: (...args: unknown[]) => construirDocumentoAssinaturaTecnicaMock(...args),
+}));
+const calcularHashAssinaturaTecnicaMock = vi.fn();
+vi.mock("@/modules/simulacao-comercial/lib/cenarios/calcularHashAssinaturaTecnica", () => ({
+  calcularHashAssinaturaTecnica: (...args: unknown[]) => calcularHashAssinaturaTecnicaMock(...args),
+}));
+
 import { supabase } from "@/lib/supabaseClient";
 import { useOrcamento } from "./useOrcamento";
 
@@ -709,12 +727,13 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
     expect(result.current.resumoOrcamento.ajusteComercial).toBe(0);
   });
 
-  it("com cenário comercial aprovado vigente: resumoOrcamento usa novoCustoTecnico como valor-base, nunca a soma bruta de itens", async () => {
+  it("com cenário comercial aprovado vigente (projeto com status=aprovado - congelamento definitivo, nunca recalcula assinatura): resumoOrcamento usa novoCustoTecnico como valor-base, nunca a soma bruta de itens", async () => {
     configurarMock(
-      (id) => ({ data: projetoRow(id as string), error: null }),
+      (id) => ({ data: projetoRow(id as string, { status: "aprovado" }), error: null }),
       {
         data: {
           id: "cenario-1",
+          empresa_id: "empresa-1",
           tipo_cenario: "ajustado",
           data_solicitada_cliente: "2026-09-01",
           prazo_proposto: "2026-09-15",
@@ -723,6 +742,8 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
           custo_adicional_total: 5000,
           novo_custo_tecnico: 55000,
           aprovado_em: "2026-08-18T10:00:00Z",
+          assinatura_tecnica: null,
+          snapshot: null,
         },
         error: null,
       },
@@ -733,6 +754,7 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
 
     expect(result.current.cenarioComercialAprovado).toEqual({
       id: "cenario-1",
+      empresaId: "empresa-1",
       tipoCenario: "ajustado",
       dataSolicitadaCliente: "2026-09-01",
       prazoProposto: "2026-09-15",
@@ -741,7 +763,12 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
       custoAdicionalTotal: 5000,
       novoCustoTecnico: 55000,
       aprovadoEm: "2026-08-18T10:00:00Z",
+      assinaturaTecnica: null,
+      janelaInicio: null,
+      janelaFim: null,
     });
+    expect(result.current.usandoCenarioComercialAprovado).toBe(true);
+    expect(result.current.cenarioComercialDesatualizado).toBe(false);
     // custoTotal (soma de itens) é 0 neste helper - se o resumo ainda
     // usasse a soma bruta, custoTotal seria 0, não 55000.
     expect(result.current.resumoOrcamento.custoTotal).toBe(55000);
@@ -755,8 +782,9 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
     expect(result.current.resumoOrcamento.ajusteComercial).toBe(55000);
   });
 
-  it("com cenário aprovado E itens reais: Custo dos itens + Ajuste comercial somam exatamente o Custo/valor técnico após o cenário", async () => {
+  it("com cenário aprovado (projeto status=aprovado) E itens reais: Custo dos itens + Ajuste comercial somam exatamente o Custo/valor técnico após o cenário", async () => {
     configurarMockCompleto({
+      projeto: { status: "aprovado" },
       itens: [
         { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 3975 },
       ],
@@ -770,6 +798,7 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
         return criarFakeQuery({
           data: {
             id: "cenario-1",
+            empresa_id: "empresa-1",
             tipo_cenario: "ajustado",
             data_solicitada_cliente: "2026-09-01",
             prazo_proposto: "2026-09-15",
@@ -778,6 +807,8 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
             custo_adicional_total: 945,
             novo_custo_tecnico: 4920,
             aprovado_em: "2026-08-18T10:00:00Z",
+            assinatura_tecnica: null,
+            snapshot: null,
           },
           error: null,
         });
@@ -794,5 +825,101 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
     expect(
       result.current.resumoOrcamento.custoTotalItens + result.current.resumoOrcamento.ajusteComercial,
     ).toBe(result.current.resumoOrcamento.custoTotal);
+  });
+
+  // Achado real do orçamento 260007 (DEC-007 §6.2/Fase 8b) - o cenário
+  // aprovado antes da migration 20260822165408 tem assinatura_tecnica
+  // NULL (legado, nunca backfillado) e o projeto NÃO está com
+  // status=aprovado - cai INTEIRAMENTE no comportamento "sem cenário":
+  // custo ao vivo, NENHUMA linha de ajuste comercial (nem R$0,00),
+  // aviso interno ativo. Números exatos do achado real: itens somam
+  // R$ 3.975,00 (não mais R$ 4.920,00 do snapshot congelado).
+  it("260007: cenário com assinatura_tecnica NULL (legado) e projeto não aprovado - cai para custo ao vivo (R$ 3.975,00), sem ajuste comercial, com aviso", async () => {
+    configurarMockCompleto({
+      projeto: { status: "em_analise" },
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 3975 },
+      ],
+      boms: [],
+    });
+    const fromOriginal = supabaseMock.from.getMockImplementation() as (tabela: string) => unknown;
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "cenarios_comerciais_aprovados") {
+        return criarFakeQuery({
+          data: {
+            id: "cenario-260007",
+            empresa_id: "empresa-1",
+            tipo_cenario: "atual",
+            data_solicitada_cliente: "2026-08-01",
+            prazo_proposto: "2026-08-15",
+            diferenca_em_dias: 14,
+            custo_tecnico_atual: 4920,
+            custo_adicional_total: 0,
+            novo_custo_tecnico: 4920,
+            aprovado_em: "2026-08-05T10:00:00Z",
+            assinatura_tecnica: null,
+            snapshot: { disponibilidadeMaterial: { original: "2026-07-25" }, saidaPrevisaoComercial: { primeiraEntregaPossivel: "2026-08-10" } },
+          },
+          error: null,
+        });
+      }
+      return fromOriginal(tabela);
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.usandoCenarioComercialAprovado).toBe(false);
+    expect(result.current.cenarioComercialDesatualizado).toBe(true);
+    expect(result.current.resumoOrcamento.custoTotal).toBe(3975);
+    expect(result.current.resumoOrcamento.custoTotalItens).toBe(3975);
+    expect(result.current.resumoOrcamento.ajusteComercial).toBe(0);
+    expect(buscarDadosAssinaturaTecnicaMock).not.toHaveBeenCalled();
+  });
+
+  it("assinatura ao vivo diverge da armazenada (projeto não aprovado): cai para custo ao vivo, com aviso", async () => {
+    buscarDadosAssinaturaTecnicaMock.mockResolvedValue({ dados: "fake" });
+    construirDocumentoAssinaturaTecnicaMock.mockReturnValue({ documento: "fake" });
+    calcularHashAssinaturaTecnicaMock.mockResolvedValue("hash-diferente");
+
+    configurarMockCompleto({
+      projeto: { status: "em_analise" },
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 3975 },
+      ],
+      boms: [],
+    });
+    const fromOriginal = supabaseMock.from.getMockImplementation() as (tabela: string) => unknown;
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "cenarios_comerciais_aprovados") {
+        return criarFakeQuery({
+          data: {
+            id: "cenario-1",
+            empresa_id: "empresa-1",
+            tipo_cenario: "atual",
+            data_solicitada_cliente: "2026-08-01",
+            prazo_proposto: "2026-08-15",
+            diferenca_em_dias: 14,
+            custo_tecnico_atual: 3975,
+            custo_adicional_total: 945,
+            novo_custo_tecnico: 4920,
+            aprovado_em: "2026-08-05T10:00:00Z",
+            assinatura_tecnica: "hash-original",
+            snapshot: { disponibilidadeMaterial: { original: "2026-07-25" }, saidaPrevisaoComercial: { primeiraEntregaPossivel: "2026-08-10" } },
+          },
+          error: null,
+        });
+      }
+      return fromOriginal(tabela);
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(buscarDadosAssinaturaTecnicaMock).toHaveBeenCalledWith(supabase, "empresa-1", "projeto-a", "2026-07-25", "2026-08-10");
+    expect(result.current.usandoCenarioComercialAprovado).toBe(false);
+    expect(result.current.cenarioComercialDesatualizado).toBe(true);
+    expect(result.current.resumoOrcamento.custoTotal).toBe(3975);
+    expect(result.current.resumoOrcamento.ajusteComercial).toBe(0);
   });
 });

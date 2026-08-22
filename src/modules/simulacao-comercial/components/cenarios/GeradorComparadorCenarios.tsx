@@ -39,6 +39,8 @@ import { buscarDadosOrcamento } from "@/modules/projetos/lib/buscarDadosOrcament
 import type { ProjectType } from "@/modules/projetos/types";
 import { calcularValorComercialProjeto } from "@/modules/projetos/lib/calcularResumoOrcamento";
 import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "@/modules/projetos/lib/buscarCenarioComercialAprovado";
+import { avaliarCenarioComercialAprovado } from "@/modules/projetos/lib/avaliarCenarioComercialAprovado";
+import type { DecisaoUsoCenarioComercial } from "@/modules/projetos/lib/decidirUsoCenarioComercialAprovado";
 import { Modal } from "@/modules/shared/ui/Modal";
 import { Button } from "@/modules/shared/ui/Button";
 import { CartaoConfiguracao } from "./CartaoConfiguracao";
@@ -135,6 +137,11 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
   // aprovado" nesse meio-tempo, CenarioAprovadoVigenteCard trata os 3
   // estados). `null` = carregado, confirmado que não há vigente.
   const [cenarioJaAprovado, setCenarioJaAprovado] = useState<CenarioComercialAprovadoResumo | null | undefined>(undefined);
+  // DEC-007 §6.2/Fase 8b (invalidação automática) - MESMA função pura/
+  // orquestrador de useOrcamento.ts/useProposta.ts (avaliarCenarioComercialAprovado.ts),
+  // nunca uma segunda decisão divergente. undefined = ainda não
+  // avaliada (mesmo tri-estado de cenarioJaAprovado, mesmo motivo).
+  const [decisaoCenarioComercial, setDecisaoCenarioComercial] = useState<DecisaoUsoCenarioComercial | null | undefined>(undefined);
   const [recarregaResumoFinanceiro, setRecarregaResumoFinanceiro] = useState(0);
 
   // Dois painéis independentes (antecipação de materiais + capacidade e
@@ -357,6 +364,7 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
 
     async function carregar() {
       setCenarioJaAprovado(undefined);
+      setDecisaoCenarioComercial(undefined);
 
       const [dadosOrcamento, cenarioAprovado] = await Promise.all([
         buscarDadosOrcamento(supabase, projetoId),
@@ -381,7 +389,17 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
         setTipoProjeto(null);
       }
 
+      // Calculado ANTES do setCenarioJaAprovado/setDecisaoCenarioComercial
+      // abaixo (mesma garantia estrutural de useOrcamento.ts/useProposta.ts)
+      // - nunca existe um render em que o badge mostra o cenário como
+      // vigente enquanto a verificação da assinatura ainda está em voo.
+      const decisao = dadosOrcamento
+        ? await avaliarCenarioComercialAprovado(supabase, projetoId, dadosOrcamento.projeto.statusProjeto, cenarioAprovado)
+        : null;
+      if (cancelado) return;
+
       setCenarioJaAprovado(cenarioAprovado);
+      setDecisaoCenarioComercial(decisao);
     }
 
     carregar();
@@ -557,7 +575,7 @@ export function GeradorComparadorCenarios({ projetoId }: GeradorComparadorCenari
         lê `cenarioJaAprovado` (banco, congelado) - nunca a simulação em
         edição.
       */}
-      <CenarioAprovadoVigenteCard cenarioJaAprovado={cenarioJaAprovado} />
+      <CenarioAprovadoVigenteCard cenarioJaAprovado={cenarioJaAprovado} decisaoCenarioComercial={decisaoCenarioComercial} />
 
       <Modal open={modalPremissasAberto} onClose={() => setModalPremissasAberto(false)} title="Premissas comerciais" size="lg">
         <div className="flex flex-col gap-4">

@@ -52,6 +52,7 @@ export default function CommercialProposalPage() {
     valorTecnicoProposta,
     valorDescontoProposta,
     valorTotalProposta,
+    cenarioComercialDesatualizado,
     revisao,
     salvandoRevisao,
     avancarRevisao,
@@ -126,14 +127,28 @@ export default function CommercialProposalPage() {
   return (
     <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-5xl space-y-5">
-        {idProjeto ? (
-          <Link
-            href={`/projetos/${idProjeto}`}
-            className="inline-flex w-fit items-center text-sm font-semibold text-slate-500 transition hover:text-slate-800"
-          >
-            ← Voltar ao Orçamento
-          </Link>
-        ) : null}
+        {/*
+          print:hidden - chrome do editor interno, nunca faz parte do
+          documento impresso/enviado ao cliente (mesmo padrão já usado
+          em ListaTecnicaProjetoModal.tsx): link de retorno e o aviso de
+          cenário desatualizado abaixo somem os dois na impressão/PDF.
+        */}
+        <div className="flex flex-col gap-3 print:hidden">
+          {idProjeto ? (
+            <Link
+              href={`/projetos/${idProjeto}`}
+              className="inline-flex w-fit items-center text-sm font-semibold text-slate-500 transition hover:text-slate-800"
+            >
+              ← Voltar ao Orçamento
+            </Link>
+          ) : null}
+
+          {cenarioComercialDesatualizado ? (
+            <p className="rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-xs font-semibold text-status-warning-text">
+              O Roteiro foi alterado após a aprovação deste cenário. Recalcule e aprove um novo cenário.
+            </p>
+          ) : null}
+        </div>
 
         {(erro || loading) && (
           <p className="text-sm text-slate-500">
@@ -170,11 +185,12 @@ export default function CommercialProposalPage() {
                   <strong className="text-slate-800">Data:</strong>{" "}
                   {formatarData(criadoEm)}
                 </span>
+                {/* print:hidden - ação do editor interno, nunca faz parte do documento impresso/enviado ao cliente. */}
                 <button
                   type="button"
                   onClick={() => setIsRevisaoModalOpen(true)}
                   disabled={salvandoRevisao || !numeroProposta}
-                  className="h-8 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-8 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 print:hidden"
                 >
                   Nova Revisão
                 </button>
@@ -256,6 +272,7 @@ export default function CommercialProposalPage() {
         <section className="rounded-lg border border-slate-200 bg-app-card px-6 py-5">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-sm font-bold text-slate-950">Considerações</h2>
+            {/* print:hidden - ação do editor interno, nunca faz parte do documento impresso/enviado ao cliente. */}
             <button
               type="button"
               onClick={() => salvarConsideracoes(textoConsideracoes)}
@@ -264,15 +281,20 @@ export default function CommercialProposalPage() {
                 !numeroProposta ||
                 textoConsideracoes === consideracoes
               }
-              className="h-8 rounded-md bg-blue-700 px-3 text-xs font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-8 rounded-md bg-blue-700 px-3 text-xs font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 print:hidden"
             >
               {salvandoConsideracoes ? "Salvando..." : "Salvar"}
             </button>
           </div>
+          {/*
+            print: o campo perde a aparência de controle editável (sem
+            borda/fundo/resize) - o texto continua visível, só deixa de
+            parecer um formulário no documento do cliente.
+          */}
           <textarea
             value={textoConsideracoes}
             onChange={(event) => setTextoConsideracoes(event.target.value)}
-            className="mt-4 min-h-32 w-full resize-y rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mt-4 min-h-32 w-full resize-y rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 print:h-auto print:min-h-0 print:resize-none print:overflow-visible print:border-none print:bg-transparent print:p-0"
           />
         </section>
 
@@ -283,39 +305,51 @@ export default function CommercialProposalPage() {
             </h2>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+          {/*
+            print: a rolagem horizontal (overflow-x-auto) e a largura
+            mínima de 760px (pensadas para tela) impediam a tabela de
+            caber na largura da página - cortavam Valor Total. Na
+            impressão a rolagem vira visível (nada fica de fora) e a
+            tabela encolhe livremente (sem largura mínima), com
+            preenchimento/tipografia menores para as 6 colunas caberem
+            inteiras. print:break-inside-avoid em cada linha evita
+            cortar um item no meio entre duas páginas - o cabeçalho
+            (thead) já repete em toda página nova por padrão do
+            navegador.
+          */}
+          <div className="overflow-x-auto print:overflow-visible">
+            <table className="w-full min-w-[760px] text-left text-sm print:min-w-0 print:text-[10.5px]">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 print:text-[9px]">
                 <tr>
-                  <th className="px-6 py-3 font-semibold">Produto</th>
-                  <th className="px-4 py-3 font-semibold">Código</th>
-                  <th className="px-4 py-3 font-semibold">NCM</th>
-                  <th className="px-4 py-3 text-center font-semibold">Qtd</th>
-                  <th className="px-4 py-3 text-right font-semibold">
+                  <th className="px-6 py-3 font-semibold print:px-2 print:py-1">Produto</th>
+                  <th className="px-4 py-3 font-semibold print:px-2 print:py-1">Código</th>
+                  <th className="px-4 py-3 font-semibold print:px-2 print:py-1">NCM</th>
+                  <th className="px-4 py-3 text-center font-semibold print:px-2 print:py-1">Qtd</th>
+                  <th className="px-4 py-3 text-right font-semibold print:px-2 print:py-1">
                     Valor Unitário
                   </th>
-                  <th className="px-6 py-3 text-right font-semibold">
+                  <th className="px-6 py-3 text-right font-semibold print:px-2 print:py-1">
                     Valor Total
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {itens.map((item) => (
-                  <tr key={item.id} className="transition hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-800">
+                  <tr key={item.id} className="transition hover:bg-slate-50 print:break-inside-avoid">
+                    <td className="px-6 py-4 font-medium text-slate-800 print:px-2 print:py-1">
                       {item.descricao}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-slate-700">{item.codigo}</td>
-                    <td className="px-4 py-4 text-slate-700">
+                    <td className="whitespace-nowrap px-4 py-4 text-slate-700 print:whitespace-normal print:px-2 print:py-1">{item.codigo}</td>
+                    <td className="px-4 py-4 text-slate-700 print:px-2 print:py-1">
                       {item.ncm || "—"}
                     </td>
-                    <td className="px-4 py-4 text-center text-slate-700">
+                    <td className="px-4 py-4 text-center text-slate-700 print:px-2 print:py-1">
                       {item.quantidade}
                     </td>
-                    <td className="px-4 py-4 text-right text-slate-700">
+                    <td className="px-4 py-4 text-right text-slate-700 print:px-2 print:py-1">
                       {formatarMoeda(item.valorUnitario)}
                     </td>
-                    <td className="px-6 py-4 text-right font-semibold text-slate-900">
+                    <td className="px-6 py-4 text-right font-semibold text-slate-900 print:px-2 print:py-1">
                       {formatarMoeda(item.valorTotal)}
                     </td>
                   </tr>
@@ -362,11 +396,17 @@ export default function CommercialProposalPage() {
           <h2 className="text-sm font-bold text-slate-950">
             Outras Informações
           </h2>
+          {/*
+            print: cada linha perde a aparência de campo de formulário
+            (sem borda/fundo) - o rótulo e o valor continuam visíveis
+            lado a lado, só deixam de parecer controles editáveis no
+            documento do cliente.
+          */}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {outrasInformacoes.map(([label, value, setValue]) => (
               <div
                 key={label}
-                className="flex min-h-10 items-center justify-between gap-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                className="flex min-h-10 items-center justify-between gap-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm print:min-h-0 print:border-none print:bg-transparent print:px-0 print:py-0.5"
               >
                 <span className="whitespace-nowrap font-semibold text-slate-600">
                   {label}
@@ -381,7 +421,8 @@ export default function CommercialProposalPage() {
           </div>
         </section>
 
-        <div className="flex justify-end gap-2">
+        {/* print:hidden - ações do editor interno (mesma categoria de Nova Revisão/Salvar), nunca fazem parte do documento impresso/enviado ao cliente. */}
+        <div className="flex justify-end gap-2 print:hidden">
           {/*
             TODO: permitir anexar documentos técnicos e comerciais à proposta:
             desenhos, especificações, fotos, catálogos, certificados e outros

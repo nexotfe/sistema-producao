@@ -50,6 +50,16 @@ describe("UserMenu", () => {
     expect(screen.getByText("usuario@nexotfe.com")).toBeTruthy();
   });
 
+  // Achado real (impressão da Proposta comercial): a barra de usuário/Sair
+  // é renderizada em toda página autenticada (AuthGate.tsx) e vazava no
+  // topo de qualquer documento impresso/exportado em PDF.
+  it("a barra de usuário/Sair nunca aparece em impressão (print:hidden)", () => {
+    signOutLocalMock.mockResolvedValue({ error: null });
+    render(<UserMenu email="usuario@nexotfe.com" />);
+    const barra = screen.getByText("usuario@nexotfe.com").closest("div");
+    expect(barra?.className).toContain("print:hidden");
+  });
+
   it("sucesso: signOut local, depois router.replace('/') e router.refresh()", async () => {
     signOutLocalMock.mockResolvedValue({ error: null });
     render(<UserMenu email="usuario@nexotfe.com" />);

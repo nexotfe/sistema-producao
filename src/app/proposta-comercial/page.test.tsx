@@ -48,6 +48,7 @@ function propostaPadrao(overrides: Record<string, unknown> = {}) {
     valorTecnicoProposta: 0,
     valorDescontoProposta: 0,
     valorTotalProposta: 0,
+    cenarioComercialDesatualizado: false,
     revisao: "A",
     salvandoRevisao: false,
     avancarRevisao: vi.fn(),
@@ -137,5 +138,141 @@ describe("proposta-comercial/page - link de retorno ao Orçamento", () => {
     render(<CommercialProposalPage />);
 
     expect(screen.queryByRole("link", { name: "← Voltar ao Orçamento" })).toBeNull();
+  });
+});
+
+// DEC-007 §6.2/Fase 8b (invalidação automática) - o aviso e o link de
+// retorno vivem no mesmo container "print:hidden" (chrome do editor
+// interno): visíveis na tela, ausentes na impressão/PDF/documento
+// enviado ao cliente - nunca dentro do <header>/<footer> do documento.
+describe("proposta-comercial/page - aviso de cenário desatualizado (editor interno, ausente na impressão)", () => {
+  const TEXTO_AVISO = "O Roteiro foi alterado após a aprovação deste cenário. Recalcule e aprove um novo cenário.";
+
+  it("cenarioComercialDesatualizado=true: aviso visível, dentro do mesmo container print:hidden do link de retorno", () => {
+    usePropostaMock.mockReturnValue(propostaPadrao({ cenarioComercialDesatualizado: true }));
+    render(<CommercialProposalPage />);
+
+    const aviso = screen.getByText(TEXTO_AVISO);
+    expect(aviso).toBeTruthy();
+
+    const link = screen.getByRole("link", { name: "← Voltar ao Orçamento" });
+    const containerAviso = aviso.closest(".print\\:hidden");
+    const containerLink = link.closest(".print\\:hidden");
+    expect(containerAviso).not.toBeNull();
+    expect(containerAviso).toBe(containerLink);
+  });
+
+  it("cenarioComercialDesatualizado=false (padrão): nenhum aviso renderizado", () => {
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    render(<CommercialProposalPage />);
+
+    expect(screen.queryByText(TEXTO_AVISO)).toBeNull();
+  });
+});
+
+// Achado real (prévia de impressão): além do link/aviso acima, a barra
+// de usuário/Sair (UserMenu.tsx, corrigida à parte) e mais 3 controles
+// PRÓPRIOS desta página vazavam no documento impresso - nenhum deles é
+// conteúdo da proposta em si, todos pertencem ao editor interno.
+describe("proposta-comercial/page - ações do editor interno ausentes na impressão (print:hidden)", () => {
+  it("botão 'Nova Revisão' tem print:hidden", () => {
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    render(<CommercialProposalPage />);
+    expect(screen.getByRole("button", { name: "Nova Revisão" }).className).toContain("print:hidden");
+  });
+
+  it("botão 'Salvar' (Considerações) tem print:hidden", () => {
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    render(<CommercialProposalPage />);
+    expect(screen.getByRole("button", { name: "Salvar" }).className).toContain("print:hidden");
+  });
+
+  it("ações de rodapé (Anexos/Gerar PDF/Enviar Proposta) ficam num container print:hidden", () => {
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    render(<CommercialProposalPage />);
+    const botaoAnexos = screen.getByRole("button", { name: "Anexos" });
+    const botaoGerarPdf = screen.getByRole("button", { name: "Gerar PDF" });
+    const botaoEnviar = screen.getByRole("button", { name: "Enviar Proposta" });
+    const container = botaoAnexos.closest(".print\\:hidden");
+    expect(container).not.toBeNull();
+    expect(container?.contains(botaoGerarPdf)).toBe(true);
+    expect(container?.contains(botaoEnviar)).toBe(true);
+  });
+
+  it("textarea de Considerações perde a aparência de campo na impressão (sem borda/fundo)", () => {
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    const { container } = render(<CommercialProposalPage />);
+    const textarea = container.querySelector("textarea");
+    expect(textarea).not.toBeNull();
+    expect(textarea?.className).toContain("print:border-none");
+    expect(textarea?.className).toContain("print:bg-transparent");
+  });
+
+  it("linhas de 'Outras Informações' perdem a aparência de campo na impressão (sem borda/fundo)", () => {
+    usePropostaMock.mockReturnValue(propostaPadrao());
+    render(<CommercialProposalPage />);
+    const linha = screen.getByText("Nome do Vendedor").closest("div");
+    expect(linha?.className).toContain("print:border-none");
+    expect(linha?.className).toContain("print:bg-transparent");
+  });
+});
+
+// Achado real (prévia de impressão): a tabela "Itens da Proposta" tinha
+// rolagem horizontal (overflow-x-auto) e largura mínima de 760px,
+// pensadas para tela - na impressão isso cortava a coluna Valor Total.
+describe("proposta-comercial/page - tabela 'Itens da Proposta' cabe inteira na impressão", () => {
+  it("o container perde a rolagem horizontal (overflow visível) e a tabela perde a largura mínima na impressão", () => {
+    usePropostaMock.mockReturnValue(
+      propostaPadrao({
+        itens: [
+          { id: "item-1", descricao: "Item 1", codigo: "PN-1", ncm: "8479.90.90", quantidade: 1, valorUnitario: 100, valorTotal: 100 },
+        ],
+      }),
+    );
+    const { container } = render(<CommercialProposalPage />);
+
+    const tabela = container.querySelector("table");
+    expect(tabela).not.toBeNull();
+    expect(tabela?.className).toContain("print:min-w-0");
+
+    const wrapper = tabela?.parentElement;
+    expect(wrapper?.className).toContain("overflow-x-auto");
+    expect(wrapper?.className).toContain("print:overflow-visible");
+  });
+
+  it("cada linha de item tem print:break-inside-avoid, para nunca cortar um item entre duas páginas", () => {
+    usePropostaMock.mockReturnValue(
+      propostaPadrao({
+        itens: [
+          { id: "item-1", descricao: "Item 1", codigo: "PN-1", ncm: "8479.90.90", quantidade: 1, valorUnitario: 100, valorTotal: 100 },
+          { id: "item-2", descricao: "Item 2", codigo: "PN-2", ncm: null, quantidade: 2, valorUnitario: 50, valorTotal: 100 },
+        ],
+      }),
+    );
+    const { container } = render(<CommercialProposalPage />);
+
+    const linhas = container.querySelectorAll("tbody tr");
+    expect(linhas.length).toBe(2);
+    linhas.forEach((linha) => {
+      expect((linha as HTMLElement).className).toContain("print:break-inside-avoid");
+    });
+  });
+
+  it("todas as 6 colunas (cabeçalho e células) continuam presentes e legíveis na impressão (typografia/padding reduzidos, nunca ocultos)", () => {
+    usePropostaMock.mockReturnValue(
+      propostaPadrao({
+        itens: [
+          { id: "item-1", descricao: "Item 1", codigo: "PN-1", ncm: "8479.90.90", quantidade: 3, valorUnitario: 10, valorTotal: 30 },
+        ],
+      }),
+    );
+    render(<CommercialProposalPage />);
+
+    for (const cabecalho of ["Produto", "Código", "NCM", "Qtd", "Valor Unitário", "Valor Total"]) {
+      expect(screen.getByText(cabecalho)).toBeTruthy();
+    }
+    expect(screen.getByText("Item 1")).toBeTruthy();
+    expect(screen.getByText("PN-1")).toBeTruthy();
+    expect(screen.getByText("8479.90.90")).toBeTruthy();
   });
 });

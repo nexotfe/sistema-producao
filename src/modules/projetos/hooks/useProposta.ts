@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { calcularResumoOrcamento } from "../lib/calcularResumoOrcamento";
 import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
+import { avaliarCenarioComercialAprovado } from "../lib/avaliarCenarioComercialAprovado";
 import { buscarDadosOrcamento } from "../lib/buscarDadosOrcamento";
 import { distribuirAjusteProporcional } from "../lib/distribuirAjusteProporcional";
 
@@ -69,6 +70,12 @@ export function useProposta(idProjeto: string | null) {
   // fica disponível para a tela usar como prazo da proposta.
   const [cenarioComercialAprovado, setCenarioComercialAprovado] =
     useState<CenarioComercialAprovadoResumo | null>(null);
+  // DEC-007 §6.2/Fase 8b (invalidação automática) - true só quando o
+  // cenário acima existe e passou pela verificação de assinatura
+  // técnica (ou o projeto está com status=aprovado - congelamento
+  // definitivo, nunca recalcula). Mesma decisão pura de useOrcamento.ts
+  // (decidirUsoCenarioComercialAprovado.ts) - nunca uma segunda regra.
+  const [cenarioComercialDesatualizado, setCenarioComercialDesatualizado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvandoRevisao, setSalvandoRevisao] = useState(false);
@@ -108,7 +115,20 @@ export function useProposta(idProjeto: string | null) {
         .maybeSingle();
 
       const cenarioAprovado = await buscarCenarioComercialAprovado(supabase, idProjeto);
+      // Calculado ANTES de qualquer setState de cenário/valores - nunca
+      // existe um render em que o cenário desatualizado aparece
+      // temporariamente como corrente enquanto a verificação roda (mesma
+      // garantia estrutural de useOrcamento.ts).
+      const decisaoCenario = await avaliarCenarioComercialAprovado(
+        supabase,
+        idProjeto,
+        dados.projeto.statusProjeto,
+        cenarioAprovado,
+      );
+      const cenarioUsavel = cenarioAprovado && decisaoCenario?.usarCenario === true ? cenarioAprovado : null;
+
       setCenarioComercialAprovado(cenarioAprovado);
+      setCenarioComercialDesatualizado(cenarioAprovado !== null && decisaoCenario?.usarCenario !== true);
 
       // Proposta nao tem numeracao propria: usa o numero_projeto direto.
       setNumeroProjetoCarregado(dados.projeto.numeroProjeto);
@@ -174,7 +194,7 @@ export function useProposta(idProjeto: string | null) {
       // novoCustoTecnico (congelado na aprovação: custo técnico + custo
       // adicional do cenário) em vez da soma bruta dos itens - mesma
       // calcularResumoOrcamento, nunca uma segunda fórmula.
-      const custoTotalEfetivo = cenarioAprovado ? cenarioAprovado.novoCustoTecnico : custoTotalSoma;
+      const custoTotalEfetivo = cenarioUsavel ? cenarioUsavel.novoCustoTecnico : custoTotalSoma;
       const { valorTecnico, valorDesconto, valorComercial: totalProposta } =
         calcularResumoOrcamento({
           custoTotal: custoTotalEfetivo,
@@ -272,6 +292,7 @@ export function useProposta(idProjeto: string | null) {
     valorDescontoProposta,
     valorTotalProposta,
     cenarioComercialAprovado,
+    cenarioComercialDesatualizado,
     revisao,
     salvandoRevisao,
     avancarRevisao,

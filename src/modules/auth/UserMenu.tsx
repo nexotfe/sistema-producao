@@ -39,7 +39,11 @@ export function UserMenu({ email }: UserMenuProps) {
   }
 
   return (
-    <div className="flex items-center justify-end gap-3 border-b border-border bg-surface px-5 py-2 text-[13px]">
+    // print:hidden - chrome global do app (usuário logado + Sair),
+    // renderizado em toda página autenticada via AuthGate.tsx - nunca
+    // deve aparecer em nenhum documento impresso/exportado em PDF (achado
+    // real: vazava no topo da impressão da Proposta comercial).
+    <div className="flex items-center justify-end gap-3 border-b border-border bg-surface px-5 py-2 text-[13px] print:hidden">
       <span className="text-text-secondary">{email ?? "Usuário autenticado"}</span>
       <Button
         variant="secondary"

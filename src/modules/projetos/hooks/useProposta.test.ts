@@ -291,14 +291,16 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     expect(result.current.erro).toBe("Projeto não encontrado.");
   });
 
-  it("com cenário aprovado vigente e 1 item: valorTotalProposta usa novo_custo_tecnico (fórmula existente, aplicada uma única vez), prazoProposto fica disponível, e o item (único) absorve o ajuste inteiro - nenhuma linha separada de ajuste", async () => {
+  it("com cenário aprovado vigente e 1 item (projeto status=aprovado - congelamento definitivo): valorTotalProposta usa novo_custo_tecnico (fórmula existente, aplicada uma única vez), prazoProposto fica disponível, e o item (único) absorve o ajuste inteiro - nenhuma linha separada de ajuste", async () => {
     configurarMock({
+      projeto: { status: "aprovado" },
       itens: [
         { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 50000 },
       ],
       respostaCenarioAprovado: {
         data: {
           id: "cenario-1",
+          empresa_id: "empresa-1",
           tipo_cenario: "ajustado",
           data_solicitada_cliente: "2026-09-01",
           prazo_proposto: "2026-09-20",
@@ -307,6 +309,8 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
           custo_adicional_total: 5000,
           novo_custo_tecnico: 55000,
           aprovado_em: "2026-08-18T10:00:00Z",
+          assinatura_tecnica: null,
+          snapshot: null,
         },
         error: null,
       },
@@ -329,9 +333,9 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     expect(result.current.itens[0].valorUnitario).toBeCloseTo(73333.33, 2);
   });
 
-  it("com cenário aprovado e múltiplos itens: o ajuste positivo é distribuído proporcionalmente, soma dos itens bate exata com o Subtotal", async () => {
+  it("com cenário aprovado (projeto status=aprovado) e múltiplos itens: o ajuste positivo é distribuído proporcionalmente, soma dos itens bate exata com o Subtotal", async () => {
     configurarMock({
-      projeto: { margem_lucro_percent: 0, carga_tributaria_percent: 0 },
+      projeto: { status: "aprovado", margem_lucro_percent: 0, carga_tributaria_percent: 0 },
       itens: [
         { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 100 },
         { id: "item-2", produto_id: "produto-2", pn: "PN-2", descricao: "Item 2", revisao: null, quantidade: 1, custo_congelado: 200 },
@@ -339,6 +343,7 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
       respostaCenarioAprovado: {
         data: {
           id: "cenario-1",
+          empresa_id: "empresa-1",
           tipo_cenario: "ajustado",
           data_solicitada_cliente: "2026-09-01",
           prazo_proposto: "2026-09-20",
@@ -347,6 +352,8 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
           custo_adicional_total: 60,
           novo_custo_tecnico: 360,
           aprovado_em: "2026-08-18T10:00:00Z",
+          assinatura_tecnica: null,
+          snapshot: null,
         },
         error: null,
       },
@@ -367,9 +374,9 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     expect(Math.round(somaItens * 100) / 100).toBe(result.current.valorTecnicoProposta);
   });
 
-  it("com cenário aprovado e ajuste negativo (custo atual dos itens maior que o novo_custo_tecnico): itens encolhem proporcionalmente, soma ainda bate exata com o Subtotal", async () => {
+  it("com cenário aprovado (projeto status=aprovado) e ajuste negativo (custo atual dos itens maior que o novo_custo_tecnico): itens encolhem proporcionalmente, soma ainda bate exata com o Subtotal", async () => {
     configurarMock({
-      projeto: { margem_lucro_percent: 0, carga_tributaria_percent: 0 },
+      projeto: { status: "aprovado", margem_lucro_percent: 0, carga_tributaria_percent: 0 },
       itens: [
         { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 200 },
         { id: "item-2", produto_id: "produto-2", pn: "PN-2", descricao: "Item 2", revisao: null, quantidade: 1, custo_congelado: 300 },
@@ -377,6 +384,7 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
       respostaCenarioAprovado: {
         data: {
           id: "cenario-1",
+          empresa_id: "empresa-1",
           tipo_cenario: "ajustado",
           data_solicitada_cliente: "2026-09-01",
           prazo_proposto: "2026-09-15",
@@ -385,6 +393,8 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
           custo_adicional_total: -140,
           novo_custo_tecnico: 360,
           aprovado_em: "2026-08-18T10:00:00Z",
+          assinatura_tecnica: null,
+          snapshot: null,
         },
         error: null,
       },
@@ -403,5 +413,44 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
 
     const somaItens = result.current.itens.reduce((acc, item) => acc + item.valorTotal, 0);
     expect(Math.round(somaItens * 100) / 100).toBe(result.current.valorTecnicoProposta);
+  });
+
+  // Achado real do orçamento 260007 (DEC-007 §6.2/Fase 8b) - assinatura
+  // nula (legado) e projeto não aprovado cai INTEIRAMENTE no
+  // comportamento "sem cenário": Subtotal = soma ao vivo dos itens
+  // (R$ 3.975,00), sem nenhum ajuste - mesma regra e mesma função
+  // (avaliarCenarioComercialAprovado.ts) de useOrcamento.ts, nunca uma
+  // segunda decisão divergente na Proposta.
+  it("260007: cenário com assinatura_tecnica NULL e projeto não aprovado - Proposta cai para o custo ao vivo (R$ 3.975,00), sem ajuste", async () => {
+    configurarMock({
+      projeto: { status: "em_analise", margem_lucro_percent: 0, carga_tributaria_percent: 0 },
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 3975 },
+      ],
+      respostaCenarioAprovado: {
+        data: {
+          id: "cenario-260007",
+          empresa_id: "empresa-1",
+          tipo_cenario: "atual",
+          data_solicitada_cliente: "2026-08-01",
+          prazo_proposto: "2026-08-15",
+          diferenca_em_dias: 14,
+          custo_tecnico_atual: 4920,
+          custo_adicional_total: 0,
+          novo_custo_tecnico: 4920,
+          aprovado_em: "2026-08-05T10:00:00Z",
+          assinatura_tecnica: null,
+          snapshot: { disponibilidadeMaterial: { original: "2026-07-25" }, saidaPrevisaoComercial: { primeiraEntregaPossivel: "2026-08-10" } },
+        },
+        error: null,
+      },
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.cenarioComercialDesatualizado).toBe(true);
+    expect(result.current.valorTecnicoProposta).toBe(3975);
+    expect(result.current.itens[0].valorTotal).toBeCloseTo(3975, 2);
   });
 });

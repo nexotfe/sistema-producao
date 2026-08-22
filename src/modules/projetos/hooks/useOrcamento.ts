@@ -11,6 +11,8 @@ import {
   type ItemOrcamentoBase,
 } from "../lib/buscarDadosOrcamento";
 import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
+import { avaliarCenarioComercialAprovado } from "../lib/avaliarCenarioComercialAprovado";
+import type { DecisaoUsoCenarioComercial } from "../lib/decidirUsoCenarioComercialAprovado";
 import type { ResultadoResumoProdutivoProjeto } from "../lib/calcularResumoProdutivoProjeto";
 
 export type { CenarioComercialAprovadoResumo } from "../lib/buscarCenarioComercialAprovado";
@@ -82,6 +84,16 @@ export function useOrcamento(idProjeto: string | null) {
   // substitui).
   const [cenarioComercialAprovado, setCenarioComercialAprovado] =
     useState<CenarioComercialAprovadoResumo | null>(null);
+  // DEC-007 §6.2/Fase 8b (invalidação automática) - decisão (função
+  // pura decidirUsoCenarioComercialAprovado.ts, via
+  // avaliarCenarioComercialAprovado.ts) sobre se o cenário acima ainda
+  // vale para uso corrente. null = sem cenário aprovado (mesmo
+  // significado de cenarioComercialAprovado===null). SEMPRE calculada
+  // dentro do mesmo carregamento assíncrono, antes do primeiro
+  // setState - nunca existe um render em que o cenário desatualizado
+  // aparece temporariamente como corrente enquanto a verificação roda.
+  const [decisaoCenarioComercial, setDecisaoCenarioComercial] =
+    useState<DecisaoUsoCenarioComercial | null>(null);
 
   // idProjetoCarregado rastreia para qual projeto os dados acima
   // realmente correspondem. Enquanto for diferente de idProjeto,
@@ -116,9 +128,14 @@ export function useOrcamento(idProjeto: string | null) {
   // resultado obsoleto em vez de aplica-lo.
   const geracaoCargaRef = useRef(0);
 
-  function aplicarDadosOrcamento(dados: DadosOrcamentoProjeto, cenarioAprovado: CenarioComercialAprovadoResumo | null) {
+  function aplicarDadosOrcamento(
+    dados: DadosOrcamentoProjeto,
+    cenarioAprovado: CenarioComercialAprovadoResumo | null,
+    decisaoCenario: DecisaoUsoCenarioComercial | null,
+  ) {
     setProjetoId(dados.projeto.id);
     setCenarioComercialAprovado(cenarioAprovado);
+    setDecisaoCenarioComercial(decisaoCenario);
     setNumero(dados.projeto.numeroProjeto);
     setNomeProjeto(dados.projeto.nomeProjeto);
     setTipoProjeto(dados.projeto.tipoProjeto);
@@ -169,7 +186,18 @@ export function useOrcamento(idProjeto: string | null) {
     }
 
     if (dados) {
-      aplicarDadosOrcamento(dados, cenarioAprovado);
+      const decisaoCenario = await avaliarCenarioComercialAprovado(
+        supabase,
+        idProjetoAlvo,
+        dados.projeto.statusProjeto,
+        cenarioAprovado,
+      );
+
+      if (geracaoCargaRef.current !== minhaGeracao) {
+        return;
+      }
+
+      aplicarDadosOrcamento(dados, cenarioAprovado, decisaoCenario);
     } else {
       setErro("Projeto não encontrado.");
     }
@@ -202,7 +230,15 @@ export function useOrcamento(idProjeto: string | null) {
         return;
       }
 
-      aplicarDadosOrcamento(dados, cenarioAprovado);
+      const decisaoCenario = await avaliarCenarioComercialAprovado(
+        supabase,
+        idProjetoAtual,
+        dados.projeto.statusProjeto,
+        cenarioAprovado,
+      );
+      if (geracaoCargaRef.current !== minhaGeracao) return;
+
+      aplicarDadosOrcamento(dados, cenarioAprovado, decisaoCenario);
       setIdProjetoCarregado(idProjetoAtual);
     }
 
@@ -247,6 +283,21 @@ export function useOrcamento(idProjeto: string | null) {
     : RESUMO_PRODUTIVO_VAZIO;
   const erroResumoProdutivoExibido = dadosValidos ? erroResumoProdutivo : null;
   const cenarioComercialAprovadoExibido = dadosValidos ? cenarioComercialAprovado : null;
+  const decisaoCenarioComercialExibida = dadosValidos ? decisaoCenarioComercial : null;
+  // Só o cenário REALMENTE usável (decisão pura confirmou) entra no
+  // cálculo financeiro e na exibição da composição "Custo dos itens +
+  // Ajuste comercial" - um cenário existente mas desatualizado (ex.:
+  // 260007) se comporta EXATAMENTE como "nenhum cenário aprovado" daqui
+  // pra baixo: custo ao vivo, sem nenhuma linha de ajuste.
+  const cenarioComercialUsavelExibido =
+    cenarioComercialAprovadoExibido && decisaoCenarioComercialExibida?.usarCenario === true
+      ? cenarioComercialAprovadoExibido
+      : null;
+  // Aviso interno (Orçamento): existe cenário aprovado, mas a decisão
+  // não confirmou seu uso - nunca aparece quando não há cenário nenhum
+  // (esse é o comportamento "sem cenário", sem aviso).
+  const cenarioComercialDesatualizado =
+    cenarioComercialAprovadoExibido !== null && decisaoCenarioComercialExibida?.usarCenario !== true;
 
   // Breakdown por item: cada linha aplica a formula individualmente
   // sobre o proprio custo (exibicao da tabela de itens).
@@ -280,8 +331,8 @@ export function useOrcamento(idProjeto: string | null) {
   // muda. Sem cenário aprovado, comportamento idêntico ao anterior.
   const resumoOrcamento = useMemo(() => {
     const custoTotalItens = itensBaseExibidos.reduce((acc, item) => acc + item.custo, 0);
-    const custoTotalEfetivo = cenarioComercialAprovadoExibido
-      ? cenarioComercialAprovadoExibido.novoCustoTecnico
+    const custoTotalEfetivo = cenarioComercialUsavelExibido
+      ? cenarioComercialUsavelExibido.novoCustoTecnico
       : custoTotalItens;
     const cargaTributariaEfetivaCalculo = cargaTributariaPercentExibido ?? cargaTributariaSugeridaExibida;
 
@@ -321,7 +372,7 @@ export function useOrcamento(idProjeto: string | null) {
     cargaTributariaPercentExibido,
     cargaTributariaSugeridaExibida,
     descontoPercentualExibido,
-    cenarioComercialAprovadoExibido,
+    cenarioComercialUsavelExibido,
   ]);
 
   const resumoProdutivo = useMemo(() => {
@@ -526,6 +577,10 @@ export function useOrcamento(idProjeto: string | null) {
     resumoOrcamento,
     resumoProdutivo,
     cenarioComercialAprovado: cenarioComercialAprovadoExibido,
+    /** true só quando um cenário aprovado existe E está sendo efetivamente usado no cálculo (decisão confirmou). */
+    usandoCenarioComercialAprovado: cenarioComercialUsavelExibido !== null,
+    /** true quando existe cenário aprovado mas ele NÃO está sendo usado (desatualizado) - nunca true na ausência de qualquer cenário. Dirige o aviso interno do Orçamento/Cenários. */
+    cenarioComercialDesatualizado,
 
     salvando,
     salvar,

@@ -11,6 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface CenarioComercialAprovadoResumo {
   readonly id: string;
+  readonly empresaId: string;
   readonly tipoCenario: "atual" | "ajustado";
   readonly dataSolicitadaCliente: string;
   readonly prazoProposto: string;
@@ -21,10 +22,30 @@ export interface CenarioComercialAprovadoResumo {
   /** Valor-base congelado (custoTecnicoAtual + custoAdicionalTotal) - entrada do fluxo financeiro do Orçamento/Proposta, ainda sem margem/imposto. */
   readonly novoCustoTecnico: number;
   readonly aprovadoEm: string;
+  /**
+   * Hash SHA-256 hex (64 chars) da base técnica no momento da
+   * aprovação (migration 20260822165408) - null = cenário aprovado
+   * ANTES da migration (legado, ex.: 260007), nunca backfillado.
+   * Consumido por avaliarCenarioComercialAprovado.ts para decidir se o
+   * cenário ainda é válido para uso corrente - nunca comparado aqui.
+   */
+  readonly assinaturaTecnica: string | null;
+  /**
+   * Janela produtiva REAL usada para calcular a assinatura na
+   * aprovação (snapshot.disponibilidadeMaterial.original/
+   * saidaPrevisaoComercial.primeiraEntregaPossivel) - nunca
+   * [dataSolicitadaCliente, prazoProposto] (a entrega pode ser antes
+   * da data solicitada). null quando o snapshot não tiver esses
+   * campos no formato esperado (ex.: formato antigo) - tratado como
+   * "não é possível reverificar" pelo chamador.
+   */
+  readonly janelaInicio: string | null;
+  readonly janelaFim: string | null;
 }
 
 type LinhaCenarioComercialAprovado = {
   id: string;
+  empresa_id: string;
   tipo_cenario: "atual" | "ajustado";
   data_solicitada_cliente: string;
   prazo_proposto: string;
@@ -33,7 +54,33 @@ type LinhaCenarioComercialAprovado = {
   custo_adicional_total: number;
   novo_custo_tecnico: number;
   aprovado_em: string;
+  assinatura_tecnica: string | null;
+  snapshot: unknown;
 };
+
+function extrairJanelaDoSnapshot(snapshot: unknown): { janelaInicio: string | null; janelaFim: string | null } {
+  if (typeof snapshot !== "object" || snapshot === null) {
+    return { janelaInicio: null, janelaFim: null };
+  }
+
+  const registro = snapshot as Record<string, unknown>;
+  const disponibilidadeMaterial = registro.disponibilidadeMaterial;
+  const saidaPrevisaoComercial = registro.saidaPrevisaoComercial;
+
+  const janelaInicio =
+    typeof disponibilidadeMaterial === "object" && disponibilidadeMaterial !== null
+      ? (disponibilidadeMaterial as Record<string, unknown>).original
+      : null;
+  const janelaFim =
+    typeof saidaPrevisaoComercial === "object" && saidaPrevisaoComercial !== null
+      ? (saidaPrevisaoComercial as Record<string, unknown>).primeiraEntregaPossivel
+      : null;
+
+  return {
+    janelaInicio: typeof janelaInicio === "string" ? janelaInicio : null,
+    janelaFim: typeof janelaFim === "string" ? janelaFim : null,
+  };
+}
 
 export async function buscarCenarioComercialAprovado(
   client: SupabaseClient,
@@ -42,7 +89,7 @@ export async function buscarCenarioComercialAprovado(
   const { data, error } = await client
     .from("cenarios_comerciais_aprovados")
     .select(
-      "id,tipo_cenario,data_solicitada_cliente,prazo_proposto,diferenca_em_dias,custo_tecnico_atual,custo_adicional_total,novo_custo_tecnico,aprovado_em",
+      "id,empresa_id,tipo_cenario,data_solicitada_cliente,prazo_proposto,diferenca_em_dias,custo_tecnico_atual,custo_adicional_total,novo_custo_tecnico,aprovado_em,assinatura_tecnica,snapshot",
     )
     .eq("projeto_id", projetoId)
     .eq("vigente", true)
@@ -53,9 +100,11 @@ export async function buscarCenarioComercialAprovado(
   }
 
   const linha = data as LinhaCenarioComercialAprovado;
+  const { janelaInicio, janelaFim } = extrairJanelaDoSnapshot(linha.snapshot);
 
   return {
     id: linha.id,
+    empresaId: linha.empresa_id,
     tipoCenario: linha.tipo_cenario,
     dataSolicitadaCliente: linha.data_solicitada_cliente,
     prazoProposto: linha.prazo_proposto,
@@ -64,5 +113,8 @@ export async function buscarCenarioComercialAprovado(
     custoAdicionalTotal: Number(linha.custo_adicional_total),
     novoCustoTecnico: Number(linha.novo_custo_tecnico),
     aprovadoEm: linha.aprovado_em,
+    assinaturaTecnica: linha.assinatura_tecnica,
+    janelaInicio,
+    janelaFim,
   };
 }
