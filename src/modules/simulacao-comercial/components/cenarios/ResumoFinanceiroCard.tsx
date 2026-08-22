@@ -21,7 +21,9 @@ import { Card } from "@/modules/shared/ui/Card";
 import { Badge } from "@/modules/shared/ui/Badge";
 import { Button } from "@/modules/shared/ui/Button";
 import { Modal } from "@/modules/shared/ui/Modal";
+import { supabase } from "@/lib/supabaseClient";
 import { aprovarCenarioComercialAction } from "@/modules/simulacao-comercial/actions/aprovarCenarioComercialAction";
+import { buscarCenarioAprovadoPorChaveIdempotencia } from "@/modules/simulacao-comercial/lib/cenarios/buscarCenarioAprovadoPorChaveIdempotencia";
 import type { CenarioAjustadoPrevisao } from "@/modules/simulacao-comercial/hooks/usePrevisaoComercialCapacidade";
 import type { SaidaPrevisaoComercial } from "@/modules/simulacao-comercial/lib/cenarios/montarPrevisaoComercialProjeto";
 import type { CenarioComercialAprovadoResumo } from "@/modules/projetos/lib/buscarCenarioComercialAprovado";
@@ -83,6 +85,12 @@ export function ResumoFinanceiroCard({
   const [aprovando, setAprovando] = useState(false);
   const [erroAprovacao, setErroAprovacao] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  // Migração 20260822195805 (idempotência - correção do usuário após o
+  // achado de travamento em "Aprovando..."): gerada quando o modal ABRE
+  // (abrirConfirmacao), reaproveitada em toda nova tentativa da MESMA
+  // confirmação - nunca regenerada a cada clique. Só uma chave nova se
+  // o usuário fechar e reabrir o modal (uma decisão nova de aprovar).
+  const [chaveIdempotencia, setChaveIdempotencia] = useState("");
 
   const saidaEfetiva = saidaAjustada ?? saidaAtual;
   const tipoCenarioEfetivo: "atual" | "ajustado" = saidaAjustada ? "ajustado" : "atual";
@@ -99,7 +107,33 @@ export function ResumoFinanceiroCard({
     setErroAprovacao(null);
     setSucesso(null);
     setMotivoSubstituicao("");
+    setChaveIdempotencia(crypto.randomUUID());
     setModalAberto(true);
+  }
+
+  /**
+   * Depois de uma falha AMBÍGUA da RPC (a chamada de rede em si falhou,
+   * nunca houve resposta limpa - motivo="gravacao_incerta"), consulta se
+   * a aprovação já foi gravada com a MESMA chave antes de decidir
+   * qualquer coisa. Achou = trata como sucesso (a escrita aconteceu, só
+   * a resposta se perdeu). Não achou = nada foi gravado, libera nova
+   * tentativa com a MESMA chave (a RPC é idempotente - mesmo que a
+   * primeira tentativa ainda esteja em voo em algum lugar e complete
+   * depois, ela nunca duplica: devolve o cenário já existente).
+   */
+  async function verificarEDecidirAposGravacaoIncerta() {
+    const encontrado = await buscarCenarioAprovadoPorChaveIdempotencia(supabase, projetoId, chaveIdempotencia);
+
+    if (encontrado) {
+      setModalAberto(false);
+      setSucesso("Cenário comercial aprovado com sucesso.");
+      onCenarioAprovado();
+      return;
+    }
+
+    setErroAprovacao(
+      "A conexão caiu antes de confirmar a gravação. Verificamos e nada foi registrado - pode tentar novamente com segurança.",
+    );
   }
 
   async function confirmarAprovacao() {
@@ -113,44 +147,85 @@ export function ResumoFinanceiroCard({
     setAprovando(true);
     setErroAprovacao(null);
 
-    const resultado = await aprovarCenarioComercialAction({
-      projetoId,
-      tipoCenario: tipoCenarioEfetivo,
-      dataNecessidade: premissas.dataNecessidade,
-      margemSegurancaDias: premissas.margemSegurancaDias,
-      dataPrevistaAprovacaoPedido: premissas.dataPrevistaAprovacaoPedido,
-      capacidadeExtraAutorizada: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.capacidadeExtraAutorizada ?? []) : [],
-      temporariosPorPrioridade: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.temporariosPorPrioridade ?? []) : [],
-      disponibilidadeMaterialNegociada: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.disponibilidadeMaterialNegociada ?? null) : null,
-      contratacoes: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.contratacoes ?? []) : [],
-      contratacaoNegociacaoMaterial: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.contratacaoNegociacaoMaterial ?? null) : null,
-      statusExibido: saidaEfetiva.status,
-      primeiraEntregaPossivelExibida: saidaEfetiva.primeiraEntregaPossivel,
-      diferencaEmDiasExibida: saidaEfetiva.diferencaEmDias,
-      custoAdicionalExibido: saidaEfetiva.custoAdicional,
-      custoTecnicoAtualExibido: custoTecnicoAtual,
-      valorComercialAtualReferenciaExibido: valorComercialAtualReferencia,
-      motivoSubstituicao: cenarioJaAprovado ? motivoSubstituicao.trim() : null,
-    });
+    try {
+      const resultado = await aprovarCenarioComercialAction({
+        projetoId,
+        tipoCenario: tipoCenarioEfetivo,
+        dataNecessidade: premissas.dataNecessidade,
+        margemSegurancaDias: premissas.margemSegurancaDias,
+        dataPrevistaAprovacaoPedido: premissas.dataPrevistaAprovacaoPedido,
+        capacidadeExtraAutorizada: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.capacidadeExtraAutorizada ?? []) : [],
+        temporariosPorPrioridade: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.temporariosPorPrioridade ?? []) : [],
+        disponibilidadeMaterialNegociada: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.disponibilidadeMaterialNegociada ?? null) : null,
+        contratacoes: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.contratacoes ?? []) : [],
+        contratacaoNegociacaoMaterial: tipoCenarioEfetivo === "ajustado" ? (cenarioAjustado?.contratacaoNegociacaoMaterial ?? null) : null,
+        statusExibido: saidaEfetiva.status,
+        primeiraEntregaPossivelExibida: saidaEfetiva.primeiraEntregaPossivel,
+        diferencaEmDiasExibida: saidaEfetiva.diferencaEmDias,
+        custoAdicionalExibido: saidaEfetiva.custoAdicional,
+        custoTecnicoAtualExibido: custoTecnicoAtual,
+        valorComercialAtualReferenciaExibido: valorComercialAtualReferencia,
+        motivoSubstituicao: cenarioJaAprovado ? motivoSubstituicao.trim() : null,
+        chaveIdempotencia,
+      });
 
-    setAprovando(false);
+      if (!resultado.ok) {
+        // gravacao_incerta nunca aparece aqui como "erro comum" - exige
+        // a verificação acima antes de qualquer mensagem para o usuário.
+        if (resultado.motivo === "gravacao_incerta") {
+          await verificarEDecidirAposGravacaoIncerta();
+          return;
+        }
 
-    if (!resultado.ok) {
-      const mensagens: Record<string, string> = {
-        nao_autenticado: "Sessão expirada - faça login novamente antes de aprovar.",
-        sem_janela_produtiva: "Não foi possível recalcular a janela produtiva no servidor - revise as premissas comerciais.",
-        divergente: "Os dados mudaram desde o último cálculo - recalcule o cenário antes de aprovar.",
-        sem_prazo_calculavel: "Não foi possível determinar um prazo dentro do horizonte avaliado - revise as alternativas.",
-        sem_orcamento_resolvivel: "Não foi possível resolver o orçamento atual do projeto - revise os itens do orçamento.",
-        erro: "mensagem" in resultado ? resultado.mensagem : "Não foi possível concluir a aprovação.",
-      };
-      setErroAprovacao(mensagens[resultado.motivo] ?? "Não foi possível concluir a aprovação.");
-      return;
+        // tempo_esgotado/falha_etapa: tela INTERNA (orçamentista/admin,
+        // nunca vista pelo cliente) - mostrar a etapa identifica onde
+        // parar para investigar, sem expor a mensagem técnica bruta
+        // (essa continua só no console.error do servidor). Achado real:
+        // "Nada foi gravado" é sempre verdade aqui - ambas as etapas
+        // rastreadas só existem ANTES da chamada a persistir.
+        if (resultado.motivo === "tempo_esgotado") {
+          setErroAprovacao(
+            `Tempo esgotado na etapa "${resultado.etapa}". Nada foi gravado - corrija a etapa antes de tentar novamente.`,
+          );
+          return;
+        }
+        if (resultado.motivo === "falha_etapa") {
+          setErroAprovacao(
+            `Falha na etapa "${resultado.etapa}" (${resultado.duracaoMs}ms). Nada foi gravado - veja o log do servidor para o detalhe técnico antes de tentar novamente.`,
+          );
+          return;
+        }
+
+        const mensagens: Record<string, string> = {
+          nao_autenticado: "Sessão expirada - faça login novamente antes de aprovar.",
+          nao_autorizado: "Você não tem permissão de administrador para aprovar um cenário comercial.",
+          sem_janela_produtiva: "Não foi possível recalcular a janela produtiva no servidor - revise as premissas comerciais.",
+          divergente: "Os dados mudaram desde o último cálculo - recalcule o cenário antes de aprovar.",
+          sem_prazo_calculavel: "Não foi possível determinar um prazo dentro do horizonte avaliado - revise as alternativas.",
+          sem_orcamento_resolvivel: "Não foi possível resolver o orçamento atual do projeto - revise os itens do orçamento.",
+          erro: "mensagem" in resultado ? resultado.mensagem : "Não foi possível concluir a aprovação.",
+        };
+        setErroAprovacao(mensagens[resultado.motivo] ?? "Não foi possível concluir a aprovação.");
+        return;
+      }
+
+      setModalAberto(false);
+      setSucesso("Cenário comercial aprovado com sucesso.");
+      onCenarioAprovado();
+    } catch {
+      // A PRÓPRIA chamada à Server Action lançou (ex.: falha de
+      // transporte invocando o endpoint) - tão ambíguo quanto
+      // gravacao_incerta (não sabemos se o servidor chegou a gravar),
+      // mesma verificação antes de decidir.
+      await verificarEDecidirAposGravacaoIncerta();
+    } finally {
+      // SEMPRE roda - mesmo se aprovarCenarioComercialAction ou a
+      // verificação pós-gravação-incerta lançarem algo inesperado. É a
+      // correção direta do achado real (travamento em "Aprovando...":
+      // antes, um erro não tratado no meio do fluxo deixava o botão
+      // preso para sempre, sem nenhuma forma de tentar de novo).
+      setAprovando(false);
     }
-
-    setModalAberto(false);
-    setSucesso("Cenário comercial aprovado com sucesso.");
-    onCenarioAprovado();
   }
 
   return (
