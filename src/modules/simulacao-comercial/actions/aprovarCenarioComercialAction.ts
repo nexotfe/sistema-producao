@@ -39,7 +39,19 @@ import {
   type ResultadoAprovacaoCenarioAction,
 } from "./orquestrarAprovacaoCenarioComercial";
 
-export type { ResultadoAprovacaoCenarioAction };
+// Achado real em produção (ReferenceError: ResultadoAprovacaoCenarioAction
+// is not defined, "at module evaluation" do chunk desta Server Action -
+// via `vercel logs`): este arquivo tinha um `export type { ... }`
+// reexportando um tipo sem NENHUM consumidor real em todo o projeto
+// (confirmado por grep) - o Turbopack, ao empacotar o chunk de "use
+// server", não eliminou essa reexportação de tipo corretamente, deixando
+// uma referência de VALOR para um identificador que só existe em tempo
+// de tipo, quebrando a avaliação do módulo inteiro antes de qualquer
+// código rodar (nenhuma etapa chega a executar, nenhuma linha é gravada -
+// mesmo sintoma relatado: falha imediata, sem timeout, sem gravacao_incerta).
+// Removida por não ter uso - quem precisar do tipo deve importar
+// diretamente de orquestrarAprovacaoCenarioComercial.ts (onde ele é
+// definido), nunca reexportado por um arquivo "use server".
 
 export async function aprovarCenarioComercialAction(
   paramsRecebidos: unknown,
