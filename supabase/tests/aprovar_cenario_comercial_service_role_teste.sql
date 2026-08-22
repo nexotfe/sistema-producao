@@ -1,9 +1,10 @@
--- TESTE (pós-aplicação) da migration
+-- TESTE (pós-aplicação) das migrations
 -- 20260822165408_aprovar_cenario_comercial_service_role_assinatura_tecnica.sql
--- (Fase 1 da transição em duas fases, correção explícita do usuário -
--- ver cabeçalho da migration) - NÃO é uma migration, vive em
--- supabase/tests/, nunca deve ser aplicado em produção. Assume que a
--- migration real já foi aplicada - NÃO embute o DDL dela.
+-- (Fase 1) e 20260822195805_aprovar_cenario_comercial_v2_idempotencia.sql
+-- (idempotência, correção do usuário após o achado de travamento em
+-- "Aprovando..." no orçamento 260007) - NÃO é uma migration, vive em
+-- supabase/tests/, nunca deve ser aplicado em produção. Assume que as
+-- duas migrations reais já foram aplicadas - NÃO embute o DDL delas.
 --
 -- DIFERENÇA DELIBERADA do padrão usado em
 -- cenarios_comerciais_aprovados_teste.sql (que reaproveita fixtures
@@ -16,38 +17,39 @@
 -- real, nunca aplicado fora deste ambiente local de validação.
 --
 -- Escopo coberto (itens do checkpoint pedido pelo usuário):
---   0. COEXISTÊNCIA (correção desta rodada): as DUAS RPCs (antiga,
---      12 parâmetros, e nova, aprovar_cenario_comercial_v2) existem e
---      funcionam SIMULTANEAMENTE - a antiga continua chamável por
---      authenticated (código ainda em produção), a nova só por
---      service_role (código novo). Nenhuma delas quebra a outra.
---   1. anon/authenticated negados por ACL (42501) na RPC NOVA - nunca
---      chegam a executar o corpo da função. A RPC ANTIGA continua
---      aceitando authenticated normalmente (testado em 0).
+--   0. COEXISTÊNCIA: as DUAS RPCs (antiga, 12 parâmetros, e nova,
+--      aprovar_cenario_comercial_v2) existem e funcionam
+--      SIMULTANEAMENTE - a antiga continua chamável por authenticated
+--      (código ainda em produção), a nova só por service_role (código
+--      novo). Nenhuma delas quebra a outra.
+--   1. anon/authenticated negados por ACL (42501) na RPC NOVA.
 --   2. service_role aprova com sucesso via v2; aprovado_por gravado é
---      EXATAMENTE p_aprovado_por (nunca auth.uid()/sessão - sob
---      service_role não haveria JWT de qualquer forma).
---   3. as DUAS assinaturas existem no catálogo (nem a antiga foi
---      removida, nem a nova ficou faltando) - a remoção da antiga é
---      escopo da Fase 2 (migration futura, não incluída aqui).
---   4. usuário sem nível admin rejeitado na v2 (mesma mensagem/motivo
---      de antes: "administrad").
---   5. usuário de outra empresa (p_empresa_id não bate com o perfil)
---      rejeitado na v2.
+--      EXATAMENTE p_aprovado_por.
+--   3. as DUAS assinaturas existem no catálogo; a assinatura v2
+--      ANTERIOR (Fase 1, 15 parâmetros, sem idempotência) NÃO existe
+--      mais - trocada em bloco por esta migration (nunca usada em
+--      produção, seguro substituir).
+--   4. usuário sem nível admin rejeitado na v2.
+--   5. usuário de outra empresa rejeitado na v2.
 --   6. projeto de outra empresa rejeitado na v2.
 --   7. p_assinatura_tecnica nula ou malformada rejeitada na v2.
---   8. cenário legado (estilo 260007: aprovado pela RPC ANTIGA)
---      permanece com assinatura_tecnica NULL - nunca backfillado,
---      nunca bloqueado por CHECK.
+--   8. cenário legado (estilo 260007) permanece com assinatura_tecnica
+--      NULL - nunca backfillado.
 --   9. regressão: substituição/motivo obrigatório e "1 vigente por
 --      projeto" continuam funcionando na v2.
+--   10. IDEMPOTÊNCIA (nova nesta migration): mesma chave + mesmo
+--       projeto + mesmo hash devolve o cenário já gravado (nunca insere
+--       de novo); mesma chave + projeto OU hash diferente é erro de
+--       integridade (nunca devolve outro cenário); p_chave_idempotencia/
+--       p_hash_solicitacao ausentes são rejeitados.
 --
 -- FORA de escopo aqui (não verificável em SQL puro, coberto em
 -- TypeScript): "Server Action rejeita ANTES de criar o client
--- privilegiado" - ver orquestrarAprovacaoCenarioComercial.test.ts
--- (testes "nao_autenticado"/"nao_autorizado"/"erro genérico quando
--- calcularAssinaturaTecnica falha"); "código novo chama exclusivamente
--- v2, nunca a antiga" - ver persistirViaRpcAprovacaoCenario.test.ts.
+-- privilegiado" - orquestrarAprovacaoCenarioComercial.test.ts; "código
+-- novo chama exclusivamente v2" - persistirViaRpcAprovacaoCenario.test.ts;
+-- "timeout por etapa"/"gravação incerta verificada antes do retry" -
+-- executarComTimeout.test.ts, orquestrarAprovacaoCenarioComercial.test.ts,
+-- ResumoFinanceiroCard.test.tsx.
 
 begin;
 
@@ -63,6 +65,7 @@ declare
   v_empresa_a uuid := gen_random_uuid();
   v_empresa_b uuid := gen_random_uuid();
   v_projeto_a uuid := gen_random_uuid();
+  v_projeto_a2 uuid := gen_random_uuid();
   v_projeto_b uuid := gen_random_uuid();
 begin
   insert into auth.users (id, is_sso_user, is_anonymous) values
@@ -83,6 +86,7 @@ begin
     id, empresa_id, numero_projeto, tipo_projeto, status, created_by, nome
   ) values
     (v_projeto_a, v_empresa_a, '900001', 'fabricacao', 'em_analise', v_admin_a, 'Projeto Teste A (local)'),
+    (v_projeto_a2, v_empresa_a, '900003', 'fabricacao', 'em_analise', v_admin_a, 'Projeto Teste A2 (local, mesma empresa)'),
     (v_projeto_b, v_empresa_b, '900002', 'fabricacao', 'em_analise', v_admin_b, 'Projeto Teste B (local)');
 
   perform set_config('teste.admin_a', v_admin_a::text, true);
@@ -91,39 +95,41 @@ begin
   perform set_config('teste.empresa_a', v_empresa_a::text, true);
   perform set_config('teste.empresa_b', v_empresa_b::text, true);
   perform set_config('teste.projeto_a', v_projeto_a::text, true);
+  perform set_config('teste.projeto_a2', v_projeto_a2::text, true);
   perform set_config('teste.projeto_b', v_projeto_b::text, true);
 
-  raise notice 'FIXTURES OK: empresa_a=%, admin_a=%, operador_a=%, projeto_a=%, empresa_b=%, admin_b=%, projeto_b=%.',
-    v_empresa_a, v_admin_a, v_operador_a, v_projeto_a, v_empresa_b, v_admin_b, v_projeto_b;
+  raise notice 'FIXTURES OK: empresa_a=%, admin_a=%, operador_a=%, projeto_a=%, projeto_a2=%, empresa_b=%, admin_b=%, projeto_b=%.',
+    v_empresa_a, v_admin_a, v_operador_a, v_projeto_a, v_projeto_a2, v_empresa_b, v_admin_b, v_projeto_b;
 end;
 $$;
 
 -- ---------------------------------------------------------------------
--- TESTE 3 (item 3 do escopo, REESCRITO para Fase 1 - a versão anterior
--- deste teste, de um desenho já superado, esperava a assinatura antiga
--- SUMIR nesta migration; agora ela precisa continuar existindo): as
--- DUAS assinaturas coexistem no catálogo.
+-- TESTE 3: RPC antiga continua existindo; a v2 ATUAL (17 parâmetros,
+-- com idempotência) existe; a v2 ANTERIOR (15 parâmetros, Fase 1, sem
+-- idempotência) NÃO existe mais - trocada em bloco por esta migration.
 -- ---------------------------------------------------------------------
 do $$
 begin
   if to_regprocedure('public.aprovar_cenario_comercial(uuid, text, date, date, numeric, numeric, numeric, numeric, numeric, numeric, jsonb, text)') is null then
-    raise exception 'TESTE 3a FALHOU: a RPC ANTIGA (12 parâmetros) deveria continuar existindo nesta fase (Fase 1 é aditiva - a remoção é escopo da Fase 2, migration futura).';
+    raise exception 'TESTE 3a FALHOU: a RPC ANTIGA (12 parâmetros) deveria continuar existindo (Fase 1 é aditiva, a remoção é escopo da Fase 2).';
   end if;
-  raise notice 'TESTE 3a OK: RPC antiga (12 parâmetros) continua existindo - Fase 1 é aditiva, nunca remove.';
+  raise notice 'TESTE 3a OK: RPC antiga (12 parâmetros) continua existindo.';
 
-  if to_regprocedure('public.aprovar_cenario_comercial_v2(uuid, uuid, uuid, text, date, date, numeric, numeric, numeric, numeric, numeric, numeric, jsonb, text, text)') is null then
-    raise exception 'TESTE 3b FALHOU: a RPC NOVA (aprovar_cenario_comercial_v2) deveria existir depois desta migration.';
+  if to_regprocedure('public.aprovar_cenario_comercial_v2(uuid, uuid, uuid, text, date, date, numeric, numeric, numeric, numeric, numeric, numeric, jsonb, text, text, text, text)') is null then
+    raise exception 'TESTE 3b FALHOU: a RPC v2 ATUAL (17 parâmetros, com idempotência) deveria existir depois desta migration.';
   end if;
-  raise notice 'TESTE 3b OK: RPC nova (aprovar_cenario_comercial_v2) existe.';
+  raise notice 'TESTE 3b OK: RPC v2 atual (17 parâmetros) existe.';
+
+  if to_regprocedure('public.aprovar_cenario_comercial_v2(uuid, uuid, uuid, text, date, date, numeric, numeric, numeric, numeric, numeric, numeric, jsonb, text, text)') is not null then
+    raise exception 'TESTE 3c FALHOU: a assinatura v2 ANTERIOR (15 parâmetros, Fase 1, sem idempotência) não deveria mais existir - deveria ter sido trocada em bloco.';
+  end if;
+  raise notice 'TESTE 3c OK: assinatura v2 anterior (15 parâmetros) não existe mais.';
 end;
 $$;
 
 -- ---------------------------------------------------------------------
--- TESTE 0 (item 0 do escopo - COEXISTÊNCIA): a RPC ANTIGA continua
--- funcionando NORMALMENTE para `authenticated`, com as claims de JWT
--- (mesmo idioma de cenarios_comerciais_aprovados_teste.sql) - prova que
--- o código ainda em produção (que só conhece a RPC antiga) não quebra
--- com esta migration aditiva.
+-- TESTE 0 (COEXISTÊNCIA): a RPC ANTIGA continua funcionando NORMALMENTE
+-- para `authenticated`, com as claims de JWT.
 -- ---------------------------------------------------------------------
 do $$
 begin
@@ -146,27 +152,24 @@ begin
   );
 
   if v_novo_id is null then
-    raise exception 'TESTE 0 FALHOU: RPC antiga (via authenticated, mesmo código de produção hoje) deveria continuar funcionando depois desta migration aditiva.';
+    raise exception 'TESTE 0 FALHOU: RPC antiga (via authenticated) deveria continuar funcionando depois destas migrations aditivas.';
   end if;
 
   select * into v_row from public.cenarios_comerciais_aprovados where id = v_novo_id;
-  if v_row.assinatura_tecnica is not null then
-    raise exception 'TESTE 0 FALHOU: cenário aprovado pela RPC ANTIGA nunca deveria gravar assinatura_tecnica (a coluna nova é opcional/nullable, RPC antiga não a conhece).';
+  if v_row.assinatura_tecnica is not null or v_row.chave_idempotencia is not null then
+    raise exception 'TESTE 0 FALHOU: cenário aprovado pela RPC ANTIGA nunca deveria gravar assinatura_tecnica/chave_idempotencia (colunas novas, RPC antiga não as conhece).';
   end if;
 
   perform set_config('teste.id_cenario_a_rpc_antiga', v_novo_id::text, true);
-  raise notice 'TESTE 0 OK: RPC antiga continua funcionando para authenticated depois da migration aditiva (id=%, assinatura_tecnica=NULL como esperado).', v_novo_id;
+  raise notice 'TESTE 0 OK: RPC antiga continua funcionando para authenticated (id=%, colunas novas NULL como esperado).', v_novo_id;
 end;
 $$;
 
 reset role;
 
 -- ---------------------------------------------------------------------
--- TESTE 1a (item 1): `authenticated` negado por ACL (42501) NA RPC
--- NOVA - nunca chega a executar o corpo da função (a rejeição é da
--- GRANT/REVOKE, não de uma validação interna). A RPC antiga (TESTE 0
--- acima) segue aceitando authenticated normalmente - só a nova é
--- restrita.
+-- TESTE 1a/1b: `authenticated`/`anon` negados por ACL (42501) na RPC
+-- NOVA - nunca chegam a executar o corpo da função.
 -- ---------------------------------------------------------------------
 set role authenticated;
 
@@ -180,7 +183,7 @@ begin
       current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 1,
       1000.00, 0, 0, 0, 0, null,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-      repeat('a', 64), null
+      repeat('a', 64), 'chave-teste-1a', repeat('h', 64), null
     );
     raise exception 'TESTE 1a FALHOU: authenticated conseguiu chamar aprovar_cenario_comercial_v2 diretamente.';
   exception
@@ -190,17 +193,14 @@ begin
   end;
 
   if v_sqlstate is distinct from '42501' then
-    raise exception 'TESTE 1a FALHOU: authenticated foi rejeitado, mas com sqlstate errado (esperava 42501/insufficient_privilege, achou %).', v_sqlstate;
+    raise exception 'TESTE 1a FALHOU: authenticated foi rejeitado, mas com sqlstate errado (esperava 42501, achou %).', v_sqlstate;
   end if;
-  raise notice 'TESTE 1a OK: authenticated negado por ACL na RPC NOVA (sqlstate 42501), nunca executa o corpo da função.';
+  raise notice 'TESTE 1a OK: authenticated negado por ACL na RPC NOVA (sqlstate 42501).';
 end;
 $$;
 
 reset role;
 
--- ---------------------------------------------------------------------
--- TESTE 1b (item 1): `anon` negado por ACL (42501) na RPC nova.
--- ---------------------------------------------------------------------
 set role anon;
 
 do $$
@@ -213,7 +213,7 @@ begin
       current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 1,
       1000.00, 0, 0, 0, 0, null,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-      repeat('a', 64), null
+      repeat('a', 64), 'chave-teste-1b', repeat('h', 64), null
     );
     raise exception 'TESTE 1b FALHOU: anon conseguiu chamar aprovar_cenario_comercial_v2 diretamente.';
   exception
@@ -232,9 +232,7 @@ $$;
 reset role;
 
 -- ---------------------------------------------------------------------
--- TESTE 7 (item 7): p_assinatura_tecnica nula ou malformada rejeitada
--- na v2 - rodado como service_role (senão o erro seria sempre 42501 de
--- ACL, nunca chegaria na validação de forma).
+-- TESTE 7: p_assinatura_tecnica nula ou malformada rejeitada na v2.
 -- ---------------------------------------------------------------------
 set role service_role;
 
@@ -246,14 +244,14 @@ begin
       current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 1,
       1000.00, 0, 0, 0, 0, null,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-      null, null
+      null, 'chave-teste-7a', repeat('h', 64), null
     );
     raise exception 'TESTE 7a FALHOU: p_assinatura_tecnica NULL deveria ter sido rejeitada.';
   exception
     when others then
       if sqlerrm like 'TESTE 7a FALHOU%' then raise; end if;
       if sqlerrm not ilike '%assinatura_tecnica%' then
-        raise exception 'TESTE 7a FALHOU: rejeitado, mas pelo motivo ERRADO (esperava menção a assinatura_tecnica, achou: %).', sqlerrm;
+        raise exception 'TESTE 7a FALHOU: rejeitado, mas pelo motivo ERRADO (achou: %).', sqlerrm;
       end if;
       raise notice 'TESTE 7a OK: p_assinatura_tecnica NULL rejeitada (%).', sqlerrm;
   end;
@@ -264,14 +262,14 @@ begin
       current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 1,
       1000.00, 0, 0, 0, 0, null,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-      'hash-curto-demais', null
+      'hash-curto-demais', 'chave-teste-7b', repeat('h', 64), null
     );
     raise exception 'TESTE 7b FALHOU: p_assinatura_tecnica malformada (não hex-64) deveria ter sido rejeitada.';
   exception
     when others then
       if sqlerrm like 'TESTE 7b FALHOU%' then raise; end if;
       if sqlerrm not ilike '%assinatura_tecnica%' then
-        raise exception 'TESTE 7b FALHOU: rejeitado, mas pelo motivo ERRADO (esperava menção a assinatura_tecnica, achou: %).', sqlerrm;
+        raise exception 'TESTE 7b FALHOU: rejeitado, mas pelo motivo ERRADO (achou: %).', sqlerrm;
       end if;
       raise notice 'TESTE 7b OK: p_assinatura_tecnica malformada rejeitada (%).', sqlerrm;
   end;
@@ -279,10 +277,52 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- TESTE 4 (item 2 do escopo): service_role aprova com sucesso via v2;
--- aprovado_por = EXATAMENTE p_aprovado_por (nunca auth.uid()/sessão -
--- nenhuma claim de JWT foi configurada nesta transação, provando que a
--- RPC não depende disso).
+-- TESTE 10a (IDEMPOTÊNCIA): p_chave_idempotencia/p_hash_solicitacao
+-- ausentes são rejeitados.
+-- ---------------------------------------------------------------------
+do $$
+begin
+  begin
+    perform public.aprovar_cenario_comercial_v2(
+      current_setting('teste.empresa_a')::uuid, current_setting('teste.admin_a')::uuid,
+      current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 1,
+      1000.00, 0, 0, 0, 0, null,
+      jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
+      repeat('a', 64), null, repeat('h', 64), null
+    );
+    raise exception 'TESTE 10a FALHOU: p_chave_idempotencia NULL deveria ter sido rejeitada.';
+  exception
+    when others then
+      if sqlerrm like 'TESTE 10a FALHOU%' then raise; end if;
+      if sqlerrm not ilike '%chave_idempotencia%' then
+        raise exception 'TESTE 10a FALHOU: rejeitado, mas pelo motivo ERRADO (achou: %).', sqlerrm;
+      end if;
+      raise notice 'TESTE 10a OK: p_chave_idempotencia NULL rejeitada (%).', sqlerrm;
+  end;
+
+  begin
+    perform public.aprovar_cenario_comercial_v2(
+      current_setting('teste.empresa_a')::uuid, current_setting('teste.admin_a')::uuid,
+      current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 1,
+      1000.00, 0, 0, 0, 0, null,
+      jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
+      repeat('a', 64), 'chave-teste-10a2', null, null
+    );
+    raise exception 'TESTE 10a2 FALHOU: p_hash_solicitacao NULL deveria ter sido rejeitada.';
+  exception
+    when others then
+      if sqlerrm like 'TESTE 10a2 FALHOU%' then raise; end if;
+      if sqlerrm not ilike '%hash_solicitacao%' then
+        raise exception 'TESTE 10a2 FALHOU: rejeitado, mas pelo motivo ERRADO (achou: %).', sqlerrm;
+      end if;
+      raise notice 'TESTE 10a2 OK: p_hash_solicitacao NULL rejeitada (%).', sqlerrm;
+  end;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- TESTE 4: service_role aprova com sucesso via v2; aprovado_por =
+-- EXATAMENTE p_aprovado_por.
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -294,7 +334,8 @@ begin
     current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 10,
     50000.00, 0, 0, 0, 0, 62000.00,
     jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-    repeat('a', 64), 'Substitui o cenário aprovado pela RPC antiga no TESTE 0.'
+    repeat('a', 64), 'chave-teste-4', repeat('h', 64),
+    'Substitui o cenário aprovado pela RPC antiga no TESTE 0.'
   );
 
   if v_novo_id is null then
@@ -304,7 +345,7 @@ begin
   select * into v_row from public.cenarios_comerciais_aprovados where id = v_novo_id;
 
   if v_row.aprovado_por <> current_setting('teste.admin_a')::uuid then
-    raise exception 'TESTE 4 FALHOU: aprovado_por (%) deveria ser EXATAMENTE p_aprovado_por (%) - nunca derivado de sessão/auth.uid().', v_row.aprovado_por, current_setting('teste.admin_a');
+    raise exception 'TESTE 4 FALHOU: aprovado_por (%) deveria ser EXATAMENTE p_aprovado_por.', v_row.aprovado_por;
   end if;
   if (v_row.snapshot ->> 'aprovadoPor') <> current_setting('teste.admin_a') then
     raise exception 'TESTE 4 FALHOU: snapshot.aprovadoPor deveria ser sobrescrito com p_aprovado_por.';
@@ -312,28 +353,149 @@ begin
   if v_row.assinatura_tecnica <> repeat('a', 64) then
     raise exception 'TESTE 4 FALHOU: assinatura_tecnica gravada não bate com o parâmetro enviado.';
   end if;
+  if v_row.chave_idempotencia <> 'chave-teste-4' or v_row.hash_solicitacao <> repeat('h', 64) then
+    raise exception 'TESTE 4 FALHOU: chave_idempotencia/hash_solicitacao gravados não batem com os parâmetros enviados.';
+  end if;
   if v_row.empresa_id <> current_setting('teste.empresa_a')::uuid then
-    raise exception 'TESTE 4 FALHOU: empresa_id gravado (%) deveria ser EXATAMENTE p_empresa_id.', v_row.empresa_id;
+    raise exception 'TESTE 4 FALHOU: empresa_id gravado deveria ser EXATAMENTE p_empresa_id.';
   end if;
 
-  -- Prova adicional de coexistência: a v2 conseguiu substituir o
-  -- vigente aprovado pela RPC ANTIGA no TESTE 0 (mesma trava/mesma
-  -- regra de "1 vigente por projeto", entre as duas RPCs).
   if (select count(*) from public.cenarios_comerciais_aprovados where projeto_id = current_setting('teste.projeto_a')::uuid and vigente = true) <> 1 then
     raise exception 'TESTE 4 FALHOU: deveria haver exatamente 1 vigente para o projeto (v2 substituindo o vigente da RPC antiga).';
   end if;
   if (select vigente from public.cenarios_comerciais_aprovados where id = current_setting('teste.id_cenario_a_rpc_antiga')::uuid) is not false then
-    raise exception 'TESTE 4 FALHOU: o cenário aprovado pela RPC ANTIGA (TESTE 0) deveria ter deixado de ser vigente após a v2 substituí-lo.';
+    raise exception 'TESTE 4 FALHOU: o cenário aprovado pela RPC ANTIGA deveria ter deixado de ser vigente após a v2 substituí-lo.';
   end if;
 
   perform set_config('teste.id_cenario_a', v_novo_id::text, true);
-  raise notice 'TESTE 4 OK: service_role aprovou com sucesso via v2, substituindo o vigente da RPC antiga - aprovado_por/empresa_id/assinatura_tecnica gravados EXATAMENTE como os parâmetros explícitos (id=%).', v_novo_id;
+  raise notice 'TESTE 4 OK: service_role aprovou com sucesso via v2 (id=%).', v_novo_id;
 end;
 $$;
 
 -- ---------------------------------------------------------------------
--- TESTE 4b (item 9 do escopo, regressão): substituição - motivo
--- obrigatório e só 1 vigente por projeto continuam funcionando na v2.
+-- TESTE 10b (IDEMPOTÊNCIA - o núcleo do achado desta rodada): repetir a
+-- MESMA chamada exata (mesma chave, mesmo projeto, mesmo hash) do
+-- TESTE 4 - simula um retry após "gravação incerta" (conexão caiu antes
+-- da resposta chegar, mas a escrita já tinha acontecido). Deve devolver
+-- o MESMO id, sem criar linha nova, sem re-executar a lógica de
+-- substituição (o cenário da RPC antiga já está marcado como não
+-- vigente - não pode virar não-vigente "de novo" por engano nem gerar
+-- um 2º registro de substituição).
+-- ---------------------------------------------------------------------
+do $$
+declare
+  v_id_original uuid := current_setting('teste.id_cenario_a')::uuid;
+  v_id_repeticao uuid;
+  v_qtd_linhas_antes bigint;
+  v_qtd_linhas_depois bigint;
+begin
+  select count(*) into v_qtd_linhas_antes from public.cenarios_comerciais_aprovados where projeto_id = current_setting('teste.projeto_a')::uuid;
+
+  v_id_repeticao := public.aprovar_cenario_comercial_v2(
+    current_setting('teste.empresa_a')::uuid, current_setting('teste.admin_a')::uuid,
+    current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 10,
+    50000.00, 0, 0, 0, 0, 62000.00,
+    jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
+    repeat('a', 64), 'chave-teste-4', repeat('h', 64),
+    'Substitui o cenário aprovado pela RPC antiga no TESTE 0.'
+  );
+
+  select count(*) into v_qtd_linhas_depois from public.cenarios_comerciais_aprovados where projeto_id = current_setting('teste.projeto_a')::uuid;
+
+  if v_id_repeticao <> v_id_original then
+    raise exception 'TESTE 10b FALHOU: repetir a MESMA chave/conteúdo deveria devolver o MESMO id (esperava %, achou %).', v_id_original, v_id_repeticao;
+  end if;
+  if v_qtd_linhas_depois <> v_qtd_linhas_antes then
+    raise exception 'TESTE 10b FALHOU: repetir a MESMA chave/conteúdo não deveria criar nenhuma linha nova (antes=%, depois=%).', v_qtd_linhas_antes, v_qtd_linhas_depois;
+  end if;
+  raise notice 'TESTE 10b OK: repetição idempotente (mesma chave, mesmo conteúdo) devolveu o cenário já gravado (id=%), nenhuma linha nova criada.', v_id_repeticao;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- TESTE 10c (IDEMPOTÊNCIA): mesma chave, MESMO projeto, mas HASH
+-- diferente - erro de integridade, nunca devolve o cenário existente
+-- nem cria um novo.
+-- ---------------------------------------------------------------------
+do $$
+begin
+  begin
+    perform public.aprovar_cenario_comercial_v2(
+      current_setting('teste.empresa_a')::uuid, current_setting('teste.admin_a')::uuid,
+      current_setting('teste.projeto_a')::uuid, 'ajustado', current_date, current_date + 30,
+      99999.00, 0, 0, 0, 0, null,
+      jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'ajustado'),
+      repeat('9', 64), 'chave-teste-4', repeat('9', 64),
+      'Tentativa de reusar a chave com conteúdo diferente.'
+    );
+    raise exception 'TESTE 10c FALHOU: mesma chave com hash diferente deveria ter sido rejeitada.';
+  exception
+    when others then
+      if sqlerrm like 'TESTE 10c FALHOU%' then raise; end if;
+      if sqlerrm not ilike '%conflito de idempotência%' then
+        raise exception 'TESTE 10c FALHOU: rejeitado, mas pelo motivo ERRADO (esperava "conflito de idempotência", achou: %).', sqlerrm;
+      end if;
+      raise notice 'TESTE 10c OK: mesma chave com hash diferente rejeitada como conflito de integridade (%).', sqlerrm;
+  end;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- TESTE 10d (IDEMPOTÊNCIA): mesma chave, MESMO hash, MESMA empresa, mas
+-- PROJETO diferente (projeto_a2, também da empresa A - nunca projeto_b,
+-- que já seria rejeitado antes por tenant) - também erro de
+-- integridade, nunca devolve o cenário de outro projeto.
+-- ---------------------------------------------------------------------
+do $$
+begin
+  begin
+    perform public.aprovar_cenario_comercial_v2(
+      current_setting('teste.empresa_a')::uuid, current_setting('teste.admin_a')::uuid,
+      current_setting('teste.projeto_a2')::uuid, 'atual', current_date, current_date + 10,
+      50000.00, 0, 0, 0, 0, 62000.00,
+      jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
+      repeat('a', 64), 'chave-teste-4', repeat('h', 64), null
+    );
+    raise exception 'TESTE 10d FALHOU: mesma chave para um projeto diferente (mesma empresa) deveria ter sido rejeitada (nunca devolve cenário de outro projeto).';
+  exception
+    when others then
+      if sqlerrm like 'TESTE 10d FALHOU%' then raise; end if;
+      if sqlerrm not ilike '%conflito de idempotência%' then
+        raise exception 'TESTE 10d FALHOU: rejeitado, mas pelo motivo ERRADO (esperava "conflito de idempotência", achou: %).', sqlerrm;
+      end if;
+      raise notice 'TESTE 10d OK: mesma chave para projeto diferente (mesma empresa) rejeitada como conflito de integridade (%).', sqlerrm;
+  end;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- TESTE 10e (IDEMPOTÊNCIA - isolamento entre empresas): a MESMA string
+-- de chave usada pela empresa A (TESTE 4) não colide com uma aprovação
+-- NOVA da empresa B - o índice único é (empresa_id, chave_idempotencia),
+-- nunca só chave_idempotencia isolada.
+-- ---------------------------------------------------------------------
+do $$
+declare
+  v_novo_id uuid;
+begin
+  v_novo_id := public.aprovar_cenario_comercial_v2(
+    current_setting('teste.empresa_b')::uuid, current_setting('teste.admin_b')::uuid,
+    current_setting('teste.projeto_b')::uuid, 'atual', current_date, current_date + 5,
+    9000.00, 0, 0, 0, 0, null,
+    jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
+    repeat('f', 64), 'chave-teste-4', repeat('g', 64), null
+  );
+
+  if v_novo_id is null then
+    raise exception 'TESTE 10e FALHOU: empresa B deveria conseguir usar a MESMA string de chave que a empresa A usou (índice único é por empresa, não global).';
+  end if;
+  raise notice 'TESTE 10e OK: mesma string de chave em empresas diferentes não colide (índice único é (empresa_id, chave_idempotencia)) - id=%.', v_novo_id;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- TESTE 4b (regressão): substituição - motivo obrigatório e só 1
+-- vigente por projeto continuam funcionando na v2.
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -346,7 +508,7 @@ begin
       current_setting('teste.projeto_a')::uuid, 'ajustado', current_date, current_date + 20,
       50000.00, 1000.00, 0, 0, 0, 62000.00,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'ajustado'),
-      repeat('b', 64), null
+      repeat('b', 64), 'chave-teste-4b-sem-motivo', repeat('h', 64), null
     );
     raise exception 'TESTE 4b FALHOU: substituir um cenário vigente sem motivo deveria ter sido rejeitado.';
   exception
@@ -360,7 +522,8 @@ begin
     current_setting('teste.projeto_a')::uuid, 'ajustado', current_date, current_date + 20,
     50000.00, 1000.00, 0, 0, 0, 62000.00,
     jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'ajustado'),
-    repeat('b', 64), 'Motivo de teste - substituição legítima.'
+    repeat('b', 64), 'chave-teste-4b-com-motivo', repeat('h', 64),
+    'Motivo de teste - substituição legítima.'
   );
 
   if (select count(*) from public.cenarios_comerciais_aprovados where projeto_id = current_setting('teste.projeto_a')::uuid and vigente = true) <> 1 then
@@ -374,8 +537,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- TESTE 5 (item 4 do escopo): usuário sem nível admin (operador_a)
--- rejeitado na v2 - mesma mensagem de antes ("administrad").
+-- TESTE 5: usuário sem nível admin (operador_a) rejeitado na v2.
 -- ---------------------------------------------------------------------
 do $$
 begin
@@ -385,24 +547,23 @@ begin
       current_setting('teste.projeto_a')::uuid, 'atual', current_date, current_date + 1,
       1000.00, 0, 0, 0, 0, null,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-      repeat('c', 64), 'Tentativa por não-admin.'
+      repeat('c', 64), 'chave-teste-5', repeat('h', 64), 'Tentativa por não-admin.'
     );
     raise exception 'TESTE 5 FALHOU: operador (nivel_acesso<>admin) conseguiu aprovar um cenário comercial.';
   exception
     when others then
       if sqlerrm like 'TESTE 5 FALHOU%' then raise; end if;
       if sqlerrm not ilike '%administrad%' then
-        raise exception 'TESTE 5 FALHOU: rejeitado, mas pelo motivo ERRADO (esperava menção a "administrad", achou: %).', sqlerrm;
+        raise exception 'TESTE 5 FALHOU: rejeitado, mas pelo motivo ERRADO (achou: %).', sqlerrm;
       end if;
-      raise notice 'TESTE 5 OK: usuário sem nivel_acesso=admin rejeitado especificamente por falta de permissão (%).', sqlerrm;
+      raise notice 'TESTE 5 OK: usuário sem nivel_acesso=admin rejeitado (%).', sqlerrm;
   end;
 end;
 $$;
 
 -- ---------------------------------------------------------------------
--- TESTE 6 (item 5 do escopo): p_empresa_id não bate com a empresa real
--- do perfil informado (admin_a é da empresa A, mas p_empresa_id manda
--- empresa B) - rejeitado na v2.
+-- TESTE 6/6b: p_empresa_id não bate com o perfil / projeto de outra
+-- empresa - rejeitados na v2.
 -- ---------------------------------------------------------------------
 do $$
 begin
@@ -412,25 +573,20 @@ begin
       current_setting('teste.projeto_b')::uuid, 'atual', current_date, current_date + 1,
       1000.00, 0, 0, 0, 0, null,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-      repeat('d', 64), null
+      repeat('d', 64), 'chave-teste-6', repeat('h', 64), null
     );
     raise exception 'TESTE 6 FALHOU: admin_a (empresa A) conseguiu aprovar informando p_empresa_id da empresa B.';
   exception
     when others then
       if sqlerrm like 'TESTE 6 FALHOU%' then raise; end if;
       if sqlerrm not ilike '%empresa informada%' then
-        raise exception 'TESTE 6 FALHOU: rejeitado, mas pelo motivo ERRADO (esperava menção a "empresa informada", achou: %).', sqlerrm;
+        raise exception 'TESTE 6 FALHOU: rejeitado, mas pelo motivo ERRADO (achou: %).', sqlerrm;
       end if;
-      raise notice 'TESTE 6 OK: usuário de outra empresa (p_empresa_id não bate com o perfil) rejeitado (%).', sqlerrm;
+      raise notice 'TESTE 6 OK: usuário de outra empresa rejeitado (%).', sqlerrm;
   end;
 end;
 $$;
 
--- ---------------------------------------------------------------------
--- TESTE 6b (item 6 do escopo): projeto de outra empresa rejeitado na
--- v2 - admin_a e p_empresa_id corretos (empresa A), mas p_projeto_id é
--- da empresa B.
--- ---------------------------------------------------------------------
 do $$
 begin
   begin
@@ -439,16 +595,16 @@ begin
       current_setting('teste.projeto_b')::uuid, 'atual', current_date, current_date + 1,
       1000.00, 0, 0, 0, 0, null,
       jsonb_build_object('versaoFormato', 1, 'tipoCenario', 'atual'),
-      repeat('e', 64), null
+      repeat('e', 64), 'chave-teste-6b', repeat('h', 64), null
     );
     raise exception 'TESTE 6b FALHOU: admin da empresa A conseguiu aprovar um cenário para um projeto da empresa B.';
   exception
     when others then
       if sqlerrm like 'TESTE 6b FALHOU%' then raise; end if;
       if sqlerrm not ilike '%pertence%' then
-        raise exception 'TESTE 6b FALHOU: rejeitado, mas pelo motivo ERRADO (esperava menção a "pertence", achou: %).', sqlerrm;
+        raise exception 'TESTE 6b FALHOU: rejeitado, mas pelo motivo ERRADO (achou: %).', sqlerrm;
       end if;
-      raise notice 'TESTE 6b OK: projeto de outra empresa rejeitado especificamente por tenant (%).', sqlerrm;
+      raise notice 'TESTE 6b OK: projeto de outra empresa rejeitado (%).', sqlerrm;
   end;
 end;
 $$;
@@ -456,40 +612,35 @@ $$;
 reset role;
 
 -- ---------------------------------------------------------------------
--- TESTE 8 (item 8 do escopo): cenário LEGADO (estilo 260007 - aprovado
--- pela RPC ANTIGA) permanece com assinatura_tecnica NULL - inserido
--- diretamente (superusuário, simulando o estado histórico da tabela)
--- - nunca um backfill, nunca bloqueado pelo CHECK de formato (NULL é
--- explicitamente aceito). O TESTE 0, acima, já prova o mesmo efeito de
--- forma end-to-end (via a RPC antiga de verdade, não um INSERT direto)
--- - este teste mantém a checagem direta do CHECK de formato/backfill.
+-- TESTE 8: cenário LEGADO (estilo 260007 - aprovado pela RPC ANTIGA)
+-- permanece com assinatura_tecnica/chave_idempotencia NULL.
 -- ---------------------------------------------------------------------
 do $$
 declare
   v_id_legado uuid;
   v_assinatura_depois text;
+  v_chave_depois text;
 begin
   insert into public.cenarios_comerciais_aprovados (
     empresa_id, projeto_id, vigente, tipo_cenario, aprovado_por,
     data_solicitada_cliente, prazo_proposto, diferenca_em_dias,
     custo_tecnico_atual, custo_adicional_total, novo_custo_tecnico,
     snapshot, versao_snapshot
-    -- assinatura_tecnica OMITIDA de propósito - simula uma linha
-    -- gravada pela RPC ANTIGA (que não referencia esta coluna).
   ) values (
-    current_setting('teste.empresa_b')::uuid, current_setting('teste.projeto_b')::uuid, true, 'atual', current_setting('teste.admin_b')::uuid,
+    current_setting('teste.empresa_b')::uuid, current_setting('teste.projeto_b')::uuid, false, 'atual', current_setting('teste.admin_b')::uuid,
     current_date, current_date + 5, 5,
     4920.00, 0, 4920.00,
     jsonb_build_object('versaoFormato', 1, 'aprovadoPor', current_setting('teste.admin_b')), 1
   )
   returning id into v_id_legado;
 
-  select assinatura_tecnica into v_assinatura_depois from public.cenarios_comerciais_aprovados where id = v_id_legado;
+  select assinatura_tecnica, chave_idempotencia into v_assinatura_depois, v_chave_depois
+  from public.cenarios_comerciais_aprovados where id = v_id_legado;
 
-  if v_assinatura_depois is not null then
-    raise exception 'TESTE 8 FALHOU: cenário legado deveria ter assinatura_tecnica NULL (achou %).', v_assinatura_depois;
+  if v_assinatura_depois is not null or v_chave_depois is not null then
+    raise exception 'TESTE 8 FALHOU: cenário legado deveria ter assinatura_tecnica/chave_idempotencia NULL.';
   end if;
-  raise notice 'TESTE 8 OK: cenário legado (estilo 260007, RPC antiga) permanece com assinatura_tecnica NULL, sem erro de CHECK e sem backfill (id=%).', v_id_legado;
+  raise notice 'TESTE 8 OK: cenário legado permanece com colunas novas NULL, sem erro de CHECK (id=%).', v_id_legado;
 end;
 $$;
 
