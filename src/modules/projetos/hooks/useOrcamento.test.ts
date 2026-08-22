@@ -705,6 +705,8 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
 
     expect(result.current.cenarioComercialAprovado).toBeNull();
     expect(result.current.resumoOrcamento.custoTotal).toBe(0); // projeto_itens mockado vazio neste helper
+    expect(result.current.resumoOrcamento.custoTotalItens).toBe(0);
+    expect(result.current.resumoOrcamento.ajusteComercial).toBe(0);
   });
 
   it("com cenário comercial aprovado vigente: resumoOrcamento usa novoCustoTecnico como valor-base, nunca a soma bruta de itens", async () => {
@@ -743,5 +745,54 @@ describe("useOrcamento - caracterização do cálculo (referência para a extra�
     // custoTotal (soma de itens) é 0 neste helper - se o resumo ainda
     // usasse a soma bruta, custoTotal seria 0, não 55000.
     expect(result.current.resumoOrcamento.custoTotal).toBe(55000);
+    // Correção (2026-08-22): a composição fica visível na tela interna -
+    // custoTotalItens é a soma ao vivo (0 aqui), ajusteComercial é a
+    // diferença derivada (custoTotal - custoTotalItens), nunca
+    // custoAdicionalTotal do snapshot direto (evita os três números não
+    // baterem entre si se o custo ao vivo tiver mudado desde a
+    // aprovação do cenário).
+    expect(result.current.resumoOrcamento.custoTotalItens).toBe(0);
+    expect(result.current.resumoOrcamento.ajusteComercial).toBe(55000);
+  });
+
+  it("com cenário aprovado E itens reais: Custo dos itens + Ajuste comercial somam exatamente o Custo/valor técnico após o cenário", async () => {
+    configurarMockCompleto({
+      itens: [
+        { id: "item-1", produto_id: "produto-1", pn: "PN-1", descricao: "Item 1", revisao: null, quantidade: 1, custo_congelado: 3975 },
+      ],
+      boms: [],
+    });
+    // configurarMockCompleto não cobre cenarios_comerciais_aprovados -
+    // sobrepõe só essa tabela, preservando o resto do mock já montado.
+    const fromOriginal = supabaseMock.from.getMockImplementation() as (tabela: string) => unknown;
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "cenarios_comerciais_aprovados") {
+        return criarFakeQuery({
+          data: {
+            id: "cenario-1",
+            tipo_cenario: "ajustado",
+            data_solicitada_cliente: "2026-09-01",
+            prazo_proposto: "2026-09-15",
+            diferenca_em_dias: 14,
+            custo_tecnico_atual: 3975,
+            custo_adicional_total: 945,
+            novo_custo_tecnico: 4920,
+            aprovado_em: "2026-08-18T10:00:00Z",
+          },
+          error: null,
+        });
+      }
+      return fromOriginal(tabela);
+    });
+
+    const { result } = renderHook(() => useOrcamento("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.resumoOrcamento.custoTotalItens).toBe(3975);
+    expect(result.current.resumoOrcamento.ajusteComercial).toBe(945);
+    expect(result.current.resumoOrcamento.custoTotal).toBe(4920);
+    expect(
+      result.current.resumoOrcamento.custoTotalItens + result.current.resumoOrcamento.ajusteComercial,
+    ).toBe(result.current.resumoOrcamento.custoTotal);
   });
 });

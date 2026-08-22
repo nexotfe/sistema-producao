@@ -294,7 +294,19 @@ export function useOrcamento(idProjeto: string | null) {
       });
 
     return {
+      // Custo/valor técnico já inclui o cenário aprovado, quando houver
+      // (custoTotalEfetivo). custoTotalItens é sempre a soma bruta ao
+      // vivo dos itens, e ajusteComercial é a diferença entre os dois -
+      // derivado (não custoAdicionalTotal do snapshot direto) para os
+      // três números sempre baterem exatamente entre si, mesmo que o
+      // custo ao vivo dos itens tenha mudado desde a aprovação do
+      // cenário (correção pedida pelo usuário, 2026-08-22: o Orçamento é
+      // a tela interna e deve deixar essa composição visível, ao
+      // contrário da Proposta, que distribui o ajuste nos itens sem
+      // expor uma linha separada).
+      custoTotalItens,
       custoTotal: custoTotalEfetivo,
+      ajusteComercial: custoTotalEfetivo - custoTotalItens,
       impostosTotal: impostos,
       lucroTotal: lucro,
       valorTecnico,

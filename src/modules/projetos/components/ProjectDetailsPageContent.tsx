@@ -72,6 +72,7 @@ export function ProjectDetailsPageContent({
     itens,
     resumoOrcamento,
     resumoProdutivo,
+    cenarioComercialAprovado,
     erro,
     mensagem,
     formulaErro,
@@ -507,14 +508,36 @@ export function ProjectDetailsPageContent({
 
         <Card title="Resumo do Orçamento">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
-            <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
-                Custo Total
-              </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-                {formatarMoeda(resumoOrcamento.custoTotal)}
+            {cenarioComercialAprovado ? (
+              <>
+                <div>
+                  <span className="mb-1 block text-xs font-semibold text-slate-600">
+                    Custo dos itens
+                  </span>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                    {formatarMoeda(resumoOrcamento.custoTotalItens)}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="mb-1 block text-xs font-semibold text-slate-600">
+                    Ajuste comercial
+                  </span>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                    {formatarMoeda(resumoOrcamento.ajusteComercial)}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div>
+                <span className="mb-1 block text-xs font-semibold text-slate-600">
+                  Custo Total
+                </span>
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                  {formatarMoeda(resumoOrcamento.custoTotal)}
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <span className="mb-1 block text-xs font-semibold text-slate-600">
