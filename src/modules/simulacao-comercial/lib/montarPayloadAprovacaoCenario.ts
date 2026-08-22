@@ -5,6 +5,11 @@
 // no banco, mas nada neste módulo a chama). Mesmo padrão de
 // montarPayloadV5.ts - extraído para ser testável sem nenhum client
 // Supabase.
+//
+// Migração 20260822195805 (idempotência - correção do usuário após o
+// achado de travamento em "Aprovando..."): chaveIdempotencia/
+// hashSolicitacao passaram a ser obrigatórios - mesmo padrão já
+// comprovado em aprovar_projeto_com_simulacao_v5 (montarPayloadV5.ts).
 import type {
   CenarioComercialAprovadoSnapshot,
   CustoAdicionalPorCategoriaSnapshot,
@@ -26,6 +31,10 @@ export interface ParametrosPayloadAprovacaoCenario {
   readonly snapshot: CenarioComercialAprovadoSnapshot;
   /** Hash SHA-256 hex (64 chars) da base técnica (construirDocumentoAssinaturaTecnica.ts) calculado sobre a MESMA carga de dados que produziu custoTecnicoAtual/snapshot - nunca em SQL, nunca opcional numa aprovação nova. */
   readonly assinaturaTecnica: string;
+  /** UUID gerado no cliente quando o modal de confirmação abre, reaproveitado em toda nova tentativa da MESMA confirmação - garante que um retry após falha ambígua nunca duplica a aprovação (aprovar_cenario_comercial_v2 devolve o cenário já gravado em vez de inserir de novo). */
+  readonly chaveIdempotencia: string;
+  /** SHA-256 hex de tudo que será persistido (calcularHashSolicitacaoAprovacaoCenario.ts) - junto com chaveIdempotencia, distingue uma repetição legítima de reuso indevido da chave. */
+  readonly hashSolicitacao: string;
   /** Obrigatório (não vazio) quando já existe um cenário vigente para o projeto - a RPC valida de novo, esta camada não decide isso sozinha. */
   readonly motivoSubstituicao: string | null;
 }
@@ -45,6 +54,8 @@ export interface PayloadRpcAprovacaoCenario {
   p_valor_comercial_atual_referencia: number | null;
   p_snapshot: CenarioComercialAprovadoSnapshot;
   p_assinatura_tecnica: string;
+  p_chave_idempotencia: string;
+  p_hash_solicitacao: string;
   p_motivo_substituicao: string | null;
 }
 
@@ -64,6 +75,8 @@ export function montarPayloadAprovacaoCenario(params: ParametrosPayloadAprovacao
     p_valor_comercial_atual_referencia: params.valorComercialAtualReferencia,
     p_snapshot: params.snapshot,
     p_assinatura_tecnica: params.assinaturaTecnica,
+    p_chave_idempotencia: params.chaveIdempotencia,
+    p_hash_solicitacao: params.hashSolicitacao,
     p_motivo_substituicao: params.motivoSubstituicao,
   };
 }

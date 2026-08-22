@@ -43,6 +43,8 @@ function parametros(overrides: Partial<ParametrosPayloadAprovacaoCenario> = {}):
     valorComercialAtualReferencia: 62000,
     snapshot,
     assinaturaTecnica: "a".repeat(64),
+    chaveIdempotencia: "11111111-1111-1111-1111-111111111111",
+    hashSolicitacao: "b".repeat(64),
     motivoSubstituicao: null,
     ...overrides,
   };
@@ -67,6 +69,8 @@ describe("montarPayloadAprovacaoCenario", () => {
       p_valor_comercial_atual_referencia: 62000,
       p_snapshot: parametros().snapshot,
       p_assinatura_tecnica: "a".repeat(64),
+      p_chave_idempotencia: "11111111-1111-1111-1111-111111111111",
+      p_hash_solicitacao: "b".repeat(64),
       p_motivo_substituicao: null,
     });
   });

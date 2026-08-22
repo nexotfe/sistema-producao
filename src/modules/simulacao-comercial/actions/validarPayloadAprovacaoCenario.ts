@@ -25,6 +25,9 @@ import type { DecisaoRecursoTemporario } from "../lib/cenarios/avaliarCenario";
 import type { StatusPrevisaoComercial, CustoAdicionalPrevisaoComercial } from "../lib/cenarios/montarPrevisaoComercialProjeto";
 
 const REGEX_DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+// UUID (qualquer versão) - formato de chaveIdempotencia
+// (crypto.randomUUID() no cliente, migração 20260822195805).
+const REGEX_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TAMANHO_TEXTO_LIVRE = 500;
 const MAX_ITENS_LISTA = 500;
 const MAX_MARGEM_SEGURANCA_DIAS = 3650;
@@ -160,6 +163,8 @@ export interface PayloadAprovacaoCenario {
   readonly custoTecnicoAtualExibido: number;
   readonly valorComercialAtualReferenciaExibido: number | null;
   readonly motivoSubstituicao: string | null;
+  /** UUID gerado no cliente quando o modal de confirmação abre - reaproveitado em toda nova tentativa da MESMA confirmação (nunca regenerado a cada clique). Ver montarPayloadAprovacaoCenario.ts. */
+  readonly chaveIdempotencia: string;
 }
 
 export type ResultadoValidacaoAprovacaoCenario =
@@ -246,6 +251,9 @@ export function validarPayloadAprovacaoCenario(payload: unknown): ResultadoValid
   if (registro.motivoSubstituicao !== null && !ehTextoNaoVazio(registro.motivoSubstituicao)) {
     return { valido: false, motivo: "motivoSubstituicao inválido" };
   }
+  if (typeof registro.chaveIdempotencia !== "string" || !REGEX_UUID.test(registro.chaveIdempotencia)) {
+    return { valido: false, motivo: "chaveIdempotencia inválida" };
+  }
 
   return {
     valido: true,
@@ -267,6 +275,7 @@ export function validarPayloadAprovacaoCenario(payload: unknown): ResultadoValid
       custoTecnicoAtualExibido: registro.custoTecnicoAtualExibido as number,
       valorComercialAtualReferenciaExibido: registro.valorComercialAtualReferenciaExibido as number | null,
       motivoSubstituicao: registro.motivoSubstituicao as string | null,
+      chaveIdempotencia: registro.chaveIdempotencia,
     },
   };
 }

@@ -57,9 +57,27 @@ import { compararDadosParaAprovacaoCenario, type DivergenciaAprovacaoCenario } f
 import type { ResultadoPersistenciaAprovacaoCenario } from "../lib/persistirViaRpcAprovacaoCenario";
 import type { ParametrosPayloadAprovacaoCenario } from "../lib/montarPayloadAprovacaoCenario";
 import type { PayloadAprovacaoCenario } from "./validarPayloadAprovacaoCenario";
+import { executarComTimeout, TimeoutEtapaError } from "../lib/executarComTimeout";
+import { calcularHashSolicitacaoAprovacaoCenario } from "../lib/calcularHashSolicitacaoAprovacaoCenario";
 
 export const MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO =
   "Não foi possível concluir a aprovação do cenário comercial. Recalcule a previsão comercial e tente novamente.";
+
+// Achado real (travamento em "Aprovando..." no orçamento 260007, DEC-007
+// - migração 20260822195805): cada etapa de I/O anterior à gravação tem
+// seu próprio orçamento de tempo, para nunca depender de uma promise que
+// pode travar sem nunca resolver nem rejeitar (mesma classe de bug já
+// documentada em AuthGate.tsx para o lock interno do client Supabase).
+// `persistir` (a chamada à RPC) DELIBERADAMENTE não tem timeout aqui -
+// uma vez iniciada a gravação, o correto é aguardar a resposta
+// DEFINITIVA (sucesso, erro limpo, ou falha ambígua de rede - ver
+// persistirViaRpcAprovacaoCenario.ts) - nunca desistir no meio e arriscar
+// tratar como "falhou" uma escrita que na verdade só demorou.
+const TIMEOUT_AUTORIZAR_APROVADOR_MS = 8_000;
+const TIMEOUT_VALORES_ORCAMENTO_MS = 8_000;
+const TIMEOUT_JANELA_MS = 8_000;
+const TIMEOUT_BASE_MS = 8_000;
+const TIMEOUT_ASSINATURA_TECNICA_MS = 15_000;
 
 export type ResultadoAprovacaoCenarioAction =
   | { ok: true; cenarioComercialAprovadoId: string }
@@ -71,6 +89,28 @@ export type ResultadoAprovacaoCenarioAction =
   | { ok: false; motivo: "divergente"; diferencas: DivergenciaAprovacaoCenario[] }
   | { ok: false; motivo: "sem_prazo_calculavel" }
   | { ok: false; motivo: "sem_orcamento_resolvivel" }
+  /** Uma etapa ANTERIOR à gravação excedeu seu orçamento de tempo - nada foi gravado (a RPC nem chegou a ser chamada). `etapa` identifica qual, para diagnóstico. Recuperável: o cliente pode tentar de novo com a MESMA chaveIdempotencia. */
+  | { ok: false; motivo: "tempo_esgotado"; etapa: string }
+  /**
+   * Achado real (correção do usuário): uma etapa ANTERIOR à gravação
+   * lançou um erro que NÃO foi timeout (ex.: consulta rejeitada,
+   * exceção do próprio código) - nada foi gravado. `etapa`/`duracaoMs`
+   * identificam qual etapa e quanto tempo rodou até falhar, para
+   * diagnóstico (nunca a mensagem técnica bruta, que só vai para o log
+   * do servidor). Recuperável: o cliente pode tentar de novo com a
+   * MESMA chaveIdempotencia.
+   */
+  | { ok: false; motivo: "falha_etapa"; etapa: string; duracaoMs: number }
+  /**
+   * A CHAMADA DE REDE à RPC falhou sem completar um ciclo requisição/
+   * resposta (ver persistirViaRpcAprovacaoCenario.ts) - não se sabe se a
+   * aprovação foi gravada ou não. O cliente NUNCA deve tratar isto como
+   * "falhou" nem "funcionou" diretamente - precisa consultar (leitura)
+   * se um cenário com a mesma chaveIdempotencia já existe antes de
+   * decidir (sucesso silencioso) ou liberar nova tentativa (mesma
+   * chave - a RPC é idempotente).
+   */
+  | { ok: false; motivo: "gravacao_incerta" }
   | { ok: false; motivo: "erro"; mensagem: string };
 
 export interface ValoresOrcamentoAtual {
@@ -174,13 +214,38 @@ export async function orquestrarAprovacaoCenarioComercial(
   params: PayloadAprovacaoCenario,
   deps: DependenciasAprovacaoCenarioComercial,
 ): Promise<ResultadoAprovacaoCenarioAction> {
+  // Achado real (correção do usuário: "exibir a etapa que excedeu o
+  // tempo OU retornou erro"): rastreados aqui fora do try/catch para o
+  // catch-all, no fim da função, poder atribuir QUALQUER exceção (não
+  // só TimeoutEtapaError) à etapa em andamento no momento - nunca só
+  // "erro genérico" quando se sabe exatamente onde parou. Resetado para
+  // null a cada etapa concluída com sucesso - um erro em código puro
+  // ENTRE etapas (nunca deveria acontecer, mas se acontecer) cai no
+  // "erro" genérico de sempre, nunca atribuído à etapa anterior por
+  // engano.
+  let etapaAtual: string | null = null;
+  let inicioEtapaMs = 0;
+
+  async function executarEtapa<T>(nome: string, timeoutMs: number, operacao: () => Promise<T>): Promise<T> {
+    etapaAtual = nome;
+    inicioEtapaMs = Date.now();
+    const resultado = await executarComTimeout(operacao, timeoutMs, nome);
+    etapaAtual = null;
+    return resultado;
+  }
+
   try {
-    const userId = await deps.autenticar();
+    // autenticar() usa o mesmo client Supabase (auth.getUser()) que já
+    // documentou o lock interno do GoTrueClient travando para sempre em
+    // AuthGate.tsx - mesma proteção das demais etapas, pelo mesmo motivo.
+    const userId = await executarEtapa("autenticar", TIMEOUT_AUTORIZAR_APROVADOR_MS, () => deps.autenticar());
     if (!userId) {
       return { ok: false, motivo: "nao_autenticado" };
     }
 
-    const autorizacao = await deps.autorizarAprovador(userId);
+    const autorizacao = await executarEtapa("autorizar-aprovador", TIMEOUT_AUTORIZAR_APROVADOR_MS, () =>
+      deps.autorizarAprovador(userId),
+    );
     if (!autorizacao) {
       return { ok: false, motivo: "nao_autorizado" };
     }
@@ -189,7 +254,9 @@ export async function orquestrarAprovacaoCenarioComercial(
     // Buscado ANTES de preparar a janela (`tipoProjeto` decide
     // modoDisponibilidadeMaterial abaixo) - nunca confia em nenhum dado
     // de natureza enviado pelo cliente para essa decisão.
-    const valoresOrcamento = await deps.buscarValoresOrcamentoAtual(empresaId, params.projetoId);
+    const valoresOrcamento = await executarEtapa("buscar-valores-orcamento-atual", TIMEOUT_VALORES_ORCAMENTO_MS, () =>
+      deps.buscarValoresOrcamentoAtual(empresaId, params.projetoId),
+    );
     if (!valoresOrcamento) {
       return { ok: false, motivo: "sem_orcamento_resolvivel" };
     }
@@ -202,14 +269,16 @@ export async function orquestrarAprovacaoCenarioComercial(
     // decisão de qual é a disponibilidade real de material por natureza -
     // janelaServidor.dataDisponibilidadeProducao já vem correta para
     // qualquer natureza, sem precisar de um segundo cálculo aqui.
-    const janelaServidor = await deps.prepararJanela(
-      empresaId,
-      {
-        dataNecessidade: params.dataNecessidade,
-        margemSegurancaDiasProdutivos: params.margemSegurancaDias,
-        dataPrevistaAprovacaoPedido: params.dataPrevistaAprovacaoPedido,
-      },
-      naturezaIndustrializacao ? "industrializacao" : "padrao",
+    const janelaServidor = await executarEtapa("preparar-janela", TIMEOUT_JANELA_MS, () =>
+      deps.prepararJanela(
+        empresaId,
+        {
+          dataNecessidade: params.dataNecessidade,
+          margemSegurancaDiasProdutivos: params.margemSegurancaDias,
+          dataPrevistaAprovacaoPedido: params.dataPrevistaAprovacaoPedido,
+        },
+        naturezaIndustrializacao ? "industrializacao" : "padrao",
+      ),
     );
 
     if (!janelaServidor.valida) {
@@ -219,13 +288,15 @@ export async function orquestrarAprovacaoCenarioComercial(
     // Base congelada recarregada do zero (mesmo princípio de
     // carregarBasePrevisaoComercial.ts) - janelaInicioGrade usa a mesma
     // convenção de usePrevisaoComercialCapacidade.ts (dataPrevistaAprovacaoPedido).
-    const base = await deps.carregarBase(
-      empresaId,
-      params.projetoId,
-      params.dataNecessidade,
-      params.dataPrevistaAprovacaoPedido,
-      janelaServidor.dataDisponibilidadeProducao,
-      janelaServidor.prazoInterno,
+    const base = await executarEtapa("carregar-base", TIMEOUT_BASE_MS, () =>
+      deps.carregarBase(
+        empresaId,
+        params.projetoId,
+        params.dataNecessidade,
+        params.dataPrevistaAprovacaoPedido,
+        janelaServidor.dataDisponibilidadeProducao,
+        janelaServidor.prazoInterno,
+      ),
     );
 
     // disponibilidadeOriginal = janelaServidor.dataDisponibilidadeProducao
@@ -317,27 +388,66 @@ export async function orquestrarAprovacaoCenarioComercial(
     // privilegiado - custo/snapshot/assinatura vêm todos desta mesma
     // chamada, nenhum recomputado depois com dado potencialmente
     // diferente.
-    const assinaturaTecnica = await deps.calcularAssinaturaTecnica(
-      empresaId,
-      params.projetoId,
-      disponibilidadeOriginal,
-      saidaRecalculada.primeiraEntregaPossivel,
+    // Extraído para uma const própria: narrowing de saidaRecalculada.
+    // primeiraEntregaPossivel (!== null, já checado acima) não sobrevive
+    // dentro do closure abaixo se acessado como propriedade diretamente.
+    const primeiraEntregaPossivel: string = saidaRecalculada.primeiraEntregaPossivel;
+
+    const assinaturaTecnica = await executarEtapa("calcular-assinatura-tecnica", TIMEOUT_ASSINATURA_TECNICA_MS, () =>
+      deps.calcularAssinaturaTecnica(empresaId, params.projetoId, disponibilidadeOriginal, primeiraEntregaPossivel),
     );
 
+    // Hash de TUDO que será persistido (calcularHashSolicitacaoAprovacaoCenario.ts)
+    // - junto com params.chaveIdempotencia (gerada no cliente quando o
+    // modal de confirmação abriu), permite à RPC distinguir uma
+    // repetição legítima (mesma chave, mesmo hash - devolve o cenário
+    // já gravado) de reuso indevido da chave (rejeitado como erro de
+    // integridade). Calculado sobre os MESMOS valores que vão para
+    // `persistir` logo abaixo - nunca uma segunda leitura.
+    const hashSolicitacao = calcularHashSolicitacaoAprovacaoCenario({
+      empresaId,
+      aprovadoPor: userId,
+      projetoId: params.projetoId,
+      tipoCenario: params.tipoCenario,
+      dataSolicitadaCliente: saidaRecalculada.dataSolicitadaCliente,
+      prazoProposto: primeiraEntregaPossivel,
+      custoTecnicoAtual: valoresOrcamento.custoTecnicoAtual,
+      custoAdicionalPorCategoria,
+      valorComercialAtualReferencia: valoresOrcamento.valorComercialAtualReferencia,
+      assinaturaTecnica,
+      snapshot,
+      motivoSubstituicao: params.motivoSubstituicao,
+    });
+
+    // A partir daqui, NENHUMA etapa tem timeout - a chamada a persistir
+    // pode iniciar a gravação de verdade; a resposta (sucesso, erro
+    // limpo, ou falha ambígua de rede) é sempre aguardada até o fim.
     const resultadoPersistencia = await deps.persistir({
       empresaId,
       aprovadoPor: userId,
       projetoId: params.projetoId,
       tipoCenario: params.tipoCenario,
       dataSolicitadaCliente: saidaRecalculada.dataSolicitadaCliente,
-      prazoProposto: saidaRecalculada.primeiraEntregaPossivel,
+      prazoProposto: primeiraEntregaPossivel,
       custoTecnicoAtual: valoresOrcamento.custoTecnicoAtual,
       custoAdicionalPorCategoria,
       valorComercialAtualReferencia: valoresOrcamento.valorComercialAtualReferencia,
       snapshot,
       assinaturaTecnica,
+      chaveIdempotencia: params.chaveIdempotencia,
+      hashSolicitacao,
       motivoSubstituicao: params.motivoSubstituicao,
     });
+
+    if (resultadoPersistencia.gravacaoIncerta) {
+      // A chamada de rede em si falhou - nunca houve uma resposta limpa
+      // da RPC. Nunca decide sozinho aqui se gravou ou não - o cliente
+      // precisa consultar antes de agir (ver ResumoFinanceiroCard.tsx).
+      console.error(
+        `orquestrarAprovacaoCenarioComercial: gravação incerta (falha de rede na chamada à RPC) - ${resultadoPersistencia.erro}`,
+      );
+      return { ok: false, motivo: "gravacao_incerta" };
+    }
 
     if (resultadoPersistencia.erro) {
       // Detalhe técnico (mensagem da RPC, ex.: "Só administradores podem
@@ -350,8 +460,29 @@ export async function orquestrarAprovacaoCenarioComercial(
 
     return { ok: true, cenarioComercialAprovadoId: resultadoPersistencia.cenarioComercialAprovadoId as string };
   } catch (erroCapturado) {
+    const duracaoMs = etapaAtual !== null ? Date.now() - inicioEtapaMs : null;
+
+    if (erroCapturado instanceof TimeoutEtapaError) {
+      console.error(
+        `orquestrarAprovacaoCenarioComercial: tempo esgotado na etapa "${erroCapturado.etapa}" (${duracaoMs}ms) - nada foi gravado.`,
+      );
+      return { ok: false, motivo: "tempo_esgotado", etapa: erroCapturado.etapa };
+    }
+
+    // etapaAtual não-nulo aqui = a exceção aconteceu DENTRO de uma etapa
+    // rastreada (não foi timeout, mas também não foi um erro genérico
+    // fora de qualquer etapa conhecida) - atribui e devolve a etapa/
+    // duração para diagnóstico, nunca só "erro" sem contexto nenhum.
+    if (etapaAtual !== null) {
+      const mensagemTecnica = erroCapturado instanceof Error ? erroCapturado.message : String(erroCapturado);
+      console.error(
+        `orquestrarAprovacaoCenarioComercial: falha na etapa "${etapaAtual}" (${duracaoMs}ms) - nada foi gravado - ${mensagemTecnica}`,
+      );
+      return { ok: false, motivo: "falha_etapa", etapa: etapaAtual, duracaoMs: duracaoMs ?? 0 };
+    }
+
     console.error(
-      `orquestrarAprovacaoCenarioComercial: erro inesperado - ${erroCapturado instanceof Error ? erroCapturado.message : String(erroCapturado)}`,
+      `orquestrarAprovacaoCenarioComercial: erro inesperado (fora de qualquer etapa rastreada) - ${erroCapturado instanceof Error ? erroCapturado.message : String(erroCapturado)}`,
     );
     return { ok: false, motivo: "erro", mensagem: MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO };
   }

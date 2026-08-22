@@ -14,6 +14,21 @@
 // são parâmetros explícitos do payload (ver
 // montarPayloadAprovacaoCenario.ts) - a RPC não tem JWT para derivar
 // auth.uid()/empresa_atual_id()/usuario_e_admin() sozinha.
+//
+// Migração 20260822195805 (idempotência - correção do usuário após o
+// achado de travamento em "Aprovando..."): distingue duas famílias de
+// falha, porque só uma delas é segura de tratar como "não gravou":
+// - erro LIMPO (cliente.rpc resolve com `{ error }`) - o ciclo
+//   requisição/resposta terminou normalmente, a RPC rodou até uma
+//   exceção controlada (ou nunca rodou, ex.: 42501 de ACL) - sabemos
+//   com certeza que nada foi gravado (a função inteira roda numa
+//   transação implícita, uma exceção desfaz tudo);
+// - erro AMBÍGUO (a PRÓPRIA chamada de rede lança, nunca chega a uma
+//   resposta) - não sabemos se a RPC chegou a rodar e gravar antes da
+//   conexão cair. Nunca decide sozinho aqui - devolve
+//   `gravacaoIncerta: true` para o chamador (orquestrador/UI) decidir
+//   com uma consulta de verificação antes de liberar qualquer nova
+//   tentativa.
 import { montarPayloadAprovacaoCenario, type ParametrosPayloadAprovacaoCenario, type PayloadRpcAprovacaoCenario } from "./montarPayloadAprovacaoCenario";
 
 /** Único formato de client que este helper precisa - o client de sessão real (createSupabaseServerClient) satisfaz esta interface estruturalmente, sem cast. */
@@ -28,6 +43,8 @@ export interface ResultadoPersistenciaAprovacaoCenario {
   cenarioComercialAprovadoId: string | null;
   /** Mensagem TÉCNICA do Supabase - nunca repassada ao usuário, só para log no chamador. */
   erro: string | null;
+  /** true = a CHAMADA DE REDE em si falhou (nunca houve um ciclo requisição/resposta completo) - resultado AMBÍGUO, pode ou não ter gravado. Ausente/false = resposta limpa da RPC (sucesso ou erro definitivo - já sabemos que não gravou). */
+  gravacaoIncerta?: boolean;
 }
 
 /**
@@ -41,7 +58,19 @@ export async function persistirViaRpcAprovacaoCenario(
   params: ParametrosPayloadAprovacaoCenario,
 ): Promise<ResultadoPersistenciaAprovacaoCenario> {
   const payload = montarPayloadAprovacaoCenario(params);
-  const { data, error } = await cliente.rpc("aprovar_cenario_comercial_v2", payload);
+
+  let resposta: { data: unknown; error: { message: string } | null };
+  try {
+    resposta = await cliente.rpc("aprovar_cenario_comercial_v2", payload);
+  } catch (erroDeRede) {
+    return {
+      cenarioComercialAprovadoId: null,
+      erro: erroDeRede instanceof Error ? erroDeRede.message : String(erroDeRede),
+      gravacaoIncerta: true,
+    };
+  }
+
+  const { data, error } = resposta;
 
   if (error) {
     return { cenarioComercialAprovadoId: null, erro: error.message };

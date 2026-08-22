@@ -82,6 +82,7 @@ function payload(overrides: Partial<PayloadAprovacaoCenario> = {}): PayloadAprov
     custoTecnicoAtualExibido: 50000,
     valorComercialAtualReferenciaExibido: 62000,
     motivoSubstituicao: null,
+    chaveIdempotencia: "11111111-1111-1111-1111-111111111111",
     ...overrides,
   };
 }
@@ -142,6 +143,24 @@ describe("orquestrarAprovacaoCenarioComercial", () => {
     expect(deps.persistir).not.toHaveBeenCalled();
   });
 
+  it("autenticar() lança um erro que não é timeout (ex.: mesmo lock do GoTrueClient já documentado em AuthGate.tsx): motivo='falha_etapa', etapa='autenticar'", async () => {
+    const deps = depsBase({ autenticar: vi.fn().mockRejectedValue(new Error("lock nunca liberado")) });
+    const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
+    expect(resultado).toEqual({ ok: false, motivo: "falha_etapa", etapa: "autenticar", duracaoMs: expect.any(Number) });
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  // persistir é DELIBERADAMENTE não rastreado (nunca tem timeout, nunca
+  // é atribuído a uma "etapa") - se lançar de forma inesperada (fora do
+  // próprio contrato de gravacaoIncerta/erro), cai no "erro" genérico de
+  // sempre, nunca é confundido com a ÚLTIMA etapa rastreada (que já
+  // tinha terminado com sucesso antes de persistir ser chamado).
+  it("persistir lança de forma inesperada (fora do contrato normal): cai no 'erro' genérico, nunca atribuído à última etapa rastreada", async () => {
+    const deps = depsBase({ persistir: vi.fn().mockRejectedValue(new Error("erro totalmente inesperado")) });
+    const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
+    expect(resultado).toEqual({ ok: false, motivo: "erro", mensagem: MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO });
+  });
+
   it("nao_autorizado quando autorizarAprovador() devolve null (sem perfil admin ativo) - MESMA regra de usuario_e_admin(), nunca aprova sem checar", async () => {
     const deps = depsBase({ autorizarAprovador: vi.fn().mockResolvedValue(null) });
     const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
@@ -164,10 +183,14 @@ describe("orquestrarAprovacaoCenarioComercial", () => {
     expect(deps.calcularAssinaturaTecnica).toHaveBeenCalledWith("empresa-1", "projeto-1", "2026-09-01", "2026-09-01");
   });
 
-  it("erro genérico (nunca persiste) quando calcularAssinaturaTecnica falha", async () => {
+  // Correção (achado real: mensagem genérica não dizia qual etapa falhou):
+  // um erro NÃO-timeout dentro de uma etapa rastreada agora é atribuído
+  // a ela (motivo="falha_etapa"), nunca mais cai no "erro" genérico sem
+  // contexto - nada foi gravado (persistir nunca é alcançado).
+  it("calcularAssinaturaTecnica lança um erro que NÃO é timeout: motivo='falha_etapa', etapa identificada, nunca persiste", async () => {
     const deps = depsBase({ calcularAssinaturaTecnica: vi.fn().mockRejectedValue(new Error("falha ao coletar base técnica")) });
     const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
-    expect(resultado).toEqual({ ok: false, motivo: "erro", mensagem: MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO });
+    expect(resultado).toEqual({ ok: false, motivo: "falha_etapa", etapa: "calcular-assinatura-tecnica", duracaoMs: expect.any(Number) });
     expect(deps.persistir).not.toHaveBeenCalled();
   });
 
@@ -373,5 +396,103 @@ describe("orquestrarAprovacaoCenarioComercial", () => {
         }),
       }),
     );
+  });
+
+  // Migração 20260822195805 (correção do usuário após o achado de
+  // travamento em "Aprovando..." no orçamento 260007): cada etapa
+  // anterior à gravação tem timeout próprio - uma promise que nunca
+  // resolve (mesma classe de bug do lock do client Supabase já
+  // documentada em AuthGate.tsx) precisa virar um erro recuperável e
+  // identificável, nunca travar a Server Action para sempre.
+  describe("timeout por etapa (nenhuma trava a gravação indevidamente, mas nenhuma promise pendente trava a Server Action para sempre)", () => {
+    it("autorizarAprovador nunca resolve: tempo_esgotado com etapa='autorizar-aprovador', nunca chama persistir", async () => {
+      vi.useFakeTimers();
+      const deps = depsBase({ autorizarAprovador: vi.fn(() => new Promise<never>(() => {})) });
+
+      const promessa = orquestrarAprovacaoCenarioComercial(payload(), deps);
+      await vi.advanceTimersByTimeAsync(8_000);
+      const resultado = await promessa;
+
+      expect(resultado).toEqual({ ok: false, motivo: "tempo_esgotado", etapa: "autorizar-aprovador" });
+      expect(deps.persistir).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("carregarBase nunca resolve: tempo_esgotado com etapa='carregar-base', nunca chama persistir", async () => {
+      vi.useFakeTimers();
+      const deps = depsBase({ carregarBase: vi.fn(() => new Promise<never>(() => {})) });
+
+      const promessa = orquestrarAprovacaoCenarioComercial(payload(), deps);
+      await vi.advanceTimersByTimeAsync(8_000);
+      const resultado = await promessa;
+
+      expect(resultado).toEqual({ ok: false, motivo: "tempo_esgotado", etapa: "carregar-base" });
+      expect(deps.persistir).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("calcularAssinaturaTecnica nunca resolve: tempo_esgotado com etapa='calcular-assinatura-tecnica' (orçamento de 15s, o maior), nunca chama persistir", async () => {
+      vi.useFakeTimers();
+      const deps = depsBase({ calcularAssinaturaTecnica: vi.fn(() => new Promise<never>(() => {})) });
+
+      const promessa = orquestrarAprovacaoCenarioComercial(payload(), deps);
+      await vi.advanceTimersByTimeAsync(15_000);
+      const resultado = await promessa;
+
+      expect(resultado).toEqual({ ok: false, motivo: "tempo_esgotado", etapa: "calcular-assinatura-tecnica" });
+      expect(deps.persistir).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("persistir NUNCA tem timeout - mesmo demorando mais que qualquer orçamento das etapas anteriores, aguarda a resposta real", async () => {
+      vi.useFakeTimers();
+      let resolverPersistir!: (valor: { cenarioComercialAprovadoId: string; erro: null }) => void;
+      const deps = depsBase({
+        persistir: vi.fn(
+          () =>
+            new Promise<{ cenarioComercialAprovadoId: string; erro: null }>((resolve) => {
+              resolverPersistir = resolve;
+            }),
+        ),
+      });
+
+      const promessa = orquestrarAprovacaoCenarioComercial(payload(), deps);
+      // Avança bem além de qualquer timeout de etapa anterior (15s) -
+      // persistir continua pendente, sem timeout algum.
+      await vi.advanceTimersByTimeAsync(60_000);
+      resolverPersistir({ cenarioComercialAprovadoId: "novo-id", erro: null });
+      const resultado = await promessa;
+
+      expect(resultado).toEqual({ ok: true, cenarioComercialAprovadoId: "novo-id" });
+      vi.useRealTimers();
+    });
+  });
+
+  // Migração 20260822195805 (idempotência) - chaveIdempotencia/
+  // hashSolicitacao propagados até persistir; falha AMBÍGUA da RPC vira
+  // motivo="gravacao_incerta" (nunca "erro" genérico), para o cliente
+  // saber que precisa verificar antes de decidir.
+  describe("idempotência (chave/hash propagados; gravação incerta tratada à parte de erro definitivo)", () => {
+    it("propaga chaveIdempotencia do payload e o hashSolicitacao calculado para persistir", async () => {
+      const deps = depsBase();
+      await orquestrarAprovacaoCenarioComercial(payload({ chaveIdempotencia: "22222222-2222-2222-2222-222222222222" }), deps);
+
+      expect(deps.persistir).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chaveIdempotencia: "22222222-2222-2222-2222-222222222222",
+          hashSolicitacao: expect.stringMatching(/^[0-9a-f]{64}$/),
+        }),
+      );
+    });
+
+    it("persistir devolve gravacaoIncerta=true: motivo='gravacao_incerta', nunca 'erro' genérico", async () => {
+      const deps = depsBase({
+        persistir: vi.fn().mockResolvedValue({ cenarioComercialAprovadoId: null, erro: "fetch failed", gravacaoIncerta: true }),
+      });
+
+      const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
+
+      expect(resultado).toEqual({ ok: false, motivo: "gravacao_incerta" });
+    });
   });
 });

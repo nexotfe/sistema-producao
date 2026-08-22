@@ -30,6 +30,8 @@ function parametros(): ParametrosPayloadAprovacaoCenario {
     custoAdicionalPorCategoria: { negociacaoMaterial: 0, horaAdicional: 0, recursoTemporario: 0, terceirizacao: 0 },
     valorComercialAtualReferencia: null,
     assinaturaTecnica: "a".repeat(64),
+    chaveIdempotencia: "11111111-1111-1111-1111-111111111111",
+    hashSolicitacao: "c".repeat(64),
     snapshot: construirSnapshotCenarioComercial({
       empresaId: "empresa-1",
       projetoId: "projeto-1",
@@ -65,5 +67,27 @@ describe("persistirViaRpcAprovacaoCenario", () => {
 
     expect(resultado).toEqual({ cenarioComercialAprovadoId: null, erro: "Só administradores podem aprovar um cenário comercial." });
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  // Migração 20260822195805 (idempotência) - distinção crítica: erro
+  // LIMPO (acima) já sabemos que nada foi gravado; erro AMBÍGUO (aqui)
+  // não sabemos - a própria chamada de rede nunca completou um ciclo
+  // requisição/resposta.
+  it("chamada de rede lança (nunca chega a uma resposta): devolve gravacaoIncerta=true, nunca assume sucesso nem falha definitiva", async () => {
+    const rpc = vi.fn().mockRejectedValue(new Error("fetch failed"));
+    const cliente: ClienteRpcAprovacaoCenario = { rpc };
+
+    const resultado = await persistirViaRpcAprovacaoCenario(cliente, parametros());
+
+    expect(resultado).toEqual({ cenarioComercialAprovadoId: null, erro: "fetch failed", gravacaoIncerta: true });
+  });
+
+  it("erro limpo da RPC (ciclo requisição/resposta completo): gravacaoIncerta nunca é true", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "Conflito de idempotência: chave já usada." } });
+    const cliente: ClienteRpcAprovacaoCenario = { rpc };
+
+    const resultado = await persistirViaRpcAprovacaoCenario(cliente, parametros());
+
+    expect(resultado.gravacaoIncerta).not.toBe(true);
   });
 });

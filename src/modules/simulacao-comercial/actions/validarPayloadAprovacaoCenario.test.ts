@@ -20,6 +20,7 @@ function payloadValido(overrides: Partial<PayloadAprovacaoCenario> = {}): unknow
     custoTecnicoAtualExibido: 50000,
     valorComercialAtualReferenciaExibido: 62000,
     motivoSubstituicao: null,
+    chaveIdempotencia: "11111111-1111-1111-1111-111111111111",
     ...overrides,
   };
 }
@@ -96,5 +97,23 @@ describe("validarPayloadAprovacaoCenario", () => {
     const payload = payloadValido() as Record<string, unknown>;
     delete payload.custoTecnicoAtualExibido;
     expect(validarPayloadAprovacaoCenario(payload).valido).toBe(false);
+  });
+
+  // Migração 20260822195805 (idempotência) - chaveIdempotencia passou a
+  // ser obrigatória (gerada no cliente com crypto.randomUUID()).
+  it("aceita chaveIdempotencia em formato UUID válido", () => {
+    const resultado = validarPayloadAprovacaoCenario(payloadValido({ chaveIdempotencia: "a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6" }));
+    expect(resultado.valido).toBe(true);
+  });
+
+  it("rejeita chaveIdempotencia ausente", () => {
+    const payload = payloadValido() as Record<string, unknown>;
+    delete payload.chaveIdempotencia;
+    expect(validarPayloadAprovacaoCenario(payload).valido).toBe(false);
+  });
+
+  it("rejeita chaveIdempotencia que não é um UUID válido", () => {
+    const resultado = validarPayloadAprovacaoCenario(payloadValido({ chaveIdempotencia: "nao-e-um-uuid" }));
+    expect(resultado.valido).toBe(false);
   });
 });
