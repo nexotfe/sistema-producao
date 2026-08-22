@@ -1,7 +1,10 @@
 // DEC-007 §6.2/Fase 8b (aprovação do cenário comercial) - mapeamento
-// puro dos parâmetros nomeados (p_*) da RPC aprovar_cenario_comercial
-// (migration 202608180002). Mesmo padrão de montarPayloadV5.ts -
-// extraído para ser testável sem nenhum client Supabase.
+// puro dos parâmetros nomeados (p_*) da RPC aprovar_cenario_comercial_v2
+// (migration 20260822165408, Fase 1 da transição em duas fases - a RPC
+// antiga, aprovar_cenario_comercial de 202608180002, continua existindo
+// no banco, mas nada neste módulo a chama). Mesmo padrão de
+// montarPayloadV5.ts - extraído para ser testável sem nenhum client
+// Supabase.
 import type {
   CenarioComercialAprovadoSnapshot,
   CustoAdicionalPorCategoriaSnapshot,
@@ -9,6 +12,10 @@ import type {
 } from "./cenarios/cenarioComercialAprovadoSnapshot";
 
 export interface ParametrosPayloadAprovacaoCenario {
+  /** public.profiles.empresa_id do aprovador - resolvido e validado pela Server Action (autorizarAprovador) ANTES de qualquer chamada à RPC, nunca de sessão implícita (a RPC roda sob service_role, sem JWT). */
+  readonly empresaId: string;
+  /** auth.uid() do aprovador, capturado por auth.getUser() no servidor - nunca de parâmetro do navegador. */
+  readonly aprovadoPor: string;
   readonly projetoId: string;
   readonly tipoCenario: TipoCenarioAprovado;
   readonly dataSolicitadaCliente: string;
@@ -17,11 +24,15 @@ export interface ParametrosPayloadAprovacaoCenario {
   readonly custoAdicionalPorCategoria: CustoAdicionalPorCategoriaSnapshot;
   readonly valorComercialAtualReferencia: number | null;
   readonly snapshot: CenarioComercialAprovadoSnapshot;
+  /** Hash SHA-256 hex (64 chars) da base técnica (construirDocumentoAssinaturaTecnica.ts) calculado sobre a MESMA carga de dados que produziu custoTecnicoAtual/snapshot - nunca em SQL, nunca opcional numa aprovação nova. */
+  readonly assinaturaTecnica: string;
   /** Obrigatório (não vazio) quando já existe um cenário vigente para o projeto - a RPC valida de novo, esta camada não decide isso sozinha. */
   readonly motivoSubstituicao: string | null;
 }
 
 export interface PayloadRpcAprovacaoCenario {
+  p_empresa_id: string;
+  p_aprovado_por: string;
   p_projeto_id: string;
   p_tipo_cenario: string;
   p_data_solicitada_cliente: string;
@@ -33,11 +44,14 @@ export interface PayloadRpcAprovacaoCenario {
   p_custo_terceirizacao: number;
   p_valor_comercial_atual_referencia: number | null;
   p_snapshot: CenarioComercialAprovadoSnapshot;
+  p_assinatura_tecnica: string;
   p_motivo_substituicao: string | null;
 }
 
 export function montarPayloadAprovacaoCenario(params: ParametrosPayloadAprovacaoCenario): PayloadRpcAprovacaoCenario {
   return {
+    p_empresa_id: params.empresaId,
+    p_aprovado_por: params.aprovadoPor,
     p_projeto_id: params.projetoId,
     p_tipo_cenario: params.tipoCenario,
     p_data_solicitada_cliente: params.dataSolicitadaCliente,
@@ -49,6 +63,7 @@ export function montarPayloadAprovacaoCenario(params: ParametrosPayloadAprovacao
     p_custo_terceirizacao: params.custoAdicionalPorCategoria.terceirizacao,
     p_valor_comercial_atual_referencia: params.valorComercialAtualReferencia,
     p_snapshot: params.snapshot,
+    p_assinatura_tecnica: params.assinaturaTecnica,
     p_motivo_substituicao: params.motivoSubstituicao,
   };
 }

@@ -32,6 +32,8 @@ function parametros(overrides: Partial<ParametrosPayloadAprovacaoCenario> = {}):
   });
 
   return {
+    empresaId: "empresa-1",
+    aprovadoPor: "user-1",
     projetoId: "projeto-1",
     tipoCenario: "ajustado",
     dataSolicitadaCliente: "2026-09-01",
@@ -40,6 +42,7 @@ function parametros(overrides: Partial<ParametrosPayloadAprovacaoCenario> = {}):
     custoAdicionalPorCategoria: { negociacaoMaterial: 100, horaAdicional: 200, recursoTemporario: 0, terceirizacao: 0 },
     valorComercialAtualReferencia: 62000,
     snapshot,
+    assinaturaTecnica: "a".repeat(64),
     motivoSubstituicao: null,
     ...overrides,
   };
@@ -50,6 +53,8 @@ describe("montarPayloadAprovacaoCenario", () => {
     const payload = montarPayloadAprovacaoCenario(parametros());
 
     expect(payload).toEqual({
+      p_empresa_id: "empresa-1",
+      p_aprovado_por: "user-1",
       p_projeto_id: "projeto-1",
       p_tipo_cenario: "ajustado",
       p_data_solicitada_cliente: "2026-09-01",
@@ -61,6 +66,7 @@ describe("montarPayloadAprovacaoCenario", () => {
       p_custo_terceirizacao: 0,
       p_valor_comercial_atual_referencia: 62000,
       p_snapshot: parametros().snapshot,
+      p_assinatura_tecnica: "a".repeat(64),
       p_motivo_substituicao: null,
     });
   });

@@ -9,16 +9,40 @@
 // comercial (avaliarPrevisaoComercialFlexivel/montarPrevisaoComercialProjeto,
 // só existe em TypeScript) e o "valor atual do orçamento" a partir de
 // dado fresco do servidor - nunca confia no que o navegador exibiu. A
-// RPC (aprovar_cenario_comercial) NÃO reconstrói essa previsão sozinha
-// (impossível em SQL); ela só verifica o que É verificável em SQL
-// (tenant/permissão/forma/soma). "Caminho oficial", não "único caminho
-// tecnicamente possível" - um admin autenticado tecnicamente pode chamar
-// a RPC direto, sem passar por aqui, mas aí a decisão gravada não teria
-// passado por este recálculo/comparação.
+// RPC (aprovar_cenario_comercial_v2) NÃO reconstrói essa previsão
+// sozinha (impossível em SQL); ela só verifica o que É verificável em
+// SQL (tenant/permissão/forma/soma). Sem cliente privilegiado, um
+// admin não consegue mais chamar a RPC direto (service_role-only,
+// abaixo) - o único caminho possível PARA ESTA RPC é este orquestrador.
 //
-// Nenhum client privilegiado (service_role) é usado neste módulo nem
-// injetado nele - todas as dependências de I/O usam a sessão real do
-// usuário (RLS aplicada normalmente), decisão confirmada com o usuário.
+// Migração 20260822165408, Fase 1 da transição em duas fases (correção
+// do achado do orçamento 260007 - ver cabeçalho da migration): duas
+// mudanças de contrato neste orquestrador, ambas exigidas pela RPC
+// NOVA aprovar_cenario_comercial_v2 (service_role-only) - a RPC antiga
+// (aprovar_cenario_comercial, 12 parâmetros) continua existindo no
+// banco, intocada, mas nada neste orquestrador a chama mais:
+// - `buscarEmpresaId` foi substituído por `autorizarAprovador`, que
+//   verifica a MESMA regra hoje aplicada por usuario_e_admin() (perfil
+//   ativo, nivel_acesso=admin, em public.profiles) e resolve o
+//   empresa_id a partir dessa MESMA linha - a nova RPC roda sob
+//   service_role (sem JWT), então auth.uid()/empresa_atual_id()/
+//   usuario_e_admin() não podem mais resolver isso sozinhos dentro
+//   dela; a checagem precisa acontecer aqui, com o client de sessão,
+//   ANTES de qualquer client privilegiado ser criado (só
+//   aprovarCenarioComercialAction.ts, na implementação real de
+//   `persistir`, cria o client privilegiado - nunca este orquestrador);
+// - `calcularAssinaturaTecnica` computa o hash estrutural da base
+//   técnica (construirDocumentoAssinaturaTecnica.ts) sobre a MESMA
+//   janela produtiva (disponibilidadeOriginal/primeiraEntregaPossivel)
+//   que entra no snapshot - nunca uma janela reconstruída à parte -
+//   gravado junto com custo/snapshot no mesmo `persistir`, garantindo
+//   que os três vêm da mesma carga autoritativa desta chamada.
+//
+// Nenhum client privilegiado (service_role) é usado ou injetado NESTE
+// arquivo - todas as dependências de I/O daqui usam a sessão real do
+// usuário (RLS aplicada normalmente); o client privilegiado só existe
+// dentro da implementação real de `persistir` (aprovarCenarioComercialAction.ts),
+// nunca antes de autenticar/autorizar.
 import type {
   PremissasJanelaComercial,
   ResultadoJanelaComercial,
@@ -40,6 +64,8 @@ export const MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO =
 export type ResultadoAprovacaoCenarioAction =
   | { ok: true; cenarioComercialAprovadoId: string }
   | { ok: false; motivo: "nao_autenticado" }
+  /** Autenticado, mas sem perfil ativo de administrador (public.profiles) - MESMA regra hoje aplicada por usuario_e_admin(), verificada aqui porque a RPC não tem mais JWT para resolvê-la sozinha. */
+  | { ok: false; motivo: "nao_autorizado" }
   | { ok: false; motivo: "sem_janela_produtiva"; detalhe: JanelaComercialInvalida }
   /** O navegador está pedindo para aprovar algo diferente do que o servidor recalculou agora - nunca aprova "no escuro". */
   | { ok: false; motivo: "divergente"; diferencas: DivergenciaAprovacaoCenario[] }
@@ -62,11 +88,16 @@ export interface ValoresOrcamentoAtual {
   readonly tipoProjeto: ProjectType;
 }
 
+export interface AutorizacaoAprovadorCenario {
+  /** public.profiles.empresa_id do aprovador - MESMO valor que empresa_atual_id() resolveria para este usuário hoje (perfil ativo tem prioridade sobre public.usuarios). */
+  readonly empresaId: string;
+}
+
 export interface DependenciasAprovacaoCenarioComercial {
   /** Resolve o usuário autenticado a partir da sessão do servidor (auth.getUser(), nunca getSession()). null = não autenticado. */
   autenticar: () => Promise<string | null>;
-  /** Resolve empresa_id do usuário autenticado. null = não encontrado. */
-  buscarEmpresaId: (userId: string) => Promise<string | null>;
+  /** Verifica que o usuário é administrador ativo (public.profiles: ativo=true, nivel_acesso='admin' - MESMO predicado de usuario_e_admin(), reproduzido aqui porque a RPC agora roda sob service_role, sem JWT) e resolve seu empresa_id. null = não autorizado (sem perfil, inativo, ou não-admin). */
+  autorizarAprovador: (userId: string) => Promise<AutorizacaoAprovadorCenario | null>;
   /** Recalcula a janela comercial a partir das premissas, contra o Calendário Operacional corrente - nunca a do navegador. `modoDisponibilidadeMaterial` é resolvido pelo ORQUESTRADOR (a partir de ValoresOrcamentoAtual.tipoProjeto, buscado antes) - nunca confiado ao payload do cliente. */
   prepararJanela: (
     empresaId: string,
@@ -84,7 +115,14 @@ export interface DependenciasAprovacaoCenarioComercial {
   ) => Promise<BasePrevisaoComercial>;
   /** "Valor atual do orçamento" recalculado do zero (buscarDadosOrcamento + calcularValorComercialProjeto) - nunca o que o navegador exibiu. null = orçamento do projeto não resolvível agora. */
   buscarValoresOrcamentoAtual: (empresaId: string, projetoId: string) => Promise<ValoresOrcamentoAtual | null>;
-  /** Chamada à RPC aprovar_cenario_comercial (client de SESSÃO, nunca privilegiado) - só invocada quando não há nenhuma divergência. */
+  /** Hash SHA-256 hex da base técnica atual (construirDocumentoAssinaturaTecnica.ts), calculado sobre a MESMA janela produtiva (disponibilidadeOriginal/primeiraEntregaPossivel) que entra no snapshot - client de SESSÃO, nunca privilegiado (é só leitura). */
+  calcularAssinaturaTecnica: (
+    empresaId: string,
+    projetoId: string,
+    janelaInicio: string,
+    janelaFim: string,
+  ) => Promise<string>;
+  /** Chamada à RPC aprovar_cenario_comercial_v2 (client PRIVILEGIADO, service_role - criado pelo chamador só neste ponto, nunca antes) - só invocada quando não há nenhuma divergência. */
   persistir: (params: ParametrosPayloadAprovacaoCenario) => Promise<ResultadoPersistenciaAprovacaoCenario>;
 }
 
@@ -142,11 +180,11 @@ export async function orquestrarAprovacaoCenarioComercial(
       return { ok: false, motivo: "nao_autenticado" };
     }
 
-    const empresaId = await deps.buscarEmpresaId(userId);
-    if (!empresaId) {
-      console.error(`orquestrarAprovacaoCenarioComercial: empresa não encontrada para o usuário ${userId}`);
-      return { ok: false, motivo: "erro", mensagem: MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO };
+    const autorizacao = await deps.autorizarAprovador(userId);
+    if (!autorizacao) {
+      return { ok: false, motivo: "nao_autorizado" };
     }
+    const empresaId = autorizacao.empresaId;
 
     // Buscado ANTES de preparar a janela (`tipoProjeto` decide
     // modoDisponibilidadeMaterial abaixo) - nunca confia em nenhum dado
@@ -269,7 +307,26 @@ export async function orquestrarAprovacaoCenarioComercial(
       valorComercialAtualReferencia: valoresOrcamento.valorComercialAtualReferencia,
     });
 
+    // Assinatura técnica: MESMA janela produtiva gravada no snapshot
+    // (disponibilidadeOriginal = disponibilidadeMaterial.original;
+    // saidaRecalculada.primeiraEntregaPossivel = saidaPrevisaoComercial.
+    // primeiraEntregaPossivel) - nunca [dataSolicitadaCliente,
+    // prazoProposto] (a entrega pode legitimamente ser ANTES da data
+    // solicitada). Calculada com o client de sessão, ANTES de
+    // deps.persistir criar (na implementação real) o client
+    // privilegiado - custo/snapshot/assinatura vêm todos desta mesma
+    // chamada, nenhum recomputado depois com dado potencialmente
+    // diferente.
+    const assinaturaTecnica = await deps.calcularAssinaturaTecnica(
+      empresaId,
+      params.projetoId,
+      disponibilidadeOriginal,
+      saidaRecalculada.primeiraEntregaPossivel,
+    );
+
     const resultadoPersistencia = await deps.persistir({
+      empresaId,
+      aprovadoPor: userId,
       projetoId: params.projetoId,
       tipoCenario: params.tipoCenario,
       dataSolicitadaCliente: saidaRecalculada.dataSolicitadaCliente,
@@ -278,6 +335,7 @@ export async function orquestrarAprovacaoCenarioComercial(
       custoAdicionalPorCategoria,
       valorComercialAtualReferencia: valoresOrcamento.valorComercialAtualReferencia,
       snapshot,
+      assinaturaTecnica,
       motivoSubstituicao: params.motivoSubstituicao,
     });
 

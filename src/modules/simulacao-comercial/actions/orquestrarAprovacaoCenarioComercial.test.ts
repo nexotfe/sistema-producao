@@ -93,7 +93,8 @@ function valoresOrcamento(overrides: Partial<ValoresOrcamentoAtual> = {}): Valor
 function depsBase(overrides: Partial<DependenciasAprovacaoCenarioComercial> = {}): DependenciasAprovacaoCenarioComercial {
   return {
     autenticar: vi.fn().mockResolvedValue("user-1"),
-    buscarEmpresaId: vi.fn().mockResolvedValue("empresa-1"),
+    autorizarAprovador: vi.fn().mockResolvedValue({ empresaId: "empresa-1" }),
+    calcularAssinaturaTecnica: vi.fn().mockResolvedValue("a".repeat(64)),
     // Fiel ao contrato real de prepararJanelaComercial: modo
     // "industrializacao" devolve dataDisponibilidadeProducao/dataChegadaPrevista
     // = dataPrevistaAprovacaoPedido, sem os deslocamentos genéricos -
@@ -123,9 +124,12 @@ describe("orquestrarAprovacaoCenarioComercial", () => {
     expect(resultado).toEqual({ ok: true, cenarioComercialAprovadoId: "novo-id" });
     expect(deps.persistir).toHaveBeenCalledWith(
       expect.objectContaining({
+        empresaId: "empresa-1",
+        aprovadoPor: "user-1",
         tipoCenario: "atual",
         custoTecnicoAtual: 50000,
         custoAdicionalPorCategoria: { negociacaoMaterial: 0, horaAdicional: 0, recursoTemporario: 0, terceirizacao: 0 },
+        assinaturaTecnica: "a".repeat(64),
       }),
     );
   });
@@ -134,6 +138,36 @@ describe("orquestrarAprovacaoCenarioComercial", () => {
     const deps = depsBase({ autenticar: vi.fn().mockResolvedValue(null) });
     const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
     expect(resultado).toEqual({ ok: false, motivo: "nao_autenticado" });
+    expect(deps.autorizarAprovador).not.toHaveBeenCalled();
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  it("nao_autorizado quando autorizarAprovador() devolve null (sem perfil admin ativo) - MESMA regra de usuario_e_admin(), nunca aprova sem checar", async () => {
+    const deps = depsBase({ autorizarAprovador: vi.fn().mockResolvedValue(null) });
+    const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
+    expect(resultado).toEqual({ ok: false, motivo: "nao_autorizado" });
+    expect(deps.persistir).not.toHaveBeenCalled();
+  });
+
+  it("calcula a assinatura técnica com a MESMA janela produtiva do snapshot (disponibilidadeOriginal/primeiraEntregaPossivel), nunca [dataSolicitadaCliente, prazoProposto]", async () => {
+    const deps = depsBase();
+    await orquestrarAprovacaoCenarioComercial(payload(), deps);
+    // depsBase() usa modo "padrao" (tipoProjeto=fabricacao) -
+    // disponibilidadeOriginal = janelaValida().dataDisponibilidadeProducao
+    // ("2026-09-01", ver janelaValida() acima) - NUNCA
+    // dataPrevistaAprovacaoPedido ("2026-08-20", só usada para
+    // Industrialização, ver teste dedicado mais abaixo). primeiraEntregaPossivel
+    // = "2026-09-01" porque a necessidade (4h, base mínima, capacidade
+    // 8h/dia) cabe no mesmo dia da grade - MESMO valor que
+    // payload().primeiraEntregaPossivelExibida, exigido para o
+    // cenário feliz não divergir.
+    expect(deps.calcularAssinaturaTecnica).toHaveBeenCalledWith("empresa-1", "projeto-1", "2026-09-01", "2026-09-01");
+  });
+
+  it("erro genérico (nunca persiste) quando calcularAssinaturaTecnica falha", async () => {
+    const deps = depsBase({ calcularAssinaturaTecnica: vi.fn().mockRejectedValue(new Error("falha ao coletar base técnica")) });
+    const resultado = await orquestrarAprovacaoCenarioComercial(payload(), deps);
+    expect(resultado).toEqual({ ok: false, motivo: "erro", mensagem: MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO });
     expect(deps.persistir).not.toHaveBeenCalled();
   });
 

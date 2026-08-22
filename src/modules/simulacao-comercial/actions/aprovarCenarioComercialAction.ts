@@ -5,17 +5,32 @@
 // arquivo sem "use server", testável com dependências injetadas; este
 // arquivo só monta as dependências REAIS e as injeta).
 //
-// Nenhum client privilegiado (service_role) é usado aqui - decisão
-// confirmada com o usuário. Todas as consultas (janela comercial, base
-// da previsão comercial, valor atual do orçamento) e a própria RPC usam
-// o client de SESSÃO (createSupabaseServerClient), com RLS normal do
-// usuário autenticado.
+// Migração 20260822165408, Fase 1 da transição em duas fases (correção
+// do achado do orçamento 260007 - ver cabeçalho da migration): este
+// arquivo passou a chamar aprovar_cenario_comercial_v2 (RPC NOVA,
+// service_role-only) em vez de aprovar_cenario_comercial (RPC antiga,
+// 12 parâmetros, que continua existindo no banco intocada até a Fase 2
+// remover - nada neste arquivo a chama mais). current_user dentro de
+// uma função SECURITY DEFINER não distingue esta Server Action de uma
+// chamada direta feita por um `authenticated` qualquer, então a
+// autorização (admin ativo, mesma regra de usuario_e_admin()) agora é
+// verificada AQUI, com o client de SESSÃO, ANTES de qualquer client
+// privilegiado ser criado. O client privilegiado
+// (createSupabaseServiceClient) só é instanciado dentro de `persistir`,
+// no fim do fluxo, depois que autenticação, autorização, janela, base,
+// orçamento E a assinatura técnica já foram resolvidos com o client de
+// sessão normal (RLS aplicada) - mesmo padrão já usado por
+// aprovarSimulacaoComercialAction.ts/v5.
 import { createSupabaseServerClient } from "@/lib/supabaseServerClient";
+import { createSupabaseServiceClient } from "@/lib/supabaseServiceClient";
 import { prepararJanelaComercial } from "../lib/prepararJanelaComercial";
 import { carregarBasePrevisaoComercial } from "../lib/cenarios/carregarBasePrevisaoComercial";
 import { buscarDadosOrcamento } from "@/modules/projetos/lib/buscarDadosOrcamento";
 import { calcularValorComercialProjeto } from "@/modules/projetos/lib/calcularResumoOrcamento";
 import { persistirViaRpcAprovacaoCenario } from "../lib/persistirViaRpcAprovacaoCenario";
+import { buscarDadosAssinaturaTecnica } from "../lib/cenarios/buscarDadosAssinaturaTecnica";
+import { construirDocumentoAssinaturaTecnica } from "../lib/cenarios/construirDocumentoAssinaturaTecnica";
+import { calcularHashAssinaturaTecnica } from "../lib/cenarios/calcularHashAssinaturaTecnica";
 import { validarPayloadAprovacaoCenario } from "./validarPayloadAprovacaoCenario";
 import {
   orquestrarAprovacaoCenarioComercial,
@@ -54,9 +69,23 @@ export async function aprovarCenarioComercialAction(
       return error || !user ? null : user.id;
     },
 
-    buscarEmpresaId: async (userId) => {
-      const { data: usuario, error } = await serverClient.from("usuarios").select("empresa_id").eq("id", userId).single();
-      return error || !usuario?.empresa_id ? null : usuario.empresa_id;
+    // Reproduz EXATAMENTE o predicado hoje aplicado por usuario_e_admin()
+    // (public.profiles: ativo=true, nivel_acesso='admin') - nunca uma
+    // regra nova nem mais frouxa. Consulta a própria linha do usuário
+    // (id=userId) com o client de SESSÃO: a policy de SELECT em
+    // profiles permite "id = auth.uid()" independente de ser admin, então
+    // esta leitura nunca falha por RLS para o próprio usuário - só a
+    // condição nivel_acesso/ativo decide o resultado. empresa_id vem
+    // desta MESMA linha (nunca de public.usuarios, que não tem coluna
+    // `ativo` e não é a fonte que usuario_e_admin() usa).
+    autorizarAprovador: async (userId) => {
+      const { data, error } = await serverClient.from("profiles").select("empresa_id, nivel_acesso, ativo").eq("id", userId).maybeSingle();
+
+      if (error || !data || !data.ativo || data.nivel_acesso !== "admin") {
+        return null;
+      }
+
+      return { empresaId: data.empresa_id };
     },
 
     prepararJanela: (empresaId, premissas, modoDisponibilidadeMaterial) =>
@@ -93,11 +122,29 @@ export async function aprovarCenarioComercialAction(
       return { custoTecnicoAtual: custoTotal, valorComercialAtualReferencia: valorComercial, tipoProjeto: dados.projeto.tipoProjeto };
     },
 
-    // Único ponto de escrita - client de SESSÃO (nunca privilegiado). A
-    // RPC (aprovar_cenario_comercial) é SECURITY DEFINER mas chamável
-    // diretamente por authenticated; toda autorização/validação de
-    // tenant acontece dentro dela.
-    persistir: (p) => persistirViaRpcAprovacaoCenario(serverClient, p),
+    // Só leitura (carregarBaseCenarios/carregarContextoCalendario/BOM -
+    // as mesmas tabelas que a tela de Cenários já lê do navegador com
+    // RLS normal) - client de SESSÃO, nunca privilegiado. Calculada
+    // sobre a MESMA janela produtiva que o orquestrador grava no
+    // snapshot (ver chamada em orquestrarAprovacaoCenarioComercial.ts).
+    calcularAssinaturaTecnica: async (empresaId, projetoId, janelaInicio, janelaFim) => {
+      const dados = await buscarDadosAssinaturaTecnica(serverClient, empresaId, projetoId, janelaInicio, janelaFim);
+      const documento = construirDocumentoAssinaturaTecnica(dados);
+      return calcularHashAssinaturaTecnica(documento);
+    },
+
+    // Único ponto de escrita - client PRIVILEGIADO (service_role),
+    // criado só aqui dentro, nunca antes: autenticação (autenticar),
+    // autorização (autorizarAprovador) e todo o recálculo já rodaram
+    // com o client de sessão normal quando este ponto é alcançado. A
+    // RPC chamada por persistirViaRpcAprovacaoCenario.ts é sempre
+    // aprovar_cenario_comercial_v2 (migração 20260822165408) - não
+    // aceita chamada direta de authenticated - autorização e tenant já
+    // vêm validados por parâmetro explícito (p_empresa_id/
+    // p_aprovado_por), nunca resolvidos de dentro dela. A RPC antiga
+    // (aprovar_cenario_comercial) continua existindo no banco até a
+    // Fase 2 da transição remover, mas nada neste arquivo a chama.
+    persistir: (p) => persistirViaRpcAprovacaoCenario(createSupabaseServiceClient(), p),
   };
 
   return orquestrarAprovacaoCenarioComercial(params, dependenciasReais);
