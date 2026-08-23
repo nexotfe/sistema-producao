@@ -132,6 +132,31 @@
   --color-info-border: #BFDBFE;
 }
 
+/*
+ * color-scheme dos CONTROLES NATIVOS (input/select/textarea) segue o
+ * tema de verdade, escopado só a eles - :root continua travado em
+ * "light" (ver acima) porque a maioria dos campos crus da aplicacao
+ * ainda nao foi migrada para os primitivos com fundo explicito. Nestes
+ * tres elementos, porem, o navegador agora sabe desenhar o icone do
+ * calendario e a lista nativa do <select> em tom escuro quando o tema
+ * e escuro - sem isso, forcar o fundo do campo para escuro deixaria
+ * esse icone nativo ilegivel (mesmo bug documentado em Field.tsx/
+ * Select.tsx, resolvido aqui na raiz em vez de So no campo).
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input,
+  :root:not([data-theme="light"]) select,
+  :root:not([data-theme="light"]) textarea {
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -143,7 +168,7 @@ body {
 
 body {
   margin: 0;
-  background: #edf1f5;
-  color: #0f172a;
+  background: var(--color-background);
+  color: var(--color-text-primary);
   font-family: Arial, Helvetica, sans-serif;
 }

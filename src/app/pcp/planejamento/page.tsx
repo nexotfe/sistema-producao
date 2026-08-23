@@ -31,9 +31,9 @@ const currentUser = "Flavio Evangelista";
 
 
 const situationStyles = {
-  "Em andamento": "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  Parado: "bg-rose-50 text-rose-700 ring-rose-200",
-  Concluído: "bg-blue-50 text-blue-700 ring-blue-200",
+  "Em andamento": "bg-status-success-bg text-status-success-text ring-status-success-border",
+  Parado: "bg-status-danger-bg text-status-danger-text ring-status-danger-border",
+  Concluído: "bg-status-info-bg text-status-info-text ring-status-info-border",
 } as const;
 
 
@@ -248,7 +248,7 @@ export default function PCPPlanningPage() {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-5">
           <div className="flex items-center gap-3">
@@ -258,10 +258,10 @@ export default function PCPPlanningPage() {
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-disabled">
                 PCP
               </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">
                 Planejamento PCP
               </h1>
             </div>
@@ -274,14 +274,14 @@ export default function PCPPlanningPage() {
                 id="pcp-search"
                 type="search"
                 placeholder="Buscar projeto, cliente ou estado operacional"
-                className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-11 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               />
 
-              <button className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <button className="h-11 rounded-md border border-border bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle">
                 Atualizar
               </button>
 
-              <button className="h-11 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800">
+              <button className="h-11 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800">
                 Filtros
               </button>
             </div>
@@ -290,20 +290,20 @@ export default function PCPPlanningPage() {
           <nav aria-label="Navegacao PCP" className="flex flex-wrap gap-2">
             <Link
               href="/pcp/planejamento"
-              className="rounded-md bg-blue-700 px-3 py-2 text-xs font-semibold text-white"
+              className="rounded-md bg-action-primary-hover px-3 py-2 text-xs font-semibold text-action-primary-text"
             >
               Planejamento PCP
             </Link>
             <Link
               href="/pcp/programacao-diaria"
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-md border border-border bg-surface-elevated px-3 py-2 text-xs font-semibold text-text-primary transition hover:bg-border-subtle"
             >
               Programacao diaria
             </Link>
             {["Capacidade", "Carga Maquina", "Sequenciamento"].map((item) => (
               <span
                 key={item}
-                className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-400"
+                className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-xs font-semibold text-text-disabled"
               >
                 {item}
               </span>
@@ -311,19 +311,19 @@ export default function PCPPlanningPage() {
           </nav>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h2 className="text-base font-semibold text-slate-950">
+        <section className="rounded-lg border border-border bg-surface">
+          <div className="border-b border-border-subtle px-5 py-4">
+            <h2 className="text-base font-semibold text-text-primary">
               Sequenciamento operacional
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-text-secondary">
               Visao inicial das frentes de fabrica para planejamento.
             </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1040px] text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs font-semibold uppercase tracking-[0.16em] text-text-disabled">
                 <tr>
                   <th className="px-5 py-3">Prioridade</th>
                   <th className="px-5 py-3">Projeto</th>
@@ -335,10 +335,10 @@ export default function PCPPlanningPage() {
                   <th className="px-5 py-3">Entrega</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-slate-500">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-text-secondary">
                       Carregando projetos...
                     </td>
                   </tr>
@@ -346,7 +346,7 @@ export default function PCPPlanningPage() {
 
                 {!isLoading && loadError ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-amber-700">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-status-warning-text">
                       {loadError}
                     </td>
                   </tr>
@@ -354,7 +354,7 @@ export default function PCPPlanningPage() {
 
                 {!isLoading && !loadError && planningRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-slate-500">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm font-medium text-text-secondary">
                       Nenhum projeto encontrado.
                     </td>
                   </tr>
@@ -365,8 +365,8 @@ export default function PCPPlanningPage() {
                     key={row.projectId}
                     onDragOver={allowDrop}
                     onDrop={() => handleDrop(row.projectId)}
-                    className={`transition hover:bg-slate-50 ${
-                      draggedProject === row.projectId ? "bg-slate-100" : ""
+                    className={`transition hover:bg-border-subtle ${
+                      draggedProject === row.projectId ? "bg-border-subtle" : ""
                     }`}
                   >
                     <td className="px-5 py-4">
@@ -374,7 +374,7 @@ export default function PCPPlanningPage() {
                         draggable
                         onDragStart={() => handleDragStart(row.projectId)}
                         onDragEnd={() => setDraggedProject(null)}
-                        className="inline-flex h-7 w-10 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700 active:cursor-grabbing"
+                        className="inline-flex h-7 w-10 cursor-grab items-center justify-center rounded-md border border-border-subtle bg-border-subtle text-xs font-semibold tabular-nums text-text-primary active:cursor-grabbing"
                       >
                         {row.priority}
                       </span>
@@ -383,12 +383,12 @@ export default function PCPPlanningPage() {
                       <EntityLink
                         type="projeto"
                         id={row.projectId}
-                        className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+                        className="font-semibold text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
                       >
                         {row.project}
                       </EntityLink>
                     </td>
-                    <td className="px-5 py-4 text-slate-700">{row.client}</td>
+                    <td className="px-5 py-4 text-text-primary">{row.client}</td>
                     <td className="px-5 py-4">
                       <span
                         title={`Status do projeto: ${row.status}`}
@@ -408,7 +408,7 @@ export default function PCPPlanningPage() {
                               ? `${row.operationalState.ready} OFs aptas e ${row.operationalState.blocked} OFs nao aptas`
                               : "Sem OFs"
                           }
-                          className="inline-flex h-7 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold tabular-nums text-slate-700"
+                          className="inline-flex h-7 items-center gap-2 rounded-md border border-border-subtle bg-border-subtle px-2.5 text-xs font-semibold tabular-nums text-text-primary"
                         >
                           {row.operationalState.hasOrders ? (
                             <>
@@ -420,39 +420,39 @@ export default function PCPPlanningPage() {
                           )}
                         </span>
 
-                        <span className="pointer-events-none absolute left-0 top-9 z-10 hidden w-48 rounded-md border border-slate-200 bg-app-card p-3 text-xs font-medium leading-5 text-slate-700 shadow-lg group-hover:block">
+                        <span className="pointer-events-none absolute left-0 top-9 z-10 hidden w-48 rounded-md border border-border bg-surface-elevated p-3 text-xs font-medium leading-5 text-text-primary shadow-lg group-hover:block">
                           <span className="flex justify-between gap-3">
                             <span>OF totais</span>
                             <span>{row.operationalState.total}</span>
                           </span>
-                          <span className="flex justify-between gap-3 text-emerald-700">
+                          <span className="flex justify-between gap-3 text-status-success-text">
                             <span>✓ Aptas</span>
                             <span>{row.operationalState.ready}</span>
                           </span>
-                          <span className="flex justify-between gap-3 text-amber-700">
+                          <span className="flex justify-between gap-3 text-status-warning-text">
                             <span>📦 Aguardando MP</span>
                             <span>{row.operationalState.waitingMaterial}</span>
                           </span>
-                          <span className="flex justify-between gap-3 text-slate-700">
+                          <span className="flex justify-between gap-3 text-text-primary">
                             <span>🏭 Em produção</span>
                             <span>{row.operationalState.inProduction}</span>
                           </span>
-                          <span className="flex justify-between gap-3 text-blue-700">
+                          <span className="flex justify-between gap-3 text-status-info-text">
                             <span>⚙ Programação</span>
                             <span>{row.operationalState.programming}</span>
                           </span>
-                          <span className="flex justify-between gap-3 text-emerald-700">
+                          <span className="flex justify-between gap-3 text-status-success-text">
                             <span>Finalizadas</span>
                             <span>{row.operationalState.finished}</span>
                           </span>
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-slate-700">{row.nextAction}</td>
-                    <td className="px-5 py-4 font-semibold tabular-nums text-slate-900">
+                    <td className="px-5 py-4 text-text-primary">{row.nextAction}</td>
+                    <td className="px-5 py-4 font-semibold tabular-nums text-text-primary">
                       {row.progress}
                     </td>
-                    <td className="px-5 py-4 text-slate-700">{row.delivery}</td>
+                    <td className="px-5 py-4 text-text-primary">{row.delivery}</td>
                   </tr>
                 ))}
               </tbody>

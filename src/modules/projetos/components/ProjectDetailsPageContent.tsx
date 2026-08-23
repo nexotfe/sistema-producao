@@ -129,16 +129,16 @@ export function ProjectDetailsPageContent({
 
   if (!projectId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-app-bg px-4 text-slate-950">
-        <div className="max-w-md rounded-lg border border-slate-200 bg-app-card p-6 text-center">
+      <main className="flex min-h-screen items-center justify-center bg-background px-4 text-text-primary">
+        <div className="max-w-md rounded-lg border border-border bg-surface p-6 text-center">
           <h1 className="text-lg font-bold">Nenhum projeto selecionado</h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-text-secondary">
             Um orçamento sempre parte de um projeto existente. Abra um projeto
             e clique em &quot;Orçamento&quot; para montar o orçamento dele.
           </p>
           <Link
             href="/projeto"
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
           >
             Ir para Projeto
           </Link>
@@ -223,10 +223,10 @@ export function ProjectDetailsPageContent({
   }
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
-      <header className="bg-app-bg pt-4">
+    <main className="min-h-screen bg-background text-text-primary">
+      <header className="bg-background pt-4">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4">
+          <div className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -294,7 +294,7 @@ export function ProjectDetailsPageContent({
                     type="button"
                     onClick={handleSalvar}
                     disabled={salvando}
-                    className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                    className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:opacity-60"
                   >
                     {salvando ? "Salvando..." : "Salvar"}
                   </button>
@@ -307,79 +307,79 @@ export function ProjectDetailsPageContent({
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         {(erro || mensagem) && (
-          <p className={`text-sm ${erro ? "text-rose-600" : "text-emerald-600"}`}>
+          <p className={`text-sm ${erro ? "text-status-danger-text" : "text-status-success-text"}`}>
             {erro ?? mensagem}
           </p>
         )}
 
-        <section className="rounded-md border border-slate-200 bg-app-card p-4">
+        <section className="rounded-md border border-border bg-surface p-4">
           <div className="mb-4">
             <h2 className="text-sm font-bold">Resumo do Projeto</h2>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-text-secondary">
               Informações herdadas do projeto.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Projeto
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {numeroProjeto ?? "—"}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Descrição do Projeto
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {nomeProjeto || "—"}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Cliente
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {cliente?.nome ?? "—"}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Natureza
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {PROJECT_TYPE_LABELS[tipoProjeto]}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Responsável pelo Projeto
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {responsavelNome || "—"}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Data de Inclusão
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {formatarData(criadoEm)}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Data de Necessidade
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {formatarData(dataObjetivo)}
               </div>
             </div>
@@ -426,14 +426,14 @@ export function ProjectDetailsPageContent({
         ) : null}
 
         {formulaErro && (
-          <p className="text-sm font-medium text-rose-600">{formulaErro}</p>
+          <p className="text-sm font-medium text-status-danger-text">{formulaErro}</p>
         )}
 
         <div className="grid gap-5 lg:grid-cols-2">
           <Card title="Margem de Lucro %">
             <div className="flex items-center gap-4">
               <div className="w-60 shrink-0">
-                <label className="mb-1 block text-xs font-semibold text-slate-600">
+                <label className="mb-1 block text-xs font-semibold text-text-secondary">
                   Margem de lucro %
                 </label>
                 <div className="flex">
@@ -451,15 +451,15 @@ export function ProjectDetailsPageContent({
                       }
                     }}
                     onBlur={() => setMargemTexto(String(margemLucroPercent))}
-                    className="h-10 w-full rounded-l-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    className="h-10 w-full rounded-l-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                   />
-                  <span className="inline-flex h-10 items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-600">
+                  <span className="inline-flex h-10 items-center rounded-r-md border border-l-0 border-border bg-border-subtle px-3 text-sm font-semibold text-text-secondary">
                     %
                   </span>
                 </div>
               </div>
 
-              <p className="text-xs leading-5 text-slate-500">
+              <p className="text-xs leading-5 text-text-secondary">
                 Valor inicial configurável nas configurações do sistema. O
                 orçamentista poderá alterar este percentual conforme a necessidade.
               </p>
@@ -518,57 +518,57 @@ export function ProjectDetailsPageContent({
             {usandoCenarioComercialAprovado ? (
               <>
                 <div>
-                  <span className="mb-1 block text-xs font-semibold text-slate-600">
+                  <span className="mb-1 block text-xs font-semibold text-text-secondary">
                     Custo dos itens
                   </span>
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                  <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                     {formatarMoeda(resumoOrcamento.custoTotalItens)}
                   </div>
                 </div>
 
                 <div>
-                  <span className="mb-1 block text-xs font-semibold text-slate-600">
+                  <span className="mb-1 block text-xs font-semibold text-text-secondary">
                     Ajuste comercial
                   </span>
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                  <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                     {formatarMoeda(resumoOrcamento.ajusteComercial)}
                   </div>
                 </div>
               </>
             ) : (
               <div>
-                <span className="mb-1 block text-xs font-semibold text-slate-600">
+                <span className="mb-1 block text-xs font-semibold text-text-secondary">
                   Custo Total
                 </span>
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+                <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                   {formatarMoeda(resumoOrcamento.custoTotal)}
                 </div>
               </div>
             )}
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Impostos Totais
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {formatarMoeda(resumoOrcamento.impostosTotal)}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Lucro Total
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {formatarMoeda(resumoOrcamento.lucroTotal)}
               </div>
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Valor Técnico
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {formatarMoeda(resumoOrcamento.valorTecnico)}
               </div>
             </div>
@@ -592,12 +592,12 @@ export function ProjectDetailsPageContent({
             </div>
           </div>
 
-          <div className="mt-3 grid gap-3 border-t border-slate-200 pt-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Margem Técnica
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {resumoOrcamento.margemTecnica !== undefined
                   ? `${resumoOrcamento.margemTecnica.toFixed(2)}%`
                   : "—"}
@@ -605,10 +605,10 @@ export function ProjectDetailsPageContent({
             </div>
 
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Margem Efetiva
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {resumoOrcamento.margemEfetiva !== undefined
                   ? `${resumoOrcamento.margemEfetiva.toFixed(2)}%`
                   : "—"}
@@ -616,33 +616,33 @@ export function ProjectDetailsPageContent({
             </div>
           </div>
 
-          <p className="mt-2 text-xs leading-5 text-slate-500">
+          <p className="mt-2 text-xs leading-5 text-text-secondary">
             Margem Efetiva é só indicador gerencial — recalcula o imposto
             proporcionalmente para mostrar o lucro real após desconto. Não
             altera o valor cobrado do cliente nem o imposto declarado.
           </p>
         </Card>
 
-        <section className="rounded-md border border-slate-200 bg-app-card p-4">
+        <section className="rounded-md border border-border bg-surface p-4">
           <h2 className="text-sm font-bold">Resumo Produtivo</h2>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-text-secondary">
             Tempo estimado das operações do roteiro, somado por Recurso
             Produtivo.
           </p>
 
           {resumoProdutivo.erro ? (
-            <p className="mt-3 text-sm font-medium text-red-600">
+            <p className="mt-3 text-sm font-medium text-status-danger-text">
               {resumoProdutivo.erro}
             </p>
           ) : (
             <>
               {resumoProdutivo.estado === "incompleto" ? (
-                <div className="mt-3 rounded-md border-2 border-amber-400 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+                <div className="mt-3 rounded-md border-2 border-status-warning-border bg-status-warning-bg px-3 py-2.5 text-sm text-status-warning-text">
                   <p className="font-bold">
                     Resumo Produtivo incompleto — não utilizar para prazo ou
                     capacidade
                   </p>
-                  <p className="mt-1 text-xs text-amber-800">
+                  <p className="mt-1 text-xs text-status-warning-text">
                     Os itens abaixo não têm estrutura de fabricação
                     totalmente resolvível, então os minutos calculados são
                     parciais:
@@ -666,7 +666,7 @@ export function ProjectDetailsPageContent({
 
               <div className="mt-3 flex flex-col gap-2">
                 {resumoProdutivo.linhas.length === 0 ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-text-secondary">
                     Nenhuma operação de roteiro cadastrada nos itens do
                     projeto.
                   </p>
@@ -674,20 +674,20 @@ export function ProjectDetailsPageContent({
                   resumoProdutivo.linhas.map((linha) => (
                     <div
                       key={linha.recursoId ?? "sem-recurso"}
-                      className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm"
                     >
                       <span
                         className={
                           linha.recursoId
-                            ? "text-slate-800"
-                            : "font-medium text-amber-700"
+                            ? "text-text-primary"
+                            : "font-medium text-status-warning-text"
                         }
                       >
                         {linha.recursoId
                           ? `${linha.codigo ?? "—"} — ${linha.nome ?? "—"}`
                           : "Sem recurso cadastrado"}
                       </span>
-                      <span className="font-medium text-slate-800">
+                      <span className="font-medium text-text-primary">
                         {linha.minutos.toLocaleString("pt-BR")} min
                       </span>
                     </div>
@@ -696,7 +696,7 @@ export function ProjectDetailsPageContent({
               </div>
 
               {resumoProdutivo.linhas.length > 0 ? (
-                <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-sm font-semibold text-slate-900">
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm font-semibold text-text-primary">
                   <span>
                     {resumoProdutivo.estado === "incompleto"
                       ? "Horas parciais identificadas"
@@ -711,11 +711,11 @@ export function ProjectDetailsPageContent({
           )}
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-app-card">
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        <section className="rounded-md border border-border bg-surface">
+          <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
             <div>
               <h2 className="text-sm font-bold">Carga Tributária</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-text-secondary">
                 Percentual tributário sugerido pela natureza do projeto.
               </p>
             </div>
@@ -723,16 +723,16 @@ export function ProjectDetailsPageContent({
 
           <div className="grid gap-3 px-4 py-4 sm:grid-cols-2">
             <div>
-              <span className="mb-1 block text-xs font-semibold text-slate-600">
+              <span className="mb-1 block text-xs font-semibold text-text-secondary">
                 Natureza
               </span>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm font-medium text-text-primary">
                 {PROJECT_TYPE_LABELS[tipoProjeto]}
               </div>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">
                 Carga Tributária do Orçamento
               </label>
               <input
@@ -753,12 +753,12 @@ export function ProjectDetailsPageContent({
                     String(cargaTributariaPercent ?? cargaTributariaEfetiva),
                   )
                 }
-                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
           </div>
 
-          <p className="px-4 pb-1 text-xs leading-5 text-slate-500">
+          <p className="px-4 pb-1 text-xs leading-5 text-text-secondary">
             A Natureza do Projeto determina automaticamente a Carga Tributária
             Sugerida. O percentual sugerido é definido nas Configurações do
             Sistema. O orçamentista poderá alterar a Carga Tributária do
@@ -773,7 +773,7 @@ export function ProjectDetailsPageContent({
                 ? `/proposta-comercial?projeto=${projetoId}`
                 : "/proposta-comercial"
             }
-            className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
           >
             Gerar Proposta Comercial
           </Link>

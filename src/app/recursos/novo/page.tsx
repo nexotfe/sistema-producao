@@ -91,7 +91,7 @@ export default function NovoRecursoPage() {
                   type="button"
                   onClick={handleSalvar}
                   disabled={loading || loadingDuplicado}
-                  className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? "Salvando..." : "Salvar"}
                 </button>

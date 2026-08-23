@@ -88,7 +88,7 @@ export default function RecursoPage({ params }: Props) {
                 {recurso.nome || "Recurso sem nome"}
               </h1>
 
-              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              <span className="rounded-md border border-status-success-border bg-status-success-bg px-3 py-1 text-xs font-semibold text-status-success-text">
                 {recurso.ativo ? "Ativo" : "Inativo"}
               </span>
             </>
@@ -100,7 +100,7 @@ export default function RecursoPage({ params }: Props) {
                 type="button"
                 onClick={handleExcluir}
                 disabled={processando}
-                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-slate-200 bg-app-card px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-border bg-surface px-5 text-sm font-semibold text-text-primary transition hover:bg-border-subtle disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Excluir recurso
               </button>

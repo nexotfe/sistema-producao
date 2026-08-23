@@ -33,25 +33,22 @@ export function Field({
       </label>
 
       {/*
-        O <input> em si é diferente: cores FIXAS (slate/blue/red), nunca
-        reativas. color-scheme fica travado em "light" para o app inteiro
-        (ver comentário em globals.css) até os campos nativos serem
-        migrados - o ícone nativo do seletor de data é desenhado pelo
-        navegador conforme color-scheme:light (sempre claro), então o
-        fundo do próprio <input> precisa continuar claro para o ícone não
-        ficar ilegível/invisível sobre o campo. Mesma categoria de token
-        "fixo" que já existe para brand-header-fixed (PAD-006 §3.1),
-        aplicada aqui a um campo nativo em vez de identidade de marca.
+        O <input> usa tokens REATIVOS de cor (fundo/texto/borda) desde a
+        Fase 1b do modo escuro. O ícone nativo do seletor de data (que
+        antes exigia manter este campo sempre claro) agora é resolvido em
+        globals.css: color-scheme fica escopado a input/select/textarea,
+        então o navegador já desenha esse ícone em tom escuro quando o
+        tema é escuro - não precisa mais travar o fundo do campo em claro.
       */}
       <input
         id={inputId}
         disabled={disabled}
         aria-invalid={Boolean(error)}
         className={[
-          "h-[42px] w-full rounded-[10px] border px-[13px] text-[13.5px] text-slate-900 outline-none transition placeholder:text-slate-400",
-          "focus-visible:border-blue-600 focus-visible:ring-[3px] focus-visible:ring-blue-400/40",
-          error ? "border-red-200 ring-[3px] ring-red-50" : "border-slate-200 bg-white",
-          disabled ? "cursor-not-allowed border-slate-100 bg-slate-100 text-slate-400" : "",
+          "h-[42px] w-full rounded-[10px] border bg-surface-elevated px-[13px] text-[13.5px] text-text-primary outline-none transition placeholder:text-text-disabled",
+          "focus-visible:border-action-primary focus-visible:ring-[3px] focus-visible:ring-focus-ring",
+          error ? "border-status-danger-border ring-[3px] ring-status-danger-bg" : "border-border",
+          disabled ? "cursor-not-allowed border-border-subtle bg-border-subtle text-text-disabled" : "",
           className,
         ]
           .filter(Boolean)

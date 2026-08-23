@@ -34,21 +34,21 @@ export function Select({
       </label>
 
       {/*
-        O <select> em si usa cores FIXAS, nunca reativas: a seta nativa
-        do dropdown é desenhada pelo navegador conforme color-scheme:light
-        (fixo no app inteiro, ver globals.css) - um fundo reativo que
-        escurece no modo escuro deixaria essa seta ilegível sobre o
-        próprio campo. Mesma correção já aplicada e aprovada em Field.tsx.
+        O <select> usa tokens REATIVOS desde a Fase 1b do modo escuro -
+        mesma correção de Field.tsx. A seta nativa e a lista de opções
+        (também nativa) seguem color-scheme, escopado em globals.css a
+        input/select/textarea, então já se adaptam ao tema sem precisar
+        travar este campo em claro.
       */}
       <select
         id={selectId}
         disabled={disabled}
         className={[
-          "h-[42px] w-full rounded-[10px] border px-[13px] text-[13.5px] text-slate-900 outline-none transition",
-          "focus-visible:border-blue-600 focus-visible:ring-[3px] focus-visible:ring-blue-400/40",
+          "h-[42px] w-full rounded-[10px] border bg-surface-elevated px-[13px] text-[13.5px] text-text-primary outline-none transition",
+          "focus-visible:border-action-primary focus-visible:ring-[3px] focus-visible:ring-focus-ring",
           disabled
-            ? "cursor-not-allowed border-slate-100 bg-slate-100 text-slate-400"
-            : "border-slate-200 bg-white",
+            ? "cursor-not-allowed border-border-subtle bg-border-subtle text-text-disabled"
+            : "border-border",
           className,
         ]
           .filter(Boolean)

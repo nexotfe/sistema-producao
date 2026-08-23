@@ -38,16 +38,16 @@ export function RowActionsMenu({
         type="button"
         aria-label={ariaLabel}
         onClick={() => (aberto ? onFechar() : onAbrir())}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-lg font-semibold leading-none text-slate-600 transition hover:bg-slate-50"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-lg font-semibold leading-none text-text-secondary transition hover:bg-border-subtle"
       >
         {"⋮"}
       </button>
 
       {aberto ? (
-        <div className="absolute right-4 top-12 z-20 w-40 overflow-hidden rounded-lg border border-slate-200 bg-app-card py-1 text-left shadow-xl">
+        <div className="absolute right-4 top-12 z-20 w-40 overflow-hidden rounded-lg border border-border bg-surface-elevated py-1 text-left shadow-xl">
           <Link
             href={editarHref}
-            className="block px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            className="block px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
           >
             Editar
           </Link>
@@ -55,14 +55,14 @@ export function RowActionsMenu({
             <button
               type="button"
               onClick={onDuplicar}
-              className="block w-full px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="block w-full px-3 py-2 text-left text-sm font-medium text-text-primary transition hover:bg-border-subtle"
             >
               Duplicar
             </button>
           ) : duplicarHref ? (
             <Link
               href={duplicarHref}
-              className="block px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="block px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
             >
               Duplicar
             </Link>
@@ -70,7 +70,7 @@ export function RowActionsMenu({
           <button
             type="button"
             onClick={onToggleAtivo}
-            className="block w-full px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            className="block w-full px-3 py-2 text-left text-sm font-medium text-text-primary transition hover:bg-border-subtle"
           >
             {ativo ? "Inativar" : "Ativar"}
           </button>
@@ -78,7 +78,7 @@ export function RowActionsMenu({
             <button
               type="button"
               onClick={onExcluir}
-              className="block w-full px-3 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
+              className="block w-full px-3 py-2 text-left text-sm font-medium text-status-danger-text transition hover:bg-status-danger-bg"
             >
               Excluir
             </button>

@@ -83,7 +83,7 @@ export function RecursosHeader({
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex w-full flex-wrap items-center justify-start gap-2">
-            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
+            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-surface p-1">
               <SituacaoButton
                 label="Todos"
                 quantidade={totais.todos}

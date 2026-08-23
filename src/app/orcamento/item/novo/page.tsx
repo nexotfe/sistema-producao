@@ -7,9 +7,9 @@ export default function NovoItemProjetoPage() {
   const router = useRouter();
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -58,11 +58,11 @@ export default function NovoItemProjetoPage() {
           </div>
         </header>
 
-        <section className="mx-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-app-card px-5 py-5">
-          <h2 className="text-sm font-bold text-slate-950">
+        <section className="mx-auto w-full max-w-3xl rounded-lg border border-border bg-surface px-5 py-5">
+          <h2 className="text-sm font-bold text-text-primary">
             Novo Item do Projeto
           </h2>
-          <p className="mt-4 text-sm text-slate-600">
+          <p className="mt-4 text-sm text-text-secondary">
             Esta página será implementada na próxima Sprint.
           </p>
         </section>

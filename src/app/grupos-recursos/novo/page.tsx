@@ -31,9 +31,9 @@ export default function NovoGrupoRecursoPage() {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -73,7 +73,7 @@ export default function NovoGrupoRecursoPage() {
                   type="button"
                   onClick={handleSalvar}
                   disabled={loading}
-                  className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? "Salvando..." : "Salvar"}
                 </button>
@@ -106,12 +106,12 @@ export default function NovoGrupoRecursoPage() {
                 rows={5}
                 value={descricao}
                 onChange={(event) => setDescricao(event.target.value)}
-                className="w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="w-full resize-y rounded-md border border-border bg-surface-elevated px-3 py-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
           </Card>
 
-          {erro && <p className="text-sm font-medium text-red-600">{erro}</p>}
+          {erro && <p className="text-sm font-medium text-status-danger-text">{erro}</p>}
 
         </section>
       </div>
@@ -127,9 +127,9 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-app-card transition hover:border-blue-700">
-      <div className="border-b border-slate-100 px-4 py-3">
-        <h2 className="text-sm font-bold text-slate-950">{titulo}</h2>
+    <div className="rounded-md border border-border bg-surface transition hover:border-action-primary-hover">
+      <div className="border-b border-border-subtle px-4 py-3">
+        <h2 className="text-sm font-bold text-text-primary">{titulo}</h2>
       </div>
 
       {children}
@@ -148,14 +148,14 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </label>
 
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       />
     </div>
   );

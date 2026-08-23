@@ -29,7 +29,7 @@ export function GruposRecursosHeader({
 
   return (
     <>
-      <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+      <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -83,7 +83,7 @@ export function GruposRecursosHeader({
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex w-full flex-wrap items-center justify-start gap-2">
-            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
+            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-border bg-surface p-1">
               <SituacaoButton
                 label="Todos"
                 quantidade={totais.todos}
@@ -127,8 +127,8 @@ function SituacaoButton({
       onClick={onClick}
       className={
         ativo
-          ? "inline-flex h-9 items-center justify-center rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-900 transition"
-          : "inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          ? "inline-flex h-9 items-center justify-center rounded-md bg-border-subtle px-3 text-sm font-semibold text-text-primary transition"
+          : "inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-text-secondary transition hover:bg-border-subtle"
       }
     >
       {label} ({quantidade})

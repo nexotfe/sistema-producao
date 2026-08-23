@@ -128,12 +128,12 @@ function AdicionarOperacaoModalConteudo({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">
+      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-border bg-surface shadow-xl">
+        <div className="border-b border-border-subtle px-5 py-4">
+          <h2 className="text-lg font-semibold text-text-primary">
             {operacaoEditando ? "Editar OP" : "Adicionar OP"}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-text-secondary">
             A ordem é única dentro de todo o roteiro (Engenharia e Operações
             compartilham a mesma numeração).
           </p>
@@ -143,50 +143,50 @@ function AdicionarOperacaoModalConteudo({
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Ordem (OP)
                 </label>
                 <input
                   value={ordem}
                   onChange={(event) => setOrdem(event.target.value)}
                   inputMode="numeric"
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-md border border-border px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Tempo estimado (min)
                 </label>
                 <input
                   value={tempoEstimadoMinutos}
                   onChange={(event) => setTempoEstimadoMinutos(event.target.value)}
                   inputMode="decimal"
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-md border border-border px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                 Descrição
               </label>
               <input
                 value={descricao}
                 onChange={(event) => setDescricao(event.target.value)}
-                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="h-10 w-full rounded-md border border-border px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Recurso aplicado
                 </label>
                 <select
                   value={recursoProdutivoId}
                   onChange={(event) => setRecursoProdutivoId(event.target.value)}
-                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 >
                   <option value="">Selecione</option>
                   {recursosDisponiveis.map((recurso) => (
@@ -198,7 +198,7 @@ function AdicionarOperacaoModalConteudo({
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Tipo
                 </label>
                 <select
@@ -206,7 +206,7 @@ function AdicionarOperacaoModalConteudo({
                   onChange={(event) =>
                     setTipo(event.target.value as "engenharia" | "producao")
                   }
-                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 >
                   <option value="producao">Produção / Mão de obra</option>
                   <option value="engenharia">Engenharia</option>
@@ -215,28 +215,28 @@ function AdicionarOperacaoModalConteudo({
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                 Observações
               </label>
               <textarea
                 value={observacoes}
                 onChange={(event) => setObservacoes(event.target.value)}
                 rows={3}
-                className="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="w-full resize-y rounded-md border border-border px-3 py-2 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
 
             {erro ? (
-              <p className="text-sm font-medium text-red-600">{erro}</p>
+              <p className="text-sm font-medium text-status-danger-text">{erro}</p>
             ) : null}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
           <button
             type="button"
             onClick={limparEFechar}
-            className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
           >
             Cancelar
           </button>
@@ -244,7 +244,7 @@ function AdicionarOperacaoModalConteudo({
             type="button"
             onClick={handleSalvar}
             disabled={salvando}
-            className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {operacaoEditando
               ? salvando

@@ -20,9 +20,9 @@ export default function ProjectsPage() {
   const { projetos, busca, setBusca, loading } = useProjetosLista();
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -73,28 +73,28 @@ export default function ProjectsPage() {
           </div>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-100 px-5 py-4">
+        <section className="rounded-lg border border-border bg-surface">
+          <div className="border-b border-border-subtle px-5 py-4">
             <Link
               href="/projeto"
-              className="inline-flex items-center text-base font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+              className="inline-flex items-center text-base font-semibold text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
             >
               Cadastro de Projetos
               <span
                 aria-hidden="true"
-                className="ml-2 text-base font-semibold leading-none text-slate-500"
+                className="ml-2 text-base font-semibold leading-none text-text-secondary"
               >
                 {"›"}
               </span>
             </Link>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-text-secondary">
               Consulte os projetos comerciais e acompanhe o status operacional.
             </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs font-semibold uppercase tracking-[0.16em] text-text-disabled">
                 <tr>
                   <th className="px-5 py-3">Projeto</th>
                   <th className="px-5 py-3">Cliente</th>
@@ -103,16 +103,16 @@ export default function ProjectsPage() {
                   <th className="px-5 py-3">Objetivo</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {loading ? (
                   <tr>
-                    <td className="px-5 py-4 text-slate-500" colSpan={5}>
+                    <td className="px-5 py-4 text-text-secondary" colSpan={5}>
                       Carregando...
                     </td>
                   </tr>
                 ) : projetos.length === 0 ? (
                   <tr>
-                    <td className="px-5 py-4 text-slate-500" colSpan={5}>
+                    <td className="px-5 py-4 text-text-secondary" colSpan={5}>
                       Nenhum projeto encontrado.
                     </td>
                   </tr>
@@ -120,26 +120,26 @@ export default function ProjectsPage() {
                   projetos.map((projeto) => (
                     <tr
                       key={projeto.id}
-                      className="transition hover:bg-slate-50"
+                      className="transition hover:bg-border-subtle"
                     >
                       <td className="px-5 py-4">
                         <Link
                           href={`/projeto?id=${projeto.id}`}
-                          className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+                          className="font-semibold text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
                         >
                           {projeto.numeroProjeto}
                         </Link>
                       </td>
-                      <td className="px-5 py-4 text-slate-700">
+                      <td className="px-5 py-4 text-text-primary">
                         {projeto.clienteNome ?? "—"}
                       </td>
-                      <td className="px-5 py-4 text-slate-700">
+                      <td className="px-5 py-4 text-text-primary">
                         {PROJECT_TYPE_LABELS[projeto.tipoProjeto]}
                       </td>
                       <td className="px-5 py-4">
                         <StatusBadge status={projeto.status} />
                       </td>
-                      <td className="px-5 py-4 text-slate-700">
+                      <td className="px-5 py-4 text-text-primary">
                         {formatarData(projeto.dataObjetivo)}
                       </td>
                     </tr>

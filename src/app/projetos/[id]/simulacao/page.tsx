@@ -39,13 +39,13 @@ export default function ProjectSimulacaoPage({ params }: ProjectSimulacaoPagePro
   }, [id]);
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
+    <main className="min-h-screen bg-background text-text-primary">
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <nav
           aria-label="Hierarquia do projeto"
-          className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500"
+          className="flex flex-wrap items-center gap-2 text-xs font-semibold text-text-secondary"
         >
-          <Link href={`/projetos/${id}`} className="transition hover:text-slate-800">
+          <Link href={`/projetos/${id}`} className="transition hover:text-text-primary">
             {numeroProjeto ? `Projeto ${numeroProjeto}` : "Orçamento"}
           </Link>
           <span>&gt;</span>

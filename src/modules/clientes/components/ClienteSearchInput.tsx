@@ -129,15 +129,15 @@ export function ClienteSearchInput({
           }
         }}
         onFocus={() => setAberto(true)}
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       />
 
       {mostrarDropdown ? (
-        <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-app-card py-1 shadow-lg">
+        <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-surface-elevated py-1 shadow-lg">
           {buscandoExibido ? (
-            <p className="px-3 py-2 text-sm text-slate-400">Buscando...</p>
+            <p className="px-3 py-2 text-sm text-text-disabled">Buscando...</p>
           ) : resultadosExibidos.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-slate-400">
+            <p className="px-3 py-2 text-sm text-text-disabled">
               Nenhum cliente encontrado.
             </p>
           ) : (
@@ -146,12 +146,12 @@ export function ClienteSearchInput({
                 key={cliente.id}
                 type="button"
                 onClick={() => selecionar(cliente)}
-                className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                className="block w-full px-3 py-2 text-left text-sm text-text-primary transition hover:bg-border-subtle"
               >
                 {cliente.nome}
                 {[cliente.nome_fantasia, cliente.cnpj].filter(Boolean).length >
                 0 ? (
-                  <span className="block text-xs text-slate-400">
+                  <span className="block text-xs text-text-disabled">
                     {[cliente.nome_fantasia, cliente.cnpj]
                       .filter(Boolean)
                       .join(" / ")}

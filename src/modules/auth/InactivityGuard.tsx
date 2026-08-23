@@ -307,7 +307,7 @@ export function InactivityGuard({
   if (phase === "expired") {
     if (logoutFailed) {
       return (
-        <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-app-bg px-5 text-center">
+        <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-5 text-center">
           <p className="text-sm font-medium text-status-danger-text">
             Não foi possível encerrar a sessão automaticamente. Tente novamente.
           </p>
@@ -327,7 +327,7 @@ export function InactivityGuard({
     }
 
     return (
-      <main className="flex min-h-screen items-center justify-center bg-app-bg px-5 text-slate-500">
+      <main className="flex min-h-screen items-center justify-center bg-background px-5 text-text-secondary">
         <p className="text-sm font-medium">Sessão encerrada por inatividade...</p>
       </main>
     );

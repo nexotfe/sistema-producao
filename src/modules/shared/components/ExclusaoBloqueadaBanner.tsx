@@ -13,19 +13,19 @@ export function ExclusaoBloqueadaBanner({
 }: ExclusaoBloqueadaBannerProps) {
   if (status === "sem_permissao") {
     return (
-      <p className="px-5 py-3 text-sm font-medium text-red-600">
+      <p className="px-5 py-3 text-sm font-medium text-status-danger-text">
         Apenas administradores podem excluir registros.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-50 px-5 py-3 text-sm text-amber-800">
+    <div className="flex flex-wrap items-center justify-between gap-3 bg-status-warning-bg px-5 py-3 text-sm text-status-warning-text">
       <span>Não é possível excluir - há vínculos com produção/histórico.</span>
       <button
         type="button"
         onClick={onDesativar}
-        className="h-9 shrink-0 rounded-md border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+        className="h-9 shrink-0 rounded-md border border-status-warning-border bg-surface-elevated px-3 text-sm font-semibold text-status-warning-text transition hover:bg-status-warning-bg"
       >
         Desativar em vez disso
       </button>

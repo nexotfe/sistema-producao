@@ -125,12 +125,12 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">
+      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-border bg-surface shadow-xl">
+        <div className="border-b border-border-subtle px-5 py-4">
+          <h2 className="text-lg font-semibold text-text-primary">
             Adicionar Item ao Orçamento
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-text-secondary">
             Busque um produto já cadastrado para incluir no orçamento.
           </p>
         </div>
@@ -139,10 +139,10 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
           {produtoSelecionado ? (
             <div className="grid gap-4">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Produto selecionado
                 </label>
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-sm text-text-primary">
                   <span className="font-semibold">
                     {produtoSelecionado.codigo}
                   </span>{" "}
@@ -151,14 +151,14 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
                 <button
                   type="button"
                   onClick={() => setProdutoSelecionado(null)}
-                  className="mt-1.5 text-xs font-semibold text-blue-700 hover:underline"
+                  className="mt-1.5 text-xs font-semibold text-action-primary hover:underline"
                 >
                   Buscar outro produto
                 </button>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Quantidade
                 </label>
                 <input
@@ -166,18 +166,18 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
                   onChange={(event) => setQuantidade(event.target.value)}
                   inputMode="decimal"
                   autoFocus
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 />
               </div>
 
               {erro ? (
-                <p className="text-sm font-medium text-red-600">{erro}</p>
+                <p className="text-sm font-medium text-status-danger-text">{erro}</p>
               ) : null}
             </div>
           ) : (
             <div className="grid gap-3">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Buscar produto (código ou descrição)
                 </label>
                 <input
@@ -188,33 +188,33 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
                   value={termo}
                   onChange={(event) => setTermo(event.target.value)}
                   placeholder="Ex: M12345 ou Cortadora"
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 />
               </div>
 
               {buscandoExibido ? (
-                <p className="text-sm text-slate-400">Buscando...</p>
+                <p className="text-sm text-text-disabled">Buscando...</p>
               ) : semResultados ? (
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-center">
-                  <p className="text-sm text-slate-500">
+                <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-4 text-center">
+                  <p className="text-sm text-text-secondary">
                     Nenhum produto encontrado.
                   </p>
                   <button
                     type="button"
                     onClick={irParaCriarProduto}
-                    className="mt-2 text-sm font-semibold text-blue-700 hover:underline"
+                    className="mt-2 text-sm font-semibold text-action-primary hover:underline"
                   >
                     Criar novo produto
                   </button>
                 </div>
               ) : resultadosExibidos.length > 0 ? (
-                <div className="rounded-md border border-slate-200">
+                <div className="rounded-md border border-border">
                   {resultadosExibidos.map((produto) => (
                     <button
                       key={produto.id}
                       type="button"
                       onClick={() => setProdutoSelecionado(produto)}
-                      className="block w-full border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-700 transition last:border-b-0 hover:bg-slate-50"
+                      className="block w-full border-b border-border-subtle px-3 py-2 text-left text-sm text-text-primary transition last:border-b-0 hover:bg-border-subtle"
                     >
                       <span className="font-semibold">{produto.codigo}</span>{" "}
                       — {produto.descricao}
@@ -226,11 +226,11 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
           <button
             type="button"
             onClick={limparEFechar}
-            className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
           >
             Cancelar
           </button>
@@ -239,7 +239,7 @@ export function ProdutoSearchModal({ open, onClose, onAdd }: Props) {
               type="button"
               onClick={handleAdicionar}
               disabled={salvando}
-              className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {salvando ? "Adicionando..." : "Adicionar"}
             </button>

@@ -327,7 +327,7 @@ export function ResumoFinanceiroCard({
                 value={motivoSubstituicao}
                 onChange={(e) => setMotivoSubstituicao(e.target.value)}
                 rows={3}
-                className="w-full rounded-[10px] border border-slate-200 bg-white px-[13px] py-2 text-[13.5px] text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:border-blue-600 focus-visible:ring-[3px] focus-visible:ring-blue-400/40"
+                className="w-full rounded-[10px] border border-border bg-surface-elevated px-[13px] py-2 text-[13.5px] text-text-primary outline-none transition placeholder:text-text-disabled focus-visible:border-action-primary focus-visible:ring-[3px] focus-visible:ring-focus-ring"
                 placeholder="Ex.: cliente renegociou o prazo e autorizou hora adicional."
               />
             </div>

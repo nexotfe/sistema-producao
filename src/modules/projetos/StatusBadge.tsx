@@ -8,24 +8,24 @@ type StatusColor = {
 
 const STATUS_COLORS: Record<ProjectStatus, StatusColor> = {
   rascunho: {
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
+    bg: "bg-status-info-bg",
+    text: "text-status-info-text",
+    border: "border-status-info-border",
   },
   em_analise: {
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
+    bg: "bg-status-warning-bg",
+    text: "text-status-warning-text",
+    border: "border-status-warning-border",
   },
   reprovado: {
-    bg: "bg-rose-50",
-    text: "text-rose-700",
-    border: "border-rose-200",
+    bg: "bg-status-danger-bg",
+    text: "text-status-danger-text",
+    border: "border-status-danger-border",
   },
   aprovado: {
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
+    bg: "bg-status-success-bg",
+    text: "text-status-success-text",
+    border: "border-status-success-border",
   },
 };
 

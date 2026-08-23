@@ -48,9 +48,9 @@ const materialDecisions = [
 ];
 
 const statusStyles = {
-  "CI total": "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  "CI parcial + compra": "bg-amber-50 text-amber-700 ring-amber-200",
-  "Compra total": "bg-red-50 text-red-700 ring-red-200",
+  "CI total": "bg-status-success-bg text-status-success-text ring-status-success-border",
+  "CI parcial + compra": "bg-status-warning-bg text-status-warning-text ring-status-warning-border",
+  "Compra total": "bg-status-danger-bg text-status-danger-text ring-status-danger-border",
 } as const;
 
 export default function MaterialDecisionPage() {
@@ -58,10 +58,10 @@ export default function MaterialDecisionPage() {
   const [busca, setBusca] = useState("");
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
-      <header className="bg-app-bg">
+    <main className="min-h-screen bg-background text-text-primary">
+      <header className="bg-background">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6">
-          <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+          <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -115,23 +115,23 @@ export default function MaterialDecisionPage() {
       </header>
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <section className="rounded-md border border-slate-200 bg-app-card">
-          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <section className="rounded-md border border-border bg-surface">
+          <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-bold">OF x material</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-text-secondary">
                 Consumo interno e compra externa por necessidade.
               </p>
             </div>
 
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-text-secondary">
               {materialDecisions.length} decisoes
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1120px] table-fixed text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="w-[9%] px-4 py-2 font-semibold">Projeto</th>
                   <th className="w-[12%] px-4 py-2 font-semibold">OF</th>
@@ -146,48 +146,48 @@ export default function MaterialDecisionPage() {
                   <th className="w-[14%] px-4 py-2 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {materialDecisions.map((decision) => (
                   <tr
                     key={`${decision.of}-${decision.materialCode}`}
-                    className="hover:bg-slate-50"
+                    className="hover:bg-border-subtle"
                   >
-                    <td className="px-4 py-3 font-bold text-blue-700">
+                    <td className="px-4 py-3 font-bold text-action-primary">
                       <EntityLink type="projeto" id={decision.project}>
                         {decision.project}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-950">
+                    <td className="px-4 py-3 font-semibold text-text-primary">
                       <EntityLink
                         type="of"
                         id={decision.of}
-                        className="font-semibold text-slate-950 transition hover:text-slate-700"
+                        className="font-semibold text-text-primary transition hover:text-text-secondary"
                       >
                         {decision.of}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {decision.materialCode}
                     </td>
-                    <td className="truncate px-4 py-3 text-slate-700">
+                    <td className="truncate px-4 py-3 text-text-primary">
                       {decision.material}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {decision.unit}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-emerald-700">
+                    <td className="px-4 py-3 font-semibold text-status-success-text">
                       {decision.internalConsumption}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-amber-700">
+                    <td className="px-4 py-3 font-semibold text-status-warning-text">
                       {decision.externalPurchase}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-950">
+                    <td className="px-4 py-3 font-semibold text-text-primary">
                       {decision.total}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {decision.cost}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {decision.needDate}
                     </td>
                     <td className="px-4 py-3">

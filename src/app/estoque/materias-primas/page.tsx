@@ -12,20 +12,20 @@ import {
 import type { MateriaPrimaLista } from "@/modules/materias-primas/types";
 
 const statusStyles = {
-  Ativo: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  Inativo: "bg-slate-100 text-slate-600 ring-slate-200",
+  Ativo: "bg-status-success-bg text-status-success-text ring-status-success-border",
+  Inativo: "bg-border-subtle text-text-secondary ring-border",
 } as const;
 
 const colunaClassMap: Record<string, string> = {
-  codigo: "whitespace-nowrap px-4 py-4 font-semibold text-slate-950",
-  descricao: "max-w-[240px] truncate px-4 py-4 text-slate-700",
-  bitola: "px-4 py-4 text-slate-700",
-  familia: "max-w-[140px] truncate px-4 py-4 text-slate-700",
-  unidade: "px-4 py-4 text-slate-700",
-  quantidade: "px-4 py-4 font-medium text-slate-950",
-  endereco: "max-w-[130px] truncate px-4 py-4 font-medium text-slate-700",
+  codigo: "whitespace-nowrap px-4 py-4 font-semibold text-text-primary",
+  descricao: "max-w-[240px] truncate px-4 py-4 text-text-primary",
+  bitola: "px-4 py-4 text-text-primary",
+  familia: "max-w-[140px] truncate px-4 py-4 text-text-primary",
+  unidade: "px-4 py-4 text-text-primary",
+  quantidade: "px-4 py-4 font-medium text-text-primary",
+  endereco: "max-w-[130px] truncate px-4 py-4 font-medium text-text-primary",
   status: "px-4 py-4",
-  preco: "px-4 py-4 text-slate-700",
+  preco: "px-4 py-4 text-text-primary",
 };
 
 function renderCelulaMaterial(field: string, material: MateriaPrimaLista) {
@@ -51,7 +51,7 @@ function renderCelulaMaterial(field: string, material: MateriaPrimaLista) {
           {abaixoDoMinimo ? (
             <span
               title={`Abaixo do estoque mínimo (${formatarQuantidade(material.estoque_minimo as number)})`}
-              className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-red-200"
+              className="inline-flex items-center gap-1 rounded-full bg-status-danger-bg px-2 py-0.5 text-xs font-semibold text-status-danger-text ring-1 ring-status-danger-border"
             >
               ⚠ Abaixo do mínimo
             </span>
@@ -107,9 +107,9 @@ export default function RawMaterialsPage() {
   );
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -160,11 +160,11 @@ export default function RawMaterialsPage() {
           </div>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-100 px-5 py-4">
+        <section className="rounded-lg border border-border bg-surface">
+          <div className="border-b border-border-subtle px-5 py-4">
             <Link
               href="/estoque/materias-primas/novo"
-              className="inline-flex w-fit items-center rounded-sm text-base font-semibold text-slate-900 outline-none transition hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+              className="inline-flex w-fit items-center rounded-sm text-base font-semibold text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
             >
               Cadastro de Matérias-Primas
               <span
@@ -174,28 +174,28 @@ export default function RawMaterialsPage() {
                 {"\u203A"}
               </span>
             </Link>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-text-secondary">
               Lista de consulta para materiais cadastrados.
             </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full table-auto text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs font-semibold uppercase tracking-[0.14em] text-text-disabled">
                 <tr>
                   {colunasVisiveis.map((coluna) => (
                     <th key={coluna.field} className="px-4 py-3">
                       {coluna.label}
                     </th>
                   ))}
-                  <th className="sticky right-0 z-10 bg-slate-50 px-4 py-3"></th>
+                  <th className="sticky right-0 z-10 bg-border-subtle px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {loading ? (
                   <tr>
                     <td
-                      className="px-4 py-8 text-center text-slate-500"
+                      className="px-4 py-8 text-center text-text-secondary"
                       colSpan={colunasVisiveis.length + 1}
                     >
                       Carregando matérias-primas...
@@ -204,7 +204,7 @@ export default function RawMaterialsPage() {
                 ) : erro ? (
                   <tr>
                     <td
-                      className="px-4 py-8 text-center text-red-600"
+                      className="px-4 py-8 text-center text-status-danger-text"
                       colSpan={colunasVisiveis.length + 1}
                     >
                       {erro}
@@ -213,7 +213,7 @@ export default function RawMaterialsPage() {
                 ) : materiais.length === 0 ? (
                   <tr>
                     <td
-                      className="px-4 py-8 text-center text-slate-500"
+                      className="px-4 py-8 text-center text-text-secondary"
                       colSpan={colunasVisiveis.length + 1}
                     >
                       Nenhuma matéria-prima encontrada.
@@ -257,45 +257,45 @@ function MaterialRow({
   const codigoUrl = encodeURIComponent(codigo);
 
   return (
-    <tr className="group transition hover:bg-slate-50">
+    <tr className="group transition hover:bg-border-subtle">
       {colunas.map((coluna) => (
         <td
           key={coluna.field}
-          className={colunaClassMap[coluna.field] ?? "px-4 py-4 text-slate-700"}
+          className={colunaClassMap[coluna.field] ?? "px-4 py-4 text-text-primary"}
         >
           {renderCelulaMaterial(coluna.field, material)}
         </td>
       ))}
-      <td className="sticky right-0 z-10 border-l border-slate-100 bg-app-card px-4 py-4 text-right group-hover:bg-slate-50">
+      <td className="sticky right-0 z-10 border-l border-border-subtle bg-surface px-4 py-4 text-right group-hover:bg-border-subtle">
         <button
           type="button"
           aria-label={`Abrir ações de ${material.descricao}`}
           onClick={() =>
             setMenuAberto(menuAberto === material.id ? null : material.id)
           }
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-lg font-semibold leading-none text-slate-600 transition hover:bg-slate-50"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-lg font-semibold leading-none text-text-secondary transition hover:bg-border-subtle"
         >
           {"\u22EE"}
         </button>
 
         {menuAberto === material.id ? (
-          <div className="absolute right-4 top-12 z-20 w-40 overflow-hidden rounded-lg border border-slate-200 bg-app-card py-1 text-left shadow-xl">
+          <div className="absolute right-4 top-12 z-20 w-40 overflow-hidden rounded-lg border border-border bg-surface-elevated py-1 text-left shadow-xl">
             <Link
               href={`/estoque/materias-primas/${codigoUrl}`}
-              className="block px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="block px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
             >
               Editar
             </Link>
             <Link
               href={`/estoque/materias-primas/novo?duplicar=${codigoUrl}`}
-              className="block px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="block px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
             >
               Duplicar
             </Link>
             <button
               type="button"
               onClick={() => inativarMaterial(material.id)}
-              className="block w-full px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="block w-full px-3 py-2 text-left text-sm font-medium text-text-primary transition hover:bg-border-subtle"
             >
               Inativar
             </button>

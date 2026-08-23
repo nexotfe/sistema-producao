@@ -50,9 +50,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-4 py-8">
+    <main className="min-h-screen bg-background px-4 py-8">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-2xl border border-slate-200 bg-app-card shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid w-full overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
           <div className="hidden bg-slate-800 p-8 text-white lg:flex lg:flex-col lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-300">
@@ -83,15 +83,15 @@ export default function LoginPage() {
           <div className="p-6 sm:p-10">
             <div className="mx-auto w-full max-w-md">
               <div className="mb-8">
-                <p className="text-sm font-semibold text-blue-700">
+                <p className="text-sm font-semibold text-action-primary">
                   Do orçamento à produção
                 </p>
 
-                <h2 className="mt-2 text-3xl font-bold text-slate-950">
+                <h2 className="mt-2 text-3xl font-bold text-text-primary">
                   Bem-vindo!
                 </h2>
 
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-text-secondary">
                   Acesse sua conta para continuar.
                 </p>
               </div>
@@ -100,7 +100,7 @@ export default function LoginPage() {
                 <div>
                   <label
                     htmlFor="email"
-                    className="mb-1 block text-sm font-medium text-slate-700"
+                    className="mb-1 block text-sm font-medium text-text-primary"
                   >
                     E-mail
                   </label>
@@ -111,14 +111,14 @@ export default function LoginPage() {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="Digite seu e-mail"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-border bg-surface-elevated px-4 py-3 text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-4 focus:ring-focus-ring"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="senha"
-                    className="mb-1 block text-sm font-medium text-slate-700"
+                    className="mb-1 block text-sm font-medium text-text-primary"
                   >
                     Senha
                   </label>
@@ -129,18 +129,18 @@ export default function LoginPage() {
                     value={senha}
                     onChange={(event) => setSenha(event.target.value)}
                     placeholder="Digite sua senha"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-border bg-surface-elevated px-4 py-3 text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-4 focus:ring-focus-ring"
                   />
                 </div>
 
                 {erro && (
-                  <p className="text-sm font-medium text-red-600">{erro}</p>
+                  <p className="text-sm font-medium text-status-danger-text">{erro}</p>
                 )}
 
                 <div className="flex justify-end">
                   <a
                     href="#"
-                    className="text-sm font-medium text-blue-700 hover:text-blue-800 hover:underline"
+                    className="text-sm font-medium text-action-primary hover:text-action-primary-hover hover:underline"
                   >
                     Esqueci minha senha
                   </a>
@@ -149,7 +149,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-blue-200"
+                  className="w-full rounded-lg bg-action-primary-hover px-4 py-3 font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-focus-ring"
                 >
                   {loading ? "Entrando..." : "Entrar"}
                 </button>

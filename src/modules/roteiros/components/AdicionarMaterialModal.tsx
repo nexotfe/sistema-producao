@@ -140,12 +140,12 @@ function AdicionarMaterialModalConteudo({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">
+      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-border bg-surface shadow-xl">
+        <div className="border-b border-border-subtle px-5 py-4">
+          <h2 className="text-lg font-semibold text-text-primary">
             {materialEditando ? "Editar material" : "Adicionar Material"}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-text-secondary">
             {materialEditando
               ? "Corrija quantidade, unidade, dimensões e observações. Para trocar a matéria-prima vinculada, remova e adicione novamente."
               : "Vincule uma matéria-prima já cadastrada a este roteiro."}
@@ -155,11 +155,11 @@ function AdicionarMaterialModalConteudo({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="grid gap-4">
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                 Matéria-prima
               </label>
               {materialEditando ? (
-                <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+                <div className="flex h-10 w-full items-center rounded-md border border-border-subtle bg-border-subtle px-3 text-sm text-text-primary">
                   {materialEditando.descricao}
                 </div>
               ) : (
@@ -171,16 +171,16 @@ function AdicionarMaterialModalConteudo({
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                 Dimensões
               </label>
               <input
                 value={dimensoes}
                 onChange={(event) => setDimensoes(event.target.value)}
                 placeholder="Ex: 1000x1000mm"
-                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="h-10 w-full rounded-md border border-border px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
-              <p className="mt-1.5 text-xs text-slate-400">
+              <p className="mt-1.5 text-xs text-text-disabled">
                 Referência da medida de origem. Não entra no cálculo de
                 custo.
               </p>
@@ -188,26 +188,26 @@ function AdicionarMaterialModalConteudo({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Quantidade
                 </label>
                 <input
                   value={quantidade}
                   onChange={(event) => setQuantidade(event.target.value)}
                   inputMode="decimal"
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-md border border-border px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                   Unidade
                 </label>
                 {materialEditando ? (
                   <select
                     value={unidadeEdicao}
                     onChange={(event) => setUnidadeEdicao(event.target.value)}
-                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                   >
                     {unidadesBomItem.map((opcao) => (
                       <option key={opcao.value} value={opcao.value}>
@@ -216,7 +216,7 @@ function AdicionarMaterialModalConteudo({
                     ))}
                   </select>
                 ) : (
-                  <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
+                  <div className="flex h-10 w-full items-center rounded-md border border-border-subtle bg-border-subtle px-3 text-sm text-text-secondary">
                     {unidadeLabel || "Selecione a matéria-prima"}
                   </div>
                 )}
@@ -224,28 +224,28 @@ function AdicionarMaterialModalConteudo({
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                 Observações
               </label>
               <textarea
                 value={observacoes}
                 onChange={(event) => setObservacoes(event.target.value)}
                 rows={3}
-                className="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="w-full resize-y rounded-md border border-border px-3 py-2 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
 
             {erro ? (
-              <p className="text-sm font-medium text-red-600">{erro}</p>
+              <p className="text-sm font-medium text-status-danger-text">{erro}</p>
             ) : null}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
           >
             Cancelar
           </button>
@@ -253,7 +253,7 @@ function AdicionarMaterialModalConteudo({
             type="button"
             onClick={handleAdicionar}
             disabled={salvando}
-            className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {materialEditando
               ? salvando

@@ -68,7 +68,7 @@ export function ProdutoSubconjuntoSearchInput({
         <>
           {item.codigo} — {item.descricao}
           {!item.temBom ? (
-            <span className="block text-xs text-amber-600">Sem roteiro cadastrado</span>
+            <span className="block text-xs text-status-warning-text">Sem roteiro cadastrado</span>
           ) : null}
         </>
       )}

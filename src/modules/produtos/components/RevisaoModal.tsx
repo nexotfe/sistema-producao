@@ -63,12 +63,12 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-slate-200 bg-app-card shadow-xl">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">
+      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-border bg-surface shadow-xl">
+        <div className="border-b border-border-subtle px-5 py-4">
+          <h2 className="text-lg font-semibold text-text-primary">
             Adicionar Revisão
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-text-secondary">
             Registre uma nova revisão técnica do produto.
           </p>
         </div>
@@ -89,7 +89,7 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
               options={situacoes}
             />
             {situacao === "vigente" ? (
-              <p className="-mt-2 text-xs text-slate-500">
+              <p className="-mt-2 text-xs text-text-secondary">
                 Ao aprovar esta revisão como vigente, a revisão vigente
                 atual (se houver) será encerrada automaticamente.
               </p>
@@ -99,7 +99,7 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
               value="Calculado automaticamente a partir do roteiro"
             />
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                 Anexo do Desenho Técnico
               </label>
               <input
@@ -107,9 +107,9 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
                 onChange={(event) =>
                   setNomeArquivo(event.target.files?.[0]?.name ?? null)
                 }
-                className="block w-full text-sm text-slate-600 file:mr-3 file:h-9 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-50"
+                className="block w-full text-sm text-text-secondary file:mr-3 file:h-9 file:rounded-md file:border file:border-border file:bg-surface-elevated file:px-3 file:text-sm file:font-semibold file:text-text-primary hover:file:bg-border-subtle"
               />
-              <p className="mt-1.5 text-xs text-slate-500">
+              <p className="mt-1.5 text-xs text-text-secondary">
                 {nomeArquivo
                   ? nomeArquivo
                   : "O anexo fica vinculado ao produto, não a esta revisão específica."}
@@ -117,16 +117,16 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
             </div>
 
             {erro ? (
-              <p className="text-sm font-medium text-red-600">{erro}</p>
+              <p className="text-sm font-medium text-status-danger-text">{erro}</p>
             ) : null}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
           <button
             type="button"
             onClick={limparEFechar}
-            className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
           >
             Cancelar
           </button>
@@ -134,7 +134,7 @@ export function RevisaoModal({ open, onClose, onAdd }: Props) {
             type="button"
             onClick={handleAdicionar}
             disabled={!codigoRevisao.trim() || salvando}
-            className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {salvando ? "Adicionando..." : "Adicionar"}
           </button>
@@ -155,14 +155,14 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </label>
 
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       />
     </div>
   );
@@ -171,11 +171,11 @@ function Field({
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <span className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </span>
 
-      <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-500">
+      <div className="flex h-10 items-center rounded-md border border-border-subtle bg-border-subtle px-3 text-sm font-medium text-text-disabled">
         {value}
       </div>
     </div>
@@ -195,14 +195,14 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </label>
 
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

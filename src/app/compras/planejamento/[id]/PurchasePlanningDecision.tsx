@@ -50,16 +50,16 @@ export function PurchasePlanningDecision({
   const orderNumber = planningNumber.replace("PC-", "PED-");
 
   return (
-    <section className="rounded-md border border-slate-200 bg-app-card p-4">
-      <div className="mb-4 grid gap-2 text-xs font-semibold text-slate-600 sm:grid-cols-3">
-        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800">
+    <section className="rounded-md border border-border bg-surface p-4">
+      <div className="mb-4 grid gap-2 text-xs font-semibold text-text-secondary sm:grid-cols-3">
+        <div className="rounded-md border border-status-info-border bg-status-info-bg px-3 py-2 text-status-info-text">
           1. Decidir compra
         </div>
         <div
           className={`rounded-md border px-3 py-2 ${
             decisionConfirmed
-              ? "border-blue-200 bg-blue-50 text-blue-800"
-              : "border-slate-200 bg-slate-50"
+              ? "border-status-info-border bg-status-info-bg text-status-info-text"
+              : "border-border bg-border-subtle"
           }`}
         >
           2. Gerar pedido
@@ -67,8 +67,8 @@ export function PurchasePlanningDecision({
         <div
           className={`rounded-md border px-3 py-2 ${
             orderGenerated
-              ? "border-blue-200 bg-blue-50 text-blue-800"
-              : "border-slate-200 bg-slate-50"
+              ? "border-status-info-border bg-status-info-bg text-status-info-text"
+              : "border-border bg-border-subtle"
           }`}
         >
           3. Pedido rascunho
@@ -79,7 +79,7 @@ export function PurchasePlanningDecision({
         <div>
           <label
             htmlFor="planning-mode"
-            className="mb-1 block text-xs font-semibold uppercase text-slate-500"
+            className="mb-1 block text-xs font-semibold uppercase text-text-secondary"
           >
             Modo
           </label>
@@ -87,7 +87,7 @@ export function PurchasePlanningDecision({
             id="planning-mode"
             value={mode}
             onChange={(event) => setMode(event.target.value)}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm font-semibold text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
           >
             <option value="manual">Manual</option>
             <option value="somar_todas">Somar todas</option>
@@ -99,7 +99,7 @@ export function PurchasePlanningDecision({
         <div>
           <label
             htmlFor="purchase-decision"
-            className="mb-1 block text-xs font-semibold uppercase text-slate-500"
+            className="mb-1 block text-xs font-semibold uppercase text-text-secondary"
           >
             Comprar
           </label>
@@ -107,23 +107,23 @@ export function PurchasePlanningDecision({
             id="purchase-decision"
             defaultValue="1 barra 6.000 mm"
             placeholder="Informe o que sera comprado"
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm font-semibold text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-text-secondary">
             Sobra prevista
           </label>
           <input
             value="2.300 mm"
             readOnly
-            className="h-10 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-950"
+            className="h-10 w-full rounded-md border border-border bg-border-subtle px-3 text-sm font-semibold text-text-disabled"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-text-secondary">
             Status
           </label>
           <button
@@ -131,7 +131,7 @@ export function PurchasePlanningDecision({
               setDecisionConfirmed(true);
               setOrderGenerated(false);
             }}
-            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="h-10 w-full rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
           >
             {decisionConfirmed ? "Compra confirmada" : "Confirmar compra"}
           </button>
@@ -142,7 +142,7 @@ export function PurchasePlanningDecision({
         {orderGenerated ? (
           <Link
             href={`/compras/pedidos/${orderNumber}`}
-            className="text-sm font-semibold text-blue-700 hover:underline"
+            className="text-sm font-semibold text-action-primary hover:underline"
           >
             Abrir {orderNumber}
           </Link>
@@ -151,19 +151,19 @@ export function PurchasePlanningDecision({
         <button
           disabled={!decisionConfirmed}
           onClick={() => setOrderGenerated(true)}
-          className="h-10 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+          className="h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
         >
           Gerar pedido
         </button>
       </div>
 
       {isPartial ? (
-        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+        <div className="mt-4 rounded-md border border-status-warning-border bg-status-warning-bg p-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-sm font-bold text-amber-900">
+            <h2 className="text-sm font-bold text-status-warning-text">
               OFs incluidas neste agrupamento
             </h2>
-            <span className="text-xs font-semibold text-amber-800">
+            <span className="text-xs font-semibold text-status-warning-text">
               {includedCount} selecionada(s)
             </span>
           </div>
@@ -172,7 +172,7 @@ export function PurchasePlanningDecision({
             {partialOrigins.map((origin) => (
               <label
                 key={origin.of}
-                className="flex items-start gap-2 rounded-md border border-amber-200 bg-white p-3 text-sm"
+                className="flex items-start gap-2 rounded-md border border-status-warning-border bg-surface-elevated p-3 text-sm"
               >
                 <input
                   type="checkbox"
@@ -183,24 +183,24 @@ export function PurchasePlanningDecision({
                       [origin.of]: event.target.checked,
                     }))
                   }
-                  className="mt-1 h-4 w-4 rounded border-slate-300"
+                  className="mt-1 h-4 w-4 rounded border-border"
                 />
                 <span>
-                  <span className="block font-bold text-slate-950">
+                  <span className="block font-bold text-text-primary">
                     <EntityLink
                       type="of"
                       id={origin.of}
-                      className="font-bold text-slate-950 transition hover:text-slate-700"
+                      className="font-bold text-text-primary transition hover:text-text-secondary"
                     >
                       {origin.of}
                     </EntityLink>
                   </span>
-                  <span className="block text-xs text-slate-600">
+                  <span className="block text-xs text-text-secondary">
                     Projeto{" "}
                     <EntityLink
                       type="projeto"
                       id={origin.project}
-                      className="font-semibold text-blue-700 transition hover:text-blue-900"
+                      className="font-semibold text-action-primary transition hover:text-action-primary-hover"
                     >
                       {origin.project}
                     </EntityLink>{" "}

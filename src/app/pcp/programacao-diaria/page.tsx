@@ -218,7 +218,7 @@ export default function DailySchedulePage() {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 print:bg-white print:px-0 print:py-0 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary print:bg-white print:px-0 print:py-0 sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-5 print:hidden">
           <div className="flex items-center gap-3">
@@ -228,10 +228,10 @@ export default function DailySchedulePage() {
 
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-disabled">
                 PCP
               </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">
                 Programacao Diaria
               </h1>
             </div>
@@ -244,24 +244,24 @@ export default function DailySchedulePage() {
                 id="daily-search"
                 type="search"
                 placeholder="Buscar recurso, OF, projeto ou Código"
-                className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-text-disabled focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               />
-              <button className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <button className="h-11 rounded-md border border-border bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle">
                 Atualizar
               </button>
-              <button className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <button className="h-11 rounded-md border border-border bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle">
                 Filtros
               </button>
               <button
                 onClick={handlePrint}
-                className="h-11 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+                className="h-11 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
               >
                 Imprimir
               </button>
-              <button className="h-11 rounded-md border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-100">
+              <button className="h-11 rounded-md border border-status-info-border bg-status-info-bg px-4 text-sm font-semibold text-status-info-text transition hover:bg-blue-100">
                 Exportar PDF
               </button>
-              <button className="h-11 rounded-md border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-100">
+              <button className="h-11 rounded-md border border-status-info-border bg-status-info-bg px-4 text-sm font-semibold text-status-info-text transition hover:bg-blue-100">
                 Exportar Excel
               </button>
             </div>
@@ -270,20 +270,20 @@ export default function DailySchedulePage() {
           <nav aria-label="Navegacao PCP" className="flex flex-wrap gap-2">
             <Link
               href="/pcp/planejamento"
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-md border border-border bg-surface-elevated px-3 py-2 text-xs font-semibold text-text-primary transition hover:bg-border-subtle"
             >
               Planejamento PCP
             </Link>
             <Link
               href="/pcp/programacao-diaria"
-              className="rounded-md bg-blue-700 px-3 py-2 text-xs font-semibold text-white"
+              className="rounded-md bg-action-primary-hover px-3 py-2 text-xs font-semibold text-action-primary-text"
             >
               Programacao diaria
             </Link>
             {["Capacidade", "Carga Maquina", "Sequenciamento"].map((item) => (
               <span
                 key={item}
-                className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-400"
+                className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2 text-xs font-semibold text-text-disabled"
               >
                 {item}
               </span>
@@ -294,10 +294,10 @@ export default function DailySchedulePage() {
             {["Data", "Turno", "Supervisor", "Centro de Trabalho", "Situacao"].map(
               (filter) => (
                 <label key={filter} className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-text-disabled">
                     {filter}
                   </span>
-                  <select className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200">
+                  <select className="h-10 rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200">
                     <option>Todos</option>
                   </select>
                 </label>
@@ -306,7 +306,7 @@ export default function DailySchedulePage() {
           </section>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-app-card print:rounded-none print:border-0">
+        <section className="rounded-lg border border-border bg-surface print:rounded-none print:border-0">
           <div className="hidden border-b border-slate-300 px-5 py-4 print:block">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               NEXOTFE - PCP
@@ -327,18 +327,18 @@ export default function DailySchedulePage() {
             </div>
           </div>
 
-          <div className="border-b border-slate-100 px-5 py-4 print:hidden">
-            <p className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 print:block">
+          <div className="border-b border-border-subtle px-5 py-4 print:hidden">
+            <p className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-text-disabled print:block">
               PCP
             </p>
-            <h2 className="text-base font-semibold text-slate-950">
+            <h2 className="text-base font-semibold text-text-primary">
               Programacao diaria por recurso
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-text-secondary">
               Planejamento micro da fabrica para execucao dos lideres.
             </p>
             {loadError ? (
-              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <p className="mt-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-text">
                 {loadError}
               </p>
             ) : null}
@@ -346,7 +346,7 @@ export default function DailySchedulePage() {
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-sm print:min-w-0 print:text-[11px]">
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 print:border-slate-300 print:bg-white print:text-[10px] print:text-slate-700">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs font-semibold uppercase tracking-[0.16em] text-text-disabled print:border-slate-300 print:bg-white print:text-[10px] print:text-slate-700">
                 <tr>
                   <th className="px-5 py-3 print:hidden">Recurso</th>
                   <th className="px-5 py-3 print:px-2 print:py-2">OF</th>
@@ -358,32 +358,32 @@ export default function DailySchedulePage() {
                   <th className="px-5 py-3 print:px-2 print:py-2">Situacao</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+              <tbody className="divide-y divide-border-subtle print:divide-slate-200">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500 print:py-6">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-text-secondary print:py-6">
                       Carregando programacao diaria...
                     </td>
                   </tr>
                 ) : groupedSchedule.length > 0 ? (
                   groupedSchedule.map(([resource, rows]) => (
                     <Fragment key={resource}>
-                      <tr key={`${resource}-header`} className="bg-slate-50 print:bg-white">
+                      <tr key={`${resource}-header`} className="bg-border-subtle print:bg-white">
                         <td
                           colSpan={8}
-                          className="px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 print:border-y print:border-slate-300 print:px-2 print:py-1 print:text-[10px] print:text-slate-800"
+                          className="px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary print:border-y print:border-slate-300 print:px-2 print:py-1 print:text-[10px] print:text-slate-800"
                         >
                           {resource} - {rows.length} OF{rows.length > 1 ? "s" : ""}
                         </td>
                       </tr>
                       {rows.map((row) => (
-                        <tr key={row.ofId} className="transition hover:bg-slate-50 print:break-inside-avoid print:hover:bg-white">
-                          <td className="px-5 py-4 font-semibold text-slate-900 print:hidden" />
+                        <tr key={row.ofId} className="transition hover:bg-border-subtle print:break-inside-avoid print:hover:bg-white">
+                          <td className="px-5 py-4 font-semibold text-text-primary print:hidden" />
                           <td className="px-5 py-4 print:px-2 print:py-2">
                             <EntityLink
                               type="of"
                               id={row.ofId}
-                              className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 print:text-slate-950"
+                              className="font-semibold text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 print:text-slate-950"
                             >
                               {row.of}
                             </EntityLink>
@@ -392,12 +392,12 @@ export default function DailySchedulePage() {
                             <EntityLink
                               type="projeto"
                               id={row.projectId}
-                              className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 print:text-slate-950"
+                              className="font-semibold text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 print:text-slate-950"
                             >
                               {row.project}
                             </EntityLink>
                           </td>
-                          <td className="px-5 py-4 text-slate-700 print:px-2 print:py-2 print:text-slate-800">
+                          <td className="px-5 py-4 text-text-primary print:px-2 print:py-2 print:text-slate-800">
                             {row.client}
                           </td>
                           <td className="px-5 py-4 print:px-2 print:py-2">
@@ -405,22 +405,22 @@ export default function DailySchedulePage() {
                               <EntityLink
                                 type="item"
                                 id={row.pnId}
-                                className="font-semibold text-slate-950 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 print:text-slate-950"
+                                className="font-semibold text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 print:text-slate-950"
                               >
                                 {row.pn}
                               </EntityLink>
                             ) : (
-                              <span className="text-slate-500">{row.pn}</span>
+                              <span className="text-text-secondary">{row.pn}</span>
                             )}
                           </td>
-                          <td className="px-5 py-4 tabular-nums text-slate-700 print:px-2 print:py-2 print:text-slate-800">
+                          <td className="px-5 py-4 tabular-nums text-text-primary print:px-2 print:py-2 print:text-slate-800">
                             <span>{row.estimatedTime}</span>
-                            <span className="mt-1 block text-xs text-slate-400 print:text-[10px] print:text-slate-600">
+                            <span className="mt-1 block text-xs text-text-disabled print:text-[10px] print:text-slate-600">
                               Apontado {row.reportedTime}
                             </span>
                           </td>
                           <td className="px-5 py-4 print:px-2 print:py-2">
-                            <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold tabular-nums text-slate-700 print:h-auto print:border-0 print:bg-app-card print:text-slate-950">
+                            <span className="inline-flex h-7 w-10 items-center justify-center rounded-md border border-border-subtle bg-border-subtle text-xs font-semibold tabular-nums text-text-primary print:h-auto print:border-0 print:bg-surface print:text-slate-950">
                               {row.priority}
                             </span>
                           </td>
@@ -436,14 +436,14 @@ export default function DailySchedulePage() {
                               title={row.programmability.details}
                               className={`mt-1 block text-xs font-semibold print:text-[10px] ${
                                 row.programmability.isProgrammable
-                                  ? "text-emerald-700 print:text-slate-800"
-                                  : "text-amber-700 print:text-slate-800"
+                                  ? "text-status-success-text print:text-slate-800"
+                                  : "text-status-warning-text print:text-slate-800"
                               }`}
                             >
                               {row.programmability.label}
                             </span>
                             {!row.programmability.isProgrammable ? (
-                              <span className="mt-0.5 block text-xs text-slate-400 print:text-[10px] print:text-slate-600">
+                              <span className="mt-0.5 block text-xs text-text-disabled print:text-[10px] print:text-slate-600">
                                 {row.programmability.blockers.join(", ")}
                               </span>
                             ) : null}
@@ -454,7 +454,7 @@ export default function DailySchedulePage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-500 print:py-6">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-text-secondary print:py-6">
                       Nenhuma OF encontrada para a programacao diaria.
                     </td>
                   </tr>

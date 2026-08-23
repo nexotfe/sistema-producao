@@ -62,12 +62,12 @@ const alerts = [
   {
     title: "OF com compra total",
     detail: "260126-0001 aguardando material sem saldo livre.",
-    tone: "border-red-200 bg-red-50 text-red-800",
+    tone: "border-status-danger-border bg-status-danger-bg text-status-danger-text",
   },
   {
     title: "Saldo parcial aproveitado",
     detail: "260125-0001 gerou CI de 40 e compra complementar de 60.",
-    tone: "border-amber-200 bg-amber-50 text-amber-800",
+    tone: "border-status-warning-border bg-status-warning-bg text-status-warning-text",
   },
 ];
 
@@ -75,10 +75,10 @@ export default function PurchasesPage() {
   const router = useRouter();
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
-      <header className="bg-app-bg">
+    <main className="min-h-screen bg-background text-text-primary">
+      <header className="bg-background">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <div className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4">
+          <div className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -128,19 +128,19 @@ export default function PurchasesPage() {
             <nav aria-label="Atalhos de compras" className="flex flex-wrap gap-2">
               <Link
                 href="/fornecedores"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-md border border-border px-3 py-2 text-xs font-semibold text-text-primary transition hover:bg-border-subtle"
               >
                 Fornecedores
               </Link>
               <Link
                 href="/compras/planejamento"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-md border border-border px-3 py-2 text-xs font-semibold text-text-primary transition hover:bg-border-subtle"
               >
                 Planejamento
               </Link>
               <Link
                 href="/estoque/materias-primas"
-                className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-md border border-border px-3 py-2 text-xs font-semibold text-text-primary transition hover:bg-border-subtle"
               >
                 Estoque
               </Link>
@@ -151,17 +151,17 @@ export default function PurchasesPage() {
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <section className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
-          <div className="rounded-md border border-slate-200 bg-app-card">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div className="rounded-md border border-border bg-surface">
+            <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
               <div>
                 <h2 className="text-sm font-bold">Requisicoes abertas</h2>
-                <p className="mt-0.5 text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-text-secondary">
                   Compras externas geradas por falta de saldo livre.
                 </p>
               </div>
               <Link
                 href="/compras/decisao-material"
-                className="text-xs font-semibold text-blue-700 hover:underline"
+                className="text-xs font-semibold text-action-primary hover:underline"
               >
                 Ver decisoes
               </Link>
@@ -169,7 +169,7 @@ export default function PurchasesPage() {
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                   <tr>
                     <th className="px-4 py-2 font-semibold">Projeto</th>
                     <th className="px-4 py-2 font-semibold">OF</th>
@@ -179,27 +179,27 @@ export default function PurchasesPage() {
                     <th className="px-4 py-2 font-semibold">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border-subtle">
                   {openRequisitions.map((row) => (
-                    <tr key={`${row.of}-${row.material}`} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-bold text-blue-700">
+                    <tr key={`${row.of}-${row.material}`} className="hover:bg-border-subtle">
+                      <td className="px-4 py-3 font-bold text-action-primary">
                         <EntityLink type="projeto" id={row.project}>
                           {row.project}
                         </EntityLink>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-950">
+                      <td className="px-4 py-3 font-semibold text-text-primary">
                         <EntityLink
                           type="of"
                           id={row.of}
-                          className="font-semibold text-slate-950 transition hover:text-slate-700"
+                          className="font-semibold text-text-primary transition hover:text-text-secondary"
                         >
                           {row.of}
                         </EntityLink>
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{row.material}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.quantity}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.needDate}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.status}</td>
+                      <td className="px-4 py-3 text-text-primary">{row.material}</td>
+                      <td className="px-4 py-3 text-text-primary">{row.quantity}</td>
+                      <td className="px-4 py-3 text-text-primary">{row.needDate}</td>
+                      <td className="px-4 py-3 text-text-primary">{row.status}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -217,34 +217,34 @@ export default function PurchasesPage() {
           </div>
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-app-card p-4">
+        <section className="rounded-md border border-border bg-surface p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-bold">Planejamento de compras</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-text-secondary">
                 Agrupe requisicoes compativeis antes do pedido de compra.
               </p>
             </div>
             <Link
               href="/compras/planejamento"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border px-3 text-xs font-semibold text-text-primary transition hover:bg-border-subtle"
             >
               Abrir planejamento
             </Link>
           </div>
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-200 px-4 py-3">
+        <section className="rounded-md border border-border bg-surface">
+          <div className="border-b border-border-subtle px-4 py-3">
             <h2 className="text-sm font-bold">Consumos internos recentes</h2>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-text-secondary">
               Material de estoque reservado para projeto e OF.
             </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="px-4 py-2 font-semibold">Projeto</th>
                   <th className="px-4 py-2 font-semibold">OF</th>
@@ -254,27 +254,27 @@ export default function PurchasesPage() {
                   <th className="px-4 py-2 font-semibold">Data</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {recentInternalConsumptions.map((row) => (
-                  <tr key={`${row.of}-${row.material}`} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-bold text-blue-700">
+                  <tr key={`${row.of}-${row.material}`} className="hover:bg-border-subtle">
+                    <td className="px-4 py-3 font-bold text-action-primary">
                       <EntityLink type="projeto" id={row.project}>
                         {row.project}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-950">
+                    <td className="px-4 py-3 font-semibold text-text-primary">
                       <EntityLink
                         type="of"
                         id={row.of}
-                        className="font-semibold text-slate-950 transition hover:text-slate-700"
+                        className="font-semibold text-text-primary transition hover:text-text-secondary"
                       >
                         {row.of}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{row.material}</td>
-                    <td className="px-4 py-3 text-slate-700">{row.quantity}</td>
-                    <td className="px-4 py-3 text-slate-700">{row.cost}</td>
-                    <td className="px-4 py-3 text-slate-700">{row.date}</td>
+                    <td className="px-4 py-3 text-text-primary">{row.material}</td>
+                    <td className="px-4 py-3 text-text-primary">{row.quantity}</td>
+                    <td className="px-4 py-3 text-text-primary">{row.cost}</td>
+                    <td className="px-4 py-3 text-text-primary">{row.date}</td>
                   </tr>
                 ))}
               </tbody>

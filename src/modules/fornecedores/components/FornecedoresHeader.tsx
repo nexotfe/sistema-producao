@@ -45,16 +45,16 @@ export function FornecedoresHeader({
     <header className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-disabled">
             Compras
           </p>
 
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">
             Fornecedores
           </h1>
         </div>
 
-        <div className="text-sm font-medium text-slate-500">
+        <div className="text-sm font-medium text-text-secondary">
           {usuario}
         </div>
       </div>
@@ -68,11 +68,11 @@ export function FornecedoresHeader({
           value={busca}
           onChange={(event) => setBusca(event.target.value)}
           placeholder="Buscar por fornecedor, CNPJ, cidade ou contato"
-          className="h-11 w-full rounded-lg border border-slate-200 bg-app-card px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70 lg:max-w-xl"
+          className="h-11 w-full rounded-lg border border-border bg-surface-elevated px-4 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-4 focus:ring-focus-ring lg:max-w-xl"
         />
 
         <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:justify-end">
-          <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
+          <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-border bg-surface p-1">
             <SituacaoButton
               label="Todos"
               quantidade={totais.todos}
@@ -95,28 +95,28 @@ export function FornecedoresHeader({
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
+          <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-surface p-1">
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setMostrarColunas(!mostrarColunas)}
-                className="inline-flex h-9 min-w-24 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex h-9 min-w-24 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
               >
                 Exibir
-                <span className="text-xs text-slate-400">{"\u25BE"}</span>
+                <span className="text-xs text-text-disabled">{"\u25BE"}</span>
               </button>
 
               {mostrarColunas && (
-                <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-app-card p-4 shadow-xl">
+                <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface-elevated p-4 shadow-xl">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
                       Exibir campos
                     </p>
 
                     <button
                       type="button"
                       onClick={() => setMostrarColunas(false)}
-                      className="text-xs font-semibold text-slate-500 transition hover:text-slate-900"
+                      className="text-xs font-semibold text-text-secondary transition hover:text-text-primary"
                     >
                       Fechar
                     </button>
@@ -185,7 +185,7 @@ export function FornecedoresHeader({
             <button
               type="button"
               onClick={onExportar}
-              className="inline-flex h-9 min-w-24 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-9 min-w-24 items-center justify-center rounded-md px-3 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
             >
               Exportar
             </button>
@@ -213,8 +213,8 @@ function SituacaoButton({
       onClick={onClick}
       className={
         ativo
-          ? "inline-flex h-9 items-center justify-center rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-900 transition"
-          : "inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          ? "inline-flex h-9 items-center justify-center rounded-md bg-border-subtle px-3 text-sm font-semibold text-text-primary transition"
+          : "inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-text-secondary transition hover:bg-border-subtle"
       }
     >
       {label} ({quantidade})
@@ -232,12 +232,12 @@ function CheckboxCampo({
   onChange: () => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+    <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-text-primary transition hover:bg-border-subtle">
       <input
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        className="h-4 w-4 accent-slate-900"
+        className="h-4 w-4 accent-text-primary"
       />
       {label}
     </label>

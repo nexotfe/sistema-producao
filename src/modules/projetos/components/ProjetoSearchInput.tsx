@@ -49,15 +49,15 @@ export function ProjetoSearchInput() {
         }}
         onFocus={() => setAberto(true)}
         placeholder="Buscar projeto por número, descrição ou cliente..."
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       />
 
       {mostrarDropdown ? (
-        <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-app-card py-1 shadow-lg">
+        <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-surface-elevated py-1 shadow-lg">
           {loading ? (
-            <p className="px-3 py-2 text-sm text-slate-400">Carregando...</p>
+            <p className="px-3 py-2 text-sm text-text-disabled">Carregando...</p>
           ) : resultados.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-slate-400">
+            <p className="px-3 py-2 text-sm text-text-disabled">
               Nenhum projeto encontrado.
             </p>
           ) : (
@@ -66,7 +66,7 @@ export function ProjetoSearchInput() {
                 key={projeto.id}
                 type="button"
                 onClick={() => selecionar(projeto.id)}
-                className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                className="block w-full px-3 py-2 text-left text-sm text-text-primary transition hover:bg-border-subtle"
               >
                 <span className="font-semibold">{projeto.numeroProjeto}</span>
                 {" — "}

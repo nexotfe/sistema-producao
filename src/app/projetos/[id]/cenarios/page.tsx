@@ -39,7 +39,7 @@ export default function ProjectCenariosPage({ params }: ProjectCenariosPageProps
   }, [id]);
 
   return (
-    // bg-background/text-text-primary (nunca bg-app-bg/text-slate-*, os
+    // bg-background/text-text-primary (nunca bg-background/text-slate-*, os
     // tokens LEGADOS estáticos que /simulacao/page.tsx usa) - esta tela
     // usa o Design System novo (Card/Field) por dentro, que É reativo a
     // tema (prefers-color-scheme/data-theme). Misturar um shell estático

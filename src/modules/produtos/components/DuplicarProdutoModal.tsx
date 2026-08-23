@@ -82,10 +82,10 @@ function DuplicarProdutoModalConteudo({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-      <div className="w-full max-w-md rounded-md border border-slate-200 bg-app-card shadow-xl">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">Duplicar produto</h2>
-          <p className="mt-1 text-sm text-slate-500">
+      <div className="w-full max-w-md rounded-md border border-border bg-surface shadow-xl">
+        <div className="border-b border-border-subtle px-5 py-4">
+          <h2 className="text-lg font-semibold text-text-primary">Duplicar produto</h2>
+          <p className="mt-1 text-sm text-text-secondary">
             Cria um produto novo com uma cópia independente do roteiro de {produtoOrigemCodigo}{" "}
             (materiais, operações, vínculos com subconjuntos e serviços de terceiros). Produtos
             usados como subconjunto não são duplicados, apenas referenciados.
@@ -93,7 +93,7 @@ function DuplicarProdutoModalConteudo({
         </div>
 
         <div className="px-5 py-4">
-          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+          <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
             Código do novo produto
           </label>
           <input
@@ -101,18 +101,18 @@ function DuplicarProdutoModalConteudo({
             onChange={(event) => setCodigo(event.target.value)}
             disabled={duplicando}
             autoFocus
-            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
+            className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring disabled:bg-border-subtle"
           />
 
-          {erro ? <p className="mt-3 text-sm font-medium text-red-600">{erro}</p> : null}
+          {erro ? <p className="mt-3 text-sm font-medium text-status-danger-text">{erro}</p> : null}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
           <button
             type="button"
             onClick={fechar}
             disabled={duplicando}
-            className="h-10 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -120,7 +120,7 @@ function DuplicarProdutoModalConteudo({
             type="button"
             onClick={handleDuplicar}
             disabled={duplicando}
-            className="h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {duplicando ? "Duplicando..." : "Duplicar"}
           </button>

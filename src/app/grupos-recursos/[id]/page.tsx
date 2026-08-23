@@ -53,9 +53,9 @@ export default function GrupoRecursoPage({ params }: Props) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-          <p className="text-sm text-slate-500">Carregando grupo...</p>
+          <p className="text-sm text-text-secondary">Carregando grupo...</p>
         </div>
       </main>
     );
@@ -63,9 +63,9 @@ export default function GrupoRecursoPage({ params }: Props) {
 
   if (erro || !grupo) {
     return (
-      <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-text-secondary">
             {erro || "Grupo nao encontrado."}
           </p>
         </div>
@@ -74,7 +74,7 @@ export default function GrupoRecursoPage({ params }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <header className="flex flex-col gap-3">
           <ModuleBackLink href="/grupos-recursos" label="Grupo de Recursos" />
@@ -82,16 +82,16 @@ export default function GrupoRecursoPage({ params }: Props) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                <h1 className="text-3xl font-semibold tracking-tight text-text-primary">
                   {grupo.nome || "Grupo sem nome"}
                 </h1>
 
-                <span className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <span className="rounded-md border border-status-success-border bg-status-success-bg px-3 py-1 text-xs font-semibold text-status-success-text">
                   {grupo.ativo ? "Ativo" : "Inativo"}
                 </span>
               </div>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-text-secondary">
                 Codigo {grupo.codigo || "nao informado"}
               </p>
             </div>
@@ -101,7 +101,7 @@ export default function GrupoRecursoPage({ params }: Props) {
                 type="button"
                 onClick={handleExcluir}
                 disabled={processando}
-                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-slate-200 bg-app-card px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-border bg-surface px-5 text-sm font-semibold text-text-primary transition hover:bg-border-subtle disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Excluir grupo
               </button>
@@ -129,21 +129,21 @@ export default function GrupoRecursoPage({ params }: Props) {
 
           <Card titulo="Descricao / Observacoes">
             <div className="px-6 py-6">
-              <p className="text-sm font-medium leading-6 text-slate-900">
+              <p className="text-sm font-medium leading-6 text-text-primary">
                 {grupo.descricao || "Nao informado"}
               </p>
             </div>
           </Card>
 
           {bloqueioExclusao === "vinculado" ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-status-warning-border bg-status-warning-bg px-4 py-3 text-sm text-status-warning-text">
               <span>
                 Não é possível excluir - há vínculos com produção/histórico.
               </span>
               <button
                 type="button"
                 onClick={handleInativar}
-                className="h-9 shrink-0 rounded-md border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+                className="h-9 shrink-0 rounded-md border border-status-warning-border bg-surface-elevated px-3 text-sm font-semibold text-status-warning-text transition hover:bg-status-warning-bg"
               >
                 Desativar em vez disso
               </button>
@@ -151,7 +151,7 @@ export default function GrupoRecursoPage({ params }: Props) {
           ) : null}
 
           {bloqueioExclusao === "sem_permissao" ? (
-            <p className="text-sm font-medium text-red-600">
+            <p className="text-sm font-medium text-status-danger-text">
               Apenas administradores podem excluir registros.
             </p>
           ) : null}
@@ -169,9 +169,9 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-app-card">
-      <div className="border-b border-slate-100 px-6 py-5">
-        <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
+    <div className="rounded-lg border border-border bg-surface">
+      <div className="border-b border-border-subtle px-6 py-5">
+        <h2 className="text-base font-semibold text-text-primary">{titulo}</h2>
       </div>
 
       {children}
@@ -188,11 +188,11 @@ function Info({
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-disabled">
         {label}
       </p>
 
-      <p className="mt-2 text-sm font-medium leading-6 text-slate-900">
+      <p className="mt-2 text-sm font-medium leading-6 text-text-primary">
         {value || "Nao informado"}
       </p>
     </div>

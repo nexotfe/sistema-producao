@@ -20,7 +20,7 @@ export default function NewProductPage() {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <Header
           titulo="Produto"
@@ -30,7 +30,7 @@ export default function NewProductPage() {
         />
 
         {erro ? (
-          <p className="text-sm font-medium text-red-600">{erro}</p>
+          <p className="text-sm font-medium text-status-danger-text">{erro}</p>
         ) : null}
 
         <ProductForm
@@ -55,7 +55,7 @@ function Header({
   salvando: boolean;
 }) {
   return (
-    <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+    <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -92,7 +92,7 @@ function Header({
               type="button"
               onClick={onSalvar}
               disabled={salvando}
-              className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {salvando ? "Salvando..." : "Salvar"}
             </button>

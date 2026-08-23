@@ -23,7 +23,7 @@ export function EntityLink({
 }: EntityLinkProps) {
   const label = children ?? `${entityLabels[type]} ${id}`;
   const defaultClassName =
-    "font-semibold text-blue-700 underline-offset-2 outline-none transition hover:text-blue-900 hover:underline focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2";
+    "font-semibold text-action-primary underline-offset-2 outline-none transition hover:text-action-primary-hover hover:underline focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2";
 
   return (
     <Link

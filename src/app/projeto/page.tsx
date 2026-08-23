@@ -147,9 +147,9 @@ export default function ProjetoPage() {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -186,7 +186,7 @@ export default function ProjetoPage() {
                   type="button"
                   onClick={handleSalvar}
                   disabled={salvando}
-                  className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:opacity-60"
                 >
                   {salvando ? "Salvando..." : "Salvar"}
                 </button>
@@ -199,14 +199,14 @@ export default function ProjetoPage() {
           {projetoId ? (
             <Link
               href={`/projetos/novo?id=${projetoId}`}
-              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-10 items-center rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
             >
               Orçamento
             </Link>
           ) : (
             <span
               title="Salve o projeto antes de abrir o orçamento."
-              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-400"
+              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-border-subtle px-3 text-sm font-semibold text-text-disabled"
             >
               Orçamento
             </span>
@@ -215,14 +215,14 @@ export default function ProjetoPage() {
           {projetoId ? (
             <Link
               href={`/projetos/${projetoId}/simulacao`}
-              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-10 items-center rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
             >
               Simulação
             </Link>
           ) : (
             <span
               title="Salve o projeto antes de simular capacidade."
-              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-400"
+              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-border-subtle px-3 text-sm font-semibold text-text-disabled"
             >
               Simulação
             </span>
@@ -231,14 +231,14 @@ export default function ProjetoPage() {
           {projetoId ? (
             <Link
               href={`/projetos/${projetoId}/cenarios`}
-              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-10 items-center rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
             >
               Cenários
             </Link>
           ) : (
             <span
               title="Salve o projeto antes de avaliar cenários."
-              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-400"
+              className="inline-flex h-10 cursor-not-allowed items-center rounded-md border border-border-subtle px-3 text-sm font-semibold text-text-disabled"
             >
               Cenários
             </span>
@@ -247,14 +247,14 @@ export default function ProjetoPage() {
 
         {(erro || mensagemSalvar) && (
           <p
-            className={`text-sm ${erro ? "text-rose-600" : "text-emerald-600"}`}
+            className={`text-sm ${erro ? "text-status-danger-text" : "text-status-success-text"}`}
           >
             {erro ?? mensagemSalvar}
           </p>
         )}
 
         {precisaSimulacaoParaAprovar && projetoId ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-status-warning-border bg-status-warning-bg px-4 py-3 text-sm text-status-warning-text">
             <span>
               A aprovação de um Projeto exige uma Simulação Comercial válida.
               Acesse a tela de Simulação Comercial para aprovar este Projeto.
@@ -272,38 +272,38 @@ export default function ProjetoPage() {
           {cards.map((card, index) => (
             <article
               key={card}
-              className={`min-h-40 rounded-lg border border-slate-200 bg-app-card px-5 py-5 ${
+              className={`min-h-40 rounded-lg border border-border bg-surface px-5 py-5 ${
                 index < 2 ? "lg:col-span-2" : ""
               }`}
             >
-              <h2 className="text-sm font-bold text-slate-950">{card}</h2>
+              <h2 className="text-sm font-bold text-text-primary">{card}</h2>
               {index === 0 ? (
                 <div className="mt-5 space-y-5">
                   <div className="grid gap-x-4 gap-y-5 lg:grid-cols-4">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Projeto
                       </label>
                       <input
                         value={numeroProjeto ?? "Gerado automaticamente"}
                         readOnly
-                        className="h-10 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700"
+                        className="h-10 w-full rounded-md border border-border-subtle bg-border-subtle px-3 text-sm text-text-disabled"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Descrição do Projeto
                       </label>
                       <input
                         value={nome}
                         onChange={(event) => setNome(event.target.value)}
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Natureza
                       </label>
                       <select
@@ -313,7 +313,7 @@ export default function ProjetoPage() {
                             event.target.value as (typeof PROJECT_TYPES)[number],
                           )
                         }
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                       >
                         {PROJECT_TYPES.map((tipo) => (
                           <option key={tipo} value={tipo}>
@@ -324,7 +324,7 @@ export default function ProjetoPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Responsável
                       </label>
                       <input
@@ -332,21 +332,21 @@ export default function ProjetoPage() {
                         onChange={(event) =>
                           setResponsavelNome(event.target.value)
                         }
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                       />
                     </div>
                   </div>
 
                   <div className="grid gap-x-4 gap-y-5 lg:grid-cols-4">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Cliente
                       </label>
                       <ClienteSearchInput value={cliente} onChange={setCliente} />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Status
                       </label>
                       <select
@@ -357,7 +357,7 @@ export default function ProjetoPage() {
                           )
                         }
                         disabled={statusCarregado === "aprovado"}
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring disabled:cursor-not-allowed disabled:bg-border-subtle disabled:text-text-secondary"
                       >
                         {PROJECT_STATUSES.map((valor) => (
                           <option key={valor} value={valor}>
@@ -368,25 +368,25 @@ export default function ProjetoPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Data de Inclusão
                       </label>
                       <input
                         value={formatarData(criadoEm)}
                         readOnly
-                        className="h-10 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700"
+                        className="h-10 w-full rounded-md border border-border-subtle bg-border-subtle px-3 text-sm text-text-disabled"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Data Necessidade
                       </label>
                       <input
                         type="date"
                         value={dataObjetivo}
                         onChange={(event) => setDataObjetivo(event.target.value)}
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                       />
                     </div>
                   </div>
@@ -396,14 +396,14 @@ export default function ProjetoPage() {
                 <div className="mt-5 space-y-5">
                   <div className="grid gap-x-4 gap-y-5 lg:grid-cols-3">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Cliente
                       </label>
                       <ClienteSearchInput value={cliente} onChange={setCliente} />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Pedido de Compra do Cliente
                       </label>
                       <input
@@ -411,12 +411,12 @@ export default function ProjetoPage() {
                         onChange={(event) =>
                           setPedidoCompraCliente(event.target.value)
                         }
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                         Documento do Cliente
                       </label>
                       <input
@@ -425,7 +425,7 @@ export default function ProjetoPage() {
                           setDocumentoCliente(event.target.value)
                         }
                         placeholder="OM, Escopo, Contrato, RFQ"
-                        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                       />
                     </div>
                   </div>
@@ -433,7 +433,7 @@ export default function ProjetoPage() {
                   {contatos.map(({ label, prefixo, contato, setContato }) => (
                     <div key={label} className="grid gap-x-4 gap-y-5 lg:grid-cols-4">
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                        <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                           {label}
                         </label>
                         <ContatoSearchInput
@@ -451,7 +451,7 @@ export default function ProjetoPage() {
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                        <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                           E-mail
                         </label>
                         <input
@@ -459,12 +459,12 @@ export default function ProjetoPage() {
                           onChange={(event) =>
                             setContato({ ...contato, email: event.target.value })
                           }
-                          className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                        <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                           Telefone
                         </label>
                         <input
@@ -475,12 +475,12 @@ export default function ProjetoPage() {
                               telefone: event.target.value,
                             })
                           }
-                          className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                        <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                           Setor
                         </label>
                         <input
@@ -488,7 +488,7 @@ export default function ProjetoPage() {
                           onChange={(event) =>
                             setContato({ ...contato, setor: event.target.value })
                           }
-                          className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                         />
                       </div>
                     </div>
@@ -500,11 +500,11 @@ export default function ProjetoPage() {
                   value={observacoes}
                   onChange={(event) => setObservacoes(event.target.value)}
                   placeholder="Informações importantes sobre este projeto..."
-                  className="mt-5 h-64 w-full resize-none rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="mt-5 h-64 w-full resize-none rounded-md border border-border bg-surface-elevated px-3 py-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
                 />
               ) : null}
               {index === 3 ? (
-                <div className="mt-5 divide-y divide-slate-200 rounded-md border border-slate-200">
+                <div className="mt-5 divide-y divide-border rounded-md border border-border">
                   {[
                     [
                       "Nº de Produtos",
@@ -524,8 +524,8 @@ export default function ProjetoPage() {
                       <span
                         className={
                           projetoAprovado
-                            ? "font-medium text-slate-600"
-                            : "font-medium text-slate-400"
+                            ? "font-medium text-text-secondary"
+                            : "font-medium text-text-disabled"
                         }
                       >
                         {label}
@@ -533,8 +533,8 @@ export default function ProjetoPage() {
                       <span
                         className={
                           projetoAprovado
-                            ? "font-semibold text-slate-800"
-                            : "font-semibold text-slate-400"
+                            ? "font-semibold text-text-primary"
+                            : "font-semibold text-text-disabled"
                         }
                       >
                         {projetoAprovado ? value : "—"}

@@ -109,7 +109,7 @@ export function ProductForm({
         </div>
       </Card>
 
-      <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-app-card px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-md border border-border bg-surface px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="w-full sm:max-w-xs">
           <ReadOnlyField
             label="Roteiro Vigente"
@@ -120,14 +120,14 @@ export function ProductForm({
         {values.code ? (
           <Link
             href={`/roteiros/${encodeURIComponent(values.code)}`}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
           >
             {values.roteiroVigente ? "Abrir Roteiro" : "Criar Roteiro"}
           </Link>
         ) : (
           <span
             title="Salve o produto antes de abrir o roteiro"
-            className="inline-flex h-10 cursor-not-allowed items-center justify-center rounded-md bg-slate-200 px-4 text-sm font-semibold text-slate-500"
+            className="inline-flex h-10 cursor-not-allowed items-center justify-center rounded-md bg-border px-4 text-sm font-semibold text-text-secondary"
           >
             Criar Roteiro
           </span>
@@ -136,11 +136,11 @@ export function ProductForm({
 
       <Card titulo="Estoque">
         {onAjustarEstoque ? (
-          <div className="flex items-center justify-end border-b border-slate-100 px-4 py-3">
+          <div className="flex items-center justify-end border-b border-border-subtle px-4 py-3">
             <button
               type="button"
               onClick={() => setModalEstoqueAberto(true)}
-              className="h-9 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="h-9 rounded-md border border-border px-3 text-xs font-semibold text-text-primary transition hover:bg-border-subtle"
             >
               Ajustar Estoque
             </button>
@@ -167,12 +167,12 @@ export function ProductForm({
       </Card>
 
       <Card titulo="Revisões">
-        <div className="border-b border-slate-100 px-4 py-3">
+        <div className="border-b border-border-subtle px-4 py-3">
           <div className="flex justify-end">
             <button
               type="button"
               onClick={() => setModalRevisaoAberto(true)}
-              className="h-10 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800"
+              className="h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
             >
               Adicionar Revisão
             </button>
@@ -238,7 +238,7 @@ function formatarUltimaMovimentacao(estoque: EstoqueInfo | null | undefined) {
 function RevisoesTable({ revisoes }: { revisoes: ProductRevision[] }) {
   if (revisoes.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-sm text-slate-500">
+      <div className="px-4 py-8 text-center text-sm text-text-secondary">
         Nenhuma revisão cadastrada
       </div>
     );
@@ -247,7 +247,7 @@ function RevisoesTable({ revisoes }: { revisoes: ProductRevision[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[820px] text-left text-sm">
-        <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+        <thead className="border-b border-border-subtle bg-border-subtle text-xs font-semibold uppercase tracking-[0.14em] text-text-disabled">
           <tr>
             <th className="px-4 py-3">Revisão</th>
             <th className="px-4 py-3">Situação</th>
@@ -256,27 +256,27 @@ function RevisoesTable({ revisoes }: { revisoes: ProductRevision[] }) {
             <th className="px-4 py-3">Desenho Técnico</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-border-subtle">
           {revisoes.map((revisao) => (
-            <tr key={revisao.id} className="transition hover:bg-slate-50">
-              <td className="px-4 py-3 font-semibold text-slate-900">
+            <tr key={revisao.id} className="transition hover:bg-border-subtle">
+              <td className="px-4 py-3 font-semibold text-text-primary">
                 {revisao.codigoRevisao}
               </td>
               <td className="px-4 py-3">
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                     revisao.situacao === "vigente"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-slate-100 text-slate-600"
+                      ? "bg-status-success-bg text-status-success-text"
+                      : "bg-border-subtle text-text-secondary"
                   }`}
                 >
                   {revisao.situacao === "vigente" ? "Vigente" : "Anterior"}
                 </span>
               </td>
-              <td className="px-4 py-3 text-slate-700">
+              <td className="px-4 py-3 text-text-primary">
                 {revisao.roteiroVinculado}
               </td>
-              <td className="px-4 py-3 text-slate-700">
+              <td className="px-4 py-3 text-text-primary">
                 {revisao.custoCalculado > 0
                   ? revisao.custoCalculado.toLocaleString("pt-BR", {
                       style: "currency",
@@ -284,7 +284,7 @@ function RevisoesTable({ revisoes }: { revisoes: ProductRevision[] }) {
                     })
                   : "Aguardando roteiro"}
               </td>
-              <td className="px-4 py-3 text-slate-700">
+              <td className="px-4 py-3 text-text-primary">
                 {revisao.anexoDesenho ?? "Sem anexo"}
               </td>
             </tr>
@@ -303,9 +303,9 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-app-card transition hover:border-blue-700">
-      <div className="border-b border-slate-100 px-4 py-3">
-        <h2 className="text-sm font-bold text-slate-950">{titulo}</h2>
+    <div className="rounded-md border border-border bg-surface transition hover:border-action-primary-hover">
+      <div className="border-b border-border-subtle px-4 py-3">
+        <h2 className="text-sm font-bold text-text-primary">{titulo}</h2>
       </div>
 
       {children}
@@ -324,14 +324,14 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </label>
 
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       />
     </div>
   );
@@ -340,11 +340,11 @@ function Field({
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <span className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </span>
 
-      <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-500">
+      <div className="flex h-10 items-center rounded-md border border-border-subtle bg-border-subtle px-3 text-sm font-medium text-text-disabled">
         {value}
       </div>
     </div>
@@ -364,14 +364,14 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </label>
 
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -396,7 +396,7 @@ function TextareaField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
         {label}
       </label>
 
@@ -404,7 +404,7 @@ function TextareaField({
         rows={rows}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="w-full resize-y rounded-md border border-border bg-surface-elevated px-3 py-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       />
     </div>
   );

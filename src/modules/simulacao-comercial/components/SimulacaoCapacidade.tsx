@@ -897,8 +897,8 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
   if (verificandoAprovacaoExistente) {
     return (
-      <section className="rounded-md border border-slate-200 bg-app-card p-4">
-        <p className="text-sm text-slate-500">Verificando simulação...</p>
+      <section className="rounded-md border border-border bg-surface p-4">
+        <p className="text-sm text-text-secondary">Verificando simulação...</p>
       </section>
     );
   }
@@ -909,19 +909,19 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
     const exibicaoEstimativa = prepararExibicaoEstimativaSnapshot(simulacaoAprovadaExistente);
 
     return (
-      <section className="rounded-md border border-emerald-200 bg-app-card p-4">
+      <section className="rounded-md border border-status-success-border bg-surface p-4">
         <div className="mb-4">
-          <h2 className="text-sm font-bold text-emerald-900">
+          <h2 className="text-sm font-bold text-status-success-text">
             Simulação Comercial Aprovada
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-text-secondary">
             Situação: Simulação Comercial Aprovada. A aprovação vigente é o
             estado oficial deste projeto - não há ação de aprovação
             disponível nesta tela.
           </p>
         </div>
 
-        <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 text-sm text-text-primary sm:grid-cols-2 lg:grid-cols-3">
           <span>
             Aprovado por: <strong>{simulacaoAprovadaExistente.aprovadoPorNome}</strong>
           </span>
@@ -993,48 +993,48 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           </span>
         </div>
 
-        <div className="mt-5 border-t border-emerald-200 pt-4">
-          <h3 className="text-sm font-bold text-emerald-900">
+        <div className="mt-5 border-t border-status-success-border pt-4">
+          <h3 className="text-sm font-bold text-status-success-text">
             Estimativa de Início Necessário
           </h3>
 
           {exibicaoEstimativa.tipo === "nao_registrada" ? (
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-text-secondary">
               Estimativa não registrada nesta simulação.
             </p>
           ) : null}
 
           {exibicaoEstimativa.tipo === "indisponivel" ? (
-            <p className="mt-1 text-sm text-slate-600">Indisponível.</p>
+            <p className="mt-1 text-sm text-text-secondary">Indisponível.</p>
           ) : null}
 
           {exibicaoEstimativa.tipo === "disponivel" ? (
-            <dl className="mt-2 grid gap-x-3 gap-y-1 text-sm text-slate-700 sm:grid-cols-2">
-              <dt className="text-slate-500">Estimativa de Início Necessário</dt>
+            <dl className="mt-2 grid gap-x-3 gap-y-1 text-sm text-text-primary sm:grid-cols-2">
+              <dt className="text-text-secondary">Estimativa de Início Necessário</dt>
               <dd>{formatarDataBr(exibicaoEstimativa.dataEstimadaInicioNecessario)}</dd>
-              <dt className="text-slate-500">Estado</dt>
+              <dt className="text-text-secondary">Estado</dt>
               <dd>{exibicaoEstimativa.estadoAmigavel}</dd>
-              <dt className="text-slate-500">Folga (dias produtivos)</dt>
+              <dt className="text-text-secondary">Folga (dias produtivos)</dt>
               <dd>{exibicaoEstimativa.folgaDiasProdutivos}</dd>
-              <dt className="text-slate-500">Versão do método</dt>
+              <dt className="text-text-secondary">Versão do método</dt>
               <dd>{exibicaoEstimativa.metodoVersao}</dd>
             </dl>
           ) : null}
         </div>
 
         {detalhamentoSnapshot && detalhamentoSnapshot.length > 0 ? (
-          <div className="mt-5 border-t border-emerald-200 pt-4">
-            <h3 className="text-sm font-bold text-emerald-900">
+          <div className="mt-5 border-t border-status-success-border pt-4">
+            <h3 className="text-sm font-bold text-status-success-text">
               Detalhamento por operação e recurso
             </h3>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-text-secondary">
               Base congelada no momento da aprovação - nunca recalculada a
               partir do cadastro atual de recursos.
             </p>
 
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
+                <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                   <tr>
                     <th className="px-4 py-3 font-bold">Operação / Recurso</th>
                     <th className="px-4 py-3 text-center font-bold">Origem</th>
@@ -1044,28 +1044,28 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                     <th className="px-4 py-3 text-center font-bold">Saldo antes → depois</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border-subtle">
                   {detalhamentoSnapshot.map((operacao) => (
                     <Fragment key={operacao.bomOperacaoId}>
-                      <tr className={operacao.deficit > 0 ? "bg-rose-50" : "bg-slate-50/60"}>
-                        <td className="px-4 py-2 align-middle font-semibold text-slate-800" colSpan={2}>
+                      <tr className={operacao.deficit > 0 ? "bg-status-danger-bg" : "bg-slate-50/60"}>
+                        <td className="px-4 py-2 align-middle font-semibold text-text-primary" colSpan={2}>
                           {operacao.operacaoDescricao}{" "}
-                          <span className="font-normal text-slate-500">
+                          <span className="font-normal text-text-secondary">
                             (original: {operacao.recursoOriginalNome}
                             {operacao.versaoResultadoMotor === 1 ? " — formato anterior à Entrega 2" : ""})
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-center align-middle font-semibold text-slate-800">
+                        <td className="px-4 py-2 text-center align-middle font-semibold text-text-primary">
                           {operacao.necessario.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h
                         </td>
-                        <td className="px-4 py-2 text-center align-middle text-slate-500" colSpan={2}>
+                        <td className="px-4 py-2 text-center align-middle text-text-secondary" colSpan={2}>
                           necessário
                         </td>
                         <td
                           className={
                             operacao.deficit > 0
-                              ? "px-4 py-2 text-center align-middle font-semibold text-rose-700"
-                              : "px-4 py-2 text-center align-middle text-slate-500"
+                              ? "px-4 py-2 text-center align-middle font-semibold text-status-danger-text"
+                              : "px-4 py-2 text-center align-middle text-text-secondary"
                           }
                         >
                           {operacao.deficit > 0
@@ -1076,39 +1076,39 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
                       {operacao.distribuicoes.length === 0 ? (
                         <tr>
-                          <td className="px-4 py-2 pl-8 align-middle text-rose-700" colSpan={6}>
+                          <td className="px-4 py-2 pl-8 align-middle text-status-danger-text" colSpan={6}>
                             Nenhum recurso comportou esta operação - déficit total.
                           </td>
                         </tr>
                       ) : (
                         operacao.distribuicoes.map((distribuicao, indice) => (
                           <tr key={`${operacao.bomOperacaoId}-${distribuicao.recursoNome}-${indice}`}>
-                            <td className="px-4 py-2 pl-8 align-middle text-slate-700" colSpan={2}>
+                            <td className="px-4 py-2 pl-8 align-middle text-text-primary" colSpan={2}>
                               {distribuicao.recursoNome}
                             </td>
-                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            <td className="px-4 py-2 text-center align-middle text-text-primary">
                               {distribuicao.origem === "ORIGINAL" ? "Original" : "Compatível"}
                             </td>
-                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            <td className="px-4 py-2 text-center align-middle text-text-primary">
                               {distribuicao.horasPadraoAlocadas.toLocaleString("pt-BR", {
                                 maximumFractionDigits: 2,
                               })}
                             </td>
-                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            <td className="px-4 py-2 text-center align-middle text-text-primary">
                               {distribuicao.produtividadeConsiderada !== null
                                 ? `${(distribuicao.produtividadeConsiderada * 100).toLocaleString("pt-BR", {
                                     maximumFractionDigits: 1,
                                   })}%`
                                 : "—"}
                             </td>
-                            <td className="px-4 py-2 text-center align-middle text-slate-700">
+                            <td className="px-4 py-2 text-center align-middle text-text-primary">
                               {distribuicao.horasMaquinaEstimadas !== null
                                 ? distribuicao.horasMaquinaEstimadas.toLocaleString("pt-BR", {
                                     maximumFractionDigits: 2,
                                   })
                                 : "—"}
                             </td>
-                            <td className="px-4 py-2 text-center align-middle text-slate-500">
+                            <td className="px-4 py-2 text-center align-middle text-text-secondary">
                               {distribuicao.capacidadeDisponivelAntes !== null &&
                               distribuicao.capacidadeDisponivelDepois !== null
                                 ? `${distribuicao.capacidadeDisponivelAntes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} → ${distribuicao.capacidadeDisponivelDepois.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}`
@@ -1127,7 +1127,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
         <Link
           href={`/projetos/${projetoId}`}
-          className="mt-4 inline-flex h-10 items-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="mt-4 inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
         >
           Voltar ao Projeto
         </Link>
@@ -1136,10 +1136,10 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
   }
 
   return (
-    <section className="rounded-md border border-slate-200 bg-app-card p-4">
+    <section className="rounded-md border border-border bg-surface p-4">
       <div className="mb-4">
         <h2 className="text-sm font-bold">Simulação de Capacidade</h2>
-        <p className="mt-0.5 text-xs text-slate-500">
+        <p className="mt-0.5 text-xs text-text-secondary">
           Avalia se os Recursos Produtivos comportam o roteiro do projeto na
           janela produtiva derivada das premissas abaixo. Não altera nem
           aprova o projeto.
@@ -1148,26 +1148,26 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-600">
+          <label className="mb-1 block text-xs font-semibold text-text-secondary">
             Data Prevista de Aprovação do Pedido
           </label>
           <input
             type="date"
             value={dataPrevistaAprovacaoPedido}
             onChange={(event) => setDataPrevistaAprovacaoPedido(event.target.value)}
-            className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="h-10 rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-600">
+          <label className="mb-1 block text-xs font-semibold text-text-secondary">
             Margem de Segurança (dias produtivos)
           </label>
           <input
             inputMode="numeric"
             value={margemSegurancaDiasTexto}
             onChange={(event) => setMargemSegurancaDiasTexto(event.target.value)}
-            className="h-10 w-40 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="h-10 w-40 rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
           />
         </div>
 
@@ -1175,19 +1175,19 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           type="button"
           onClick={handleSimular}
           disabled={carregando || calculandoJanela || !janelaComercial?.valida}
-          className="h-10 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {carregando ? "Simulando..." : "Simular"}
         </button>
       </div>
 
       {calculandoJanela ? (
-        <p className="mt-2 text-sm text-slate-500">Calculando janela produtiva...</p>
+        <p className="mt-2 text-sm text-text-secondary">Calculando janela produtiva...</p>
       ) : erroJanela ? (
-        <p className="mt-2 text-sm text-rose-600">{erroJanela}</p>
+        <p className="mt-2 text-sm text-status-danger-text">{erroJanela}</p>
       ) : janelaComercial ? (
         janelaComercial.valida ? (
-          <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 sm:grid-cols-3">
+          <div className="mt-3 grid gap-2 rounded-md border border-border-subtle bg-border-subtle p-3 text-sm text-text-primary sm:grid-cols-3">
             <span>
               Data de Chegada Prevista:{" "}
               <strong>{formatarDataBr(janelaComercial.dataChegadaPrevista)}</strong>
@@ -1201,21 +1201,21 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
             </span>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-rose-600">{mensagemAusenciaJanela(janelaComercial)}</p>
+          <p className="mt-2 text-sm text-status-danger-text">{mensagemAusenciaJanela(janelaComercial)}</p>
         )
       ) : null}
 
-      {erro ? <p className="mt-3 text-sm text-rose-600">{erro}</p> : null}
+      {erro ? <p className="mt-3 text-sm text-status-danger-text">{erro}</p> : null}
 
       {resultado ? (
         resultado.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">
+          <p className="mt-4 text-sm text-text-secondary">
             Nenhuma operação encontrada no roteiro deste projeto.
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="px-4 py-3 font-bold">Operação / Recurso</th>
                   <th className="px-4 py-3 text-center font-bold">Origem</th>
@@ -1225,29 +1225,29 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                   <th className="px-4 py-3 text-center font-bold">Saldo antes → depois</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {resultado.map((operacao) => (
                   <Fragment key={operacao.bomOperacaoId}>
                     <tr
-                      className={operacao.deficit > 0 ? "bg-rose-50" : "bg-slate-50/60"}
+                      className={operacao.deficit > 0 ? "bg-status-danger-bg" : "bg-slate-50/60"}
                     >
-                      <td className="px-4 py-2 align-middle font-semibold text-slate-800" colSpan={2}>
+                      <td className="px-4 py-2 align-middle font-semibold text-text-primary" colSpan={2}>
                         {operacao.operacaoDescricao}{" "}
-                        <span className="font-normal text-slate-500">
+                        <span className="font-normal text-text-secondary">
                           (original: {operacao.recursoOriginalNome})
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-center align-middle font-semibold text-slate-800">
+                      <td className="px-4 py-2 text-center align-middle font-semibold text-text-primary">
                         {operacao.necessario.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h
                       </td>
-                      <td className="px-4 py-2 text-center align-middle text-slate-500" colSpan={2}>
+                      <td className="px-4 py-2 text-center align-middle text-text-secondary" colSpan={2}>
                         necessário
                       </td>
                       <td
                         className={
                           operacao.deficit > 0
-                            ? "px-4 py-2 text-center align-middle font-semibold text-rose-700"
-                            : "px-4 py-2 text-center align-middle text-slate-500"
+                            ? "px-4 py-2 text-center align-middle font-semibold text-status-danger-text"
+                            : "px-4 py-2 text-center align-middle text-text-secondary"
                         }
                       >
                         {operacao.deficit > 0
@@ -1258,36 +1258,36 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
                     {operacao.distribuicoes.length === 0 ? (
                       <tr key={`${operacao.bomOperacaoId}-vazio`}>
-                        <td className="px-4 py-2 pl-8 align-middle text-rose-700" colSpan={6}>
+                        <td className="px-4 py-2 pl-8 align-middle text-status-danger-text" colSpan={6}>
                           Nenhum recurso comportou esta operação - déficit total.
                         </td>
                       </tr>
                     ) : (
                       operacao.distribuicoes.map((distribuicao, indice) => (
                         <tr key={`${operacao.bomOperacaoId}-${distribuicao.recursoNome}-${indice}`}>
-                          <td className="px-4 py-2 pl-8 align-middle text-slate-700" colSpan={2}>
+                          <td className="px-4 py-2 pl-8 align-middle text-text-primary" colSpan={2}>
                             {distribuicao.recursoNome}
                           </td>
-                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                          <td className="px-4 py-2 text-center align-middle text-text-primary">
                             {distribuicao.origem === "ORIGINAL" ? "Original" : "Compatível"}
                           </td>
-                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                          <td className="px-4 py-2 text-center align-middle text-text-primary">
                             {distribuicao.horasPadraoAlocadas.toLocaleString("pt-BR", {
                               maximumFractionDigits: 2,
                             })}
                           </td>
-                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                          <td className="px-4 py-2 text-center align-middle text-text-primary">
                             {(distribuicao.produtividadeConsiderada * 100).toLocaleString("pt-BR", {
                               maximumFractionDigits: 1,
                             })}
                             %
                           </td>
-                          <td className="px-4 py-2 text-center align-middle text-slate-700">
+                          <td className="px-4 py-2 text-center align-middle text-text-primary">
                             {distribuicao.horasMaquinaEstimadas.toLocaleString("pt-BR", {
                               maximumFractionDigits: 2,
                             })}
                           </td>
-                          <td className="px-4 py-2 text-center align-middle text-slate-500">
+                          <td className="px-4 py-2 text-center align-middle text-text-secondary">
                             {distribuicao.capacidadeDisponivelAntes.toLocaleString("pt-BR", {
                               maximumFractionDigits: 1,
                             })}{" "}
@@ -1308,9 +1308,9 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       ) : null}
 
       {resultadoEstimativa ? (
-        <div className="mt-5 border-t border-slate-200 pt-4">
+        <div className="mt-5 border-t border-border pt-4">
           <h3 className="text-sm font-bold">Estimativa de Início Necessário</h3>
-          <p className="mt-0.5 text-xs font-semibold text-slate-500">
+          <p className="mt-0.5 text-xs font-semibold text-text-secondary">
             Esta estimativa comercial não é uma programação de PCP. A
             ausência de precedências entre operações e de distribuição
             temporal dos compromissos existentes pode deslocar a data em
@@ -1319,7 +1319,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
           {resultadoEstimativa.estado === "viavel" ||
           resultadoEstimativa.estado === "viavel_no_limite" ? (
-            <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <div className="mt-3 rounded-md border border-status-success-border bg-status-success-bg p-3 text-sm text-status-success-text">
               <p>
                 Estimativa de Início Necessário:{" "}
                 <strong>{formatarDataBr(resultadoEstimativa.dataEstimadaInicioNecessario)}</strong>
@@ -1333,16 +1333,16 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           ) : null}
 
           {resultadoEstimativa.estado === "janela_insuficiente" ? (
-            <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="mt-3 rounded-md border border-status-warning-border bg-status-warning-bg p-3 text-sm text-status-warning-text">
               <p className="font-semibold">Janela insuficiente</p>
               <dl className="mt-2 grid gap-x-3 gap-y-1 sm:grid-cols-2">
-                <dt className="text-amber-700">Estimativa de Início Necessário</dt>
+                <dt className="text-status-warning-text">Estimativa de Início Necessário</dt>
                 <dd>{formatarDataBr(resultadoEstimativa.dataEstimadaInicioNecessario)}</dd>
-                <dt className="text-amber-700">Data de Disponibilidade para Produção</dt>
+                <dt className="text-status-warning-text">Data de Disponibilidade para Produção</dt>
                 <dd>{formatarDataBr(resultadoEstimativa.dataDisponibilidadeProducao)}</dd>
-                <dt className="text-amber-700">Folga (dias produtivos)</dt>
+                <dt className="text-status-warning-text">Folga (dias produtivos)</dt>
                 <dd>{resultadoEstimativa.folgaDiasProdutivos}</dd>
-                <dt className="text-amber-700">Déficit na janela realmente permitida</dt>
+                <dt className="text-status-warning-text">Déficit na janela realmente permitida</dt>
                 <dd>
                   {resultadoEstimativa.avaliacaoNaJanelaRealmentePermitida.deficitTotal.toLocaleString(
                     "pt-BR",
@@ -1356,7 +1356,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                 (op) => op.deficit > 0,
               ) ? (
                 <div className="mt-2">
-                  <p className="font-semibold text-amber-800">Operações/recursos afetados</p>
+                  <p className="font-semibold text-status-warning-text">Operações/recursos afetados</p>
                   <ul className="mt-1 list-disc pl-5">
                     {resultadoEstimativa.avaliacaoNaJanelaRealmentePermitida.resultadoPorOperacao
                       .filter((op) => op.deficit > 0)
@@ -1374,7 +1374,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           ) : null}
 
           {resultadoEstimativa.estado === "dados_insuficientes" ? (
-            <div className="mt-3 rounded-md border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700">
+            <div className="mt-3 rounded-md border border-border bg-border-subtle p-3 text-sm text-text-primary">
               <p className="font-semibold">Dados insuficientes para estimar</p>
               <p className="mt-1">
                 {resultadoEstimativa.causa === "capacidade_cadastral_zero"
@@ -1388,7 +1388,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           ) : null}
 
           {resultadoEstimativa.estado === "horizonte_tecnico_excedido" ? (
-            <div className="mt-3 rounded-md border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700">
+            <div className="mt-3 rounded-md border border-border bg-border-subtle p-3 text-sm text-text-primary">
               <p className="font-semibold">
                 Não foi possível determinar a estimativa dentro do horizonte técnico de busca
               </p>
@@ -1405,41 +1405,41 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       ) : null}
 
       {resultado ? (
-        <div className="mt-5 border-t border-slate-200 pt-4">
+        <div className="mt-5 border-t border-border pt-4">
           <h3 className="text-sm font-bold">Parâmetros da Aprovação</h3>
 
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">
                 Cenário de Demanda
               </label>
               <input
                 value={cenarioDemanda}
                 onChange={(event) => setCenarioDemanda(event.target.value)}
-                className="h-10 w-48 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="h-10 w-48 rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">
                 Modo de Produção
               </label>
               <input
                 value={modoProducao}
                 onChange={(event) => setModoProducao(event.target.value)}
-                className="h-10 w-48 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="h-10 w-48 rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">
                 Data de Necessidade
               </label>
               <input
                 type="date"
                 value={dataNecessidade}
                 onChange={(event) => setDataNecessidade(event.target.value)}
-                className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="h-10 rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
               />
             </div>
 
@@ -1461,22 +1461,22 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           </div>
 
           {statusAprovacao?.tipo === "erro" ? (
-            <p className="mt-2 text-sm text-rose-600">{statusAprovacao.mensagem}</p>
+            <p className="mt-2 text-sm text-status-danger-text">{statusAprovacao.mensagem}</p>
           ) : null}
         </div>
       ) : null}
 
       {statusAprovacao?.tipo === "divergente" ? (
-        <div className="mt-5 rounded-md border border-amber-300 bg-amber-50 p-4">
-          <h3 className="text-sm font-bold text-amber-900">
+        <div className="mt-5 rounded-md border border-status-warning-border bg-status-warning-bg p-4">
+          <h3 className="text-sm font-bold text-status-warning-text">
             Dados desatualizados
           </h3>
-          <p className="mt-1 text-xs text-amber-800">
+          <p className="mt-1 text-xs text-status-warning-text">
             Algo mudou desde a simulação exibida. Revise as mudanças abaixo e
             execute uma nova simulação antes de aprovar.
           </p>
 
-          <ul className="mt-3 space-y-1 text-sm text-amber-900">
+          <ul className="mt-3 space-y-1 text-sm text-status-warning-text">
             {statusAprovacao.diferencas.map((diferenca, indice) => (
               <li key={`${diferenca.operacao}-${diferenca.campo}-${indice}`}>
                 <strong>
@@ -1501,9 +1501,9 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
       ) : null}
 
       {statusAprovacao?.tipo === "pronta" && !precisaConfirmarRisco ? (
-        <div className="mt-5 rounded-md border border-emerald-200 bg-emerald-50 p-4">
+        <div className="mt-5 rounded-md border border-status-success-border bg-status-success-bg p-4">
           {statusAprovacao.simulacaoVigente ? (
-            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <p className="mb-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-text">
               Já existe uma simulação comercial aprovada para este projeto (em{" "}
               {new Date(
                 statusAprovacao.simulacaoVigente.aprovadoEm,
@@ -1513,11 +1513,11 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
             </p>
           ) : null}
 
-          <h3 className="text-sm font-bold text-emerald-900">
+          <h3 className="text-sm font-bold text-status-success-text">
             Simulação pronta para aprovação
           </h3>
 
-          <div className="mt-2 grid gap-2 text-sm text-emerald-900 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-2 grid gap-2 text-sm text-status-success-text sm:grid-cols-2 lg:grid-cols-3">
             <span>
               Operações analisadas: <strong>{totalOperacoes}</strong>
             </span>
@@ -1555,16 +1555,16 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
       {statusAprovacao?.tipo === "pronta" && precisaConfirmarRisco ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
-          <div className="w-full max-w-lg rounded-lg border border-rose-200 bg-app-card shadow-xl">
-            <div className="border-b border-rose-200 px-6 py-4">
-              <h3 className="text-base font-bold text-rose-700">
+          <div className="w-full max-w-lg rounded-lg border border-status-danger-border bg-surface shadow-xl">
+            <div className="border-b border-status-danger-border px-6 py-4">
+              <h3 className="text-base font-bold text-status-danger-text">
                 Déficit de capacidade identificado
               </h3>
             </div>
 
-            <div className="space-y-3 px-6 py-5 text-sm text-slate-700">
+            <div className="space-y-3 px-6 py-5 text-sm text-text-primary">
               {statusAprovacao.simulacaoVigente ? (
-                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                <p className="rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-status-warning-text">
                   Já existe uma simulação comercial aprovada para este projeto
                   (em{" "}
                   {new Date(
@@ -1591,7 +1591,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
 
               {statusAprovacao.temDeficit ? (
                 <div>
-                  <p className="font-semibold text-slate-800">
+                  <p className="font-semibold text-text-primary">
                     Recurso restritivo:
                   </p>
                   <ul className="mt-1 list-disc pl-5">
@@ -1603,18 +1603,18 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
               ) : null}
 
               {resultadoEstimativa?.estado === "janela_insuficiente" ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-                  <p className="font-semibold text-amber-900">
+                <div className="rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2">
+                  <p className="font-semibold text-status-warning-text">
                     Estimativa de Início Necessário indica janela insuficiente
                   </p>
                   <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
-                    <dt className="text-amber-700">Estimativa de Início Necessário</dt>
+                    <dt className="text-status-warning-text">Estimativa de Início Necessário</dt>
                     <dd>{formatarDataBr(resultadoEstimativa.dataEstimadaInicioNecessario)}</dd>
-                    <dt className="text-amber-700">Data de Disponibilidade para Produção</dt>
+                    <dt className="text-status-warning-text">Data de Disponibilidade para Produção</dt>
                     <dd>{formatarDataBr(resultadoEstimativa.dataDisponibilidadeProducao)}</dd>
-                    <dt className="text-amber-700">Folga (dias produtivos)</dt>
+                    <dt className="text-status-warning-text">Folga (dias produtivos)</dt>
                     <dd>{resultadoEstimativa.folgaDiasProdutivos}</dd>
-                    <dt className="text-amber-700">Déficit na janela realmente permitida</dt>
+                    <dt className="text-status-warning-text">Déficit na janela realmente permitida</dt>
                     <dd>
                       {resultadoEstimativa.avaliacaoNaJanelaRealmentePermitida.deficitTotal.toLocaleString(
                         "pt-BR",
@@ -1623,21 +1623,21 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                       h
                     </dd>
                   </dl>
-                  <p className="mt-2 text-xs text-amber-800">
+                  <p className="mt-2 text-xs text-status-warning-text">
                     Esta estimativa comercial não é uma programação de PCP.
                   </p>
                 </div>
               ) : null}
 
               {statusAprovacao.motivoPrincipalDeficit ? (
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="font-semibold text-slate-800">
+                <div className="rounded-md border border-border-subtle bg-border-subtle px-3 py-2">
+                  <p className="font-semibold text-text-primary">
                     Motivo principal do déficit
                   </p>
                   <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
-                    <dt className="text-slate-500">Operação</dt>
+                    <dt className="text-text-secondary">Operação</dt>
                     <dd>{statusAprovacao.motivoPrincipalDeficit.operacaoDescricao}</dd>
-                    <dt className="text-slate-500">Necessário</dt>
+                    <dt className="text-text-secondary">Necessário</dt>
                     <dd>
                       {statusAprovacao.motivoPrincipalDeficit.necessario.toLocaleString(
                         "pt-BR",
@@ -1645,7 +1645,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                       )}{" "}
                       h
                     </dd>
-                    <dt className="text-slate-500">Disponível na janela</dt>
+                    <dt className="text-text-secondary">Disponível na janela</dt>
                     <dd>
                       {statusAprovacao.motivoPrincipalDeficit.disponivelNaJanela.toLocaleString(
                         "pt-BR",
@@ -1653,7 +1653,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                       )}{" "}
                       h
                     </dd>
-                    <dt className="text-slate-500">Janela produtiva</dt>
+                    <dt className="text-text-secondary">Janela produtiva</dt>
                     <dd>
                       {statusAprovacao.motivoPrincipalDeficit.diasProdutivos} dia(s)
                     </dd>
@@ -1661,7 +1661,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                 </div>
               ) : null}
 
-              <p className="text-slate-600">
+              <p className="text-text-secondary">
                 A aprovação poderá prosseguir, porém esta simulação indica que
                 não existe capacidade produtiva suficiente para cumprir o
                 prazo nas condições atuais. Ao continuar, a empresa assume
@@ -1669,11 +1669,11 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
               </p>
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-rose-200 px-6 py-4">
+            <div className="flex justify-end gap-2 border-t border-status-danger-border px-6 py-4">
               <button
                 type="button"
                 onClick={() => setStatusAprovacao(null)}
-                className="h-10 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="h-10 rounded-md border border-border px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
               >
                 Cancelar
               </button>
@@ -1685,7 +1685,7 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                     "O módulo Cenários de Viabilidade Comercial será disponibilizado em uma próxima versão.",
                   )
                 }
-                className="h-10 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="h-10 rounded-md border border-border px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
               >
                 Nova Simulação
               </button>

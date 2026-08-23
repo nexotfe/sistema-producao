@@ -184,11 +184,11 @@ export function DropdownBuscaPaginada<T>({
         }}
         onFocus={() => setAberto(true)}
         onKeyDown={aoTeclarNoInput}
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
       />
 
       {mostrarDropdown ? (
-        <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-app-card shadow-lg">
+        <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-surface-elevated shadow-lg">
           <ul
             ref={listaRef}
             role="listbox"
@@ -209,10 +209,10 @@ export function DropdownBuscaPaginada<T>({
                   onClick={() => !desabilitado && selecionar(item)}
                   className={
                     desabilitado
-                      ? "cursor-not-allowed px-3 py-2 text-sm text-slate-400"
+                      ? "cursor-not-allowed px-3 py-2 text-sm text-text-disabled"
                       : indice === indiceAtivoClamped
-                        ? "cursor-pointer bg-blue-50 px-3 py-2 text-sm text-blue-900"
-                        : "cursor-pointer px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        ? "cursor-pointer bg-status-info-bg px-3 py-2 text-sm text-status-info-text"
+                        : "cursor-pointer px-3 py-2 text-sm text-text-primary hover:bg-border-subtle"
                   }
                 >
                   {renderItem(item, indice === indiceAtivoClamped)}
@@ -221,29 +221,29 @@ export function DropdownBuscaPaginada<T>({
             })}
 
             {itens.length === 0 && !carregando ? (
-              <li className="px-3 py-2 text-sm text-slate-400" role="presentation">
+              <li className="px-3 py-2 text-sm text-text-disabled" role="presentation">
                 {erro ?? mensagemVazio}
               </li>
             ) : null}
           </ul>
 
-          <div className="border-t border-slate-100 px-3 py-2">
+          <div className="border-t border-border-subtle px-3 py-2">
             {carregando ? (
-              <p className="text-center text-sm text-slate-400">Carregando...</p>
+              <p className="text-center text-sm text-text-disabled">Carregando...</p>
             ) : erro && itens.length > 0 ? (
-              <p className="text-center text-xs text-rose-600">{erro}</p>
+              <p className="text-center text-xs text-status-danger-text">{erro}</p>
             ) : temMais ? (
               <button
                 type="button"
                 onClick={carregarMais}
                 disabled={carregandoMais}
                 aria-label="Carregar mais resultados"
-                className="w-full rounded-md py-1.5 text-center text-xs font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-md py-1.5 text-center text-xs font-semibold text-action-primary transition hover:bg-status-info-bg disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {carregandoMais ? "Carregando mais..." : "Carregar mais"}
               </button>
             ) : itens.length > 0 ? (
-              <p className="text-center text-xs text-slate-400">Fim da lista.</p>
+              <p className="text-center text-xs text-text-disabled">Fim da lista.</p>
             ) : null}
           </div>
         </div>

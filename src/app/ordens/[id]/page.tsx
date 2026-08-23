@@ -88,15 +88,15 @@ async function getOFOperationalData(ofId: string) {
 function renderStatusBadge(status: string | null | undefined) {
   const definedStatus = status ?? "desconhecido";
   const badgeStyles = {
-    planejada: "bg-blue-100 text-blue-700",
-    em_producao: "bg-amber-100 text-amber-700",
-    concluida: "bg-emerald-100 text-emerald-700",
-    suspensa: "bg-rose-100 text-rose-700",
-    cancelada: "bg-slate-100 text-slate-700",
+    planejada: "bg-status-info-bg text-status-info-text",
+    em_producao: "bg-status-warning-bg text-status-warning-text",
+    concluida: "bg-status-success-bg text-status-success-text",
+    suspensa: "bg-status-danger-bg text-status-danger-text",
+    cancelada: "bg-border-subtle text-text-secondary",
     ci_parcial_compra_parcial: "bg-purple-100 text-purple-700",
     ci_total: "bg-teal-100 text-teal-700",
     compra_total: "bg-orange-100 text-orange-700",
-    desconhecido: "bg-slate-100 text-slate-700",
+    desconhecido: "bg-border-subtle text-text-secondary",
   } as Record<string, string>;
 
   return (
@@ -122,8 +122,8 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
 
   if (!isSupabaseConfigured) {
     return (
-      <main className="min-h-screen bg-app-bg px-4 py-8">
-        <div className="mx-auto max-w-4xl rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+      <main className="min-h-screen bg-background px-4 py-8">
+        <div className="mx-auto max-w-4xl rounded-2xl border border-status-warning-border bg-status-warning-bg p-6 text-sm text-status-warning-text">
           Supabase não está configurado. Defina as variáveis de ambiente e tente novamente.
         </div>
       </main>
@@ -132,8 +132,8 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
 
   if (!data || "error" in data) {
     return (
-      <main className="min-h-screen bg-app-bg px-4 py-8">
-        <div className="mx-auto max-w-4xl rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
+      <main className="min-h-screen bg-background px-4 py-8">
+        <div className="mx-auto max-w-4xl rounded-2xl border border-status-danger-border bg-status-danger-bg p-6 text-sm text-status-danger-text">
           Falha ao carregar os dados da OF. {data?.error ?? ""}
         </div>
       </main>
@@ -149,13 +149,13 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
     : 0;
 
   return (
-    <main className="min-h-screen bg-app-bg px-4 py-8">
+    <main className="min-h-screen bg-background px-4 py-8">
       <section className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <ModuleBackLink href="/central" label="Dashboard" />
-            <h1 className="mt-4 text-3xl font-bold text-slate-950">OF {ofData?.numero_of ?? id}</h1>
-            <p className="mt-2 text-sm text-slate-500">Tela operacional da ordem de fabricação.</p>
+            <h1 className="mt-4 text-3xl font-bold text-text-primary">OF {ofData?.numero_of ?? id}</h1>
+            <p className="mt-2 text-sm text-text-secondary">Tela operacional da ordem de fabricação.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {renderStatusBadge(ofData?.status)}
@@ -164,44 +164,44 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-3xl border border-slate-200 bg-app-card p-6 shadow-sm">
+          <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Produção</p>
-                <p className="mt-2 text-sm text-slate-700">{ofData?.tipo ?? "—"}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-text-secondary">Produção</p>
+                <p className="mt-2 text-sm text-text-primary">{ofData?.tipo ?? "—"}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Progresso</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">{progresso}%</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-text-secondary">Progresso</p>
+                <p className="mt-2 text-lg font-semibold text-text-primary">{progresso}%</p>
               </div>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-3 overflow-hidden rounded-full bg-border">
               <div
-                className="h-full rounded-full bg-blue-600 transition-all duration-300"
+                className="h-full rounded-full bg-action-primary transition-all duration-300"
                 style={{ width: `${progresso}%` }}
               />
             </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Quantidade planejada</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">{formatNumber(ofData?.quantidade_planejada)}</p>
-                <p className="text-xs text-slate-500">{ofData?.unidade ?? "—"}</p>
+              <div className="rounded-2xl border border-border-subtle bg-border-subtle p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-text-secondary">Quantidade planejada</p>
+                <p className="mt-2 text-lg font-semibold text-text-primary">{formatNumber(ofData?.quantidade_planejada)}</p>
+                <p className="text-xs text-text-secondary">{ofData?.unidade ?? "—"}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Quantidade produzida</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">{formatNumber(ofData?.quantidade_produzida)}</p>
-                <p className="text-xs text-slate-500">{ofData?.unidade ?? "—"}</p>
+              <div className="rounded-2xl border border-border-subtle bg-border-subtle p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-text-secondary">Quantidade produzida</p>
+                <p className="mt-2 text-lg font-semibold text-text-primary">{formatNumber(ofData?.quantidade_produzida)}</p>
+                <p className="text-xs text-text-secondary">{ofData?.unidade ?? "—"}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-app-card p-6 shadow-sm">
+          <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
             <div className="grid gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Dados da OF</p>
-                <dl className="mt-3 grid gap-2 text-sm text-slate-700">
+                <p className="text-xs uppercase tracking-[0.2em] text-text-secondary">Dados da OF</p>
+                <dl className="mt-3 grid gap-2 text-sm text-text-primary">
                   <div className="flex items-center justify-between">
-                    <dt className="font-medium text-slate-600">Projeto</dt>
+                    <dt className="font-medium text-text-secondary">Projeto</dt>
                     <dd>
                       {ofData?.projeto_id ? (
                         <EntityLink type="projeto" id={ofData.projeto_id}>
@@ -213,11 +213,11 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
                     </dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="font-medium text-slate-600">BOM</dt>
+                    <dt className="font-medium text-text-secondary">BOM</dt>
                     <dd>{flowData?.bom_versao ?? "—"}</dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="font-medium text-slate-600">Produto</dt>
+                    <dt className="font-medium text-text-secondary">Produto</dt>
                     <dd>
                       {flowData?.produto_pn ? (
                         <EntityLink type="item" id={flowData.produto_pn}>
@@ -229,22 +229,22 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
                     </dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="font-medium text-slate-600">Versão BOM</dt>
+                    <dt className="font-medium text-text-secondary">Versão BOM</dt>
                     <dd>{flowData?.bom_versao ?? "—"}</dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="font-medium text-slate-600">Início planejado</dt>
+                    <dt className="font-medium text-text-secondary">Início planejado</dt>
                     <dd>{formatDate(ofData?.data_inicio_planejada)}</dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="font-medium text-slate-600">Conclusão prevista</dt>
+                    <dt className="font-medium text-text-secondary">Conclusão prevista</dt>
                     <dd>{formatDate(ofData?.data_conclusao_planejada)}</dd>
                   </div>
                 </dl>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Resumo operacional</p>
-                <div className="mt-3 grid gap-3 text-sm text-slate-700">
+              <div className="rounded-2xl border border-border-subtle bg-border-subtle p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-text-secondary">Resumo operacional</p>
+                <div className="mt-3 grid gap-3 text-sm text-text-primary">
                   <div className="flex items-center justify-between">
                     <span>Total demanda BOM</span>
                     <strong>{formatNumber(flowData?.total_demanda_bom)}</strong>
@@ -267,11 +267,11 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
           </div>
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-app-card p-6 shadow-sm">
+        <section className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-slate-950">Materiais da OF</h2>
-              <p className="mt-2 text-sm text-slate-500">
+              <h2 className="text-xl font-semibold text-text-primary">Materiais da OF</h2>
+              <p className="mt-2 text-sm text-text-secondary">
                 Lista de componentes do BOM com estoque, consumo e necessidade de compra.
               </p>
             </div>
@@ -279,7 +279,7 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="px-3 py-3 font-semibold">Material</th>
                   <th className="px-3 py-3 font-semibold">Tipo</th>
@@ -290,26 +290,26 @@ export default async function OFOperationalPage({ params }: OFPageProps) {
                   <th className="px-3 py-3 font-semibold">Status fluxo</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {detailRows && detailRows.length > 0 ? (
                   detailRows.map((row, index) => (
-                    <tr key={`${row.materia_prima_codigo ?? index}-${index}`} className="hover:bg-slate-50">
-                      <td className="px-3 py-3 font-medium text-slate-900">
+                    <tr key={`${row.materia_prima_codigo ?? index}-${index}`} className="hover:bg-border-subtle">
+                      <td className="px-3 py-3 font-medium text-text-primary">
                         {row.materia_prima_descricao ?? row.componente_tipo ?? "—"}
                       </td>
-                      <td className="px-3 py-3 text-slate-700">{row.componente_tipo ?? "—"}</td>
-                      <td className="px-3 py-3 text-slate-700">
+                      <td className="px-3 py-3 text-text-primary">{row.componente_tipo ?? "—"}</td>
+                      <td className="px-3 py-3 text-text-primary">
                         {formatNumber(row.bom_quantidade)} {row.bom_unidade ?? ""}
                       </td>
-                      <td className="px-3 py-3 text-slate-700">{formatNumber(row.estoque_saldo_livre)}</td>
-                      <td className="px-3 py-3 text-slate-700">{formatNumber(row.quantidade_consumo_interno)}</td>
-                      <td className="px-3 py-3 text-slate-700">{formatNumber(row.quantidade_compra_externa)}</td>
+                      <td className="px-3 py-3 text-text-primary">{formatNumber(row.estoque_saldo_livre)}</td>
+                      <td className="px-3 py-3 text-text-primary">{formatNumber(row.quantidade_consumo_interno)}</td>
+                      <td className="px-3 py-3 text-text-primary">{formatNumber(row.quantidade_compra_externa)}</td>
                       <td className="px-3 py-3">{renderStatusBadge(row.status_fluxo)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-3 py-6 text-center text-sm text-text-secondary">
                       Nenhum material encontrado para esta OF.
                     </td>
                   </tr>

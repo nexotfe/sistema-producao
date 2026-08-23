@@ -49,7 +49,7 @@ export function MateriaPrimaSearchInput({
         <>
           {item.descricao}
           {item.codigo ? (
-            <span className="block text-xs text-slate-400">{item.codigo}</span>
+            <span className="block text-xs text-text-disabled">{item.codigo}</span>
           ) : null}
         </>
       )}

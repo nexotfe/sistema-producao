@@ -28,18 +28,18 @@ const purchasePlans = [
 ];
 
 const statusStyles = {
-  "Em planejamento": "bg-amber-50 text-amber-700 ring-amber-200",
-  "Pronto pedido": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "Em planejamento": "bg-status-warning-bg text-status-warning-text ring-status-warning-border",
+  "Pronto pedido": "bg-status-success-bg text-status-success-text ring-status-success-border",
 } as const;
 
 export default function PurchasePlanningPage() {
   const router = useRouter();
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
+    <main className="min-h-screen bg-background text-text-primary">
       <header className="px-4 py-6 sm:px-6">
         <div className="mx-auto w-full max-w-7xl">
-          <div className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4">
+          <div className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -106,23 +106,23 @@ export default function PurchasePlanningPage() {
       </header>
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <section className="rounded-md border border-slate-200 bg-app-card">
-          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <section className="rounded-md border border-border bg-surface">
+          <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-bold">Planejamentos ativos</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-text-secondary">
                 Escolha o modo e abra o PC para decidir a compra.
               </p>
             </div>
 
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-text-secondary">
               {purchasePlans.length} planejamentos
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] table-fixed text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="w-[14%] px-4 py-2 font-semibold">Planej.</th>
                   <th className="w-[32%] px-4 py-2 font-semibold">Material</th>
@@ -132,21 +132,21 @@ export default function PurchasePlanningPage() {
                   <th className="w-[8%] px-4 py-2 font-semibold">Acao</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {purchasePlans.map((plan) => (
-                  <tr key={plan.number} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-bold text-blue-700">
+                  <tr key={plan.number} className="hover:bg-border-subtle">
+                    <td className="px-4 py-3 font-bold text-action-primary">
                       <Link href={`/compras/planejamento/${plan.number}`}>
                         {plan.number}
                       </Link>
                     </td>
-                    <td className="truncate px-4 py-3 text-slate-700">
+                    <td className="truncate px-4 py-3 text-text-primary">
                       {plan.material}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-950">
+                    <td className="px-4 py-3 font-semibold text-text-primary">
                       {plan.mode}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{plan.totalSum}</td>
+                    <td className="px-4 py-3 text-text-primary">{plan.totalSum}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ring-1 ${
@@ -161,7 +161,7 @@ export default function PurchasePlanningPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/compras/planejamento/${plan.number}`}
-                        className="text-xs font-semibold text-blue-700 hover:underline"
+                        className="text-xs font-semibold text-action-primary hover:underline"
                       >
                         Abrir
                       </Link>

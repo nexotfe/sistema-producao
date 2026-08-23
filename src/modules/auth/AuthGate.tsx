@@ -113,7 +113,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (checkingSession && !isPublicRoute) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-app-bg px-5 text-slate-500">
+      <main className="flex min-h-screen items-center justify-center bg-background px-5 text-text-secondary">
         <p className="text-sm font-medium">Verificando acesso...</p>
       </main>
     );
@@ -121,7 +121,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (erroVerificacao && !isPublicRoute) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-app-bg px-5 text-center">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-5 text-center">
         <p className="max-w-sm text-sm font-medium text-text-secondary">{erroVerificacao}</p>
         <button
           type="button"
@@ -141,7 +141,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     // acesso", para nao expor uma tela em branco na corrida entre
     // SIGNED_OUT e a navegacao (ex.: logout automatico por inatividade).
     return (
-      <main className="flex min-h-screen items-center justify-center bg-app-bg px-5 text-slate-500">
+      <main className="flex min-h-screen items-center justify-center bg-background px-5 text-text-secondary">
         <p className="text-sm font-medium">Redirecionando...</p>
       </main>
     );

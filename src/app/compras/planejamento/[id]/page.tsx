@@ -40,8 +40,8 @@ const planningOrigins = [
 ];
 
 const statusStyles = {
-  Incluida: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  Excluida: "bg-slate-50 text-slate-600 ring-slate-200",
+  Incluida: "bg-status-success-bg text-status-success-text ring-status-success-border",
+  Excluida: "bg-border-subtle text-text-secondary ring-border",
 } as const;
 
 export default function PurchasePlanningDetailPage({
@@ -52,9 +52,9 @@ export default function PurchasePlanningDetailPage({
   const [busca, setBusca] = useState("");
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
+    <main className="min-h-screen bg-background text-text-primary">
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -108,20 +108,20 @@ export default function PurchasePlanningDetailPage({
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-md border border-slate-200 bg-app-card p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase text-text-secondary">
               Material
             </p>
-            <p className="mt-2 text-sm font-bold text-slate-950">
+            <p className="mt-2 text-sm font-bold text-text-primary">
               SAE 1045 redondo 4
             </p>
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-app-card p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase text-text-secondary">
               Soma total
             </p>
-            <p className="mt-2 text-sm font-bold text-slate-950">
+            <p className="mt-2 text-sm font-bold text-text-primary">
               3.700 mm
             </p>
           </div>
@@ -130,17 +130,17 @@ export default function PurchasePlanningDetailPage({
 
         <PurchasePlanningDecision planningNumber={id} />
 
-        <section className="rounded-md border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-200 px-4 py-3">
+        <section className="rounded-md border border-border bg-surface">
+          <div className="border-b border-border-subtle px-4 py-3">
             <h2 className="text-sm font-bold">OFs do planejamento</h2>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-text-secondary">
               Origens somadas ou separadas pelo comprador.
             </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="px-4 py-2 font-semibold">Projeto</th>
                   <th className="px-4 py-2 font-semibold">OF</th>
@@ -150,30 +150,30 @@ export default function PurchasePlanningDetailPage({
                   <th className="px-4 py-2 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {planningOrigins.map((origin) => (
-                  <tr key={origin.of} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-bold text-blue-700">
+                  <tr key={origin.of} className="hover:bg-border-subtle">
+                    <td className="px-4 py-3 font-bold text-action-primary">
                       <EntityLink type="projeto" id={origin.project}>
                         {origin.project}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-950">
+                    <td className="px-4 py-3 font-semibold text-text-primary">
                       <EntityLink
                         type="of"
                         id={origin.of}
-                        className="font-semibold text-slate-950 transition hover:text-slate-700"
+                        className="font-semibold text-text-primary transition hover:text-text-secondary"
                       >
                         {origin.of}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {origin.dimension}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {origin.pieces}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {origin.needed}
                     </td>
                     <td className="px-4 py-3">

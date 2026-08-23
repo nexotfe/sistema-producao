@@ -85,26 +85,26 @@ const totalLinks = navigationGroups.reduce(
 
 export default function CentralNexusPage() {
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-disabled">
             Nexus
           </p>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+              <h1 className="text-3xl font-semibold tracking-tight text-text-primary">
                 Bem-vindo ao NEXOTFE
               </h1>
 
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">
                 Navegacao simples para acessar todas as paginas atuais e revisar
                 cada modulo com seguranca.
               </p>
             </div>
 
-            <span className="text-sm font-semibold text-slate-500">
+            <span className="text-sm font-semibold text-text-secondary">
               {totalLinks} acessos
             </span>
           </div>
@@ -114,14 +114,14 @@ export default function CentralNexusPage() {
           {navigationGroups.map((group) => (
             <section
               key={group.title}
-              className="rounded-lg border border-slate-200 bg-app-card"
+              className="rounded-lg border border-border bg-surface"
             >
-              <div className="border-b border-slate-100 px-5 py-4">
-                <h2 className="text-base font-semibold text-slate-900">
+              <div className="border-b border-border-subtle px-5 py-4">
+                <h2 className="text-base font-semibold text-text-primary">
                   {group.title}
                 </h2>
 
-                <p className="mt-1 text-sm leading-5 text-slate-500">
+                <p className="mt-1 text-sm leading-5 text-text-secondary">
                   {group.description}
                 </p>
               </div>
@@ -131,12 +131,12 @@ export default function CentralNexusPage() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="flex min-h-11 items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium text-slate-700 outline-none transition hover:bg-slate-50 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
+                    className="flex min-h-11 items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium text-text-primary outline-none transition hover:bg-border-subtle hover:text-text-primary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
                   >
                     <span>
                       {link.label}
                       {link.note ? (
-                        <span className="ml-2 text-xs font-medium text-slate-400">
+                        <span className="ml-2 text-xs font-medium text-text-disabled">
                           {link.note}
                         </span>
                       ) : null}
@@ -144,7 +144,7 @@ export default function CentralNexusPage() {
 
                     <span
                       aria-hidden="true"
-                      className="ml-3 text-base font-semibold leading-none text-slate-400"
+                      className="ml-3 text-base font-semibold leading-none text-text-disabled"
                     >
                       {"\u203A"}
                     </span>

@@ -47,7 +47,7 @@ export function ModuleHeader({
     return (
       <header
         className={[
-          "rounded-t-lg border-x border-t border-slate-200 bg-brand-header-fixed px-5 py-4 -mb-6",
+          "rounded-t-lg border-x border-t border-border bg-brand-header-fixed px-5 py-4 -mb-6",
           className,
         ]
           .filter(Boolean)

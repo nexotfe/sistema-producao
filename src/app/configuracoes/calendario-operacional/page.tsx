@@ -83,25 +83,25 @@ export default function CalendarioOperacionalPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+      <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-          <p className="text-sm text-slate-500">Carregando calendário...</p>
+          <p className="text-sm text-text-secondary">Carregando calendário...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <header className="flex flex-col gap-3">
           <ModuleBackLink href="/central" label="Configurações" />
 
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+            <h1 className="text-3xl font-semibold tracking-tight text-text-primary">
               Calendário Operacional
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-text-secondary">
               Padrão semanal de trabalho e eventos que alteram a
               produtividade de dias específicos.
             </p>
@@ -109,17 +109,17 @@ export default function CalendarioOperacionalPage() {
         </header>
 
         {(erro || mensagem) && (
-          <p className={`text-sm ${erro ? "text-rose-600" : "text-emerald-600"}`}>
+          <p className={`text-sm ${erro ? "text-status-danger-text" : "text-status-success-text"}`}>
             {erro ?? mensagem}
           </p>
         )}
 
-        <section className="rounded-lg border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-100 px-6 py-5">
-            <h2 className="text-base font-semibold text-slate-900">
+        <section className="rounded-lg border border-border bg-surface">
+          <div className="border-b border-border-subtle px-6 py-5">
+            <h2 className="text-base font-semibold text-text-primary">
               Padrão Semanal de Trabalho
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-text-secondary">
               Dias marcados são considerados produtivos por padrão — o
               Calendário Oficial e os Eventos da Empresa podem alterar dias
               específicos.
@@ -133,7 +133,7 @@ export default function CalendarioOperacionalPage() {
               return (
                 <label
                   key={key}
-                  className="flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700"
+                  className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-text-primary"
                 >
                   <input
                     type="checkbox"
@@ -147,7 +147,7 @@ export default function CalendarioOperacionalPage() {
             })}
           </div>
 
-          <div className="flex justify-end border-t border-slate-100 px-6 py-4">
+          <div className="flex justify-end border-t border-border-subtle px-6 py-4">
             <button
               type="button"
               onClick={salvarPadraoSemanal}
@@ -159,32 +159,32 @@ export default function CalendarioOperacionalPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-100 px-6 py-5">
-            <h2 className="text-base font-semibold text-slate-900">
+        <section className="rounded-lg border border-border bg-surface">
+          <div className="border-b border-border-subtle px-6 py-5">
+            <h2 className="text-base font-semibold text-text-primary">
               Eventos do Calendário da Empresa
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-text-secondary">
               Exceções pontuais — recesso, inventário, paralisação, dia
               trabalhado excepcional, feriado local temporário.
             </p>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-100 px-6 py-6 md:grid-cols-3">
+          <div className="grid gap-4 border-b border-border-subtle px-6 py-6 md:grid-cols-3">
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+              <label className="mb-2 block text-sm font-medium text-text-primary">
                 Data
               </label>
               <input
                 type="date"
                 value={novaData}
                 onChange={(event) => setNovaData(event.target.value)}
-                className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+                className="h-11 w-full rounded-lg border border-border bg-surface-elevated px-4 text-sm text-text-primary outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+              <label className="mb-2 block text-sm font-medium text-text-primary">
                 Tipo
               </label>
               <select
@@ -192,7 +192,7 @@ export default function CalendarioOperacionalPage() {
                 onChange={(event) =>
                   setNovoTipo(event.target.value as TipoEventoCalendario)
                 }
-                className="h-11 w-full rounded-lg border border-slate-200 bg-app-card px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+                className="h-11 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text-primary outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
               >
                 {TIPOS_EVENTO.map((tipo) => (
                   <option key={tipo} value={tipo}>
@@ -203,13 +203,13 @@ export default function CalendarioOperacionalPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+              <label className="mb-2 block text-sm font-medium text-text-primary">
                 Descrição
               </label>
               <input
                 value={novaDescricao}
                 onChange={(event) => setNovaDescricao(event.target.value)}
-                className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
+                className="h-11 w-full rounded-lg border border-border bg-surface-elevated px-4 text-sm text-text-primary outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-200/70"
               />
             </div>
 
@@ -224,9 +224,9 @@ export default function CalendarioOperacionalPage() {
             </div>
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border-subtle">
             {eventos.length === 0 ? (
-              <p className="px-6 py-6 text-sm text-slate-500">
+              <p className="px-6 py-6 text-sm text-text-secondary">
                 Nenhum evento cadastrado.
               </p>
             ) : (
@@ -236,14 +236,14 @@ export default function CalendarioOperacionalPage() {
                   className="flex items-center justify-between px-6 py-4"
                 >
                   <div>
-                    <p className="text-sm font-medium text-slate-800">
+                    <p className="text-sm font-medium text-text-primary">
                       {new Date(`${evento.data}T00:00:00`).toLocaleDateString(
                         "pt-BR",
                       )}{" "}
                       — {TIPO_EVENTO_LABELS[evento.tipo]}
                     </p>
                     {evento.descricao ? (
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-text-secondary">
                         {evento.descricao}
                       </p>
                     ) : null}
@@ -252,7 +252,7 @@ export default function CalendarioOperacionalPage() {
                   <button
                     type="button"
                     onClick={() => removerEvento(evento.id)}
-                    className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                    className="rounded-md border border-border px-3 py-2 text-xs font-semibold text-text-secondary transition hover:bg-border-subtle"
                   >
                     Remover
                   </button>

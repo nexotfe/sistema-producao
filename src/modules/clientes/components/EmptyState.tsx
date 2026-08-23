@@ -7,13 +7,13 @@ export function EmptyState({ titulo, descricao }: EmptyStateProps) {
   return (
     <div className="flex min-h-[280px] items-center justify-center px-6 py-10">
       <div className="max-w-sm text-center">
-        <div className="mx-auto mb-4 h-10 w-10 rounded-lg border border-slate-200 bg-slate-50" />
+        <div className="mx-auto mb-4 h-10 w-10 rounded-lg border border-border bg-border-subtle" />
 
-        <h3 className="text-base font-semibold text-slate-900">
+        <h3 className="text-base font-semibold text-text-primary">
           {titulo}
         </h3>
 
-        <p className="mt-2 text-sm leading-6 text-slate-500">
+        <p className="mt-2 text-sm leading-6 text-text-secondary">
           {descricao}
         </p>
       </div>

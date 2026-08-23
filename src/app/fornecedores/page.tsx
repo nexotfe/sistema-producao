@@ -76,9 +76,9 @@ export default function FornecedoresPage() {
   }
 
   return (
-    <main className="min-h-screen bg-app-bg px-5 py-6 text-slate-900 sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -132,7 +132,7 @@ export default function FornecedoresPage() {
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="flex w-full flex-wrap items-center justify-start gap-2">
-              <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
+              <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-border bg-surface p-1">
                 <SituacaoButton
                   label="Todos"
                   quantidade={totais.todos}
@@ -155,28 +155,28 @@ export default function FornecedoresPage() {
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-app-card p-1">
+              <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-surface p-1">
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setMostrarColunas(!mostrarColunas)}
-                    className="inline-flex h-9 min-w-24 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    className="inline-flex h-9 min-w-24 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
                   >
                     Exibir
-                    <span className="text-xs text-slate-400">{"\u25BE"}</span>
+                    <span className="text-xs text-text-disabled">{"\u25BE"}</span>
                   </button>
 
                   {mostrarColunas && (
-                    <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-app-card p-4 shadow-xl">
+                    <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface-elevated p-4 shadow-xl">
                       <div className="mb-4 flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
                           Exibir campos
                         </p>
 
                         <button
                           type="button"
                           onClick={() => setMostrarColunas(false)}
-                          className="text-xs font-semibold text-slate-500 transition hover:text-slate-900"
+                          className="text-xs font-semibold text-text-secondary transition hover:text-text-primary"
                         >
                           Fechar
                         </button>
@@ -245,7 +245,7 @@ export default function FornecedoresPage() {
                 <button
                   type="button"
                   onClick={exportarFornecedores}
-                  className="inline-flex h-9 min-w-24 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  className="inline-flex h-9 min-w-24 items-center justify-center rounded-md px-3 text-sm font-medium text-text-primary transition hover:bg-border-subtle"
                 >
                   Exportar
                 </button>
@@ -283,8 +283,8 @@ function SituacaoButton({
       onClick={onClick}
       className={
         ativo
-          ? "inline-flex h-9 items-center justify-center rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-900 transition"
-          : "inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          ? "inline-flex h-9 items-center justify-center rounded-md bg-border-subtle px-3 text-sm font-semibold text-text-primary transition"
+          : "inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-text-secondary transition hover:bg-border-subtle"
       }
     >
       {label} ({quantidade})
@@ -302,12 +302,12 @@ function CheckboxCampo({
   onChange: () => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+    <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-text-primary transition hover:bg-border-subtle">
       <input
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        className="h-4 w-4 accent-slate-900"
+        className="h-4 w-4 accent-text-primary"
       />
       {label}
     </label>

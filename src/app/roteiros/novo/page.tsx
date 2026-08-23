@@ -9,10 +9,10 @@ export default function NewManufacturingRoutePage() {
   const pn = searchParams.get("pn");
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
-      <header className="bg-app-bg px-4 pt-4 sm:px-6">
+    <main className="min-h-screen bg-background text-text-primary">
+      <header className="bg-background px-4 pt-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <div className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4">
+          <div className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -50,7 +50,7 @@ export default function NewManufacturingRoutePage() {
                   </Link>
                   <button
                     type="button"
-                    className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover"
                   >
                     Salvar
                   </button>
@@ -62,8 +62,8 @@ export default function NewManufacturingRoutePage() {
       </header>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <div className="rounded-md border border-slate-200 bg-app-card p-8 text-center">
-          <p className="text-sm text-slate-500">
+        <div className="rounded-md border border-border bg-surface p-8 text-center">
+          <p className="text-sm text-text-secondary">
             Estrutura do roteiro (operações, materiais e tecnologias) será
             criada aqui. Página mock apenas para validar a navegação a
             partir do cadastro de produto.

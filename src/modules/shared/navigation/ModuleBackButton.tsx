@@ -9,7 +9,7 @@ type ModuleBackButtonProps = {
 };
 
 export const moduleBackButtonClassName =
-  "inline-flex w-fit items-center gap-1 rounded-sm text-sm font-semibold uppercase text-slate-500 outline-none transition hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2";
+  "inline-flex w-fit items-center gap-1 rounded-sm text-sm font-semibold uppercase text-text-secondary outline-none transition hover:text-text-primary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2";
 
 export function ModuleBackButton({
   label = "Voltar",

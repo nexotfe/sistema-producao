@@ -37,9 +37,9 @@ export default function PurchaseOrderDraftPage({
   const planningNumber = id.replace("PED-", "PC-");
 
   return (
-    <main className="min-h-screen bg-app-bg text-slate-950">
+    <main className="min-h-screen bg-background text-text-primary">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6">
-        <header className="rounded-t-lg border-x border-t border-slate-200 bg-[#0B1B2B] px-5 py-4 -mb-6">
+        <header className="rounded-t-lg border-x border-t border-border bg-[#0B1B2B] px-5 py-4 -mb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/5 text-xs font-bold text-slate-300">
@@ -92,7 +92,7 @@ export default function PurchaseOrderDraftPage({
                 </button>
                 <button
                   type="button"
-                  className="h-10 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover"
                 >
                   Salvar
                 </button>
@@ -104,43 +104,43 @@ export default function PurchaseOrderDraftPage({
 
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <section className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-md border border-slate-200 bg-app-card p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase text-text-secondary">
               Fornecedor
             </p>
             <input
               placeholder="Selecionar fornecedor"
-              className="mt-2 h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className="mt-2 h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm font-semibold text-text-primary outline-none transition placeholder:text-text-disabled focus:border-action-primary focus:ring-2 focus:ring-focus-ring"
             />
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-app-card p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase text-text-secondary">
               Origem
             </p>
-            <p className="mt-2 text-sm font-bold text-slate-950">
+            <p className="mt-2 text-sm font-bold text-text-primary">
               {planningNumber}
             </p>
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-app-card p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase text-text-secondary">
               Proxima acao
             </p>
-            <button className="mt-2 h-10 w-full rounded-md bg-blue-700 px-3 text-sm font-semibold text-white transition hover:bg-blue-800">
+            <button className="mt-2 h-10 w-full rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800">
               Enviar ao fornecedor
             </button>
           </div>
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-200 px-4 py-3">
+        <section className="rounded-md border border-border bg-surface">
+          <div className="border-b border-border-subtle px-4 py-3">
             <h2 className="text-sm font-bold">Item do pedido</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] table-fixed text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="w-[36%] px-4 py-2 font-semibold">Material</th>
                   <th className="w-[18%] px-4 py-2 font-semibold">Comprar</th>
@@ -149,15 +149,15 @@ export default function PurchaseOrderDraftPage({
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-slate-100">
-                  <td className="px-4 py-3 font-semibold text-slate-950">
+                <tr className="border-b border-border-subtle">
+                  <td className="px-4 py-3 font-semibold text-text-primary">
                     SAE 1045 redondo 4
                   </td>
-                  <td className="px-4 py-3 text-slate-700">
+                  <td className="px-4 py-3 text-text-primary">
                     1 barra 6.000 mm
                   </td>
-                  <td className="px-4 py-3 text-slate-700">2.300 mm</td>
-                  <td className="px-4 py-3 text-slate-700">
+                  <td className="px-4 py-3 text-text-primary">2.300 mm</td>
+                  <td className="px-4 py-3 text-text-primary">
                     Compra consolidada por planejamento
                   </td>
                 </tr>
@@ -166,38 +166,38 @@ export default function PurchaseOrderDraftPage({
           </div>
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-app-card">
-          <div className="border-b border-slate-200 px-4 py-3">
+        <section className="rounded-md border border-border bg-surface">
+          <div className="border-b border-border-subtle px-4 py-3">
             <h2 className="text-sm font-bold">Rastreabilidade</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-border-subtle bg-border-subtle text-xs uppercase text-text-secondary">
                 <tr>
                   <th className="px-4 py-2 font-semibold">Projeto</th>
                   <th className="px-4 py-2 font-semibold">OF</th>
                   <th className="px-4 py-2 font-semibold">Necessidade</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-subtle">
                 {orderOrigins.map((origin) => (
                   <tr key={origin.of}>
-                    <td className="px-4 py-3 font-bold text-blue-700">
+                    <td className="px-4 py-3 font-bold text-action-primary">
                       <EntityLink type="projeto" id={origin.project}>
                         {origin.project}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-950">
+                    <td className="px-4 py-3 font-semibold text-text-primary">
                       <EntityLink
                         type="of"
                         id={origin.of}
-                        className="font-semibold text-slate-950 transition hover:text-slate-700"
+                        className="font-semibold text-text-primary transition hover:text-text-secondary"
                       >
                         {origin.of}
                       </EntityLink>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {origin.need}
                     </td>
                   </tr>
