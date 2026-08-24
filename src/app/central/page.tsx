@@ -1,159 +1,206 @@
-import Link from "next/link";
+"use client";
 
-type NavigationLink = {
-  label: string;
-  href: string;
-  note?: string;
-};
+// Central — navegação Área → Módulo → Ação. A URL (?area=&modulo=) é a
+// única fonte de verdade do nível atual — sem estado local próprio que
+// possa divergir dela. Cada seleção empilha uma entrada de histórico
+// (router.push), então Voltar/Avançar do navegador funcionam como
+// navegação normal; atualizar a página relê os mesmos parâmetros e
+// reconstrói o mesmo nível. Parâmetro que não corresponde a nenhuma
+// área/módulo conhecido é tratado como inválido e volta para a tela
+// inicial (nunca renderiza um nível quebrado).
+//
+// Ver histórico de aprovação visual em /design/central-preview (mockup,
+// removido após esta implementação ser aprovada).
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ModuleHeader } from "@/modules/shared/ui/ModuleHeader";
+import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
+import { Card } from "@/modules/shared/ui/Card";
+import { Badge } from "@/modules/shared/ui/Badge";
+import { AreaTile } from "@/modules/central/components/AreaTile";
+import { ModuloRow } from "@/modules/central/components/ModuloRow";
+import { AcaoRow } from "@/modules/central/components/AcaoRow";
+import { Breadcrumb } from "@/modules/central/components/Breadcrumb";
+import { areas } from "@/modules/central/data";
+import { useCabecalhoTemporal } from "@/modules/central/hooks/useCabecalhoTemporal";
 
-type NavigationGroup = {
-  title: string;
-  description: string;
-  links: NavigationLink[];
-};
+function construirUrl(areaId: string | null, moduloId: string | null): string {
+  if (!areaId) {
+    return "/central";
+  }
 
-const navigationGroups: NavigationGroup[] = [
-  {
-    title: "Comercial",
-    description: "Clientes, projetos e entrada de demandas comerciais.",
-    links: [
-      { label: "Clientes", href: "/clientes" },
-      { label: "Novo cliente", href: "/clientes/novo" },
-      { label: "Colaboradores", href: "/colaboradores" },
-      { label: "Novo colaborador", href: "/colaboradores/novo" },
-      { label: "Projeto", href: "/projeto" },
-      { label: "Projetos", href: "/projetos" },
-      { label: "Novo projeto", href: "/projetos/novo" },
-    ],
-  },
-  {
-    title: "Suprimentos",
-    description: "Fornecedores, compras, planejamento e decisao de material.",
-    links: [
-      { label: "Fornecedores", href: "/fornecedores" },
-      { label: "Novo fornecedor", href: "/fornecedores/novo" },
-      { label: "Compras", href: "/compras" },
-      { label: "Planejamento de compras", href: "/compras/planejamento" },
-      { label: "Detalhe do planejamento", href: "/compras/planejamento/PL-001", note: "exemplo" },
-      { label: "Decisao de material", href: "/compras/decisao-material" },
-      { label: "Pedido de compra", href: "/compras/pedidos/PC-001", note: "exemplo" },
-    ],
-  },
-  {
-    title: "Estoque",
-    description: "Consulta de materias-primas e saldos operacionais.",
-    links: [
-      { label: "Grupos de recursos", href: "/grupos-recursos" },
-      { label: "Novo grupo de recursos", href: "/grupos-recursos/novo" },
-      { label: "Recursos produtivos", href: "/recursos" },
-      { label: "Novo recurso", href: "/recursos/novo" },
-      { label: "Materias-primas", href: "/estoque/materias-primas" },
-    ],
-  },
-  {
-    title: "Producao e Engenharia",
-    description: "Produtos, roteiros e ordens de fabricacao.",
-    links: [
-      { label: "Produtos", href: "/produtos" },
-      { label: "Novo produto", href: "/produtos/novo" },
-      { label: "Roteiro", href: "/roteiros/1243-01", note: "exemplo" },
-      { label: "Ordem de fabricacao", href: "/ordens/OF-001", note: "exemplo" },
-    ],
-  },
-  {
-    title: "Configurações",
-    description: "Parâmetros operacionais da empresa.",
-    links: [
-      { label: "Calendário Operacional", href: "/configuracoes/calendario-operacional" },
-      { label: "Convenção coletiva", href: "/configuracoes/convencao-coletiva" },
-    ],
-  },
-  {
-    title: "Sistema",
-    description: "Entrada principal e rotas de compatibilidade.",
-    links: [
-      { label: "Central Nexus", href: "/central" },
-      { label: "Dashboard antigo", href: "/dashboard", note: "redireciona para Central" },
-    ],
-  },
-];
+  const params = new URLSearchParams();
+  params.set("area", areaId);
+  if (moduloId) {
+    params.set("modulo", moduloId);
+  }
 
-const totalLinks = navigationGroups.reduce(
-  (total, group) => total + group.links.length,
-  0
-);
+  return `/central?${params.toString()}`;
+}
 
-export default function CentralNexusPage() {
+function CentralNavegacao() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const areaParam = searchParams.get("area");
+  const moduloParam = searchParams.get("modulo");
+
+  const areaEncontrada = areaParam ? (areas.find((area) => area.id === areaParam) ?? null) : null;
+  const moduloEncontrado =
+    areaEncontrada && moduloParam
+      ? (areaEncontrada.modulos.find((modulo) => modulo.id === moduloParam) ?? null)
+      : null;
+
+  // Área presente na URL mas desconhecida, ou módulo presente mas que
+  // não pertence à área válida: parâmetro inválido, volta com
+  // segurança para a tela inicial (nunca meio-caminho).
+  const parametroInvalido =
+    (areaParam !== null && areaEncontrada === null) ||
+    (areaEncontrada !== null && moduloParam !== null && moduloEncontrado === null);
+
+  // Navegação (efeito colateral) nunca acontece durante o render — só
+  // depois de pintar a tela segura, aqui dentro de um efeito.
+  useEffect(() => {
+    if (parametroInvalido) {
+      router.replace("/central");
+    }
+  }, [parametroInvalido, router]);
+
+  const areaAtual = parametroInvalido ? null : areaEncontrada;
+  const moduloAtual = parametroInvalido ? null : moduloEncontrado;
+
+  function selecionarArea(areaId: string) {
+    router.push(construirUrl(areaId, null));
+  }
+
+  function selecionarModulo(moduloId: string) {
+    if (!areaAtual) {
+      return;
+    }
+    router.push(construirUrl(areaAtual.id, moduloId));
+  }
+
+  function irParaInicio() {
+    router.push("/central");
+  }
+
+  function irParaArea() {
+    if (!areaAtual) {
+      return;
+    }
+    router.push(construirUrl(areaAtual.id, null));
+  }
+
+  const criacoes = moduloAtual?.acoes.filter((acao) => acao.tipo === "criar" && !acao.futuro) ?? [];
+  const consultas =
+    moduloAtual?.acoes.filter((acao) => acao.tipo === "consultar" && !acao.futuro) ?? [];
+  const futuras = moduloAtual?.acoes.filter((acao) => acao.futuro) ?? [];
+
   return (
-    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-disabled">
-            Nexus
-          </p>
+    <>
+      {areaAtual ? (
+        <Breadcrumb area={areaAtual} modulo={moduloAtual} onInicio={irParaInicio} onArea={irParaArea} />
+      ) : null}
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-text-primary">
-                Bem-vindo ao NEXOTFE
-              </h1>
-
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">
-                Navegacao simples para acessar todas as paginas atuais e revisar
-                cada modulo com seguranca.
-              </p>
+      <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4">
+        {!areaAtual ? (
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {areas.map((area) => (
+              <AreaTile key={area.id} area={area} onSelecionar={() => selecionarArea(area.id)} />
+            ))}
+          </section>
+        ) : !moduloAtual ? (
+          <Card title={areaAtual.titulo}>
+            <div className="flex flex-col gap-1">
+              {areaAtual.modulos.map((modulo) => (
+                <ModuloRow
+                  key={modulo.id}
+                  modulo={modulo}
+                  onSelecionar={() => selecionarModulo(modulo.id)}
+                />
+              ))}
             </div>
 
-            <span className="text-sm font-semibold text-text-secondary">
-              {totalLinks} acessos
-            </span>
-          </div>
-        </header>
+            {areaAtual.notaFinal ? (
+              <p className="mt-3 border-t border-border-subtle pt-3 text-[13px] text-text-disabled">
+                {areaAtual.notaFinal}
+              </p>
+            ) : null}
+          </Card>
+        ) : (
+          <Card title={moduloAtual.titulo}>
+            <div className="flex flex-col gap-4">
+              {consultas.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  {consultas.map((acao) => (
+                    <AcaoRow key={acao.label} acao={acao} />
+                  ))}
+                </div>
+              ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {navigationGroups.map((group) => (
-            <section
-              key={group.title}
-              className="rounded-lg border border-border bg-surface"
-            >
-              <div className="border-b border-border-subtle px-5 py-4">
-                <h2 className="text-base font-semibold text-text-primary">
-                  {group.title}
-                </h2>
+              {criacoes.length > 0 ? (
+                <div className="flex flex-wrap gap-2 border-t border-border-subtle pt-4">
+                  {criacoes.map((acao) => (
+                    <AcaoRow key={acao.label} acao={acao} />
+                  ))}
+                </div>
+              ) : null}
 
-                <p className="mt-1 text-sm leading-5 text-text-secondary">
-                  {group.description}
-                </p>
-              </div>
+              {futuras.length > 0 ? (
+                <div className="flex flex-col gap-1.5 border-t border-border-subtle pt-4">
+                  {futuras.map((acao) => (
+                    <AcaoRow key={acao.label} acao={acao} />
+                  ))}
+                </div>
+              ) : null}
 
-              <div className="grid gap-1 p-3">
-                {group.links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex min-h-11 items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium text-text-primary outline-none transition hover:bg-border-subtle hover:text-text-primary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
-                  >
-                    <span>
-                      {link.label}
-                      {link.note ? (
-                        <span className="ml-2 text-xs font-medium text-text-disabled">
-                          {link.note}
-                        </span>
-                      ) : null}
-                    </span>
+              {moduloAtual.acoes.length === 0 ? (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border-subtle bg-border-subtle px-3 py-3">
+                  <span className="text-sm text-text-secondary">
+                    Área reservada para funcionalidade futura.
+                  </span>
+                  <Badge variant="neutral">Em desenvolvimento</Badge>
+                </div>
+              ) : null}
 
-                    <span
-                      aria-hidden="true"
-                      className="ml-3 text-base font-semibold leading-none text-text-disabled"
-                    >
-                      {"\u203A"}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
-        </section>
+              {moduloAtual.nota ? <p className="text-[13px] text-text-disabled">{moduloAtual.nota}</p> : null}
+            </div>
+          </Card>
+        )}
+      </div>
+    </>
+  );
+}
+
+function CentralNavegacaoFallback() {
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4">
+      <p className="px-3 py-3 text-sm text-text-secondary">Carregando…</p>
+    </div>
+  );
+}
+
+export default function CentralPage() {
+  const { saudacao, dataExtenso } = useCabecalhoTemporal();
+
+  return (
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <ModuleHeader
+          themeToggle={<ThemeToggle />}
+          title={
+            <h1 className="text-3xl font-semibold tracking-tight text-text-primary">{saudacao}</h1>
+          }
+          subtitle={dataExtenso}
+        >
+          <p className="mt-1 text-sm italic text-text-secondary">
+            Da oportunidade à entrega, cada decisão constrói o resultado.
+          </p>
+        </ModuleHeader>
+
+        <Suspense fallback={<CentralNavegacaoFallback />}>
+          <CentralNavegacao />
+        </Suspense>
       </div>
     </main>
   );
