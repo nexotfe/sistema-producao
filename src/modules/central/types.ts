@@ -15,7 +15,8 @@ export type IconName =
   | "calendar"
   | "clipboard-check"
   | "box"
-  | "gauge";
+  | "gauge"
+  | "building";
 
 export type Acao = {
   label: string;

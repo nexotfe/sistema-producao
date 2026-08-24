@@ -147,5 +147,13 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
           <path d="M12 15h.01" />
         </svg>
       );
+    case "building":
+      return (
+        <svg {...common}>
+          <rect x="4" y="3" width="12" height="18" rx="1" />
+          <path d="M9 8h2M9 12h2M9 16h2" />
+          <path d="M16 10h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3" />
+        </svg>
+      );
   }
 }

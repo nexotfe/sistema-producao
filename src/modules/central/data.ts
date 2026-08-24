@@ -200,6 +200,18 @@ export const areas: Area[] = [
     icon: "sliders",
     modulos: [
       {
+        id: "identidade-empresa",
+        titulo: "Identidade da empresa",
+        icon: "building",
+        acoes: [
+          {
+            label: "Acessar dados da empresa",
+            tipo: "consultar",
+            href: "/configuracoes/empresa",
+          },
+        ],
+      },
+      {
         id: "calendario-operacional",
         titulo: "Calendário operacional",
         icon: "calendar",
