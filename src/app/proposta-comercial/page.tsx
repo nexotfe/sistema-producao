@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { proximaRevisao, useProposta } from "@/modules/projetos/hooks/useProposta";
+import { LogoEmpresa } from "@/modules/empresa/components/LogoEmpresa";
 
 function formatarData(iso: string | null) {
   if (!iso) {
@@ -140,9 +141,11 @@ export default function CommercialProposalPage() {
 
         <header className="rounded-lg border border-slate-200 bg-app-card px-6 py-6">
           <div className="flex min-w-0 gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500">
-              LOGO
-            </div>
+            <LogoEmpresa
+              logoUrl={identidadeEmpresa?.logoUrl ?? null}
+              nomeEmpresa={identidadeEmpresa?.nome ?? "Empresa"}
+              size="md"
+            />
 
             <div className="min-w-0 space-y-3 text-sm text-slate-600">
               <div>

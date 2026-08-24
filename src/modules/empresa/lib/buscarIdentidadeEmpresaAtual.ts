@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buscarEmpresaIdAtual } from "./buscarEmpresaIdAtual";
+import { BUCKET_LOGOS_EMPRESAS } from "./logoEmpresaConfig";
 
 const CHAVE_SITE = "site";
 
@@ -11,6 +12,7 @@ export type IdentidadeEmpresa = {
   telefone: string | null;
   email: string | null;
   site: string | null;
+  logoUrl: string | null;
 };
 
 export type ResultadoIdentidadeEmpresa =
@@ -55,7 +57,7 @@ export async function buscarIdentidadeEmpresaAtual(
   const [empresaResultado, siteResultado] = await Promise.all([
     client
       .from("empresas")
-      .select("nome, cnpj, inscricao_estadual, endereco, telefone, email")
+      .select("nome, cnpj, inscricao_estadual, endereco, telefone, email, logo_path")
       .eq("id", empresaId)
       .single(),
     client
@@ -96,6 +98,11 @@ export async function buscarIdentidadeEmpresaAtual(
   const siteValor = siteResultado.data?.valor as { url?: string } | null | undefined;
   const site = siteValor?.url?.trim() || null;
 
+  const logoPath = empresaResultado.data.logo_path as string | null;
+  const logoUrl = logoPath
+    ? client.storage.from(BUCKET_LOGOS_EMPRESAS).getPublicUrl(logoPath).data.publicUrl
+    : null;
+
   return {
     status: "ok",
     identidade: {
@@ -106,6 +113,7 @@ export async function buscarIdentidadeEmpresaAtual(
       telefone: empresaResultado.data.telefone,
       email: empresaResultado.data.email,
       site,
+      logoUrl,
     },
   };
 }

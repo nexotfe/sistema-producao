@@ -23,6 +23,8 @@ import { AcaoRow } from "@/modules/central/components/AcaoRow";
 import { Breadcrumb } from "@/modules/central/components/Breadcrumb";
 import { areas } from "@/modules/central/data";
 import { useCabecalhoTemporal } from "@/modules/central/hooks/useCabecalhoTemporal";
+import { useIdentidadeEmpresaAtual } from "@/modules/empresa/hooks/useIdentidadeEmpresaAtual";
+import { LogoEmpresa } from "@/modules/empresa/components/LogoEmpresa";
 
 function construirUrl(areaId: string | null, moduloId: string | null): string {
   if (!areaId) {
@@ -182,6 +184,10 @@ function CentralNavegacaoFallback() {
 
 export default function CentralPage() {
   const { saudacao, dataExtenso } = useCabecalhoTemporal();
+  const identidadeEmpresa = useIdentidadeEmpresaAtual();
+
+  const logoUrl = identidadeEmpresa.status === "ok" ? identidadeEmpresa.identidade.logoUrl : null;
+  const nomeEmpresa = identidadeEmpresa.status === "ok" ? identidadeEmpresa.identidade.nome : "Empresa";
 
   return (
     <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
@@ -189,7 +195,10 @@ export default function CentralPage() {
         <ModuleHeader
           themeToggle={<ThemeToggle />}
           title={
-            <h1 className="text-3xl font-semibold tracking-tight text-text-primary">{saudacao}</h1>
+            <div className="flex items-center gap-4">
+              <LogoEmpresa logoUrl={logoUrl} nomeEmpresa={nomeEmpresa} size="sm" />
+              <h1 className="text-3xl font-semibold tracking-tight text-text-primary">{saudacao}</h1>
+            </div>
           }
           subtitle={dataExtenso}
         >

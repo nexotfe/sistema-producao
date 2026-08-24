@@ -18,6 +18,13 @@ vi.mock("@/lib/supabaseClient", () => ({
     from: vi.fn(),
     auth: { getUser: vi.fn() },
     rpc: vi.fn(),
+    storage: {
+      from: vi.fn(() => ({
+        getPublicUrl: (caminho: string) => ({
+          data: { publicUrl: `https://fake-storage.test/empresas-logos/${caminho}` },
+        }),
+      })),
+    },
   },
 }));
 
@@ -30,6 +37,7 @@ const supabaseMock = supabase as unknown as {
   from: ReturnType<typeof vi.fn>;
   auth: { getUser: ReturnType<typeof vi.fn> };
   rpc: ReturnType<typeof vi.fn>;
+  storage: { from: ReturnType<typeof vi.fn> };
 };
 
 const VAZIO: Resultado = { data: null, error: null };
@@ -580,7 +588,49 @@ describe("useProposta - identidade da empresa (buscarIdentidadeEmpresaAtual)", (
       telefone: "(12) 3933-3874",
       email: null,
       site: "www.enifer.com.br",
+      logoUrl: null,
     });
+  });
+
+  it("logo_path presente: logoUrl é construída via storage.getPublicUrl (URL pública, sem consulta extra)", async () => {
+    configurarMock({ itens: [] });
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "usuarios") {
+        return criarFakeQuery({
+          data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+          error: null,
+        });
+      }
+      if (tabela === "empresas") {
+        return criarFakeQuery({
+          data: {
+            nome: "ENIFER USINAGEM E INDUSTRIA LTDA",
+            cnpj: null,
+            inscricao_estadual: null,
+            endereco: null,
+            telefone: null,
+            email: null,
+            logo_path: "empresa-teste/logo-11111111-1111-1111-1111-111111111111.png",
+          },
+          error: null,
+        });
+      }
+      if (tabela === "projetos") {
+        return criarFakeQuery({ data: projetoRow(), error: null });
+      }
+      if (tabela === "projeto_itens") {
+        return criarFakeQuery({ data: [], error: null });
+      }
+      return criarFakeQuery(VAZIO);
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.erro).toBeNull();
+    expect(result.current.identidadeEmpresa?.logoUrl).toBe(
+      "https://fake-storage.test/empresas-logos/empresa-teste/logo-11111111-1111-1111-1111-111111111111.png",
+    );
   });
 
   it("empresa sem nome cadastrado (string vazia): aborta com mensagem clara, não renderiza a proposta silenciosamente", async () => {
