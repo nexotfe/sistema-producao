@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ProductForm } from "@/modules/produtos/components/ProductForm";
 import { useEditarProduto } from "@/modules/produtos/hooks/useEditarProduto";
 import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
+import { Button } from "@/modules/shared/ui/Button";
 
 type Props = {
   params: Promise<{
@@ -120,14 +121,9 @@ function Header({
             >
               Início
             </Link>
-            <button
-              type="button"
-              onClick={onSalvar}
-              disabled={salvando}
-              className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button onClick={onSalvar} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

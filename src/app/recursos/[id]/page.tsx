@@ -8,6 +8,7 @@ import { useRecurso } from "@/modules/recursos/hooks/useRecurso";
 import { ModuleHeader } from "@/modules/shared/ui/ModuleHeader";
 import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
 import { Card } from "@/modules/shared/ui/Card";
+import { Button, buttonClassName } from "@/modules/shared/ui/Button";
 
 type Props = {
   params: Promise<{
@@ -96,17 +97,12 @@ export default function RecursoPage({ params }: Props) {
           subtitle={`Codigo ${recurso.codigo || "nao informado"}`}
           actions={
             <>
-              <button
-                type="button"
-                onClick={handleExcluir}
-                disabled={processando}
-                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-border bg-surface px-5 text-sm font-semibold text-text-primary transition hover:bg-border-subtle disabled:cursor-not-allowed disabled:opacity-60"
-              >
+              <Button variant="secondary" onClick={handleExcluir} disabled={processando}>
                 Excluir recurso
-              </button>
+              </Button>
               <Link
                 href={`/recursos/${id}/editar`}
-                className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className={buttonClassName("primary")}
               >
                 Editar recurso
               </Link>

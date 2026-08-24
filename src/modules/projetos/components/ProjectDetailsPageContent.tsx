@@ -21,6 +21,7 @@ import { ListaTecnicaProjetoModal } from "@/modules/projetos/components/ListaTec
 import { PROJECT_TYPE_LABELS } from "@/modules/projetos/constants";
 import { Field } from "@/modules/shared/ui/Field";
 import { Card } from "@/modules/shared/ui/Card";
+import { Button } from "@/modules/shared/ui/Button";
 
 // Esta tela ainda NAO foi migrada ao Design System (PAD-006/007) - o
 // cabecalho, "Itens do projeto", "Resumo Produtivo" e "Carga
@@ -290,14 +291,9 @@ export function ProjectDetailsPageContent({
                   >
                     Lista Técnica
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleSalvar}
-                    disabled={salvando}
-                    className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:opacity-60"
-                  >
+                  <Button onClick={handleSalvar} disabled={salvando}>
                     {salvando ? "Salvando..." : "Salvar"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

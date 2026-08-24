@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
+import { Button } from "@/modules/shared/ui/Button";
 
 const partialOrigins = [
   {
@@ -126,15 +127,16 @@ export function PurchasePlanningDecision({
           <label className="mb-1 block text-xs font-semibold uppercase text-text-secondary">
             Status
           </label>
-          <button
+          <Button
+            variant="secondary"
+            className="w-full"
             onClick={() => {
               setDecisionConfirmed(true);
               setOrderGenerated(false);
             }}
-            className="h-10 w-full rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
           >
             {decisionConfirmed ? "Compra confirmada" : "Confirmar compra"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -148,13 +150,9 @@ export function PurchasePlanningDecision({
           </Link>
         ) : null}
 
-        <button
-          disabled={!decisionConfirmed}
-          onClick={() => setOrderGenerated(true)}
-          className="h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
-        >
+        <Button disabled={!decisionConfirmed} onClick={() => setOrderGenerated(true)}>
           Gerar pedido
-        </button>
+        </Button>
       </div>
 
       {isPartial ? (

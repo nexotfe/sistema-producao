@@ -44,6 +44,15 @@ const config: Config = {
 
         // Token FIXO (nao reativo) — ver PAD-006 secao 3.1.
         "brand-header-fixed": "var(--color-brand-header-fixed)",
+
+        // Tokens FIXOS de preenchimento solido para botoes de status —
+        // ver comentario em globals.css junto a --color-success-solid-bg.
+        "status-success-solid-bg": "var(--color-success-solid-bg)",
+        "status-success-solid-hover": "var(--color-success-solid-hover)",
+        "status-warning-solid-bg": "var(--color-warning-solid-bg)",
+        "status-warning-solid-hover": "var(--color-warning-solid-hover)",
+        "status-danger-solid-bg": "var(--color-danger-solid-bg)",
+        "status-danger-solid-hover": "var(--color-danger-solid-hover)",
       },
     },
   },

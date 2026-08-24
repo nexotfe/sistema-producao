@@ -13,6 +13,7 @@ import {
 } from "@/modules/projetos/components/ContatoSearchInput";
 import { ProjetoSearchInput } from "@/modules/projetos/components/ProjetoSearchInput";
 import { useProjeto, type ContatoProjeto } from "@/modules/projetos/hooks/useProjeto";
+import { Button, buttonClassName } from "@/modules/shared/ui/Button";
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
@@ -182,14 +183,9 @@ export default function ProjetoPage() {
                 >
                   Início
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleSalvar}
-                  disabled={salvando}
-                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:opacity-60"
-                >
+                <Button onClick={handleSalvar} disabled={salvando}>
                   {salvando ? "Salvando..." : "Salvar"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -261,7 +257,7 @@ export default function ProjetoPage() {
             </span>
             <Link
               href={`/projetos/${projetoId}/simulacao`}
-              className="inline-flex h-9 shrink-0 items-center rounded-md bg-amber-700 px-3 text-sm font-semibold text-white transition hover:bg-amber-800"
+              className={buttonClassName("warning")}
             >
               Abrir Simulação Comercial
             </Link>

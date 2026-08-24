@@ -38,6 +38,24 @@
    * Ver PAD-006 secao 3.1 (tokens fixos vs. reativos).
    */
   --color-brand-header-fixed: #0B1B2B;
+
+  /*
+   * Tokens FIXOS (mesmo padrao acima) para preenchimento solido de
+   * botoes de status (success/warning/danger-solid no Button.tsx).
+   * Os tokens -text/-bg/-border de status foram calibrados para texto
+   * sobre fundo translucido (badges/avisos), nao para hospedar texto
+   * branco por cima como um botao solido - no modo escuro o -text vira
+   * claro demais e o contraste falha. Estes tokens dedicados usam a
+   * mesma tonalidade em claro e escuro (equivalente a emerald-700/800,
+   * amber-700/800 e red-700/800), validada >=4.5:1 com texto branco
+   * nos dois temas. Nao reutilizar para badges/avisos.
+   */
+  --color-success-solid-bg: #047857;
+  --color-success-solid-hover: #065F46;
+  --color-warning-solid-bg: #B45309;
+  --color-warning-solid-hover: #92400E;
+  --color-danger-solid-bg: #B91C1C;
+  --color-danger-solid-hover: #991B1B;
 }
 
 @media (prefers-color-scheme: dark) {

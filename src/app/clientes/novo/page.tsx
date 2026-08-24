@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNovoCliente } from "@/modules/clientes/hooks/useNovoCliente";
+import { Button } from "@/modules/shared/ui/Button";
 
 export default function NovoClientePage() {
   const router = useRouter();
@@ -87,14 +88,9 @@ export default function NovoClientePage() {
                 >
                   Início
                 </Link>
-                <button
-                  type="button"
-                  onClick={salvarCliente}
-                  disabled={loading}
-                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                <Button onClick={salvarCliente} disabled={loading}>
                   {loading ? "Salvando..." : "Salvar"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

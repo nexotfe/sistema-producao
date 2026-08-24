@@ -4,6 +4,7 @@ import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { use } from "react";
 import { useEditarGrupoRecurso } from "@/modules/grupos-recursos/hooks/useEditarGrupoRecurso";
 import { useRouter } from "next/navigation";
+import { Button } from "@/modules/shared/ui/Button";
 
 type Props = {
   params: Promise<{
@@ -101,22 +102,13 @@ export default function EditarGrupoRecursoPage({ params }: Props) {
           {erro && <p className="text-sm font-medium text-status-danger-text">{erro}</p>}
 
           <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => router.push(`/grupos-recursos/${id}`)}
-              className="rounded-lg border border-border bg-surface px-5 py-3 text-sm font-medium text-text-secondary transition hover:bg-border-subtle"
-            >
+            <Button variant="secondary" onClick={() => router.push(`/grupos-recursos/${id}`)}>
               Cancelar
-            </button>
+            </Button>
 
-            <button
-              type="button"
-              onClick={handleSalvar}
-              disabled={salvando}
-              className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button onClick={handleSalvar} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar"}
-            </button>
+            </Button>
           </div>
         </section>
       </div>

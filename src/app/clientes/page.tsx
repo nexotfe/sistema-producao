@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { ClientesTable } from "@/modules/clientes/components/ClientesTable";
 import { useClientes } from "@/modules/clientes/hooks/useClientes";
+import { Button } from "@/modules/shared/ui/Button";
 
 type SituacaoCliente = "todos" | "ativos" | "inativos";
 

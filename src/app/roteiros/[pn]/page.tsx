@@ -9,6 +9,7 @@ import { ExcluirRoteiroModal } from "@/modules/roteiros/components/ExcluirRoteir
 import { DuplicarProdutoModal } from "@/modules/produtos/components/DuplicarProdutoModal";
 import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
 import { getEntityHref } from "@/modules/shared/navigation/entityRoutes";
+import { Button } from "@/modules/shared/ui/Button";
 
 type RoutePageProps = {
   params: Promise<{
@@ -118,12 +119,7 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
                   >
                     Excluir roteiro
                   </button>
-                  <button
-                    type="button"
-                    className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover"
-                  >
-                    Salvar
-                  </button>
+                  <Button>Salvar</Button>
                 </div>
 
                 <button className="h-10 rounded-md border border-white/20 bg-white/[0.08] px-4 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.15]">
@@ -149,14 +145,13 @@ export default function ManufacturingRoutePage({ params }: RoutePageProps) {
             <p className="text-sm text-text-secondary">
               Este produto ainda não tem nenhum roteiro cadastrado.
             </p>
-            <button
-              type="button"
+            <Button
+              className="mt-4"
               onClick={() => criarPrimeiroRoteiro()}
               disabled={processando}
-              className="mt-4 h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {processando ? "Criando..." : "Criar Roteiro (versão A, rascunho)"}
-            </button>
+            </Button>
           </div>
         </section>
       ) : (

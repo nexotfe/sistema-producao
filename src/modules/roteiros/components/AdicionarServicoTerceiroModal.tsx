@@ -6,6 +6,7 @@ import type {
   OpcaoSelect,
   ResultadoOperacaoRoteiro,
 } from "../types";
+import { Button } from "@/modules/shared/ui/Button";
 
 type Props = {
   open: boolean;
@@ -172,21 +173,12 @@ export function AdicionarServicoTerceiroModal({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
-          <button
-            type="button"
-            onClick={limparEFechar}
-            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
-          >
+          <Button variant="secondary" onClick={limparEFechar}>
             Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleAdicionar}
-            disabled={salvando}
-            className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          </Button>
+          <Button onClick={handleAdicionar} disabled={salvando}>
             {salvando ? "Adicionando..." : "Adicionar"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

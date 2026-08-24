@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ProductForm } from "@/modules/produtos/components/ProductForm";
 import { useNovoProduto } from "@/modules/produtos/hooks/useNovoProduto";
 import { ModuleBackTrigger } from "@/modules/shared/navigation/ModuleBackTrigger";
+import { Button } from "@/modules/shared/ui/Button";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -88,14 +89,9 @@ function Header({
             >
               Início
             </Link>
-            <button
-              type="button"
-              onClick={onSalvar}
-              disabled={salvando}
-              className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button onClick={onSalvar} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

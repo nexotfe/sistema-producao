@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { use } from "react";
 import { useCliente } from "@/modules/clientes/hooks/useCliente";
+import { buttonClassName } from "@/modules/shared/ui/Button";
 
 type Props = {
   params: Promise<{
@@ -62,7 +63,7 @@ export default function ClientePage({ params }: Props) {
 
             <Link
               href={`/clientes/${id}/editar`}
-              className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className={buttonClassName("primary")}
             >
               Editar cliente
             </Link>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/modules/shared/ui/Button";
 
 export default function NewManufacturingRoutePage() {
   const router = useRouter();
@@ -48,12 +49,7 @@ export default function NewManufacturingRoutePage() {
                   >
                     Início
                   </Link>
-                  <button
-                    type="button"
-                    className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover"
-                  >
-                    Salvar
-                  </button>
+                  <Button>Salvar</Button>
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { use } from "react";
 import { useFornecedor } from "@/modules/fornecedores/hooks/useFornecedor";
+import { buttonClassName } from "@/modules/shared/ui/Button";
 
 type Props = {
   params: Promise<{
@@ -62,7 +63,7 @@ export default function FornecedorPage({ params }: Props) {
 
             <Link
               href={`/fornecedores/${id}/editar`}
-              className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className={buttonClassName("primary")}
             >
               Editar fornecedor
             </Link>

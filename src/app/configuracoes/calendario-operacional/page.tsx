@@ -7,6 +7,7 @@ import {
   TIPO_EVENTO_LABELS,
   type TipoEventoCalendario,
 } from "@/modules/calendario/types";
+import { Button } from "@/modules/shared/ui/Button";
 
 const DIAS_SEMANA: Array<{
   key:
@@ -148,14 +149,9 @@ export default function CalendarioOperacionalPage() {
           </div>
 
           <div className="flex justify-end border-t border-border-subtle px-6 py-4">
-            <button
-              type="button"
-              onClick={salvarPadraoSemanal}
-              disabled={salvando}
-              className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button onClick={salvarPadraoSemanal} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar padrão semanal"}
-            </button>
+            </Button>
           </div>
         </section>
 
@@ -214,13 +210,9 @@ export default function CalendarioOperacionalPage() {
             </div>
 
             <div className="md:col-span-3">
-              <button
-                type="button"
-                onClick={handleAdicionarEvento}
-                className="rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
+              <Button onClick={handleAdicionarEvento}>
                 Adicionar evento
-              </button>
+              </Button>
             </div>
           </div>
 

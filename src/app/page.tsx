@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { Button } from "@/modules/shared/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -146,13 +147,9 @@ export default function LoginPage() {
                   </a>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-lg bg-action-primary-hover px-4 py-3 font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-focus-ring"
-                >
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
-                </button>
+                </Button>
               </form>
             </div>
           </div>

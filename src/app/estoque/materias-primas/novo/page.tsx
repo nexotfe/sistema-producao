@@ -12,6 +12,7 @@ import {
   campoLabel,
   campoVisivel,
 } from "@/modules/materias-primas/columnConfig";
+import { Button } from "@/modules/shared/ui/Button";
 import type {
   FornecedorMateriaPrima,
   MateriaPrimaForm,
@@ -277,13 +278,9 @@ function FormularioMateriaPrima({
       <Card titulo="Fornecedores">
         <div className="border-b border-border-subtle px-4 py-3">
           <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={abrirModalFornecedores}
-              className="h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
-            >
+            <Button onClick={abrirModalFornecedores}>
               Adicionar Fornecedor
-            </button>
+            </Button>
           </div>
         </div>
         <FornecedoresAssociadosTable fornecedores={fornecedoresAssociados} />
@@ -400,14 +397,9 @@ function Header({
             >
               Início
             </Link>
-            <button
-              type="button"
-              onClick={onSalvar}
-              disabled={salvando}
-              className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button onClick={onSalvar} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

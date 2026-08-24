@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@/modules/shared/ui/Button";
 
 type RowActionsMenuProps = {
   aberto: boolean;
@@ -34,14 +35,15 @@ export function RowActionsMenu({
 }: RowActionsMenuProps) {
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="icon"
         aria-label={ariaLabel}
         onClick={() => (aberto ? onFechar() : onAbrir())}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-lg font-semibold leading-none text-text-secondary transition hover:bg-border-subtle"
+        className="text-lg leading-none"
       >
         {"⋮"}
-      </button>
+      </Button>
 
       {aberto ? (
         <div className="absolute right-4 top-12 z-20 w-40 overflow-hidden rounded-lg border border-border bg-surface-elevated py-1 text-left shadow-xl">

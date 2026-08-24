@@ -6,6 +6,7 @@
 // ListaTecnicaProjetoModal.tsx - sem useEffect para resetar estado.
 import { useState } from "react";
 import type { ResultadoOperacaoRoteiro } from "../types";
+import { Button } from "@/modules/shared/ui/Button";
 
 type Props = {
   open: boolean;
@@ -124,21 +125,16 @@ function ExcluirRoteiroModalConteudo({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
-          >
+          <Button variant="secondary" onClick={onClose}>
             Cancelar
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="danger-solid"
             onClick={handleConfirmar}
             disabled={!confirmacaoHabilitada || excluindo}
-            className="h-10 rounded-md bg-red-600 px-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {excluindo ? "Excluindo..." : "Confirmar exclusão"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

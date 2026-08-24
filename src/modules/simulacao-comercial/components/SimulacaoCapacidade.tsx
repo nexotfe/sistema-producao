@@ -44,6 +44,7 @@ import {
 import type { ResultadoEstimativaInicioNecessario } from "@/modules/simulacao-comercial/lib/estimarInicioNecessario";
 import { prepararExibicaoEstimativaSnapshot } from "@/modules/simulacao-comercial/lib/prepararExibicaoEstimativaSnapshot";
 import { aprovarSimulacaoComercialAction } from "@/modules/simulacao-comercial/actions/aprovarSimulacaoComercialAction";
+import { Button } from "@/modules/shared/ui/Button";
 import {
   prepararResultadoParaExibicao,
   type OperacaoParaExibicao,
@@ -1171,14 +1172,12 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
           />
         </div>
 
-        <button
-          type="button"
+        <Button
           onClick={handleSimular}
           disabled={carregando || calculandoJanela || !janelaComercial?.valida}
-          className="h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {carregando ? "Simulando..." : "Simular"}
-        </button>
+        </Button>
       </div>
 
       {calculandoJanela ? (
@@ -1443,8 +1442,8 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
               />
             </div>
 
-            <button
-              type="button"
+            <Button
+              variant="success"
               onClick={iniciarAprovacao}
               disabled={
                 cenarioDemanda.trim() === "" ||
@@ -1452,12 +1451,11 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
                 statusAprovacao?.tipo === "revalidando" ||
                 statusAprovacao?.tipo === "aprovando"
               }
-              className="h-10 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {statusAprovacao?.tipo === "revalidando"
                 ? "Revalidando..."
                 : "Aprovar simulação"}
-            </button>
+            </Button>
           </div>
 
           {statusAprovacao?.tipo === "erro" ? (
@@ -1490,13 +1488,9 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
             ))}
           </ul>
 
-          <button
-            type="button"
-            onClick={handleSimular}
-            className="mt-3 h-10 rounded-md bg-amber-700 px-4 text-sm font-semibold text-white transition hover:bg-amber-800"
-          >
+          <Button variant="warning" className="mt-3" onClick={handleSimular}>
             Executar nova simulação
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -1543,13 +1537,9 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleConfirmarAprovacao}
-            className="mt-3 h-10 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
-          >
+          <Button variant="success" className="mt-3" onClick={handleConfirmarAprovacao}>
             Aprovar simulação
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -1670,33 +1660,24 @@ export function SimulacaoCapacidade({ projetoId }: SimulacaoCapacidadeProps) {
             </div>
 
             <div className="flex justify-end gap-2 border-t border-status-danger-border px-6 py-4">
-              <button
-                type="button"
-                onClick={() => setStatusAprovacao(null)}
-                className="h-10 rounded-md border border-border px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
-              >
+              <Button variant="secondary" onClick={() => setStatusAprovacao(null)}>
                 Cancelar
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() =>
                   window.alert(
                     "O módulo Cenários de Viabilidade Comercial será disponibilizado em uma próxima versão.",
                   )
                 }
-                className="h-10 rounded-md border border-border px-4 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
               >
                 Nova Simulação
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                onClick={handleConfirmarAprovacao}
-                className="h-10 rounded-md bg-rose-700 px-4 text-sm font-semibold text-white transition hover:bg-rose-800"
-              >
+              <Button variant="warning" onClick={handleConfirmarAprovacao}>
                 Aprovar com risco assumido
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { EntityLink } from "@/modules/shared/navigation/EntityLink";
+import { Button } from "@/modules/shared/ui/Button";
 
 type PurchaseOrderDraftPageProps = {
   params: Promise<{
@@ -90,12 +91,7 @@ export default function PurchaseOrderDraftPage({
                 >
                   Excluir
                 </button>
-                <button
-                  type="button"
-                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover"
-                >
-                  Salvar
-                </button>
+                <Button>Salvar</Button>
               </div>
             </div>
           </div>
@@ -127,9 +123,9 @@ export default function PurchaseOrderDraftPage({
             <p className="text-xs font-semibold uppercase text-text-secondary">
               Proxima acao
             </p>
-            <button className="mt-2 h-10 w-full rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800">
+            <Button className="mt-2 w-full">
               Enviar ao fornecedor
-            </button>
+            </Button>
           </div>
         </section>
 

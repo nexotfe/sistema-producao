@@ -5,6 +5,7 @@ import { ModuleBackLink } from "@/modules/shared/navigation/ModuleBackLink";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGrupoRecurso } from "@/modules/grupos-recursos/hooks/useGrupoRecurso";
+import { Button, buttonClassName } from "@/modules/shared/ui/Button";
 
 type Props = {
   params: Promise<{
@@ -97,17 +98,12 @@ export default function GrupoRecursoPage({ params }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={handleExcluir}
-                disabled={processando}
-                className="inline-flex h-11 w-fit items-center justify-center rounded-lg border border-border bg-surface px-5 text-sm font-semibold text-text-primary transition hover:bg-border-subtle disabled:cursor-not-allowed disabled:opacity-60"
-              >
+              <Button variant="secondary" onClick={handleExcluir} disabled={processando}>
                 Excluir grupo
-              </button>
+              </Button>
               <Link
                 href={`/grupos-recursos/${id}/editar`}
-                className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className={buttonClassName("primary")}
               >
                 Editar grupo
               </Link>

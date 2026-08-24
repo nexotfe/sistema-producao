@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
 import { Card } from "@/modules/shared/ui/Card";
 import { Field } from "@/modules/shared/ui/Field";
 import { Select } from "@/modules/shared/ui/Select";
+import { Button } from "@/modules/shared/ui/Button";
 import { CompatibilidadeRecursos } from "@/modules/recursos/components/CompatibilidadeRecursos";
 
 type Props = {
@@ -280,22 +281,13 @@ export default function EditarRecursoPage({ params }: Props) {
           )}
 
           <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => router.push(`/recursos/${id}`)}
-              className="rounded-lg border border-border bg-surface px-5 py-3 text-sm font-medium text-text-secondary transition hover:bg-border-subtle"
-            >
+            <Button variant="secondary" onClick={() => router.push(`/recursos/${id}`)}>
               Cancelar
-            </button>
+            </Button>
 
-            <button
-              type="button"
-              onClick={handleSalvar}
-              disabled={salvando}
-              className="rounded-lg bg-action-primary px-5 py-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button onClick={handleSalvar} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar"}
-            </button>
+            </Button>
           </div>
         </section>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/modules/shared/ui/Button";
 
 export type ItemParaEditar = {
   id: string;
@@ -118,21 +119,12 @@ function EditarQuantidadeItemModalConteudo({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
-          <button
-            type="button"
-            onClick={limparEFechar}
-            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle"
-          >
+          <Button variant="secondary" onClick={limparEFechar}>
             Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSalvar}
-            disabled={salvando}
-            className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          </Button>
+          <Button onClick={handleSalvar} disabled={salvando}>
             {salvando ? "Salvando..." : "Salvar"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

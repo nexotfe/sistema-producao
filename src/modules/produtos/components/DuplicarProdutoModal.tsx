@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { duplicarProdutoComRoteiro } from "../lib/duplicarProdutoComRoteiro";
 import { ControladorChamadaUnica } from "@/modules/shared/lib/controladorChamadaUnica";
+import { Button } from "@/modules/shared/ui/Button";
 
 type Props = {
   open: boolean;
@@ -108,22 +109,12 @@ function DuplicarProdutoModalConteudo({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
-          <button
-            type="button"
-            onClick={fechar}
-            disabled={duplicando}
-            className="h-10 rounded-md border border-border px-3 text-sm font-semibold text-text-primary transition hover:bg-border-subtle disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button variant="secondary" onClick={fechar} disabled={duplicando}>
             Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleDuplicar}
-            disabled={duplicando}
-            className="h-10 rounded-md bg-action-primary-hover px-3 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          </Button>
+          <Button onClick={handleDuplicar} disabled={duplicando}>
             {duplicando ? "Duplicando..." : "Duplicar"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

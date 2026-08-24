@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { RevisaoModal } from "./RevisaoModal";
 import { AjustarEstoqueModal } from "./AjustarEstoqueModal";
+import { Button, buttonClassName } from "@/modules/shared/ui/Button";
 import type {
   EstoqueInfo,
   NovaRevisaoInput,
@@ -120,7 +121,7 @@ export function ProductForm({
         {values.code ? (
           <Link
             href={`/roteiros/${encodeURIComponent(values.code)}`}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
+            className={buttonClassName("primary")}
           >
             {values.roteiroVigente ? "Abrir Roteiro" : "Criar Roteiro"}
           </Link>
@@ -169,13 +170,9 @@ export function ProductForm({
       <Card titulo="Revisões">
         <div className="border-b border-border-subtle px-4 py-3">
           <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setModalRevisaoAberto(true)}
-              className="h-10 rounded-md bg-action-primary-hover px-4 text-sm font-semibold text-action-primary-text transition hover:bg-blue-800"
-            >
+            <Button onClick={() => setModalRevisaoAberto(true)}>
               Adicionar Revisão
-            </button>
+            </Button>
           </div>
         </div>
         <RevisoesTable revisoes={values.revisions} />

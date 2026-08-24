@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { useEditarColaborador } from "@/modules/colaboradores/hooks/useEditarColaborador";
 import { useNovoColaborador } from "@/modules/colaboradores/hooks/useNovoColaborador";
+import { Button } from "@/modules/shared/ui/Button";
 
 type Props = {
   params: Promise<{
@@ -157,14 +158,9 @@ export default function ColaboradorPage({ params }: Props) {
                     </button>
                   </>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={salvarColaborador}
-                  disabled={salvando}
-                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                <Button onClick={salvarColaborador} disabled={salvando}>
                   {salvando ? "Salvando..." : "Salvar"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useNovoGrupoRecurso } from "@/modules/grupos-recursos/hooks/useNovoGrupoRecurso";
 import { useRouter } from "next/navigation";
+import { Button } from "@/modules/shared/ui/Button";
 
 export default function NovoGrupoRecursoPage() {
   const router = useRouter();
@@ -69,14 +70,9 @@ export default function NovoGrupoRecursoPage() {
                 >
                   Início
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleSalvar}
-                  disabled={loading}
-                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                <Button onClick={handleSalvar} disabled={loading}>
                   {loading ? "Salvando..." : "Salvar"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

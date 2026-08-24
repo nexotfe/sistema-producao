@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/modules/shared/ui/ThemeToggle";
 import { Card } from "@/modules/shared/ui/Card";
 import { Field } from "@/modules/shared/ui/Field";
 import { Select } from "@/modules/shared/ui/Select";
+import { Button } from "@/modules/shared/ui/Button";
 
 export default function NovoRecursoPage() {
   const router = useRouter();
@@ -87,14 +88,9 @@ export default function NovoRecursoPage() {
                 >
                   Início
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleSalvar}
-                  disabled={loading || loadingDuplicado}
-                  className="h-10 rounded-md bg-action-primary px-3 text-sm font-semibold text-action-primary-text transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                <Button onClick={handleSalvar} disabled={loading || loadingDuplicado}>
                   {loading ? "Salvando..." : "Salvar"}
-                </button>
+                </Button>
               </div>
             </>
           }
