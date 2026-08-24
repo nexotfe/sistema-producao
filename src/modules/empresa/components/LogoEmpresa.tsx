@@ -33,6 +33,21 @@ export function LogoEmpresa({ logoUrl, nomeEmpresa, size = "sm", className }: Lo
     logoUrl ? "carregando" : "erro",
   );
 
+  // Ajuste de estado durante o render (mesmo padrão já usado em
+  // proposta-comercial/page.tsx) - sem useEffect: o valor inicial do
+  // useState acima só roda na montagem, então sem isto o componente
+  // ficaria travado no estado de quando montou (ex.: monta sem logo,
+  // "erro"/fallback; logoUrl muda para uma URL real depois - primeiro
+  // upload de uma empresa sem logo, mesma sessão - e o componente nunca
+  // mostraria a imagem nova). Só reseta quando logoUrl de fato muda
+  // (comparação com o valor anterior evita re-render em loop e evita
+  // resetar "carregada"/"erro" à toa quando o valor não mudou).
+  const [logoUrlAnterior, setLogoUrlAnterior] = useState(logoUrl);
+  if (logoUrl !== logoUrlAnterior) {
+    setLogoUrlAnterior(logoUrl);
+    setEstado(logoUrl ? "carregando" : "erro");
+  }
+
   const classesBase = [
     "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-border bg-border-subtle",
     CLASSES_TAMANHO[size],

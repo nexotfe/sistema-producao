@@ -51,3 +51,68 @@ describe("LogoEmpresa", () => {
     expect(containerMd.firstElementChild?.className).toContain("h-14");
   });
 });
+
+describe("LogoEmpresa - logoUrl muda depois da montagem (sem reload da página)", () => {
+  it("null -> primeira URL válida: sai do fallback e passa a renderizar <img>, mesmo sem remontar", () => {
+    const { rerender } = render(<LogoEmpresa logoUrl={null} nomeEmpresa="ENIFER" />);
+
+    expect(screen.getByText("LOGO")).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+
+    rerender(<LogoEmpresa logoUrl="https://exemplo.test/logo-nova.png" nomeEmpresa="ENIFER" />);
+
+    const img = screen.getByRole("img", { name: "ENIFER" }) as HTMLImageElement;
+    expect(img.src).toBe("https://exemplo.test/logo-nova.png");
+    expect(img.className).toContain("opacity-0");
+    expect(screen.queryByText("LOGO")).toBeNull();
+  });
+
+  it("URL válida -> outra URL válida: reseta para carregando (opacidade 0) na URL nova, não fica com a imagem antiga", () => {
+    const { rerender } = render(<LogoEmpresa logoUrl="https://exemplo.test/logo-1.png" nomeEmpresa="ENIFER" />);
+
+    fireEvent.load(screen.getByRole("img", { name: "ENIFER" }));
+    expect(screen.getByRole("img", { name: "ENIFER" }).className).toContain("opacity-100");
+
+    rerender(<LogoEmpresa logoUrl="https://exemplo.test/logo-2.png" nomeEmpresa="ENIFER" />);
+
+    const img = screen.getByRole("img", { name: "ENIFER" }) as HTMLImageElement;
+    expect(img.src).toBe("https://exemplo.test/logo-2.png");
+    expect(img.className).toContain("opacity-0");
+  });
+
+  it("URL com erro -> nova URL válida: sai do fallback 'LOGO' e volta a tentar renderizar <img>", () => {
+    const { rerender } = render(<LogoEmpresa logoUrl="https://exemplo.test/logo-quebrada.png" nomeEmpresa="ENIFER" />);
+
+    fireEvent.error(screen.getByRole("img", { name: "ENIFER" }));
+    expect(screen.getByText("LOGO")).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+
+    rerender(<LogoEmpresa logoUrl="https://exemplo.test/logo-boa.png" nomeEmpresa="ENIFER" />);
+
+    const img = screen.getByRole("img", { name: "ENIFER" }) as HTMLImageElement;
+    expect(img.src).toBe("https://exemplo.test/logo-boa.png");
+    expect(screen.queryByText("LOGO")).toBeNull();
+  });
+
+  it("URL válida -> null: volta para o fallback 'LOGO' (ex.: remoção da logo)", () => {
+    const { rerender } = render(<LogoEmpresa logoUrl="https://exemplo.test/logo.png" nomeEmpresa="ENIFER" />);
+
+    fireEvent.load(screen.getByRole("img", { name: "ENIFER" }));
+    rerender(<LogoEmpresa logoUrl={null} nomeEmpresa="ENIFER" />);
+
+    expect(screen.getByText("LOGO")).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("mesma URL em re-render: não reinicializa o estado à toa (permanece carregada, sem voltar a opacity-0)", () => {
+    const mesmaUrl = "https://exemplo.test/logo-estavel.png";
+    const { rerender } = render(<LogoEmpresa logoUrl={mesmaUrl} nomeEmpresa="ENIFER" />);
+
+    fireEvent.load(screen.getByRole("img", { name: "ENIFER" }));
+    expect(screen.getByRole("img", { name: "ENIFER" }).className).toContain("opacity-100");
+
+    rerender(<LogoEmpresa logoUrl={mesmaUrl} nomeEmpresa="ENIFER" />);
+
+    expect(screen.getByRole("img", { name: "ENIFER" }).className).toContain("opacity-100");
+  });
+});
