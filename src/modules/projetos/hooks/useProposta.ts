@@ -7,6 +7,10 @@ import { buscarCenarioComercialAprovado, type CenarioComercialAprovadoResumo } f
 import { avaliarCenarioComercialAprovado } from "../lib/avaliarCenarioComercialAprovado";
 import { buscarDadosOrcamento } from "../lib/buscarDadosOrcamento";
 import { distribuirAjusteProporcional } from "../lib/distribuirAjusteProporcional";
+import {
+  buscarIdentidadeEmpresaAtual,
+  type IdentidadeEmpresa,
+} from "@/modules/empresa/lib/buscarIdentidadeEmpresaAtual";
 
 export type ClienteProposta = {
   nome: string;
@@ -55,6 +59,7 @@ export function useProposta(idProjeto: string | null) {
   const [consideracoes, setConsideracoes] = useState(
     TEXTO_CONSIDERACOES_PADRAO,
   );
+  const [identidadeEmpresa, setIdentidadeEmpresa] = useState<IdentidadeEmpresa | null>(null);
   const [cliente, setCliente] = useState<ClienteProposta | null>(null);
   const [nomeSolicitante, setNomeSolicitante] = useState<string | null>(null);
   const [responsavelNome, setResponsavelNome] = useState("");
@@ -90,6 +95,26 @@ export function useProposta(idProjeto: string | null) {
         setLoading(false);
         return;
       }
+
+      // Identidade da empresa (nome/CNPJ/endereço/contato) é pré-requisito
+      // do documento - carregada primeiro e aborta o restante em caso de
+      // erro real ou ausência do dado obrigatório (nome), em vez de
+      // deixar a proposta renderizar parcialmente sem essa identificação.
+      const resultadoIdentidade = await buscarIdentidadeEmpresaAtual(supabase);
+
+      if (resultadoIdentidade.status === "erro") {
+        setErro(resultadoIdentidade.mensagem);
+        setLoading(false);
+        return;
+      }
+
+      if (resultadoIdentidade.status === "sem_empresa") {
+        setErro("Não foi possível identificar a empresa do usuário logado.");
+        setLoading(false);
+        return;
+      }
+
+      setIdentidadeEmpresa(resultadoIdentidade.identidade);
 
       // Fonte ÚNICA de "custo dos itens do orçamento" (consolidação
       // pedida pelo usuário, 2026-08-22): antes, esta lógica (preferir
@@ -284,6 +309,7 @@ export function useProposta(idProjeto: string | null) {
     erro,
     numeroProposta: numeroProjetoCarregado,
     criadoEm,
+    identidadeEmpresa,
     cliente,
     nomeSolicitante,
     responsavelNome,

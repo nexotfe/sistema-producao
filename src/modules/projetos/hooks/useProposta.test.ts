@@ -97,9 +97,22 @@ function configurarMock(params: {
 }) {
   const chamadasBoms: string[] = [];
 
-  supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null } });
+  // Usuário autenticado com empresa/identidade resolvíveis (feliz path
+  // de buscarIdentidadeEmpresaAtual - pré-requisito do carregamento
+  // desde a correção da Proposta usar dados reais de `empresas`).
+  // Testes que precisam do caminho "sem usuário" configuram o próprio
+  // mock manualmente.
+  supabaseMock.auth.getUser.mockResolvedValue({
+    data: { user: { id: "usuario-teste" } },
+    error: null,
+  });
 
   supabaseMock.rpc.mockImplementation((nome: string, args: unknown) => {
+    // empresa_atual_id() - função real de banco (RLS), chamada via RPC
+    // por buscarEmpresaIdAtual.ts em vez de reproduzida em TypeScript.
+    if (nome === "empresa_atual_id") {
+      return Promise.resolve({ data: "empresa-teste", error: null });
+    }
     if (nome === "calcular_resumo_produtivo_projeto") {
       return Promise.resolve({
         data: { estado: "calculado", mensagem: null, recursos: [], itens: [] },
@@ -114,6 +127,25 @@ function configurarMock(params: {
   });
 
   supabaseMock.from.mockImplementation((tabela: string) => {
+    if (tabela === "usuarios") {
+      return criarFakeQuery({
+        data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+        error: null,
+      });
+    }
+    if (tabela === "empresas") {
+      return criarFakeQuery({
+        data: {
+          nome: "Empresa Teste",
+          cnpj: null,
+          inscricao_estadual: null,
+          endereco: null,
+          telefone: null,
+          email: null,
+        },
+        error: null,
+      });
+    }
     if (tabela === "projetos") {
       return criarFakeQuery({ data: projetoRow(params.projeto ?? {}), error: null });
     }
@@ -254,6 +286,25 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     });
 
     supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "usuarios") {
+        return criarFakeQuery({
+          data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+          error: null,
+        });
+      }
+      if (tabela === "empresas") {
+        return criarFakeQuery({
+          data: {
+            nome: "Empresa Teste",
+            cnpj: null,
+            inscricao_estadual: null,
+            endereco: null,
+            telefone: null,
+            email: null,
+          },
+          error: null,
+        });
+      }
       if (tabela === "projetos") {
         return criarFakeQuery({ data: projetoRow({ carga_tributaria_percent: null, tipo_projeto: "fabricacao" }), error: null });
       }
@@ -278,9 +329,36 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
   });
 
   it("projeto não encontrado: mensagem de erro preservada", async () => {
-    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null } });
-    supabaseMock.rpc.mockResolvedValue({ data: null, error: null });
+    supabaseMock.auth.getUser.mockResolvedValue({
+      data: { user: { id: "usuario-teste" } },
+      error: null,
+    });
+    supabaseMock.rpc.mockImplementation((nome: string) => {
+      if (nome === "empresa_atual_id") {
+        return Promise.resolve({ data: "empresa-teste", error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
     supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "usuarios") {
+        return criarFakeQuery({
+          data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+          error: null,
+        });
+      }
+      if (tabela === "empresas") {
+        return criarFakeQuery({
+          data: {
+            nome: "Empresa Teste",
+            cnpj: null,
+            inscricao_estadual: null,
+            endereco: null,
+            telefone: null,
+            email: null,
+          },
+          error: null,
+        });
+      }
       if (tabela === "projetos") return criarFakeQuery({ data: null, error: null });
       return criarFakeQuery(VAZIO);
     });
@@ -452,5 +530,137 @@ describe("useProposta - fonte de custo consolidada com o Orçamento", () => {
     expect(result.current.cenarioComercialDesatualizado).toBe(true);
     expect(result.current.valorTecnicoProposta).toBe(3975);
     expect(result.current.itens[0].valorTotal).toBeCloseTo(3975, 2);
+  });
+});
+
+describe("useProposta - identidade da empresa (buscarIdentidadeEmpresaAtual)", () => {
+  it("identidadeEmpresa é exposta com os dados reais da empresa, quando a consulta é bem-sucedida", async () => {
+    configurarMock({ itens: [] });
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "usuarios") {
+        return criarFakeQuery({
+          data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+          error: null,
+        });
+      }
+      if (tabela === "empresas") {
+        return criarFakeQuery({
+          data: {
+            nome: "ENIFER USINAGEM E INDUSTRIA LTDA",
+            cnpj: "08.443.110/0001-30",
+            inscricao_estadual: "645495919110",
+            endereco: "AV DOUTOR SEBASTIAO..., Sao Jose dos Campos - SP",
+            telefone: "(12) 3933-3874",
+            email: null,
+          },
+          error: null,
+        });
+      }
+      if (tabela === "configuracoes_empresa") {
+        return criarFakeQuery({ data: { valor: { url: "www.enifer.com.br" } }, error: null });
+      }
+      if (tabela === "projetos") {
+        return criarFakeQuery({ data: projetoRow(), error: null });
+      }
+      if (tabela === "projeto_itens") {
+        return criarFakeQuery({ data: [], error: null });
+      }
+      return criarFakeQuery(VAZIO);
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.erro).toBeNull();
+    expect(result.current.identidadeEmpresa).toEqual({
+      nome: "ENIFER USINAGEM E INDUSTRIA LTDA",
+      cnpj: "08.443.110/0001-30",
+      inscricaoEstadual: "645495919110",
+      endereco: "AV DOUTOR SEBASTIAO..., Sao Jose dos Campos - SP",
+      telefone: "(12) 3933-3874",
+      email: null,
+      site: "www.enifer.com.br",
+    });
+  });
+
+  it("empresa sem nome cadastrado (string vazia): aborta com mensagem clara, não renderiza a proposta silenciosamente", async () => {
+    configurarMock({ itens: [] });
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "usuarios") {
+        return criarFakeQuery({
+          data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+          error: null,
+        });
+      }
+      if (tabela === "empresas") {
+        return criarFakeQuery({
+          data: { nome: "   ", cnpj: null, inscricao_estadual: null, endereco: null, telefone: null, email: null },
+          error: null,
+        });
+      }
+      return criarFakeQuery(VAZIO);
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.identidadeEmpresa).toBeNull();
+    expect(result.current.erro).toMatch(/não possui nome cadastrado/);
+  });
+
+  it("falha real ao consultar empresas: reporta erro explícito, nunca trata como empresa ausente", async () => {
+    configurarMock({ itens: [] });
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "usuarios") {
+        return criarFakeQuery({
+          data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+          error: null,
+        });
+      }
+      if (tabela === "empresas") {
+        return criarFakeQuery({ data: null, error: { message: "permission denied for table empresas" } });
+      }
+      return criarFakeQuery(VAZIO);
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.identidadeEmpresa).toBeNull();
+    expect(result.current.erro).toMatch(/Não foi possível carregar os dados da empresa/);
+  });
+
+  it("chave 'site' inexistente em configuracoes_empresa: campo opcional null, sem erro (diferente de falha de consulta)", async () => {
+    configurarMock({ itens: [] });
+    supabaseMock.from.mockImplementation((tabela: string) => {
+      if (tabela === "usuarios") {
+        return criarFakeQuery({
+          data: { id: "usuario-teste", nome: "Usuário Teste", empresa_id: "empresa-teste" },
+          error: null,
+        });
+      }
+      if (tabela === "empresas") {
+        return criarFakeQuery({
+          data: { nome: "Empresa Teste", cnpj: null, inscricao_estadual: null, endereco: null, telefone: null, email: null },
+          error: null,
+        });
+      }
+      if (tabela === "configuracoes_empresa") {
+        return criarFakeQuery({ data: null, error: null });
+      }
+      if (tabela === "projetos") {
+        return criarFakeQuery({ data: projetoRow(), error: null });
+      }
+      if (tabela === "projeto_itens") {
+        return criarFakeQuery({ data: [], error: null });
+      }
+      return criarFakeQuery(VAZIO);
+    });
+
+    const { result } = renderHook(() => useProposta("projeto-a"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.erro).toBeNull();
+    expect(result.current.identidadeEmpresa?.site).toBeNull();
   });
 });

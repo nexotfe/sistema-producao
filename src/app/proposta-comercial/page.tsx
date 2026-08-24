@@ -5,25 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { proximaRevisao, useProposta } from "@/modules/projetos/hooks/useProposta";
 
-const companyContactInfo = [
-  ["Site", "www.nexotfe.com.br"],
-  ["E-mail", "comercial@nexotfe.com.br"],
-  ["Telefone", "(11) 0000-0000"],
-];
-
-const companyLegalInfo = [
-  ["CNPJ", "00.000.000/0001-00"],
-  ["Inscrição Estadual", "000.000.000.000"],
-  ["Inscrição Municipal", "0000000"],
-];
-
-const companyAddress = [
-  ["Endereço", "Av. Industrial, 1000"],
-  ["Cidade", "São Paulo"],
-  ["Estado", "SP"],
-  ["CEP", "00000-000"],
-];
-
 function formatarData(iso: string | null) {
   if (!iso) {
     return "—";
@@ -45,6 +26,7 @@ export default function CommercialProposalPage() {
     erro,
     numeroProposta,
     criadoEm,
+    identidadeEmpresa,
     cliente,
     nomeSolicitante,
     responsavelNome,
@@ -165,7 +147,7 @@ export default function CommercialProposalPage() {
             <div className="min-w-0 space-y-3 text-sm text-slate-600">
               <div>
                 <p className="text-base font-semibold text-slate-800">
-                  Nome da Empresa
+                  {identidadeEmpresa?.nome ?? "—"}
                 </p>
                 <h1 className="mt-1 text-lg font-bold tracking-wide text-slate-950">
                   PROPOSTA COMERCIAL
@@ -197,33 +179,43 @@ export default function CommercialProposalPage() {
               </div>
 
               <div className="flex flex-wrap gap-x-2 gap-y-1">
-                {companyContactInfo.map(([label, value], index) => (
-                  <span key={label}>
-                    <strong className="text-slate-800">{label}:</strong>{" "}
-                    {value}
-                    {index < companyContactInfo.length - 1 ? (
-                      <span className="px-2 text-slate-300">|</span>
-                    ) : null}
-                  </span>
-                ))}
+                <span>
+                  <strong className="text-slate-800">Site:</strong>{" "}
+                  {identidadeEmpresa?.site ?? "Não informado"}
+                </span>
+                <span className="px-2 text-slate-300">|</span>
+                <span>
+                  <strong className="text-slate-800">E-mail:</strong>{" "}
+                  {identidadeEmpresa?.email ?? "Não informado"}
+                </span>
+                <span className="px-2 text-slate-300">|</span>
+                <span>
+                  <strong className="text-slate-800">Telefone:</strong>{" "}
+                  {identidadeEmpresa?.telefone ?? "Não informado"}
+                </span>
               </div>
 
               <div className="flex flex-wrap gap-x-2 gap-y-1">
-                {companyLegalInfo.map(([label, value], index) => (
-                  <span key={label}>
-                    <strong className="text-slate-800">{label}:</strong>{" "}
-                    {value}
-                    {index < companyLegalInfo.length - 1 ? (
-                      <span className="px-2 text-slate-300">|</span>
-                    ) : null}
-                  </span>
-                ))}
+                <span>
+                  <strong className="text-slate-800">CNPJ:</strong>{" "}
+                  {identidadeEmpresa?.cnpj ? (
+                    identidadeEmpresa.cnpj
+                  ) : (
+                    <span className="font-semibold text-amber-700">
+                      CNPJ não cadastrado
+                    </span>
+                  )}
+                </span>
+                <span className="px-2 text-slate-300">|</span>
+                <span>
+                  <strong className="text-slate-800">Inscrição Estadual:</strong>{" "}
+                  {identidadeEmpresa?.inscricaoEstadual ?? "Não informado"}
+                </span>
               </div>
 
               <p>
                 <strong className="text-slate-800">Endereço:</strong>{" "}
-                {companyAddress[0][1]} - {companyAddress[1][1]}/
-                {companyAddress[2][1]} - CEP {companyAddress[3][1]}
+                {identidadeEmpresa?.endereco ?? "Não informado"}
               </p>
             </div>
           </div>
@@ -456,11 +448,13 @@ export default function CommercialProposalPage() {
 
         <footer className="rounded-lg border border-slate-200 bg-app-card px-6 py-4 text-sm text-slate-600">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            <span className="font-semibold text-slate-800">Nome da Empresa</span>
-            <span>www.nexotfe.com.br</span>
-            <span>comercial@nexotfe.com.br</span>
-            <span>(11) 0000-0000</span>
-            <span>Av. Industrial, 1000 - São Paulo/SP</span>
+            <span className="font-semibold text-slate-800">
+              {identidadeEmpresa?.nome ?? "—"}
+            </span>
+            <span>{identidadeEmpresa?.site ?? "Não informado"}</span>
+            <span>{identidadeEmpresa?.email ?? "Não informado"}</span>
+            <span>{identidadeEmpresa?.telefone ?? "Não informado"}</span>
+            <span>{identidadeEmpresa?.endereco ?? "Não informado"}</span>
           </div>
         </footer>
       </div>
