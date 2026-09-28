@@ -9,8 +9,7 @@ create table if not exists public.projetos (
   cliente_id uuid references public.clientes(id),
   tipo_projeto text not null,
   data_objetivo date,
-  prioridade text not null default 'normal',
-  margem_lucro_percent numeric,
+  prioridade text,
   regra_faturamento text,
   observacoes text,
   status text not null,
@@ -25,13 +24,13 @@ create table if not exists public.projetos (
     tipo_projeto in ('fabricacao', 'desenvolvimento')
   ),
   constraint projetos_status_chk check (
-    status in ('em_elaboracao', 'em_analise', 'aprovado', 'perdido', 'cancelado')
-  ),
-  constraint projetos_prioridade_chk check (
-    prioridade in ('baixa', 'normal', 'urgente')
-  ),
-  constraint projetos_margem_lucro_chk check (
-    margem_lucro_percent is null or margem_lucro_percent >= 0
+    status in (
+      'orcamento',
+      'aprovado',
+      'producao',
+      'finalizado',
+      'cancelado'
+    )
   )
 );
 

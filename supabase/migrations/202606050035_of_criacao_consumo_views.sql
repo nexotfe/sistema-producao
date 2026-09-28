@@ -1,6 +1,18 @@
 -- NEXOTFE - Ordem de Fabricação Operacional e Vistas de Consumo
 -- Cria a função de criação de OF completa e views que acompanham o fluxo BOM -> estoque -> consumo interno -> compra externa.
 
+drop function public.registrar_consumo_interno(
+  uuid,
+  text,
+  uuid,
+  numeric,
+  text,
+  numeric,
+  text,
+  date,
+  text
+);
+
 create or replace function public.registrar_consumo_interno(
   p_projeto_id uuid,
   p_of_numero text,
@@ -90,6 +102,16 @@ $$;
 
 comment on function public.registrar_consumo_interno is
   'Registra consumo interno para uma OF e atualiza a reserva em estoque.';
+
+drop function public.registrar_requisicao_compra_material(
+  uuid,
+  text,
+  uuid,
+  numeric,
+  text,
+  date,
+  text
+);
 
 create or replace function public.registrar_requisicao_compra_material(
   p_projeto_id uuid,

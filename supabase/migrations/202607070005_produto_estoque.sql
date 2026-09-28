@@ -12,9 +12,9 @@
 -- so que como view computada em vez de tabela mantida). Nenhuma das duas
 -- views e referenciada por outra view, function ou pelo frontend (0
 -- ocorrencias em src/) - seguro remover as duas antes da tabela.
-drop view public.movimentacoes_estoque_ativas;
-drop view public.saldo_estoque_atual;
-drop table public.movimentacoes_estoque;
+drop view if exists public.movimentacoes_estoque_ativas;
+drop view if exists public.saldo_estoque_atual;
+drop table if exists public.movimentacoes_estoque;
 
 -- PASSO 2 - produto_movimentacoes, espelhando estoque_movimentacoes
 -- (mesmas FKs sem "on delete" explicito = NO ACTION, mesma ausencia de

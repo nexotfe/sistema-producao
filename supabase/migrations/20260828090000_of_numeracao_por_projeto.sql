@@ -175,12 +175,25 @@ grant select on public.numeracao_of_formato to authenticated;
 --    vai falhar com o erro explícito de gerar_numero_of até alguém
 --    configurar o formato dela. created_by = Thiago Teodoro
 --    (7c2ca3b6-f2bd-4eed-bbdb-5cbb3440a349), admin real de ENIFER.
-insert into public.numeracao_of_formato (empresa_id, formato, created_by)
-values (
-  'f835684a-0400-43a5-ba54-dd4629230c3c',
-  '{numero_projeto}-{sequencial:4}',
-  '7c2ca3b6-f2bd-4eed-bbdb-5cbb3440a349'
-);
+--    Condicional: em ambiente sem os dados reais (fresh replay local/CI),
+--    nem a empresa nem o usuário existem — o INSERT é pulado com um aviso,
+--    sem erro, sem dado fictício (mesmo padrão já usado em
+--    20260913140351_fix_numeracao_projeto_enifer.sql).
+do $$
+begin
+  if exists (select 1 from public.empresas where id = 'f835684a-0400-43a5-ba54-dd4629230c3c')
+     and exists (select 1 from auth.users where id = '7c2ca3b6-f2bd-4eed-bbdb-5cbb3440a349') then
+    insert into public.numeracao_of_formato (empresa_id, formato, created_by)
+    values (
+      'f835684a-0400-43a5-ba54-dd4629230c3c',
+      '{numero_projeto}-{sequencial:4}',
+      '7c2ca3b6-f2bd-4eed-bbdb-5cbb3440a349'
+    );
+  else
+    raise notice 'Seed da ENIFER (numeracao_of_formato) pulado: empresa % ou usuario % nao existe neste ambiente.',
+      'f835684a-0400-43a5-ba54-dd4629230c3c', '7c2ca3b6-f2bd-4eed-bbdb-5cbb3440a349';
+  end if;
+end $$;
 
 -- 5. Contador transacional por empresa+projeto. Nunca decrementado, nunca
 --    resetado (cada projeto novo começa do zero, isolado na própria
