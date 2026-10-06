@@ -25,6 +25,16 @@
 // impossibilidade de verificar). Qualquer falha técnica na chamada
 // (error retornado, exceção lançada, ou retorno fora do contrato
 // conhecido) é fail-closed - nunca libera navegação.
+//
+// C2.4-P1: depois que o vínculo é confirmado "coerente", uma SEGUNDA
+// barreira independente - usuario_atual_esta_ativo() - decide se o
+// usuário pode de fato navegar. "Coerente" nunca significa "ativo"
+// (profiles.ativo é deliberadamente fora da regra estrutural, ver
+// comentário da própria RPC). Usuário inativo tem sua própria rota de
+// destino e sua própria coleção de isenção - terceiro estado
+// semanticamente distinto de "inconsistente" e de "erro técnico": o
+// vínculo pode estar perfeitamente coerente e o acesso, ainda assim,
+// ter sido encerrado.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -38,17 +48,20 @@ const PUBLIC_PATHS = new Set(["/"]);
 
 const ROTA_VINCULO_INCONSISTENTE = "/acesso/vinculo-inconsistente";
 const ROTA_VERIFICACAO_INDISPONIVEL = "/acesso/verificacao-indisponivel";
+const ROTA_USUARIO_INATIVO = "/acesso/usuario-inativo";
 
-// Duas coleções separadas, deliberadamente não fundidas - ver
-// comentário do cabeçalho: mesmo efeito operacional (pular a RPC),
+// Três coleções separadas, deliberadamente não fundidas - ver
+// comentário do cabeçalho: mesmo efeito operacional (pular as RPCs),
 // motivos semanticamente distintos.
 const ESTRUTURAL_EXEMPT_PATHS = new Set([ROTA_VINCULO_INCONSISTENTE]);
 const TECNICO_EXEMPT_PATHS = new Set([ROTA_VERIFICACAO_INDISPONIVEL]);
+const INATIVO_EXEMPT_PATHS = new Set([ROTA_USUARIO_INATIVO]);
 
 // Único ponto que constrói um redirect preservando cookies renovados -
-// usado pelos 3 redirects deste arquivo (sessão ausente, vínculo
-// inconsistente, falha técnica). Sem isso, um refresh de token que
-// coincida com qualquer um desses redirecionamentos seria perdido.
+// usado por todos os redirects deste arquivo (sessão ausente, vínculo
+// inconsistente, falha técnica, usuário inativo). Sem isso, um refresh
+// de token que coincida com qualquer um desses redirecionamentos seria
+// perdido.
 function redirecionarPreservandoCookies(
   pathname: string,
   request: NextRequest,
@@ -107,8 +120,15 @@ export async function proxy(request: NextRequest) {
 
   const isRotaEstruturalIsenta = ESTRUTURAL_EXEMPT_PATHS.has(pathname);
   const isRotaTecnicaIsenta = TECNICO_EXEMPT_PATHS.has(pathname);
+  const isRotaInativoIsenta = INATIVO_EXEMPT_PATHS.has(pathname);
 
-  if (isAuthenticated && !isPublicPath && !isRotaEstruturalIsenta && !isRotaTecnicaIsenta) {
+  if (
+    isAuthenticated &&
+    !isPublicPath &&
+    !isRotaEstruturalIsenta &&
+    !isRotaTecnicaIsenta &&
+    !isRotaInativoIsenta
+  ) {
     // INSTRUMENTAÇÃO TEMPORÁRIA - ver decisão de manutenção/remoção no
     // entregável da ETAPA U9-B. Mede só a duração da chamada e a
     // categoria do resultado - nunca o pathname (várias rotas
@@ -155,7 +175,66 @@ export async function proxy(request: NextRequest) {
           `[proxy][vinculo] duracaoMs=${(performance.now() - inicioMedicao).toFixed(1)} resultado=${categoriaResultado}`,
         );
       }
-      return response;
+
+      // C2.4-P1: segunda barreira independente, só avaliada depois que o
+      // vínculo já é coerente - "coerente" nunca implica "ativo".
+      const inicioMedicaoAtivo = performance.now();
+      let ativo: unknown = null;
+      let erroAtivo: unknown = null;
+      let categoriaAtivo: "ativo" | "inativo" | "erro" | "inesperado";
+
+      try {
+        const resultadoAtivo = await supabase.rpc("usuario_atual_esta_ativo");
+        ativo = resultadoAtivo.data;
+        erroAtivo = resultadoAtivo.error;
+      } catch {
+        categoriaAtivo = "erro";
+        if (instrumentacaoAtiva) {
+          console.log(
+            `[proxy][ativo] duracaoMs=${(performance.now() - inicioMedicaoAtivo).toFixed(1)} resultado=${categoriaAtivo}`,
+          );
+        }
+        return redirecionarPreservandoCookies(ROTA_VERIFICACAO_INDISPONIVEL, request, response);
+      }
+
+      if (erroAtivo) {
+        categoriaAtivo = "erro";
+        if (instrumentacaoAtiva) {
+          console.log(
+            `[proxy][ativo] duracaoMs=${(performance.now() - inicioMedicaoAtivo).toFixed(1)} resultado=${categoriaAtivo}`,
+          );
+        }
+        return redirecionarPreservandoCookies(ROTA_VERIFICACAO_INDISPONIVEL, request, response);
+      }
+
+      if (ativo === true) {
+        categoriaAtivo = "ativo";
+        if (instrumentacaoAtiva) {
+          console.log(
+            `[proxy][ativo] duracaoMs=${(performance.now() - inicioMedicaoAtivo).toFixed(1)} resultado=${categoriaAtivo}`,
+          );
+        }
+        return response;
+      }
+
+      if (ativo === false) {
+        categoriaAtivo = "inativo";
+        if (instrumentacaoAtiva) {
+          console.log(
+            `[proxy][ativo] duracaoMs=${(performance.now() - inicioMedicaoAtivo).toFixed(1)} resultado=${categoriaAtivo}`,
+          );
+        }
+        return redirecionarPreservandoCookies(ROTA_USUARIO_INATIVO, request, response);
+      }
+
+      // null, undefined ou qualquer valor não reconhecido, sem error - fail-closed.
+      categoriaAtivo = "inesperado";
+      if (instrumentacaoAtiva) {
+        console.log(
+          `[proxy][ativo] duracaoMs=${(performance.now() - inicioMedicaoAtivo).toFixed(1)} resultado=${categoriaAtivo}`,
+        );
+      }
+      return redirecionarPreservandoCookies(ROTA_VERIFICACAO_INDISPONIVEL, request, response);
     }
 
     if (vinculo === "inconsistente") {
