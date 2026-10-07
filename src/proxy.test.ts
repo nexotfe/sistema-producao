@@ -82,7 +82,16 @@ describe("proxy — checagem de vínculo operacional (rota protegida, sessão au
   });
 
   it("'coerente' → segue normalmente (controle positivo, não é um dos 5 ramos técnicos)", async () => {
-    rpcMock.mockResolvedValue({ data: "coerente", error: null });
+    // Duas RPCs reais no caminho feliz (C2.4-P1): vínculo 'coerente' e,
+    // em seguida, usuario_atual_esta_ativo() === true - mock precisa
+    // diferenciar pelo nome, senão a 2a chamada herda "coerente" (string)
+    // como se fosse o retorno booleano da 1a, caindo no ramo "inesperado".
+    rpcMock.mockImplementation(async (nome: string) => {
+      if (nome === "usuario_atual_esta_ativo") {
+        return { data: true, error: null };
+      }
+      return { data: "coerente", error: null };
+    });
     const res = await proxy(criarRequestAutenticado("/central"));
     expect(res.status).not.toBe(307);
   });
@@ -94,12 +103,19 @@ describe("proxy — checagem de vínculo operacional (rota protegida, sessão au
     expect(res.headers.get("location")).toContain("/acesso/vinculo-inconsistente");
   });
 
-  it("a RPC é chamada com o nome exato e SEM nenhum argumento (nunca user_id/empresa_id)", async () => {
-    rpcMock.mockResolvedValue({ data: "coerente", error: null });
+  it("as 2 RPCs (vínculo + ativo, C2.4-P1) são chamadas com o nome exato e SEM nenhum argumento (nunca user_id/empresa_id)", async () => {
+    rpcMock.mockImplementation(async (nome: string) => {
+      if (nome === "usuario_atual_esta_ativo") {
+        return { data: true, error: null };
+      }
+      return { data: "coerente", error: null };
+    });
     await proxy(criarRequestAutenticado("/central"));
-    expect(rpcMock).toHaveBeenCalledTimes(1);
-    expect(rpcMock).toHaveBeenCalledWith("resolver_consistencia_vinculo_operacional_atual");
+    expect(rpcMock).toHaveBeenCalledTimes(2);
+    expect(rpcMock).toHaveBeenNthCalledWith(1, "resolver_consistencia_vinculo_operacional_atual");
+    expect(rpcMock).toHaveBeenNthCalledWith(2, "usuario_atual_esta_ativo");
     expect(rpcMock.mock.calls[0]).toHaveLength(1);
+    expect(rpcMock.mock.calls[1]).toHaveLength(1);
   });
 
   it("rotas isentas nunca chamam a RPC, mesmo com sessão válida", async () => {
