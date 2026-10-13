@@ -1,6 +1,6 @@
 // DEC-007 §6.2/Fase 8b (idempotência da aprovação de cenário comercial -
 // migração 20260822195805) - único uso: depois de uma falha AMBÍGUA na
-// chamada de aprovar_cenario_comercial_v2 (a chamada de rede em si
+// chamada de aprovar_cenario_comercial_v3 (a chamada de rede em si
 // falhou, sem resposta limpa - ver persistirViaRpcAprovacaoCenario.ts),
 // o cliente precisa saber se a aprovação foi gravada antes de decidir
 // entre "tratar como sucesso" (achou) ou "liberar nova tentativa com a

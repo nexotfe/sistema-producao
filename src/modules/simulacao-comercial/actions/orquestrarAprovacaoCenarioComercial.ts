@@ -185,7 +185,7 @@ export interface DependenciasAprovacaoCenarioComercial {
     janelaInicio: string,
     janelaFim: string,
   ) => Promise<ResultadoAssinaturaTecnica>;
-  /** Chamada à RPC aprovar_cenario_comercial_v2 (client PRIVILEGIADO, service_role - criado pelo chamador só neste ponto, nunca antes) - só invocada quando não há nenhuma divergência. */
+  /** Chamada à RPC aprovar_cenario_comercial_v3 (client PRIVILEGIADO, service_role - criado pelo chamador só neste ponto, nunca antes) - só invocada quando não há nenhuma divergência. */
   persistir: (params: ParametrosPayloadAprovacaoCenario) => Promise<ResultadoPersistenciaAprovacaoCenario>;
 }
 

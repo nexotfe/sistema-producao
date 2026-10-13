@@ -1,7 +1,7 @@
 // DEC-007 §6.2/Fase 8b (idempotência da aprovação de cenário comercial -
 // correção do usuário depois do achado de travamento em "Aprovando...")
 // - hash canônico de TUDO que será de fato persistido nesta aprovação,
-// para a RPC aprovar_cenario_comercial_v2 detectar se uma repetição
+// para a RPC aprovar_cenario_comercial_v3 detectar se uma repetição
 // (mesma chave_idempotencia) é a MESMA solicitação (devolve o cenário já
 // gravado) ou uma solicitação DIFERENTE reusando a chave por engano
 // (rejeita, nunca devolve outro cenário). Mesmo princípio de
