@@ -28,6 +28,9 @@ function ocorrencia(
     ocorrencia: { chave: chave(bomOperacaoId), bomOperacaoId, bomId: "bom-1" },
     necessarioHorasPadrao,
     recursoOriginalId,
+    codigoOperacaoOrigem: 10,
+    descricaoOperacaoOrigem: "Operação de teste",
+    tempoUnitarioMinutos: necessarioHorasPadrao * 60,
   };
 }
 

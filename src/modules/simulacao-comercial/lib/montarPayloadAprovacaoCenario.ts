@@ -1,8 +1,9 @@
 // DEC-007 §6.2/Fase 8b (aprovação do cenário comercial) - mapeamento
-// puro dos parâmetros nomeados (p_*) da RPC aprovar_cenario_comercial_v2
-// (migration 20260822165408, Fase 1 da transição em duas fases - a RPC
-// antiga, aprovar_cenario_comercial de 202608180002, continua existindo
-// no banco, mas nada neste módulo a chama). Mesmo padrão de
+// puro dos parâmetros nomeados (p_*) da RPC aprovar_cenario_comercial_v3
+// (migration 20261009, PCP-P4S - Fase 1 da transição v2→v3: a v2, 17
+// parâmetros, fica INTOCADA no banco, nada neste módulo a chama mais;
+// a antiga aprovar_cenario_comercial, 12 parâmetros, 202608180002,
+// continua existindo também, sem nenhum caminho real). Mesmo padrão de
 // montarPayloadV5.ts - extraído para ser testável sem nenhum client
 // Supabase.
 //
@@ -10,11 +11,18 @@
 // achado de travamento em "Aprovando..."): chaveIdempotencia/
 // hashSolicitacao passaram a ser obrigatórios - mesmo padrão já
 // comprovado em aprovar_projeto_com_simulacao_v5 (montarPayloadV5.ts).
+//
+// PCP-P4S: v3 acrescenta p_snapshot_tecnico/p_snapshot_tecnico_versao -
+// o Snapshot Técnico Histórico completo (DocumentoAssinaturaTecnica v2),
+// não só seu hash (já coberto por p_assinatura_tecnica, que continua
+// existindo). Nunca reconstruído separadamente - é o MESMO objeto que
+// produziu assinaturaTecnica (ver orquestrarAprovacaoCenarioComercial.ts).
 import type {
   CenarioComercialAprovadoSnapshot,
   CustoAdicionalPorCategoriaSnapshot,
   TipoCenarioAprovado,
 } from "./cenarios/cenarioComercialAprovadoSnapshot";
+import type { DocumentoAssinaturaTecnica } from "./cenarios/construirDocumentoAssinaturaTecnica";
 
 export interface ParametrosPayloadAprovacaoCenario {
   /** public.profiles.empresa_id do aprovador - resolvido e validado pela Server Action (autorizarAprovador) ANTES de qualquer chamada à RPC, nunca de sessão implícita (a RPC roda sob service_role, sem JWT). */
@@ -31,7 +39,11 @@ export interface ParametrosPayloadAprovacaoCenario {
   readonly snapshot: CenarioComercialAprovadoSnapshot;
   /** Hash SHA-256 hex (64 chars) da base técnica (construirDocumentoAssinaturaTecnica.ts) calculado sobre a MESMA carga de dados que produziu custoTecnicoAtual/snapshot - nunca em SQL, nunca opcional numa aprovação nova. */
   readonly assinaturaTecnica: string;
-  /** UUID gerado no cliente quando o modal de confirmação abre, reaproveitado em toda nova tentativa da MESMA confirmação - garante que um retry após falha ambígua nunca duplica a aprovação (aprovar_cenario_comercial_v2 devolve o cenário já gravado em vez de inserir de novo). */
+  /** PCP-P4Q/R/S: o MESMO documento (DocumentoAssinaturaTecnica v2) que produziu assinaturaTecnica - nunca reconstruído separadamente (ver orquestrarAprovacaoCenarioComercial.ts). */
+  readonly snapshotTecnico: DocumentoAssinaturaTecnica;
+  /** Sempre igual a snapshotTecnico.versao - redundância deliberada (defesa em profundidade), mesmo padrão já usado para snapshot/versao_snapshot. */
+  readonly snapshotTecnicoVersao: number;
+  /** UUID gerado no cliente quando o modal de confirmação abre, reaproveitado em toda nova tentativa da MESMA confirmação - garante que um retry após falha ambígua nunca duplica a aprovação (aprovar_cenario_comercial_v3 devolve o cenário já gravado em vez de inserir de novo). */
   readonly chaveIdempotencia: string;
   /** SHA-256 hex de tudo que será persistido (calcularHashSolicitacaoAprovacaoCenario.ts) - junto com chaveIdempotencia, distingue uma repetição legítima de reuso indevido da chave. */
   readonly hashSolicitacao: string;
@@ -56,6 +68,8 @@ export interface PayloadRpcAprovacaoCenario {
   p_assinatura_tecnica: string;
   p_chave_idempotencia: string;
   p_hash_solicitacao: string;
+  p_snapshot_tecnico: DocumentoAssinaturaTecnica;
+  p_snapshot_tecnico_versao: number;
   p_motivo_substituicao: string | null;
 }
 
@@ -77,6 +91,8 @@ export function montarPayloadAprovacaoCenario(params: ParametrosPayloadAprovacao
     p_assinatura_tecnica: params.assinaturaTecnica,
     p_chave_idempotencia: params.chaveIdempotencia,
     p_hash_solicitacao: params.hashSolicitacao,
+    p_snapshot_tecnico: params.snapshotTecnico,
+    p_snapshot_tecnico_versao: params.snapshotTecnicoVersao,
     p_motivo_substituicao: params.motivoSubstituicao,
   };
 }

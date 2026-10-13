@@ -49,13 +49,25 @@ import { OperacaoSemRecursoError } from "@/modules/bom/lib/errors";
 import type { ConvencaoHorasAdicionaisVigencia } from "./resolverConvencaoParaData";
 
 type ProjetoItemRow = { id: string; produto_id: string; quantidade: number };
-type BomOperacaoDetalheRow = { id: string; tempo_estimado_minutos: number; recurso_produtivo_id: string | null };
+type BomOperacaoDetalheRow = {
+  id: string;
+  tempo_estimado_minutos: number;
+  recurso_produtivo_id: string | null;
+  ordem: number;
+  descricao: string;
+};
 
 export interface OcorrenciaComTamanho {
   ocorrencia: OcorrenciaComContexto;
   /** (tempoEstimadoMinutos / 60) × quantidadeAcumulada - mesma fórmula de motorAvaliacaoSequencial.ts. */
   necessarioHorasPadrao: number;
   recursoOriginalId: string;
+  /** bom_operacoes.ordem no momento desta leitura - rótulo/código histórico da operação no roteiro orçado (Snapshot Técnico Histórico, PCP-P4Q/R). Nunca fonte de grafo - dependências continuam vindo exclusivamente de `dependencias[]`. */
+  codigoOperacaoOrigem: number;
+  /** bom_operacoes.descricao no momento desta leitura. */
+  descricaoOperacaoOrigem: string;
+  /** bom_operacoes.tempo_estimado_minutos (bruto, por 1 peça) no momento desta leitura - diferente de necessarioHorasPadrao, que já está multiplicado pela quantidadeAcumulada. */
+  tempoUnitarioMinutos: number;
 }
 
 export interface BaseCenarios {
@@ -300,7 +312,7 @@ export async function carregarBaseCenarios(
   const bomOperacaoIds = Array.from(new Set(ocorrenciasComQuantidade.map((o) => o.ocorrencia.bomOperacaoId)));
   const { data: detalheData, error: erroDetalhe } = await client
     .from("bom_operacoes")
-    .select("id,tempo_estimado_minutos,recurso_produtivo_id")
+    .select("id,tempo_estimado_minutos,recurso_produtivo_id,ordem,descricao")
     .eq("empresa_id", empresaId)
     .in("id", bomOperacaoIds);
 
@@ -308,10 +320,18 @@ export async function carregarBaseCenarios(
     throw new Error(`Erro ao consultar detalhe de bom_operacoes para projeto_id=${projetoId}: ${erroDetalhe.message}`);
   }
 
-  const detalhePorBomOperacaoId = new Map<string, { tempoEstimadoMinutos: number; recursoProdutivoId: string | null }>(
+  const detalhePorBomOperacaoId = new Map<
+    string,
+    { tempoEstimadoMinutos: number; recursoProdutivoId: string | null; ordem: number; descricao: string }
+  >(
     ((detalheData ?? []) as BomOperacaoDetalheRow[]).map((linha) => [
       linha.id,
-      { tempoEstimadoMinutos: Number(linha.tempo_estimado_minutos), recursoProdutivoId: linha.recurso_produtivo_id },
+      {
+        tempoEstimadoMinutos: Number(linha.tempo_estimado_minutos),
+        recursoProdutivoId: linha.recurso_produtivo_id,
+        ordem: Number(linha.ordem),
+        descricao: linha.descricao,
+      },
     ]),
   );
 
@@ -330,6 +350,9 @@ export async function carregarBaseCenarios(
       ocorrencia,
       necessarioHorasPadrao: (detalhe.tempoEstimadoMinutos / 60) * quantidadeAcumulada,
       recursoOriginalId: detalhe.recursoProdutivoId,
+      codigoOperacaoOrigem: detalhe.ordem,
+      descricaoOperacaoOrigem: detalhe.descricao,
+      tempoUnitarioMinutos: detalhe.tempoEstimadoMinutos,
     };
   });
 

@@ -33,6 +33,9 @@ function construirBase(): BaseCenarios {
     ocorrencia: { chave: chave("OP-1"), bomOperacaoId: "OP-1", bomId: "BOM-1" },
     necessarioHorasPadrao: 6,
     recursoOriginalId: "recurso-A",
+    codigoOperacaoOrigem: 10,
+    descricaoOperacaoOrigem: "Operação de teste",
+    tempoUnitarioMinutos: 360,
   };
   const candidatoCompativel: CandidatoRecurso = { recursoId: "recurso-B", prioridade: 1 };
 
@@ -168,6 +171,9 @@ describe("Caso completo com números fáceis de conferir (falta obrigatória de 
           ocorrencia: { chave: chave("OP-1"), bomOperacaoId: "OP-1", bomId: "BOM-1" },
           necessarioHorasPadrao: 10, // Necessidade da operação: 10 horas.
           recursoOriginalId: "recurso-A",
+          codigoOperacaoOrigem: 10,
+          descricaoOperacaoOrigem: "Operação de teste",
+          tempoUnitarioMinutos: 600,
         },
       ],
       dependencias: [],

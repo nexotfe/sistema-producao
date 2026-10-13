@@ -15,6 +15,7 @@ import type {
   CustoAdicionalPorCategoriaSnapshot,
   TipoCenarioAprovado,
 } from "./cenarios/cenarioComercialAprovadoSnapshot";
+import type { DocumentoAssinaturaTecnica } from "./cenarios/construirDocumentoAssinaturaTecnica";
 
 export interface DadosHashSolicitacaoAprovacaoCenario {
   readonly empresaId: string;
@@ -28,6 +29,9 @@ export interface DadosHashSolicitacaoAprovacaoCenario {
   readonly valorComercialAtualReferencia: number | null;
   readonly assinaturaTecnica: string;
   readonly snapshot: CenarioComercialAprovadoSnapshot;
+  /** PCP-P4Q/R/S: o mesmo documento técnico que produziu assinaturaTecnica - "hash de TUDO que será persistido" passa a cobrir também o Snapshot Técnico Histórico, não só seu hash. */
+  readonly snapshotTecnico: DocumentoAssinaturaTecnica;
+  readonly snapshotTecnicoVersao: number;
   readonly motivoSubstituicao: string | null;
 }
 
@@ -44,6 +48,8 @@ export function calcularHashSolicitacaoAprovacaoCenario(dados: DadosHashSolicita
     valorComercialAtualReferencia: dados.valorComercialAtualReferencia,
     assinaturaTecnica: dados.assinaturaTecnica,
     snapshot: dados.snapshot,
+    snapshotTecnico: dados.snapshotTecnico,
+    snapshotTecnicoVersao: dados.snapshotTecnicoVersao,
     motivoSubstituicao: dados.motivoSubstituicao,
   });
 

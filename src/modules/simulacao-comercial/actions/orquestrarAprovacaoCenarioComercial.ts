@@ -59,6 +59,14 @@ import type { ParametrosPayloadAprovacaoCenario } from "../lib/montarPayloadApro
 import type { PayloadAprovacaoCenario } from "./validarPayloadAprovacaoCenario";
 import { executarComTimeout, TimeoutEtapaError } from "../lib/executarComTimeout";
 import { calcularHashSolicitacaoAprovacaoCenario } from "../lib/calcularHashSolicitacaoAprovacaoCenario";
+import type { DocumentoAssinaturaTecnica } from "../lib/cenarios/construirDocumentoAssinaturaTecnica";
+
+// PCP-P4Q/R/S: versão atual (única suportada nesta fase) do Snapshot
+// Técnico Histórico - sempre igual a snapshotTecnico.versao (ver
+// ResultadoAssinaturaTecnica abaixo). Documentos v1 nunca existiram
+// persistidos (só o hash era gravado) - não há versão anterior real a
+// suportar na leitura.
+const SNAPSHOT_TECNICO_VERSAO_ATUAL = 2;
 
 export const MENSAGEM_ERRO_GENERICA_APROVACAO_CENARIO =
   "Não foi possível concluir a aprovação do cenário comercial. Recalcule a previsão comercial e tente novamente.";
@@ -133,6 +141,12 @@ export interface AutorizacaoAprovadorCenario {
   readonly empresaId: string;
 }
 
+/** PCP-P4Q/R/S - documento técnico completo + seu hash, sempre da MESMA construção (ver DependenciasAprovacaoCenarioComercial.calcularAssinaturaTecnica). */
+export interface ResultadoAssinaturaTecnica {
+  readonly snapshotTecnico: DocumentoAssinaturaTecnica;
+  readonly assinaturaTecnica: string;
+}
+
 export interface DependenciasAprovacaoCenarioComercial {
   /** Resolve o usuário autenticado a partir da sessão do servidor (auth.getUser(), nunca getSession()). null = não autenticado. */
   autenticar: () => Promise<string | null>;
@@ -155,13 +169,22 @@ export interface DependenciasAprovacaoCenarioComercial {
   ) => Promise<BasePrevisaoComercial>;
   /** "Valor atual do orçamento" recalculado do zero (buscarDadosOrcamento + calcularValorComercialProjeto) - nunca o que o navegador exibiu. null = orçamento do projeto não resolvível agora. */
   buscarValoresOrcamentoAtual: (empresaId: string, projetoId: string) => Promise<ValoresOrcamentoAtual | null>;
-  /** Hash SHA-256 hex da base técnica atual (construirDocumentoAssinaturaTecnica.ts), calculado sobre a MESMA janela produtiva (disponibilidadeOriginal/primeiraEntregaPossivel) que entra no snapshot - client de SESSÃO, nunca privilegiado (é só leitura). */
+  /**
+   * Documento técnico completo (DocumentoAssinaturaTecnica v2) + seu hash
+   * SHA-256 hex, calculados sobre a MESMA janela produtiva
+   * (disponibilidadeOriginal/primeiraEntregaPossivel) que entra no
+   * snapshot comercial - client de SESSÃO, nunca privilegiado (é só
+   * leitura). PCP-P4Q/R/S: devolve os dois juntos, de uma ÚNICA
+   * construção do documento - nunca reconstruído separadamente para
+   * persistência (decisão congelada: "o mesmo objeto usado para
+   * calcular o hash deve ser o objeto enviado como snapshot").
+   */
   calcularAssinaturaTecnica: (
     empresaId: string,
     projetoId: string,
     janelaInicio: string,
     janelaFim: string,
-  ) => Promise<string>;
+  ) => Promise<ResultadoAssinaturaTecnica>;
   /** Chamada à RPC aprovar_cenario_comercial_v2 (client PRIVILEGIADO, service_role - criado pelo chamador só neste ponto, nunca antes) - só invocada quando não há nenhuma divergência. */
   persistir: (params: ParametrosPayloadAprovacaoCenario) => Promise<ResultadoPersistenciaAprovacaoCenario>;
 }
@@ -393,8 +416,10 @@ export async function orquestrarAprovacaoCenarioComercial(
     // dentro do closure abaixo se acessado como propriedade diretamente.
     const primeiraEntregaPossivel: string = saidaRecalculada.primeiraEntregaPossivel;
 
-    const assinaturaTecnica = await executarEtapa("calcular-assinatura-tecnica", TIMEOUT_ASSINATURA_TECNICA_MS, () =>
-      deps.calcularAssinaturaTecnica(empresaId, params.projetoId, disponibilidadeOriginal, primeiraEntregaPossivel),
+    const { snapshotTecnico, assinaturaTecnica } = await executarEtapa(
+      "calcular-assinatura-tecnica",
+      TIMEOUT_ASSINATURA_TECNICA_MS,
+      () => deps.calcularAssinaturaTecnica(empresaId, params.projetoId, disponibilidadeOriginal, primeiraEntregaPossivel),
     );
 
     // Hash de TUDO que será persistido (calcularHashSolicitacaoAprovacaoCenario.ts)
@@ -416,6 +441,8 @@ export async function orquestrarAprovacaoCenarioComercial(
       valorComercialAtualReferencia: valoresOrcamento.valorComercialAtualReferencia,
       assinaturaTecnica,
       snapshot,
+      snapshotTecnico,
+      snapshotTecnicoVersao: SNAPSHOT_TECNICO_VERSAO_ATUAL,
       motivoSubstituicao: params.motivoSubstituicao,
     });
 
@@ -434,6 +461,8 @@ export async function orquestrarAprovacaoCenarioComercial(
       valorComercialAtualReferencia: valoresOrcamento.valorComercialAtualReferencia,
       snapshot,
       assinaturaTecnica,
+      snapshotTecnico,
+      snapshotTecnicoVersao: SNAPSHOT_TECNICO_VERSAO_ATUAL,
       chaveIdempotencia: params.chaveIdempotencia,
       hashSolicitacao,
       motivoSubstituicao: params.motivoSubstituicao,

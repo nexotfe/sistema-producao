@@ -67,7 +67,13 @@ function op(id: string, bomId: string, ordem: number): OpFixture {
   return { id, bom_id: bomId, ordem, ativo: true, deleted_at: null };
 }
 
-type DetalheFixture = { id: string; tempo_estimado_minutos: number; recurso_produtivo_id: string | null };
+type DetalheFixture = {
+  id: string;
+  tempo_estimado_minutos: number;
+  recurso_produtivo_id: string | null;
+  ordem: number;
+  descricao: string;
+};
 
 // Cenário base: 1 projeto item (produto-raiz, bom-raiz) com OP10/20/22/30
 // + 1 subconjunto (bi-sub, bom-sub) com OP-sub-10, vínculo mestre para OP30
@@ -80,11 +86,11 @@ function cenarioBase() {
     },
     opsGrafo: [op("op-10", "bom-raiz", 10), op("op-20", "bom-raiz", 20), op("op-22", "bom-raiz", 22), op("op-30", "bom-raiz", 30), op("op-sub-10", "bom-sub", 10)],
     detalhes: [
-      { id: "op-10", tempo_estimado_minutos: 60, recurso_produtivo_id: "recurso-A" },
-      { id: "op-20", tempo_estimado_minutos: 30, recurso_produtivo_id: "recurso-A" },
-      { id: "op-22", tempo_estimado_minutos: 15, recurso_produtivo_id: "recurso-B" },
-      { id: "op-30", tempo_estimado_minutos: 120, recurso_produtivo_id: "recurso-B" },
-      { id: "op-sub-10", tempo_estimado_minutos: 90, recurso_produtivo_id: "recurso-A" },
+      { id: "op-10", tempo_estimado_minutos: 60, recurso_produtivo_id: "recurso-A", ordem: 10, descricao: "Corte" },
+      { id: "op-20", tempo_estimado_minutos: 30, recurso_produtivo_id: "recurso-A", ordem: 20, descricao: "Torno" },
+      { id: "op-22", tempo_estimado_minutos: 15, recurso_produtivo_id: "recurso-B", ordem: 22, descricao: "Fresa" },
+      { id: "op-30", tempo_estimado_minutos: 120, recurso_produtivo_id: "recurso-B", ordem: 30, descricao: "Ajustagem" },
+      { id: "op-sub-10", tempo_estimado_minutos: 90, recurso_produtivo_id: "recurso-A", ordem: 10, descricao: "Montagem do subconjunto" },
     ] as DetalheFixture[],
     vinculos: [{ bom_item_id: "bi-sub", bom_operacao_id: "op-30", deleted_at: null, ativo: true }],
   };
@@ -236,6 +242,21 @@ describe("carregarBaseCenarios - caso feliz (topologia real conhecida)", () => {
     expect(opSub.necessarioHorasPadrao).toBeCloseTo((90 / 60) * 2); // 3h
 
     expect(base.ocorrencias).toHaveLength(5);
+  });
+
+  // PCP-P4S - código/descrição/tempo unitário bruto vêm da MESMA consulta
+  // de detalhe (bom_operacoes), capturados junto com tempo_estimado_minutos/
+  // recurso_produtivo_id - nunca uma segunda consulta viva posterior.
+  it("captura codigoOperacaoOrigem/descricaoOperacaoOrigem/tempoUnitarioMinutos de bom_operacoes.ordem/descricao/tempo_estimado_minutos", async () => {
+    const cfg = cenarioBase();
+    const { client } = criarClienteFalso({ ...cfg, capacidadePorRecurso: { "recurso-A": 8, "recurso-B": 8 } });
+
+    const base = await carregarBaseCenarios(client, "empresa-1", "projeto-1", DISPONIBILIDADE_ORIGINAL_MATERIAL_PADRAO, PRAZO_INTERNO_PADRAO);
+
+    const op30 = base.ocorrencias.find((o) => o.ocorrencia.bomOperacaoId === "op-30")!;
+    expect(op30.codigoOperacaoOrigem).toBe(30);
+    expect(op30.descricaoOperacaoOrigem).toBe("Ajustagem");
+    expect(op30.tempoUnitarioMinutos).toBe(120); // bruto, NUNCA multiplicado por quantidadeAcumulada (diferente de necessarioHorasPadrao=4h).
   });
 
   it("deriva chavesRaizOrcamentoNovo e chavesFinaisOrcamentoNovo corretamente do grafo de dependências", async () => {

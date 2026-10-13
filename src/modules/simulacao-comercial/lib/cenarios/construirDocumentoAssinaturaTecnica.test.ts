@@ -42,6 +42,9 @@ function dadosBase(): DadosAssinaturaTecnica {
           },
           necessarioHorasPadrao: 10,
           recursoOriginalId: "recurso-A",
+          codigoOperacaoOrigem: 10,
+          descricaoOperacaoOrigem: "Corte",
+          tempoUnitarioMinutos: 30,
         },
       ],
       dependencias: [],
@@ -77,6 +80,15 @@ async function hashDe(dados: DadosAssinaturaTecnica): Promise<string> {
   return calcularHashAssinaturaTecnica(construirDocumentoAssinaturaTecnica(dados));
 }
 
+// PCP-P4S, Fase D ponto 17 ("teste comercial: preço/desconto/condição de
+// pagamento não alteram o snapshot/hash técnico"): não há aqui um teste
+// de runtime variando esses campos porque é estruturalmente impossível -
+// `DadosAssinaturaTecnica` (acima, construirDocumentoAssinaturaTecnica.ts)
+// não tem NENHUM campo de preço/desconto/condição de pagamento; só
+// compilaria passar o que o tipo já restringe a dados técnicos. A
+// garantia é de tipo, mais forte que um teste de runtime que só provaria
+// o comportamento de HOJE.
+
 describe("calcularHashAssinaturaTecnica - determinismo isomórfico", () => {
   it("o mesmo documento produz sempre o mesmo hash (chamado duas vezes)", async () => {
     const documento = construirDocumentoAssinaturaTecnica(dadosBase());
@@ -84,6 +96,13 @@ describe("calcularHashAssinaturaTecnica - determinismo isomórfico", () => {
     const hash2 = await calcularHashAssinaturaTecnica(documento);
     expect(hash1).toBe(hash2);
     expect(hash1).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  // PCP-P4S - documento v2 (codigoOperacaoOrigem/descricaoOperacaoOrigem/
+  // tempoUnitarioMinutos por ocorrência, acrescentados nesta fase).
+  it("o documento produzido é sempre versao=2", () => {
+    const documento = construirDocumentoAssinaturaTecnica(dadosBase());
+    expect(documento.versao).toBe(2);
   });
 
   it("ordem de inserção diferente nos dados brutos produz o mesmo documento/hash (canonicalização ordena)", async () => {
@@ -115,6 +134,30 @@ describe("construirDocumentoAssinaturaTecnica - cada categoria muda o hash isola
     const base = dadosBase();
     const alterado = dadosBase();
     alterado.base.ocorrencias[0].necessarioHorasPadrao = 12;
+    expect(await hashDe(base)).not.toBe(await hashDe(alterado));
+  });
+
+  // PCP-P4Q/R/S - 3 campos novos do documento v2, cada um altera o hash
+  // isoladamente (código/descrição/tempo unitário bruto - distintos de
+  // necessarioHorasPadrao, já testado acima, e nunca fonte de grafo).
+  it("código original da operação (codigoOperacaoOrigem)", async () => {
+    const base = dadosBase();
+    const alterado = dadosBase();
+    alterado.base.ocorrencias[0].codigoOperacaoOrigem = 20;
+    expect(await hashDe(base)).not.toBe(await hashDe(alterado));
+  });
+
+  it("descrição original da operação (descricaoOperacaoOrigem)", async () => {
+    const base = dadosBase();
+    const alterado = dadosBase();
+    alterado.base.ocorrencias[0].descricaoOperacaoOrigem = "Torno";
+    expect(await hashDe(base)).not.toBe(await hashDe(alterado));
+  });
+
+  it("tempo unitário bruto da operação (tempoUnitarioMinutos) - diferente de necessarioHorasPadrao", async () => {
+    const base = dadosBase();
+    const alterado = dadosBase();
+    alterado.base.ocorrencias[0].tempoUnitarioMinutos = 45;
     expect(await hashDe(base)).not.toBe(await hashDe(alterado));
   });
 

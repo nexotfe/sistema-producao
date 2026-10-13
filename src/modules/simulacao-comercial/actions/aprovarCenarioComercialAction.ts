@@ -10,7 +10,11 @@
 // arquivo passou a chamar aprovar_cenario_comercial_v2 (RPC NOVA,
 // service_role-only) em vez de aprovar_cenario_comercial (RPC antiga,
 // 12 parâmetros, que continua existindo no banco intocada até a Fase 2
-// remover - nada neste arquivo a chama mais). current_user dentro de
+// remover - nada neste arquivo a chama mais).
+//
+// PCP-P4S (Fase 1 da transição v2→v3): agora chama exclusivamente
+// aprovar_cenario_comercial_v3 - a v2 (17 parâmetros) fica INTOCADA no
+// banco, sem nenhum caminho real que ainda a chame. current_user dentro de
 // uma função SECURITY DEFINER não distingue esta Server Action de uma
 // chamada direta feita por um `authenticated` qualquer, então a
 // autorização (admin ativo, mesma regra de usuario_e_admin()) agora é
@@ -139,10 +143,16 @@ export async function aprovarCenarioComercialAction(
     // RLS normal) - client de SESSÃO, nunca privilegiado. Calculada
     // sobre a MESMA janela produtiva que o orquestrador grava no
     // snapshot (ver chamada em orquestrarAprovacaoCenarioComercial.ts).
+    // PCP-P4Q/R/S: devolve o documento completo (Snapshot Técnico
+    // Histórico v2) junto com o hash - de UMA ÚNICA construção, nunca
+    // reconstruído separadamente (decisão congelada: "o mesmo objeto
+    // usado para calcular o hash deve ser o objeto enviado como
+    // snapshot").
     calcularAssinaturaTecnica: async (empresaId, projetoId, janelaInicio, janelaFim) => {
       const dados = await buscarDadosAssinaturaTecnica(serverClient, empresaId, projetoId, janelaInicio, janelaFim);
       const documento = construirDocumentoAssinaturaTecnica(dados);
-      return calcularHashAssinaturaTecnica(documento);
+      const assinaturaTecnica = await calcularHashAssinaturaTecnica(documento);
+      return { snapshotTecnico: documento, assinaturaTecnica };
     },
 
     // Único ponto de escrita - client PRIVILEGIADO (service_role),
@@ -150,12 +160,13 @@ export async function aprovarCenarioComercialAction(
     // autorização (autorizarAprovador) e todo o recálculo já rodaram
     // com o client de sessão normal quando este ponto é alcançado. A
     // RPC chamada por persistirViaRpcAprovacaoCenario.ts é sempre
-    // aprovar_cenario_comercial_v2 (migração 20260822165408) - não
-    // aceita chamada direta de authenticated - autorização e tenant já
-    // vêm validados por parâmetro explícito (p_empresa_id/
-    // p_aprovado_por), nunca resolvidos de dentro dela. A RPC antiga
-    // (aprovar_cenario_comercial) continua existindo no banco até a
-    // Fase 2 da transição remover, mas nada neste arquivo a chama.
+    // aprovar_cenario_comercial_v3 (PCP-P4S) - não aceita chamada
+    // direta de authenticated - autorização e tenant já vêm validados
+    // por parâmetro explícito (p_empresa_id/p_aprovado_por), nunca
+    // resolvidos de dentro dela. A v2 (17 parâmetros, 20260822195805) e
+    // a RPC ainda mais antiga (aprovar_cenario_comercial, 12
+    // parâmetros) continuam existindo no banco intocadas, sem nenhum
+    // caminho real que ainda as chame.
     persistir: (p) => persistirViaRpcAprovacaoCenario(createSupabaseServiceClient(), p),
   };
 

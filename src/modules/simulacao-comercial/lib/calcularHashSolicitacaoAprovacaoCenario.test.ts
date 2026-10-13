@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { calcularHashSolicitacaoAprovacaoCenario, type DadosHashSolicitacaoAprovacaoCenario } from "./calcularHashSolicitacaoAprovacaoCenario";
 import { construirSnapshotCenarioComercial } from "./cenarios/cenarioComercialAprovadoSnapshot";
 import type { SaidaPrevisaoComercial } from "./cenarios/montarPrevisaoComercialProjeto";
+import type { DocumentoAssinaturaTecnica } from "./cenarios/construirDocumentoAssinaturaTecnica";
+
+function snapshotTecnicoFixture(): DocumentoAssinaturaTecnica {
+  return {
+    versao: 2,
+    projetoId: "projeto-1",
+    empresaId: "empresa-1",
+    janela: { inicio: "2026-08-26", fim: "2026-09-02" },
+    itens: [],
+    ocorrencias: [],
+    dependencias: [],
+    recursos: [],
+    convencoesHorasAdicionais: [],
+    restricaoMaterialPorChave: [],
+    calendario: { padraoSemanal: null, feriadosOficiais: [], eventosEmpresa: [] },
+  };
+}
 
 function saidaBase(): SaidaPrevisaoComercial {
   return {
@@ -46,6 +63,8 @@ function dados(overrides: Partial<DadosHashSolicitacaoAprovacaoCenario> = {}): D
     valorComercialAtualReferencia: null,
     assinaturaTecnica: "a".repeat(64),
     snapshot,
+    snapshotTecnico: snapshotTecnicoFixture(),
+    snapshotTecnicoVersao: 2,
     motivoSubstituicao: null,
     ...overrides,
   };
@@ -86,6 +105,23 @@ describe("calcularHashSolicitacaoAprovacaoCenario", () => {
   it("aprovadoPor diferente produz hash diferente (liga a solicitação a quem aprovou)", () => {
     const hashA = calcularHashSolicitacaoAprovacaoCenario(dados({ aprovadoPor: "user-1" }));
     const hashB = calcularHashSolicitacaoAprovacaoCenario(dados({ aprovadoPor: "user-2" }));
+    expect(hashA).not.toBe(hashB);
+  });
+
+  // PCP-P4Q/R/S - snapshotTecnico/snapshotTecnicoVersao passam a fazer
+  // parte de "tudo que será persistido" - um reuso de chaveIdempotencia
+  // com snapshot técnico diferente precisa ser detectável pelo hash.
+  it("snapshotTecnico diferente produz hash diferente", () => {
+    const hashA = calcularHashSolicitacaoAprovacaoCenario(dados());
+    const hashB = calcularHashSolicitacaoAprovacaoCenario(
+      dados({ snapshotTecnico: { ...snapshotTecnicoFixture(), projetoId: "projeto-2" } }),
+    );
+    expect(hashA).not.toBe(hashB);
+  });
+
+  it("snapshotTecnicoVersao diferente produz hash diferente", () => {
+    const hashA = calcularHashSolicitacaoAprovacaoCenario(dados({ snapshotTecnicoVersao: 2 }));
+    const hashB = calcularHashSolicitacaoAprovacaoCenario(dados({ snapshotTecnicoVersao: 3 }));
     expect(hashA).not.toBe(hashB);
   });
 });

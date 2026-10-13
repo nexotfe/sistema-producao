@@ -9,6 +9,23 @@ import type { PayloadAprovacaoCenario } from "./validarPayloadAprovacaoCenario";
 import type { ResultadoJanelaComercial } from "../lib/prepararJanelaComercial";
 import type { BasePrevisaoComercial } from "../lib/cenarios/carregarBasePrevisaoComercial";
 import type { NecessidadeCapacidadeFlexivel, CapacidadeNormalRecurso } from "../lib/cenarios/necessidadeCapacidadeFlexivel";
+import type { DocumentoAssinaturaTecnica } from "../lib/cenarios/construirDocumentoAssinaturaTecnica";
+
+function snapshotTecnicoFixture(): DocumentoAssinaturaTecnica {
+  return {
+    versao: 2,
+    projetoId: "projeto-1",
+    empresaId: "empresa-1",
+    janela: { inicio: "2026-09-01", fim: "2026-09-01" },
+    itens: [],
+    ocorrencias: [],
+    dependencias: [],
+    recursos: [],
+    convencoesHorasAdicionais: [],
+    restricaoMaterialPorChave: [],
+    calendario: { padraoSemanal: null, feriadosOficiais: [], eventosEmpresa: [] },
+  };
+}
 
 function necessidade(overrides: Partial<NecessidadeCapacidadeFlexivel> = {}): NecessidadeCapacidadeFlexivel {
   return {
@@ -95,7 +112,7 @@ function depsBase(overrides: Partial<DependenciasAprovacaoCenarioComercial> = {}
   return {
     autenticar: vi.fn().mockResolvedValue("user-1"),
     autorizarAprovador: vi.fn().mockResolvedValue({ empresaId: "empresa-1" }),
-    calcularAssinaturaTecnica: vi.fn().mockResolvedValue("a".repeat(64)),
+    calcularAssinaturaTecnica: vi.fn().mockResolvedValue({ snapshotTecnico: snapshotTecnicoFixture(), assinaturaTecnica: "a".repeat(64) }),
     // Fiel ao contrato real de prepararJanelaComercial: modo
     // "industrializacao" devolve dataDisponibilidadeProducao/dataChegadaPrevista
     // = dataPrevistaAprovacaoPedido, sem os deslocamentos genéricos -
@@ -473,6 +490,22 @@ describe("orquestrarAprovacaoCenarioComercial", () => {
   // motivo="gravacao_incerta" (nunca "erro" genérico), para o cliente
   // saber que precisa verificar antes de decidir.
   describe("idempotência (chave/hash propagados; gravação incerta tratada à parte de erro definitivo)", () => {
+    // PCP-P4Q/R/S: snapshotTecnico propagado a persistir é EXATAMENTE o
+    // objeto devolvido por calcularAssinaturaTecnica - nunca reconstruído
+    // à parte (prova da decisão congelada "não reconstruir duas vezes").
+    it("propaga o MESMO snapshotTecnico devolvido por calcularAssinaturaTecnica para persistir, com snapshotTecnicoVersao=2", async () => {
+      const documentoFixo = snapshotTecnicoFixture();
+      const deps = depsBase({
+        calcularAssinaturaTecnica: vi.fn().mockResolvedValue({ snapshotTecnico: documentoFixo, assinaturaTecnica: "a".repeat(64) }),
+      });
+
+      await orquestrarAprovacaoCenarioComercial(payload(), deps);
+
+      expect(deps.persistir).toHaveBeenCalledWith(
+        expect.objectContaining({ snapshotTecnico: documentoFixo, snapshotTecnicoVersao: 2 }),
+      );
+    });
+
     it("propaga chaveIdempotencia do payload e o hashSolicitacao calculado para persistir", async () => {
       const deps = depsBase();
       await orquestrarAprovacaoCenarioComercial(payload({ chaveIdempotencia: "22222222-2222-2222-2222-222222222222" }), deps);

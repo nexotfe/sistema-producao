@@ -11,9 +11,14 @@
 // - toda ordenação tem desempate final por ID (nunca depende de ordem
 //   de retorno do banco);
 // - todo campo ausente vira null explícito, nunca chave omitida;
-// - versao:1 dentro do próprio documento (não como prefixo do hash -
+// - versao:N dentro do próprio documento (não como prefixo do hash -
 //   o hash armazenado fica hex puro, mais fácil de validar por
-//   constraint).
+//   constraint). v2 (PCP-P4Q/R/S) acrescenta por ocorrência
+//   codigoOperacaoOrigem/descricaoOperacaoOrigem/tempoUnitarioMinutos -
+//   rótulo/descrição/tempo bruto históricos de bom_operacoes, nunca
+//   fonte de grafo (dependências continuam só em `dependencias[]`).
+//   Documentos v1 (hoje só o hash é persistido em produção, nenhum
+//   conteúdo v1 existe gravado) nunca são reconstruídos como v2.
 //
 // Deliberadamente EXCLUÍDO (decisão do usuário): comprometidoInicialPorRecurso
 // (reservas de OUTROS projetos - ambiente operacional variável, nunca
@@ -57,7 +62,7 @@ export interface DadosAssinaturaTecnica {
 }
 
 export interface DocumentoAssinaturaTecnica {
-  versao: 1;
+  versao: 2;
   projetoId: string;
   empresaId: string;
   janela: { inicio: string; fim: string };
@@ -75,6 +80,9 @@ export interface DocumentoAssinaturaTecnica {
     bomId: string;
     necessarioHorasPadrao: string;
     recursoOriginalId: string;
+    codigoOperacaoOrigem: string;
+    descricaoOperacaoOrigem: string;
+    tempoUnitarioMinutos: string;
   }[];
   dependencias: { predecessora: string; sucessora: string; tipo: string }[];
   recursos: {
@@ -166,6 +174,9 @@ export function construirDocumentoAssinaturaTecnica(
       bomId: o.ocorrencia.bomId,
       necessarioHorasPadrao: normalizarDecimalCanonico(o.necessarioHorasPadrao),
       recursoOriginalId: o.recursoOriginalId,
+      codigoOperacaoOrigem: normalizarDecimalCanonico(o.codigoOperacaoOrigem),
+      descricaoOperacaoOrigem: o.descricaoOperacaoOrigem.trim(),
+      tempoUnitarioMinutos: normalizarDecimalCanonico(o.tempoUnitarioMinutos),
     }))
     .sort((a, b) => a.chave.localeCompare(b.chave) || a.bomOperacaoId.localeCompare(b.bomOperacaoId));
 
@@ -232,7 +243,7 @@ export function construirDocumentoAssinaturaTecnica(
     .sort((a, b) => a.data.localeCompare(b.data) || a.id.localeCompare(b.id));
 
   return {
-    versao: 1,
+    versao: 2,
     projetoId: dados.projetoId,
     empresaId: dados.empresaId,
     janela: { inicio: dados.janela.inicio, fim: dados.janela.fim },

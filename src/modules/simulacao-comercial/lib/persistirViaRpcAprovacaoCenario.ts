@@ -1,5 +1,5 @@
 // DEC-007 §6.2/Fase 8b (aprovação do cenário comercial) - isola a
-// chamada de rede à RPC aprovar_cenario_comercial_v2 atrás de um
+// chamada de rede à RPC aprovar_cenario_comercial_v3 atrás de um
 // client injetável (mesmo motivo de persistirViaRpcV5.ts: testável com
 // um client Supabase simulado, sem sessão real).
 //
@@ -14,6 +14,13 @@
 // são parâmetros explícitos do payload (ver
 // montarPayloadAprovacaoCenario.ts) - a RPC não tem JWT para derivar
 // auth.uid()/empresa_atual_id()/usuario_e_admin() sozinha.
+//
+// PCP-P4S (Fase 1 da transição v2→v3, mesmo princípio da transição
+// anterior v1→v2): passa a chamar aprovar_cenario_comercial_v3 (nome
+// NOVO, nunca substitui/altera a v2 - decisão explícita, correção
+// empírica PCP-P4R.1: CREATE OR REPLACE mudando aridade cria overload
+// ambígua, nunca "substitui"). A v2 (17 parâmetros) fica INTOCADA no
+// banco, sem nenhum caminho real que ainda a chame.
 //
 // Migração 20260822195805 (idempotência - correção do usuário após o
 // achado de travamento em "Aprovando..."): distingue duas famílias de
@@ -34,7 +41,7 @@ import { montarPayloadAprovacaoCenario, type ParametrosPayloadAprovacaoCenario, 
 /** Único formato de client que este helper precisa - o client de sessão real (createSupabaseServerClient) satisfaz esta interface estruturalmente, sem cast. */
 export interface ClienteRpcAprovacaoCenario {
   rpc: (
-    fn: "aprovar_cenario_comercial_v2",
+    fn: "aprovar_cenario_comercial_v3",
     args: PayloadRpcAprovacaoCenario,
   ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
 }
@@ -48,7 +55,7 @@ export interface ResultadoPersistenciaAprovacaoCenario {
 }
 
 /**
- * Única chamada de rede desta função: aprovar_cenario_comercial_v2.
+ * Única chamada de rede desta função: aprovar_cenario_comercial_v3.
  * Sem fallback para nenhuma outra via em nenhum ramo (nem para a RPC
  * antiga) - falha aqui sempre volta como erro no retorno, nunca tenta
  * escrever de outro jeito.
@@ -61,7 +68,7 @@ export async function persistirViaRpcAprovacaoCenario(
 
   let resposta: { data: unknown; error: { message: string } | null };
   try {
-    resposta = await cliente.rpc("aprovar_cenario_comercial_v2", payload);
+    resposta = await cliente.rpc("aprovar_cenario_comercial_v3", payload);
   } catch (erroDeRede) {
     return {
       cenarioComercialAprovadoId: null,

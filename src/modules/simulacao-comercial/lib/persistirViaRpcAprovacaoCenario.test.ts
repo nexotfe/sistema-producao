@@ -3,6 +3,23 @@ import { persistirViaRpcAprovacaoCenario, type ClienteRpcAprovacaoCenario } from
 import { construirSnapshotCenarioComercial } from "./cenarios/cenarioComercialAprovadoSnapshot";
 import type { ParametrosPayloadAprovacaoCenario } from "./montarPayloadAprovacaoCenario";
 import type { SaidaPrevisaoComercial } from "./cenarios/montarPrevisaoComercialProjeto";
+import type { DocumentoAssinaturaTecnica } from "./cenarios/construirDocumentoAssinaturaTecnica";
+
+function snapshotTecnicoFixture(): DocumentoAssinaturaTecnica {
+  return {
+    versao: 2,
+    projetoId: "projeto-1",
+    empresaId: "empresa-1",
+    janela: { inicio: "2026-08-25", fim: "2026-09-10" },
+    itens: [],
+    ocorrencias: [],
+    dependencias: [],
+    recursos: [],
+    convencoesHorasAdicionais: [],
+    restricaoMaterialPorChave: [],
+    calendario: { padraoSemanal: null, feriadosOficiais: [], eventosEmpresa: [] },
+  };
+}
 
 function parametros(): ParametrosPayloadAprovacaoCenario {
   const saida: SaidaPrevisaoComercial = {
@@ -32,6 +49,8 @@ function parametros(): ParametrosPayloadAprovacaoCenario {
     assinaturaTecnica: "a".repeat(64),
     chaveIdempotencia: "11111111-1111-1111-1111-111111111111",
     hashSolicitacao: "c".repeat(64),
+    snapshotTecnico: snapshotTecnicoFixture(),
+    snapshotTecnicoVersao: 2,
     snapshot: construirSnapshotCenarioComercial({
       empresaId: "empresa-1",
       projetoId: "projeto-1",
@@ -49,13 +68,16 @@ function parametros(): ParametrosPayloadAprovacaoCenario {
 }
 
 describe("persistirViaRpcAprovacaoCenario", () => {
-  it("chama aprovar_cenario_comercial_v2 (nunca a RPC antiga) com o payload mapeado e devolve o id", async () => {
+  it("chama aprovar_cenario_comercial_v3 (nunca a v2 nem a RPC antiga) com o payload mapeado e devolve o id", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: "novo-id", error: null });
     const cliente: ClienteRpcAprovacaoCenario = { rpc };
 
     const resultado = await persistirViaRpcAprovacaoCenario(cliente, parametros());
 
-    expect(rpc).toHaveBeenCalledWith("aprovar_cenario_comercial_v2", expect.objectContaining({ p_projeto_id: "projeto-1", p_tipo_cenario: "atual" }));
+    expect(rpc).toHaveBeenCalledWith(
+      "aprovar_cenario_comercial_v3",
+      expect.objectContaining({ p_projeto_id: "projeto-1", p_tipo_cenario: "atual", p_snapshot_tecnico_versao: 2 }),
+    );
     expect(resultado).toEqual({ cenarioComercialAprovadoId: "novo-id", erro: null });
   });
 

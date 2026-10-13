@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { montarPayloadAprovacaoCenario, type ParametrosPayloadAprovacaoCenario } from "./montarPayloadAprovacaoCenario";
 import { construirSnapshotCenarioComercial } from "./cenarios/cenarioComercialAprovadoSnapshot";
 import type { SaidaPrevisaoComercial } from "./cenarios/montarPrevisaoComercialProjeto";
+import type { DocumentoAssinaturaTecnica } from "./cenarios/construirDocumentoAssinaturaTecnica";
+
+function snapshotTecnicoFixture(): DocumentoAssinaturaTecnica {
+  return {
+    versao: 2,
+    projetoId: "projeto-1",
+    empresaId: "empresa-1",
+    janela: { inicio: "2026-08-20", fim: "2026-09-10" },
+    itens: [],
+    ocorrencias: [],
+    dependencias: [],
+    recursos: [],
+    convencoesHorasAdicionais: [],
+    restricaoMaterialPorChave: [],
+    calendario: { padraoSemanal: null, feriadosOficiais: [], eventosEmpresa: [] },
+  };
+}
 
 function parametros(overrides: Partial<ParametrosPayloadAprovacaoCenario> = {}): ParametrosPayloadAprovacaoCenario {
   const saida: SaidaPrevisaoComercial = {
@@ -43,6 +60,8 @@ function parametros(overrides: Partial<ParametrosPayloadAprovacaoCenario> = {}):
     valorComercialAtualReferencia: 62000,
     snapshot,
     assinaturaTecnica: "a".repeat(64),
+    snapshotTecnico: snapshotTecnicoFixture(),
+    snapshotTecnicoVersao: 2,
     chaveIdempotencia: "11111111-1111-1111-1111-111111111111",
     hashSolicitacao: "b".repeat(64),
     motivoSubstituicao: null,
@@ -71,6 +90,8 @@ describe("montarPayloadAprovacaoCenario", () => {
       p_assinatura_tecnica: "a".repeat(64),
       p_chave_idempotencia: "11111111-1111-1111-1111-111111111111",
       p_hash_solicitacao: "b".repeat(64),
+      p_snapshot_tecnico: snapshotTecnicoFixture(),
+      p_snapshot_tecnico_versao: 2,
       p_motivo_substituicao: null,
     });
   });
