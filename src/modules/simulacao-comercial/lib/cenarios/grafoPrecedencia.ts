@@ -72,9 +72,15 @@ export function resolverPredecessoraLinear(
 
 export type TipoDependenciaOcorrencia = "sequencia_roteiro" | "consumo_subconjunto";
 
-export interface DependenciaOcorrencia {
-  predecessora: ChaveOcorrencia;
-  sucessora: ChaveOcorrencia;
+// PCP-P8C/DEC-P8-03: TChave com default ChaveOcorrencia preserva 100% do
+// comportamento/assinatura já existente para todo chamador do Comercial
+// (bare `DependenciaOcorrencia` continua significando
+// `DependenciaOcorrencia<ChaveOcorrencia>`). O PCP usa
+// `DependenciaOcorrencia<ChaveOcorrenciaPcp>` explicitamente - nunca o
+// contrário.
+export interface DependenciaOcorrencia<TChave = ChaveOcorrencia> {
+  predecessora: TChave;
+  sucessora: TChave;
   tipo: TipoDependenciaOcorrencia;
 }
 
@@ -104,13 +110,23 @@ export interface SubconjuntoUsado {
  * Retorna o caminho do ciclo encontrado (para diagnóstico), ou `null`
  * se o grafo é acíclico.
  */
-export function detectarCiclo(dependencias: DependenciaOcorrencia[]): ChaveOcorrencia[] | null {
-  const sucessorasPorPredecessora = new Map<string, ChaveOcorrencia[]>();
-  const chavePorString = new Map<string, ChaveOcorrencia>();
+/**
+ * PCP-P8C: versão genérica de `detectarCiclo`, parametrizada sobre
+ * TChave com `serializarChave` explícito (nunca opcional aqui - a
+ * versão concreta abaixo, usada pelo Comercial, é que fixa o
+ * serializador de sempre). Corpo idêntico ao original, só substituindo
+ * `chaveOcorrenciaParaString` por `serializarChave`.
+ */
+export function detectarCicloGenerico<TChave>(
+  dependencias: DependenciaOcorrencia<TChave>[],
+  serializarChave: (chave: TChave) => string,
+): TChave[] | null {
+  const sucessorasPorPredecessora = new Map<string, TChave[]>();
+  const chavePorString = new Map<string, TChave>();
 
   for (const dependencia of dependencias) {
-    const predStr = chaveOcorrenciaParaString(dependencia.predecessora);
-    const sucStr = chaveOcorrenciaParaString(dependencia.sucessora);
+    const predStr = serializarChave(dependencia.predecessora);
+    const sucStr = serializarChave(dependencia.sucessora);
     chavePorString.set(predStr, dependencia.predecessora);
     chavePorString.set(sucStr, dependencia.sucessora);
     if (!sucessorasPorPredecessora.has(predStr)) sucessorasPorPredecessora.set(predStr, []);
@@ -121,12 +137,12 @@ export function detectarCiclo(dependencias: DependenciaOcorrencia[]): ChaveOcorr
   for (const chaveStr of chavePorString.keys()) cor.set(chaveStr, "branco");
   const pilha: string[] = [];
 
-  function visitar(chaveStr: string): ChaveOcorrencia[] | null {
+  function visitar(chaveStr: string): TChave[] | null {
     cor.set(chaveStr, "cinza");
     pilha.push(chaveStr);
 
     for (const sucessora of sucessorasPorPredecessora.get(chaveStr) ?? []) {
-      const sucStr = chaveOcorrenciaParaString(sucessora);
+      const sucStr = serializarChave(sucessora);
       const corSucessora = cor.get(sucStr) ?? "branco";
       if (corSucessora === "cinza") {
         const indiceInicioCiclo = pilha.indexOf(sucStr);
@@ -151,6 +167,16 @@ export function detectarCiclo(dependencias: DependenciaOcorrencia[]): ChaveOcorr
   }
 
   return null;
+}
+
+/**
+ * Wrapper para o Comercial - assinatura e comportamento IDÊNTICOS ao
+ * original (PCP-P8C): delega para `detectarCicloGenerico` com
+ * TChave=ChaveOcorrencia e o serializador de sempre. Nenhum chamador
+ * existente precisa mudar.
+ */
+export function detectarCiclo(dependencias: DependenciaOcorrencia[]): ChaveOcorrencia[] | null {
+  return detectarCicloGenerico<ChaveOcorrencia>(dependencias, chaveOcorrenciaParaString);
 }
 
 /**
@@ -388,22 +414,36 @@ export function construirGrafoOcorrencias(params: {
  * só garante que nenhuma ocorrência libera antes de TODAS as suas
  * predecessoras estarem no conjunto `concluidas`.
  */
-export function resolverOcorrenciasLiberadas(
-  todasOcorrencias: ChaveOcorrencia[],
-  dependencias: DependenciaOcorrencia[],
+/** PCP-P8C: versão genérica de `resolverOcorrenciasLiberadas` - ver comentário de `detectarCicloGenerico`. */
+export function resolverOcorrenciasLiberadasGenerico<TChave>(
+  todasOcorrencias: TChave[],
+  dependencias: DependenciaOcorrencia<TChave>[],
   concluidas: ReadonlySet<string>,
-): ChaveOcorrencia[] {
-  const predecessorasPorSucessora = new Map<string, ChaveOcorrencia[]>();
+  serializarChave: (chave: TChave) => string,
+): TChave[] {
+  const predecessorasPorSucessora = new Map<string, TChave[]>();
   for (const dependencia of dependencias) {
-    const sucStr = chaveOcorrenciaParaString(dependencia.sucessora);
+    const sucStr = serializarChave(dependencia.sucessora);
     if (!predecessorasPorSucessora.has(sucStr)) predecessorasPorSucessora.set(sucStr, []);
     predecessorasPorSucessora.get(sucStr)!.push(dependencia.predecessora);
   }
 
   return todasOcorrencias.filter((ocorrencia) => {
-    const chaveStr = chaveOcorrenciaParaString(ocorrencia);
+    const chaveStr = serializarChave(ocorrencia);
     if (concluidas.has(chaveStr)) return false;
     const predecessoras = predecessorasPorSucessora.get(chaveStr) ?? [];
-    return predecessoras.every((predecessora) => concluidas.has(chaveOcorrenciaParaString(predecessora)));
+    return predecessoras.every((predecessora) => concluidas.has(serializarChave(predecessora)));
   });
+}
+
+/**
+ * Wrapper para o Comercial - assinatura e comportamento IDÊNTICOS ao
+ * original (PCP-P8C). Nenhum chamador existente precisa mudar.
+ */
+export function resolverOcorrenciasLiberadas(
+  todasOcorrencias: ChaveOcorrencia[],
+  dependencias: DependenciaOcorrencia[],
+  concluidas: ReadonlySet<string>,
+): ChaveOcorrencia[] {
+  return resolverOcorrenciasLiberadasGenerico<ChaveOcorrencia>(todasOcorrencias, dependencias, concluidas, chaveOcorrenciaParaString);
 }

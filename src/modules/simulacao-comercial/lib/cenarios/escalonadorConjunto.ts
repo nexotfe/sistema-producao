@@ -46,8 +46,8 @@
 // início/fim real coerente para se propagar às sucessoras.
 import { chaveOcorrenciaParaString, type ChaveOcorrencia } from "./chaveOcorrencia";
 import {
-  detectarCiclo,
-  resolverOcorrenciasLiberadas,
+  detectarCicloGenerico,
+  resolverOcorrenciasLiberadasGenerico,
   type DependenciaOcorrencia,
 } from "./grafoPrecedencia";
 import { resolverDataInicioMinima } from "./datasPrecedencia";
@@ -58,8 +58,11 @@ import {
 } from "./alocarOperacaoDiaAdia";
 import { validarDataIso, validarDatasEstritamenteCrescentes } from "./validacoes";
 
-export interface OcorrenciaEscalonavel {
-  chave: ChaveOcorrencia;
+// PCP-P8C/DEC-P8-03: TChave com default ChaveOcorrencia preserva 100% do
+// comportamento/assinatura já existente para todo chamador do Comercial.
+// O PCP usa `OcorrenciaEscalonavel<ChaveOcorrenciaPcp>` explicitamente.
+export interface OcorrenciaEscalonavel<TChave = ChaveOcorrencia> {
+  chave: TChave;
   projetoId: string;
   necessarioHorasPadrao: number;
   /** IDs resolvidos contra `registroCandidatos` - nunca objetos embutidos (ver comentário do módulo). */
@@ -70,8 +73,8 @@ export interface OcorrenciaEscalonavel {
 
 export type StatusOcorrenciaEscalonada = "concluida" | "bloqueada_por_deficit" | "bloqueada_por_predecessora";
 
-export interface ResultadoOcorrenciaEscalonada {
-  chave: ChaveOcorrencia;
+export interface ResultadoOcorrenciaEscalonada<TChave = ChaveOcorrencia> {
+  chave: TChave;
   status: StatusOcorrenciaEscalonada;
   /** Primeiro dia com alguma alocação real - null se nenhuma alocação ocorreu. */
   dataInicioReal: string | null;
@@ -105,15 +108,16 @@ export interface ResultadoOcorrenciaEscalonada {
  * Chamado EXATAMENTE UMA VEZ por ocorrência, para TODAS as ocorrências,
  * antes do laço principal (ver `escalonarConjuntoComFilaDeProntos`).
  */
-export type CriterioPrioridadeDeNegocio = (ocorrencia: OcorrenciaEscalonavel) => number;
+export type CriterioPrioridadeDeNegocio<TChave = ChaveOcorrencia> = (ocorrencia: OcorrenciaEscalonavel<TChave>) => number;
 
-function validarEntrada(params: {
-  ocorrencias: OcorrenciaEscalonavel[];
-  dependencias: DependenciaOcorrencia[];
+function validarEntrada<TChave>(params: {
+  ocorrencias: OcorrenciaEscalonavel<TChave>[];
+  dependencias: DependenciaOcorrencia<TChave>[];
   registroCandidatos: ReadonlyMap<string, CandidatoComCapacidadeDiaria>;
   datasGradeCompartilhada: string[];
+  serializarChave: (chave: TChave) => string;
 }): void {
-  const { ocorrencias, dependencias, registroCandidatos, datasGradeCompartilhada } = params;
+  const { ocorrencias, dependencias, registroCandidatos, datasGradeCompartilhada, serializarChave } = params;
 
   validarDatasEstritamenteCrescentes(datasGradeCompartilhada, "datasGradeCompartilhada");
 
@@ -135,7 +139,7 @@ function validarEntrada(params: {
 
   const chavesConhecidas = new Set<string>();
   for (const ocorrencia of ocorrencias) {
-    const chaveStr = chaveOcorrenciaParaString(ocorrencia.chave);
+    const chaveStr = serializarChave(ocorrencia.chave);
     if (chavesConhecidas.has(chaveStr)) {
       throw new RangeError(`Ocorrência duplicada no conjunto: a chave "${chaveStr}" aparece mais de uma vez.`);
     }
@@ -160,7 +164,7 @@ function validarEntrada(params: {
 
   for (const dependencia of dependencias) {
     for (const chave of [dependencia.predecessora, dependencia.sucessora]) {
-      const chaveStr = chaveOcorrenciaParaString(chave);
+      const chaveStr = serializarChave(chave);
       if (!chavesConhecidas.has(chaveStr)) {
         throw new RangeError(
           `Dependência referencia uma ocorrência fora do conjunto informado: "${chaveStr}".`,
@@ -169,10 +173,10 @@ function validarEntrada(params: {
     }
   }
 
-  const cicloEncontrado = detectarCiclo(dependencias);
+  const cicloEncontrado = detectarCicloGenerico(dependencias, serializarChave);
   if (cicloEncontrado) {
     throw new RangeError(
-      `Ciclo de precedência detectado entre ocorrências: ${cicloEncontrado.map(chaveOcorrenciaParaString).join(" -> ")}`,
+      `Ciclo de precedência detectado entre ocorrências: ${cicloEncontrado.map(serializarChave).join(" -> ")}`,
     );
   }
 }
@@ -183,13 +187,14 @@ function validarEntrada(params: {
  * subconjunto "pronto" de uma rodada (ver comentário do módulo: precisa
  * rodar inteiramente ANTES de qualquer `candidato.consumir`).
  */
-function calcularPrioridadesDeTodasAsOcorrencias(
-  ocorrencias: OcorrenciaEscalonavel[],
-  criterioPrioridadeDeNegocio: CriterioPrioridadeDeNegocio,
+function calcularPrioridadesDeTodasAsOcorrencias<TChave>(
+  ocorrencias: OcorrenciaEscalonavel<TChave>[],
+  criterioPrioridadeDeNegocio: CriterioPrioridadeDeNegocio<TChave>,
+  serializarChave: (chave: TChave) => string,
 ): Map<string, number> {
   const prioridadePorChaveStr = new Map<string, number>();
   for (const ocorrencia of ocorrencias) {
-    const chaveStr = chaveOcorrenciaParaString(ocorrencia.chave);
+    const chaveStr = serializarChave(ocorrencia.chave);
     const prioridade = criterioPrioridadeDeNegocio(ocorrencia);
     if (!Number.isFinite(prioridade)) {
       throw new RangeError(
@@ -254,34 +259,42 @@ function compararComDesempateTotal(
   return chaveStrA < chaveStrB ? -1 : 1;
 }
 
-export function escalonarConjuntoComFilaDeProntos(params: {
-  ocorrencias: OcorrenciaEscalonavel[];
-  dependencias: DependenciaOcorrencia[];
+/**
+ * PCP-P8C: núcleo genérico, parametrizado sobre TChave com
+ * `serializarChave` explícito (sempre obrigatório aqui - a versão
+ * concreta `escalonarConjuntoComFilaDeProntos`, abaixo, é que fixa o
+ * serializador de sempre para o Comercial). Matemática idêntica à
+ * original - só a origem da função de serialização muda.
+ */
+export function escalonarConjuntoGenerico<TChave>(params: {
+  ocorrencias: OcorrenciaEscalonavel<TChave>[];
+  dependencias: DependenciaOcorrencia<TChave>[];
   /** Registro central - única fonte de estado de capacidade por candidatoId (recurso real ou temporário). */
   registroCandidatos: ReadonlyMap<string, CandidatoComCapacidadeDiaria>;
   /** Grade única, ordenada, compartilhada por TODAS as ocorrências/projetos - dias corridos (não só produtivos: capacidade extra pode existir em sábado/domingo/feriado), já estendida até o horizonte técnico. */
   datasGradeCompartilhada: string[];
-  criterioPrioridadeDeNegocio: CriterioPrioridadeDeNegocio;
-}): Map<string, ResultadoOcorrenciaEscalonada> {
-  const { ocorrencias, dependencias, registroCandidatos, datasGradeCompartilhada, criterioPrioridadeDeNegocio } = params;
+  criterioPrioridadeDeNegocio: CriterioPrioridadeDeNegocio<TChave>;
+  serializarChave: (chave: TChave) => string;
+}): Map<string, ResultadoOcorrenciaEscalonada<TChave>> {
+  const { ocorrencias, dependencias, registroCandidatos, datasGradeCompartilhada, criterioPrioridadeDeNegocio, serializarChave } = params;
 
-  validarEntrada({ ocorrencias, dependencias, registroCandidatos, datasGradeCompartilhada });
+  validarEntrada({ ocorrencias, dependencias, registroCandidatos, datasGradeCompartilhada, serializarChave });
 
   // Prioridade de TODAS as ocorrências, calculada e validada ANTES de
   // qualquer mutação de capacidade (nenhum candidato.consumir foi chamado
   // ainda neste ponto) - ver comentário do módulo.
-  const prioridadePorChaveStr = calcularPrioridadesDeTodasAsOcorrencias(ocorrencias, criterioPrioridadeDeNegocio);
+  const prioridadePorChaveStr = calcularPrioridadesDeTodasAsOcorrencias(ocorrencias, criterioPrioridadeDeNegocio, serializarChave);
 
-  const porChaveStr = new Map(ocorrencias.map((oc) => [chaveOcorrenciaParaString(oc.chave), oc]));
+  const porChaveStr = new Map(ocorrencias.map((oc) => [serializarChave(oc.chave), oc]));
   const todasChaves = ocorrencias.map((oc) => oc.chave);
-  const dependenciasPorSucessora = new Map<string, DependenciaOcorrencia[]>();
+  const dependenciasPorSucessora = new Map<string, DependenciaOcorrencia<TChave>[]>();
   for (const dependencia of dependencias) {
-    const sucStr = chaveOcorrenciaParaString(dependencia.sucessora);
+    const sucStr = serializarChave(dependencia.sucessora);
     if (!dependenciasPorSucessora.has(sucStr)) dependenciasPorSucessora.set(sucStr, []);
     dependenciasPorSucessora.get(sucStr)!.push(dependencia);
   }
 
-  const resultados = new Map<string, ResultadoOcorrenciaEscalonada>();
+  const resultados = new Map<string, ResultadoOcorrenciaEscalonada<TChave>>();
   const concluidas = new Set<string>();
   // Data mínima bruta por ocorrência - calculada UMA VEZ, na primeira
   // rodada em que a ocorrência aparece pronta, e nunca recalculada depois
@@ -290,20 +303,20 @@ export function escalonarConjuntoComFilaDeProntos(params: {
   const dataMinimaPorChaveStr = new Map<string, string>();
 
   while (true) {
-    const liberadas = resolverOcorrenciasLiberadas(todasChaves, dependencias, concluidas).filter(
-      (chave) => !resultados.has(chaveOcorrenciaParaString(chave)),
+    const liberadas = resolverOcorrenciasLiberadasGenerico(todasChaves, dependencias, concluidas, serializarChave).filter(
+      (chave) => !resultados.has(serializarChave(chave)),
     );
     if (liberadas.length === 0) break;
 
-    const prontas = liberadas.map((chave) => porChaveStr.get(chaveOcorrenciaParaString(chave))!);
+    const prontas = liberadas.map((chave) => porChaveStr.get(serializarChave(chave))!);
 
     for (const oc of prontas) {
-      const chaveStr = chaveOcorrenciaParaString(oc.chave);
+      const chaveStr = serializarChave(oc.chave);
       if (dataMinimaPorChaveStr.has(chaveStr)) continue;
 
       const predecessoras = dependenciasPorSucessora.get(chaveStr) ?? [];
       const dataFimPredecessoras = predecessoras.map((dependencia) => {
-        const resultadoPredecessora = resultados.get(chaveOcorrenciaParaString(dependencia.predecessora))!;
+        const resultadoPredecessora = resultados.get(serializarChave(dependencia.predecessora))!;
         // Garantido não-nulo: só está em `concluidas` quando dataFimReal existe (ver atribuição abaixo).
         return resultadoPredecessora.dataFimReal!;
       });
@@ -312,14 +325,14 @@ export function escalonarConjuntoComFilaDeProntos(params: {
 
     prontas.sort((a, b) =>
       compararComDesempateTotal(
-        chaveOcorrenciaParaString(a.chave),
-        chaveOcorrenciaParaString(b.chave),
+        serializarChave(a.chave),
+        serializarChave(b.chave),
         prioridadePorChaveStr,
         dataMinimaPorChaveStr,
       ),
     );
     const proxima = prontas[0];
-    const proximaChaveStr = chaveOcorrenciaParaString(proxima.chave);
+    const proximaChaveStr = serializarChave(proxima.chave);
 
     const dataInicioMinima = dataMinimaPorChaveStr.get(proximaChaveStr)!;
     const indiceInicio = datasGradeCompartilhada.findIndex((data) => data >= dataInicioMinima);
@@ -355,7 +368,7 @@ export function escalonarConjuntoComFilaDeProntos(params: {
   // ocorrência que sobra aqui só pode ser por predecessora não concluída
   // (nunca mais um "ciclo_ou_erro_estrutural" residual).
   for (const chave of todasChaves) {
-    const chaveStr = chaveOcorrenciaParaString(chave);
+    const chaveStr = serializarChave(chave);
     if (!resultados.has(chaveStr)) {
       resultados.set(chaveStr, {
         chave,
@@ -369,4 +382,20 @@ export function escalonarConjuntoComFilaDeProntos(params: {
   }
 
   return resultados;
+}
+
+/**
+ * Wrapper para o Comercial - assinatura e comportamento IDÊNTICOS ao
+ * original (PCP-P8C): delega para `escalonarConjuntoGenerico` com
+ * TChave=ChaveOcorrencia e o serializador de sempre. Nenhum chamador
+ * existente precisa mudar.
+ */
+export function escalonarConjuntoComFilaDeProntos(params: {
+  ocorrencias: OcorrenciaEscalonavel[];
+  dependencias: DependenciaOcorrencia[];
+  registroCandidatos: ReadonlyMap<string, CandidatoComCapacidadeDiaria>;
+  datasGradeCompartilhada: string[];
+  criterioPrioridadeDeNegocio: CriterioPrioridadeDeNegocio;
+}): Map<string, ResultadoOcorrenciaEscalonada> {
+  return escalonarConjuntoGenerico<ChaveOcorrencia>({ ...params, serializarChave: chaveOcorrenciaParaString });
 }
