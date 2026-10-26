@@ -1,5 +1,7 @@
 "use client";
 
+export const maxDuration = 300;
+
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
