@@ -51,6 +51,38 @@ export interface EntradaMotorPcp {
   excluidas: OpExcluidaPcp[];
 }
 
+/**
+ * Etapa 2O.8B-I6-A: ingrediente plano de um candidato - os 4 valores que
+ * construirCandidatoPcp usa para fechar faixasDoDia/consumir. Nunca
+ * carrega o fechamento em si (não atravessa workerData).
+ */
+export interface CandidatoMotorPcpSerializavel {
+  recursoId: string;
+  capacidadeHorasDia: number;
+  produtividade: number;
+}
+
+/**
+ * Etapa 2O.8B-I6-A: forma 100% serializável (JSON-safe, sem funções nem
+ * Map/Set) de EntradaMotorPcp - o que atravessa `workerData` para dentro
+ * da Worker Thread. `registroCandidatos` e `criterioPrioridadeDeNegocio`
+ * nunca são serializáveis diretamente (são fechamentos) - por isso saem
+ * daqui como `candidatos` (ingredientes planos) e `posicaoPorProjeto`
+ * (mapa plano), reconstruídos do outro lado por
+ * reconstruirEntradaMotorPcpDeSerializavel usando a MESMA
+ * construirCandidatoPcp - nunca uma segunda implementação da lógica de
+ * capacidade.
+ */
+export interface EntradaMotorPcpSerializavel {
+  ocorrencias: OcorrenciaEscalonavel<ChaveOcorrenciaPcp>[];
+  dependencias: DependenciaOcorrencia<ChaveOcorrenciaPcp>[];
+  candidatos: CandidatoMotorPcpSerializavel[];
+  datasGradeCompartilhada: string[];
+  diasProdutivos: string[];
+  posicaoPorProjeto: Record<string, number>;
+  excluidas: OpExcluidaPcp[];
+}
+
 interface FilaRow {
   projeto_id: string;
   posicao: number;
@@ -187,11 +219,30 @@ function sucessorasTransitivas(opIds: ReadonlySet<string>, dependencias: Depende
   return alcancaveis;
 }
 
-export async function montarEntradaMotorPcp(
+/**
+ * Etapa 2O.8B-I6-A: ingredientes planos (JSON-safe) da entrada do
+ * Motor - tudo que é dado bruto, nunca fechamento. Única implementação
+ * de toda a busca/regra de negócio (passos 0-11) - tanto
+ * montarEntradaMotorPcp (fechamentos, uso direto síncrono existente)
+ * quanto montarEntradaMotorPcpSerializavel (ingredientes planos, para
+ * atravessar workerData) chamam ESTA MESMA função internamente, nunca
+ * duas implementações da mesma busca.
+ */
+interface IngredientesMotorPcp {
+  ocorrencias: OcorrenciaEscalonavel<ChaveOcorrenciaPcp>[];
+  dependencias: DependenciaOcorrencia<ChaveOcorrenciaPcp>[];
+  excluidas: OpExcluidaPcp[];
+  posicaoPorProjeto: Map<string, number>;
+  candidatosIngredientes: CandidatoMotorPcpSerializavel[];
+  datasGradeCompartilhada: string[];
+  diasProdutivos: Set<string>;
+}
+
+async function montarIngredientesMotorPcp(
   client: SupabaseClient,
   pSolicitadoPor: string,
   datasGradeCompartilhada: string[],
-): Promise<EntradaMotorPcp> {
+): Promise<IngredientesMotorPcp> {
   if (datasGradeCompartilhada.length === 0) {
     throw new RangeError("montarEntradaMotorPcp: datasGradeCompartilhada não pode ser vazia - a janela é responsabilidade explícita do chamador.");
   }
@@ -212,7 +263,7 @@ export async function montarEntradaMotorPcp(
 
   const posicaoPorProjeto = new Map<string, number>(snapshot.fila.map((r) => [r.projeto_id, r.posicao]));
   if (posicaoPorProjeto.size === 0) {
-    return { ocorrencias: [], dependencias: [], registroCandidatos: new Map(), criterioPrioridadeDeNegocio: () => 0, excluidas: [] };
+    return { ocorrencias: [], dependencias: [], excluidas: [], posicaoPorProjeto, candidatosIngredientes: [], datasGradeCompartilhada, diasProdutivos: new Set() };
   }
 
   // 2. OFs elegíveis - a RPC já restringe a "projeto na fila"; aqui
@@ -225,14 +276,14 @@ export async function montarEntradaMotorPcp(
   const quantidadePorOf = new Map(ofsElegiveis.map((of) => [of.id, of.quantidade_planejada]));
 
   if (ofsElegiveis.length === 0) {
-    return { ocorrencias: [], dependencias: [], registroCandidatos: new Map(), criterioPrioridadeDeNegocio: () => 0, excluidas: [] };
+    return { ocorrencias: [], dependencias: [], excluidas: [], posicaoPorProjeto, candidatosIngredientes: [], datasGradeCompartilhada, diasProdutivos: new Set() };
   }
 
   // 3. OPs elegíveis (nao_aplicavel=false) das OFs elegíveis.
   const idsOfElegiveis = new Set(projetoPorOf.keys());
   const opsBrutas = snapshot.ops.filter((op) => idsOfElegiveis.has(op.of_id) && !op.nao_aplicavel);
   if (opsBrutas.length === 0) {
-    return { ocorrencias: [], dependencias: [], registroCandidatos: new Map(), criterioPrioridadeDeNegocio: () => 0, excluidas: [] };
+    return { ocorrencias: [], dependencias: [], excluidas: [], posicaoPorProjeto, candidatosIngredientes: [], datasGradeCompartilhada, diasProdutivos: new Set() };
   }
 
   // 4. Dependências restritas às OPs carregadas (ambos os lados).
@@ -334,35 +385,34 @@ export async function montarEntradaMotorPcp(
     datasGradeCompartilhada.filter((data) => resolverDiaProdutivoComContexto(contextoCalendario, data).produtivo),
   );
 
-  // 12. registroCandidatos - só para recursos com capacidade cadastrada válida.
-  const registroCandidatos = new Map<string, CandidatoComCapacidadeDiaria>();
+  // 12. Ingredientes planos dos candidatos - só para recursos com
+  // capacidade cadastrada válida. Nunca constrói o fechamento aqui
+  // (isso fica para quem consumir - montarEntradaMotorPcp ou a Worker).
+  const recursosComCapacidadeValida = new Set<string>();
+  const candidatosIngredientes: CandidatoMotorPcpSerializavel[] = [];
   for (const recursoId of todosRecursosNecessarios) {
     const capacidadeHorasDia = capacidadePorRecurso[recursoId];
     if (capacidadeHorasDia === undefined) continue; // sem capacidade cadastrada - tratado abaixo por OP.
-    registroCandidatos.set(
+    recursosComCapacidadeValida.add(recursoId);
+    candidatosIngredientes.push({
       recursoId,
-      construirCandidatoPcp({
-        recursoId,
-        capacidadeHorasDia,
-        produtividade: produtividadePorRecurso.get(recursoId) ?? 1,
-        datasGradeCompartilhada,
-        diasProdutivos,
-      }),
-    );
+      capacidadeHorasDia,
+      produtividade: produtividadePorRecurso.get(recursoId) ?? 1,
+    });
   }
 
   // 13. Monta as ocorrências finais - recurso primário sem capacidade
   // cadastrada válida também é insuficiência de dados explícita.
   const ocorrencias: OcorrenciaEscalonavel<ChaveOcorrenciaPcp>[] = [];
   for (const { op, recursoPrimario } of opsComRecurso) {
-    if (!registroCandidatos.has(recursoPrimario)) {
+    if (!recursosComCapacidadeValida.has(recursoPrimario)) {
       excluidas.push({ opId: op.id, motivo: "recurso_vigente_ausente_ou_invalido" });
       continue;
     }
 
     const candidatoIdsPorPrioridade = [
       recursoPrimario,
-      ...(compatibilidadesPorRecurso.get(recursoPrimario) ?? []).filter((id) => registroCandidatos.has(id)),
+      ...(compatibilidadesPorRecurso.get(recursoPrimario) ?? []).filter((id) => recursosComCapacidadeValida.has(id)),
     ];
 
     const quantidadePlanejada = quantidadePorOf.get(op.of_id) ?? 0;
@@ -380,12 +430,103 @@ export async function montarEntradaMotorPcp(
     });
   }
 
-  const criterioPrioridadeDeNegocio: CriterioPrioridadeDeNegocio<ChaveOcorrenciaPcp> = (ocorrencia) =>
-    posicaoPorProjeto.get(ocorrencia.projetoId) ?? Number.POSITIVE_INFINITY;
+  return { ocorrencias, dependencias, excluidas, posicaoPorProjeto, candidatosIngredientes, datasGradeCompartilhada, diasProdutivos };
+}
 
-  return { ocorrencias, dependencias, registroCandidatos, criterioPrioridadeDeNegocio, excluidas };
+/** Construção dos fechamentos (registroCandidatos/criterioPrioridadeDeNegocio) a partir dos ingredientes planos - única implementação, reutilizada pelos dois caminhos (uso direto síncrono e reconstrução dentro da Worker). */
+function construirFechamentosMotorPcp(ingredientes: IngredientesMotorPcp): Pick<EntradaMotorPcp, "registroCandidatos" | "criterioPrioridadeDeNegocio"> {
+  const registroCandidatos = new Map<string, CandidatoComCapacidadeDiaria>();
+  for (const candidato of ingredientes.candidatosIngredientes) {
+    registroCandidatos.set(
+      candidato.recursoId,
+      construirCandidatoPcp({
+        recursoId: candidato.recursoId,
+        capacidadeHorasDia: candidato.capacidadeHorasDia,
+        produtividade: candidato.produtividade,
+        datasGradeCompartilhada: ingredientes.datasGradeCompartilhada,
+        diasProdutivos: ingredientes.diasProdutivos,
+      }),
+    );
+  }
+  const criterioPrioridadeDeNegocio: CriterioPrioridadeDeNegocio<ChaveOcorrenciaPcp> = (ocorrencia) =>
+    ingredientes.posicaoPorProjeto.get(ocorrencia.projetoId) ?? Number.POSITIVE_INFINITY;
+  return { registroCandidatos, criterioPrioridadeDeNegocio };
+}
+
+/**
+ * Uso direto síncrono (callers existentes, comportamento IDÊNTICO ao
+ * anterior a esta refatoração - nenhuma mudança de comportamento).
+ */
+export async function montarEntradaMotorPcp(
+  client: SupabaseClient,
+  pSolicitadoPor: string,
+  datasGradeCompartilhada: string[],
+): Promise<EntradaMotorPcp> {
+  const ingredientes = await montarIngredientesMotorPcp(client, pSolicitadoPor, datasGradeCompartilhada);
+  const { registroCandidatos, criterioPrioridadeDeNegocio } = construirFechamentosMotorPcp(ingredientes);
+  return {
+    ocorrencias: ingredientes.ocorrencias,
+    dependencias: ingredientes.dependencias,
+    registroCandidatos,
+    criterioPrioridadeDeNegocio,
+    excluidas: ingredientes.excluidas,
+  };
+}
+
+/**
+ * Etapa 2O.8B-I6-A: forma 100% serializável - para atravessar
+ * `workerData` rumo à Worker Thread. O outro lado reconstrói com
+ * reconstruirEntradaMotorPcpDeSerializavel, usando a MESMA
+ * construirFechamentosMotorPcp (via reconstruirEntradaMotorPcpDeSerializavel)
+ * - nunca uma segunda implementação da lógica de capacidade/prioridade.
+ */
+export async function montarEntradaMotorPcpSerializavel(
+  client: SupabaseClient,
+  pSolicitadoPor: string,
+  datasGradeCompartilhada: string[],
+): Promise<EntradaMotorPcpSerializavel> {
+  const ingredientes = await montarIngredientesMotorPcp(client, pSolicitadoPor, datasGradeCompartilhada);
+  return {
+    ocorrencias: ingredientes.ocorrencias,
+    dependencias: ingredientes.dependencias,
+    candidatos: ingredientes.candidatosIngredientes,
+    datasGradeCompartilhada: ingredientes.datasGradeCompartilhada,
+    diasProdutivos: Array.from(ingredientes.diasProdutivos),
+    posicaoPorProjeto: Object.fromEntries(ingredientes.posicaoPorProjeto),
+    excluidas: ingredientes.excluidas,
+  };
+}
+
+/**
+ * Etapa 2O.8B-I6-A: reconstrói EntradaMotorPcp a partir da forma
+ * serializável - chamada DENTRO da Worker Thread, depois de receber
+ * `workerData`. Pura, sem I/O - reaproveita construirCandidatoPcp
+ * (mesma função usada no caminho síncrono) para os fechamentos de
+ * capacidade; nunca duplica essa lógica.
+ */
+export function reconstruirEntradaMotorPcpDeSerializavel(serializavel: EntradaMotorPcpSerializavel): EntradaMotorPcp {
+  const ingredientes: IngredientesMotorPcp = {
+    ocorrencias: serializavel.ocorrencias,
+    dependencias: serializavel.dependencias,
+    excluidas: serializavel.excluidas,
+    posicaoPorProjeto: new Map(Object.entries(serializavel.posicaoPorProjeto)),
+    candidatosIngredientes: serializavel.candidatos,
+    datasGradeCompartilhada: serializavel.datasGradeCompartilhada,
+    diasProdutivos: new Set(serializavel.diasProdutivos),
+  };
+  const { registroCandidatos, criterioPrioridadeDeNegocio } = construirFechamentosMotorPcp(ingredientes);
+  return {
+    ocorrencias: ingredientes.ocorrencias,
+    dependencias: ingredientes.dependencias,
+    registroCandidatos,
+    criterioPrioridadeDeNegocio,
+    excluidas: ingredientes.excluidas,
+  };
 }
 
 // Reexportado só para quem for inspecionar a fotografia chamar o Motor
 // manualmente depois (P8D não chama) - nunca usado internamente aqui.
-export { escalonarConjuntoGenerico, chaveOcorrenciaPcpParaString };
+// construirCandidatoPcp exportado para a Worker Thread (I6-A) poder
+// reconstruir os MESMOS fechamentos de capacidade - nunca uma segunda
+// implementação.
+export { escalonarConjuntoGenerico, chaveOcorrenciaPcpParaString, construirCandidatoPcp };

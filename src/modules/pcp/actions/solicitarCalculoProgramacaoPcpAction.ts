@@ -1,9 +1,10 @@
 "use server";
-// Solicitação de cálculo de programação do PCP (PCP-P8I-B4) - wrapper
-// fino sobre orquestrarSolicitacaoCalculoPcp.ts, mesmo padrão de
-// aprovarCenarioComercialAction.ts: a lógica testável vive no arquivo
-// sem "use server", com dependências injetadas; este arquivo só monta
-// as dependências REAIS.
+// Solicitação de cálculo de programação do PCP (PCP-P8I-B4, integrado à
+// reserva exclusiva + Worker supervisionada na Etapa 2O.8B-I6-B) -
+// wrapper fino sobre orquestrarSolicitacaoCalculoPcp.ts, mesmo padrão
+// de aprovarCenarioComercialAction.ts: a lógica testável vive no
+// arquivo sem "use server", com dependências injetadas; este arquivo
+// só monta as dependências REAIS.
 //
 // DESVIO DELIBERADO do padrão Comercial (registrado em PCP-P8I-B4):
 // no Comercial, o client service_role só é criado DEPOIS de
@@ -15,12 +16,34 @@
 // ele já foi validado por auth.getUser() no client de sessão, nunca
 // aceito do corpo da requisição.
 //
-// Esta Server Action NUNCA escreve nada - monta a entrada do Motor e
-// escalona em memória; o resultado devolvido ao navegador é só para
-// análise (ver cabeçalho do orquestrador).
+// Esta Server Action NUNCA escreve programação oficial - monta a
+// entrada do Motor e escalona dentro de uma Worker Thread
+// supervisionada; o resultado devolvido ao navegador é só para
+// análise. A reserva (iniciar_recalculo_pcp/finalizar_recalculo_pcp,
+// contexto='solicitar_calculo') é controle de concorrência, nunca
+// decisão de negócio - nunca move prioridade, nunca grava no Histórico
+// de Prioridades, nunca inventa justificativa.
+//
+// PENDÊNCIA DE maxDuration (auditoria I6-B): a documentação do Next.js
+// exige que `maxDuration` seja declarado no segmento de PÁGINA para
+// afetar Server Actions - não há, hoje, nenhuma página real que chame
+// esta action (achado: zero consumidor em src/app). MAX_DURATION_FUNCAO_SEGUNDOS
+// (orcamentoTempoMotorPcp.ts) alimenta o cálculo interno de T_efetivo,
+// mas a imposição REAL do limite pela Vercel sobre esta Server Action
+// especificamente só poderá ser confirmada quando uma página existir e
+// declarar `export const maxDuration` com o MESMO valor.
+import { Worker } from "node:worker_threads";
 import { createSupabaseServerClient } from "@/lib/supabaseServerClient";
 import { createSupabaseServiceClient } from "@/lib/supabaseServiceClient";
-import { montarEntradaMotorPcp } from "../lib/motor/montarEntradaMotorPcp";
+import { montarEntradaMotorPcpSerializavel, type EntradaMotorPcpSerializavel } from "../lib/motor/montarEntradaMotorPcp";
+import { executarComSupervisao, calcularLimiteEfetivoMs } from "../lib/motor/supervisorMotorPcp";
+import {
+  LIMITE_MOTOR_MS,
+  MAX_DURATION_FUNCAO_MS,
+  MARGEM_FINALIZACAO_MS,
+  LIMITE_MINIMO_VIAVEL_MS,
+  TTL_RESERVA_SEGUNDOS,
+} from "../lib/motor/orcamentoTempoMotorPcp";
 import {
   orquestrarSolicitacaoCalculoPcp,
   type DependenciasSolicitacaoCalculoPcp,
@@ -29,6 +52,7 @@ import {
 } from "./orquestrarSolicitacaoCalculoPcp";
 
 const PERMISSAO_SOLICITAR_CALCULO = "pcp.solicitar_calculo";
+const CONTEXTO_RESERVA = "solicitar_calculo";
 
 function validarPayload(paramsRecebidos: unknown): PayloadSolicitacaoCalculoPcp | null {
   if (typeof paramsRecebidos !== "object" || paramsRecebidos === null) return null;
@@ -87,7 +111,56 @@ export async function solicitarCalculoProgramacaoPcpAction(
       return data.versao as number;
     },
 
-    montarEntrada: (userId, datasGradeCompartilhada) => montarEntradaMotorPcp(serviceClient, userId, datasGradeCompartilhada),
+    calcularLimiteEfetivoMs: (tempoJaConsumidoMs) =>
+      calcularLimiteEfetivoMs({
+        limiteMotorMs: LIMITE_MOTOR_MS,
+        maxDurationFuncaoMs: MAX_DURATION_FUNCAO_MS,
+        tempoJaConsumidoMs,
+        margemFinalizacaoMs: MARGEM_FINALIZACAO_MS,
+        limiteMinimoViavelMs: LIMITE_MINIMO_VIAVEL_MS,
+      }),
+
+    iniciarReserva: async (empresaId, userId) => {
+      const { data, error } = await serviceClient.rpc("iniciar_recalculo_pcp", {
+        p_empresa_id: empresaId,
+        p_iniciado_por: userId,
+        p_contexto: CONTEXTO_RESERVA,
+        p_ttl_segundos: TTL_RESERVA_SEGUNDOS,
+      });
+      if (error) throw new Error(error.message);
+      const linha = data[0];
+      return {
+        execucaoId: linha.execucao_id as string,
+        adquirida: linha.adquirida as boolean,
+        motivo: linha.motivo as string,
+        responsavelAtualNome: linha.responsavel_atual_nome as string,
+      };
+    },
+
+    finalizarReserva: async (empresaId, execucaoId, situacao) => {
+      const { data, error } = await serviceClient.rpc("finalizar_recalculo_pcp", {
+        p_empresa_id: empresaId,
+        p_execucao_id: execucaoId,
+        p_situacao: situacao,
+      });
+      if (error) throw new Error(error.message);
+      return data as boolean;
+    },
+
+    montarEntradaSerializavel: (userId, datasGradeCompartilhada) =>
+      montarEntradaMotorPcpSerializavel(serviceClient, userId, datasGradeCompartilhada),
+
+    // new Worker(new URL(...)) INLINE aqui dentro, por exigência de
+    // rastreamento de asset do Turbopack (comprovado na I6-A) - nunca
+    // movido para um helper. Toda a lógica de supervisão vem de
+    // supervisorMotorPcp.ts (módulo único, reutilizado pelos dois
+    // caminhos - I6-B e a futura I6-C).
+    executarCalculoSupervisionado: async (entrada: EntradaMotorPcpSerializavel, limiteEfetivoMs: number) => {
+      const worker = new Worker(new URL("../lib/motor/motorWorker.ts", import.meta.url), {
+        workerData: entrada,
+      });
+      return executarComSupervisao(worker, { limiteMs: limiteEfetivoMs });
+    },
   };
 
   return orquestrarSolicitacaoCalculoPcp(params, dependenciasReais);

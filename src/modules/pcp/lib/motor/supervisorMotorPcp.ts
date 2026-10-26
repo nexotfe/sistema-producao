@@ -1,0 +1,108 @@
+// Etapa 2O.8B-I6-A: supervisor único e genérico de uma Worker Thread -
+// mesma mecânica já comprovada na P1 (poc-worker/supervisor.mjs:
+// race entre a mensagem de resultado e o timeout de corte, terminate()
+// como confirmação REAL de encerramento, guarda contra 'exit' chegar
+// antes da Promise de terminate() resolver). Nunca constrói a Worker
+// (new Worker(new URL(...)) precisa ficar inline na função exportada do
+// chamador, por exigência de rastreamento de asset do Turbopack - ver
+// cabeçalho de motorWorker.ts) - recebe a instância já criada. Nunca
+// sabe nada sobre reserva, PCP ou Motor - só supervisiona qualquer
+// Worker que fale o protocolo "uma mensagem de resultado, ou erro, ou
+// saída".
+import type { Worker } from "node:worker_threads";
+
+export type ResultadoSupervisaoMotorPcp<TResultado> =
+  | { situacao: "concluido"; resultado: TResultado; tempoTotalMs: number }
+  | { situacao: "interrompido_por_limite"; tempoTotalMs: number; via: "evento_exit" | "promise_terminate" }
+  | { situacao: "erro_na_worker"; mensagem: string; tempoTotalMs: number }
+  | { situacao: "saida_inesperada"; exitCode: number; tempoTotalMs: number };
+
+export interface OpcoesSupervisaoMotorPcp {
+  /** T_efetivo já resolvido pelo chamador (nunca decidido aqui - ver DEC do orçamento de tempo, I6-A). */
+  limiteMs: number;
+}
+
+/**
+ * Supervisiona UMA Worker já construída até: (a) receber uma mensagem
+ * de resultado, (b) o limite expirar (terminate() + confirmação real de
+ * encerramento), (c) a Worker emitir 'error', ou (d) a Worker encerrar
+ * inesperadamente ('exit' sem resultado nem corte). Nunca reinicia,
+ * nunca tenta de novo - decisão de retry é do chamador, nunca do
+ * supervisor.
+ */
+export function executarComSupervisao<TResultado>(
+  worker: Worker,
+  opcoes: OpcoesSupervisaoMotorPcp,
+): Promise<ResultadoSupervisaoMotorPcp<TResultado>> {
+  return new Promise((resolve) => {
+    const inicio = Date.now();
+    let finalizado = false;
+    let timeoutLimite: ReturnType<typeof setTimeout> | null = null;
+    // ACHADO DO PoC P1: o evento 'exit' pode chegar ANTES (ou na mesma
+    // volta de microtask) da Promise de worker.terminate() resolver -
+    // sem este sinalizador, 'exit' classificaria incorretamente um
+    // encerramento DELIBERADO como "saída inesperada".
+    let encerramentoSolicitadoPorLimite = false;
+
+    function concluirComo(valor: ResultadoSupervisaoMotorPcp<TResultado>) {
+      if (finalizado) return; // guarda contra callbacks duplicados (ex.: message + exit, error + exit).
+      finalizado = true;
+      if (timeoutLimite) clearTimeout(timeoutLimite);
+      resolve(valor);
+    }
+
+    worker.on("message", (resultado: TResultado) => {
+      concluirComo({ situacao: "concluido", resultado, tempoTotalMs: Date.now() - inicio });
+    });
+
+    worker.on("error", (erro: Error) => {
+      if (encerramentoSolicitadoPorLimite) {
+        concluirComo({ situacao: "interrompido_por_limite", tempoTotalMs: Date.now() - inicio, via: "evento_exit" });
+        return;
+      }
+      concluirComo({ situacao: "erro_na_worker", mensagem: erro.message, tempoTotalMs: Date.now() - inicio });
+    });
+
+    worker.on("exit", (exitCode) => {
+      if (finalizado) return;
+      if (encerramentoSolicitadoPorLimite) {
+        concluirComo({ situacao: "interrompido_por_limite", tempoTotalMs: Date.now() - inicio, via: "evento_exit" });
+        return;
+      }
+      concluirComo({ situacao: "saida_inesperada", exitCode, tempoTotalMs: Date.now() - inicio });
+    });
+
+    timeoutLimite = setTimeout(() => {
+      encerramentoSolicitadoPorLimite = true;
+      // terminate() devolve uma Promise resolvida quando a thread
+      // REALMENTE parou - a confirmação de encerramento real, nunca
+      // presumida só pelo disparo do timeout.
+      worker.terminate().then(() => {
+        if (finalizado) return; // 'exit' já confirmou - nunca duplicar.
+        concluirComo({ situacao: "interrompido_por_limite", tempoTotalMs: Date.now() - inicio, via: "promise_terminate" });
+      });
+    }, opcoes.limiteMs);
+  });
+}
+
+/**
+ * Orçamento de tempo (auditoria I6-A, decisão 2): T_efetivo = min(limite
+ * do Motor, tempo restante seguro da função) - nunca exige o limite
+ * cheio do Motor para iniciar. `margemFinalizacaoMs` cobre validação +
+ * finalização da reserva depois que a Worker responder; se não houver
+ * margem suficiente nem para o mínimo viável, retorna null - o chamador
+ * decide o que fazer (nunca o supervisor spawna uma Worker fadada a
+ * não ter tempo de finalizar com segurança).
+ */
+export function calcularLimiteEfetivoMs(params: {
+  limiteMotorMs: number;
+  maxDurationFuncaoMs: number;
+  tempoJaConsumidoMs: number;
+  margemFinalizacaoMs: number;
+  limiteMinimoViavelMs: number;
+}): number | null {
+  const { limiteMotorMs, maxDurationFuncaoMs, tempoJaConsumidoMs, margemFinalizacaoMs, limiteMinimoViavelMs } = params;
+  const margemRestante = maxDurationFuncaoMs - tempoJaConsumidoMs - margemFinalizacaoMs;
+  if (margemRestante < limiteMinimoViavelMs) return null;
+  return Math.min(limiteMotorMs, margemRestante);
+}
