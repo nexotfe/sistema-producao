@@ -91,7 +91,7 @@ export const areas: Area[] = [
         icon: "calendar",
         futuro: true,
         acoes: [
-          { label: "Lista de prioridades", tipo: "consultar", futuro: true },
+          { label: "Lista de prioridades", tipo: "consultar", href: "/pcp/prioridades" },
           { label: "OFs por projeto", tipo: "consultar", futuro: true },
           { label: "Remanejamentos e retrabalhos", tipo: "consultar", futuro: true },
           { label: "Cenários de produção", tipo: "consultar", futuro: true },
