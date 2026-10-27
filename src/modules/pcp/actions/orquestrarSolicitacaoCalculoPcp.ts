@@ -201,11 +201,6 @@ export async function executarCalculoMotorSupervisionado(
   inicioOrcamentoMs: number,
   deps: DependenciasExecutarCalculoMotorSupervisionado,
 ): Promise<ResultadoCalculoMotorSupervisionado> {
-  const limiteEfetivoMs = deps.calcularLimiteEfetivoMs(Date.now() - inicioOrcamentoMs);
-  if (limiteEfetivoMs === null) {
-    return { ok: false, motivo: "sem_margem_segura_para_executar" };
-  }
-
   const versaoAntes = await deps.lerVersaoCapacidade(empresaId);
   if (versaoAntes === null) {
     return { ok: false, motivo: "versao_capacidade_indisponivel" };
@@ -224,6 +219,16 @@ export async function executarCalculoMotorSupervisionado(
   }
   if (versaoAntes !== versaoDepoisMontagem) {
     return { ok: false, motivo: "capacidade_mudou_durante_calculo" };
+  }
+
+  // Recalculado AQUI, nunca no início da função (achado da auditoria do
+  // PR #1) - contabiliza o tempo real já gasto pelas duas leituras de
+  // versão de capacidade e pela montagem da entrada. O Motor nunca
+  // inicia sem essa margem recalculada no momento real em que a Worker
+  // seria disparada.
+  const limiteEfetivoMs = deps.calcularLimiteEfetivoMs(Date.now() - inicioOrcamentoMs);
+  if (limiteEfetivoMs === null) {
+    return { ok: false, motivo: "sem_margem_segura_para_executar" };
   }
 
   const supervisao = await deps.executarCalculoSupervisionado(entrada, limiteEfetivoMs);

@@ -11,7 +11,13 @@ import {
 } from "./orquestrarSolicitacaoCalculoPcp";
 import type { ResultadoIniciarReservaPcp } from "./reservaExclusivaRecalculoPcp";
 import type { EntradaMotorPcpSerializavel } from "../lib/motor/montarEntradaMotorPcp";
-import type { ResultadoSupervisaoMotorPcp } from "../lib/motor/supervisorMotorPcp";
+import { calcularLimiteEfetivoMs as calcularLimiteEfetivoMsReal, type ResultadoSupervisaoMotorPcp } from "../lib/motor/supervisorMotorPcp";
+import {
+  LIMITE_MOTOR_MS,
+  MARGEM_FINALIZACAO_MS,
+  LIMITE_MINIMO_VIAVEL_MS,
+  MAX_DURATION_FUNCAO_MS,
+} from "../lib/motor/orcamentoTempoMotorPcp";
 import type { ResultadoOcorrenciaEscalonada } from "@/modules/simulacao-comercial/lib/cenarios/escalonadorConjunto";
 import type { ChaveOcorrenciaPcp } from "../lib/motor/chaveOcorrenciaPcp";
 
@@ -345,5 +351,90 @@ describe("orquestrarSolicitacaoCalculoPcp - ausência estrutural de escrita de p
       "montarEntradaSerializavel",
       "resolverEmpresa",
     ]);
+  });
+});
+
+// Achado #1/#3 da auditoria do PR #1: calcularLimiteEfetivoMs (função
+// real de supervisorMotorPcp.ts) nunca tinha teste próprio - todo teste
+// acima a mocka com um valor fixo, então um erro de sinal/off-by-one na
+// fórmula passaria por toda a suíte sem ser detectado.
+describe("calcularLimiteEfetivoMs (função real, orçamento de tempo)", () => {
+  const PARAMS_PADRAO = {
+    limiteMotorMs: LIMITE_MOTOR_MS,
+    maxDurationFuncaoMs: MAX_DURATION_FUNCAO_MS,
+    margemFinalizacaoMs: MARGEM_FINALIZACAO_MS,
+    limiteMinimoViavelMs: LIMITE_MINIMO_VIAVEL_MS,
+  };
+
+  it("tempo já consumido pequeno: retorna o limite do Motor (240s), nunca a margem restante inteira (300s)", () => {
+    const resultado = calcularLimiteEfetivoMsReal({ ...PARAMS_PADRAO, tempoJaConsumidoMs: 1_000 });
+    expect(resultado).toBe(LIMITE_MOTOR_MS);
+  });
+
+  it("tempo já consumido alto: retorna a margem restante (já descontada a margem de finalização), menor que o limite do Motor", () => {
+    // maxDuration=300s, consumido=200s, margemFinalizacao=10s -> restam 90s, abaixo dos 240s do Motor.
+    const resultado = calcularLimiteEfetivoMsReal({ ...PARAMS_PADRAO, tempoJaConsumidoMs: 200_000 });
+    expect(resultado).toBe(MAX_DURATION_FUNCAO_MS - 200_000 - MARGEM_FINALIZACAO_MS);
+    expect(resultado).toBeLessThan(LIMITE_MOTOR_MS);
+  });
+
+  it("exatamente no limite mínimo viável: ainda retorna um valor (não nulo)", () => {
+    const tempoJaConsumidoMs = MAX_DURATION_FUNCAO_MS - MARGEM_FINALIZACAO_MS - LIMITE_MINIMO_VIAVEL_MS;
+    const resultado = calcularLimiteEfetivoMsReal({ ...PARAMS_PADRAO, tempoJaConsumidoMs });
+    expect(resultado).toBe(LIMITE_MINIMO_VIAVEL_MS);
+  });
+
+  it("1ms abaixo do limite mínimo viável: null - o Motor não deve iniciar", () => {
+    const tempoJaConsumidoMs = MAX_DURATION_FUNCAO_MS - MARGEM_FINALIZACAO_MS - LIMITE_MINIMO_VIAVEL_MS + 1;
+    const resultado = calcularLimiteEfetivoMsReal({ ...PARAMS_PADRAO, tempoJaConsumidoMs });
+    expect(resultado).toBeNull();
+  });
+
+  it("tempo já consumido excede o próprio maxDuration da função: null, nunca um número negativo", () => {
+    const resultado = calcularLimiteEfetivoMsReal({ ...PARAMS_PADRAO, tempoJaConsumidoMs: MAX_DURATION_FUNCAO_MS + 5_000 });
+    expect(resultado).toBeNull();
+  });
+});
+
+// Achado #1 da auditoria do PR #1: calcularLimiteEfetivoMs era chamado
+// ANTES de lerVersaoCapacidade/montarEntradaSerializavel dentro de
+// executarCalculoMotorSupervisionado - o tempo real gasto por essas
+// chamadas nunca entrava no orçamento entregue à Worker. Corrigido para
+// ser chamado imediatamente antes de executarCalculoSupervisionado.
+describe("orquestrarSolicitacaoCalculoPcp - orçamento de tempo recalculado após a preparação (achado #1)", () => {
+  it("preparação demorada: o tempo consumido passado a calcularLimiteEfetivoMs reflete a demora real, nunca só o tempo até o início da função", async () => {
+    const ATRASO_PREPARACAO_MS = 60;
+    const { deps, calcularLimiteEfetivoMs, montarEntradaSerializavel } = criarDependenciasFalsas();
+    montarEntradaSerializavel.mockImplementation(async (_uid: string, _datas: string[]) => {
+      await new Promise((resolve) => setTimeout(resolve, ATRASO_PREPARACAO_MS));
+      return entradaSerializavelNormal();
+    });
+
+    await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
+
+    // A pré-checagem (antes da reserva) e o recálculo (antes da Worker)
+    // chamam a função - a ÚLTIMA chamada é a que importa para este
+    // achado: precisa refletir o atraso real da preparação.
+    const tempoPassadoNaUltimaChamada = calcularLimiteEfetivoMs.mock.calls.at(-1)?.[0] as number;
+    expect(tempoPassadoNaUltimaChamada).toBeGreaterThanOrEqual(ATRASO_PREPARACAO_MS);
+  });
+
+  it("preparação consome a margem toda: sem_margem_segura_para_executar, Worker NUNCA chamada, reserva finalizada como falhou", async () => {
+    const { deps, executarCalculoSupervisionado, finalizarReserva, calcularLimiteEfetivoMs } = criarDependenciasFalsas();
+    // Primeira chamada (pré-checagem, antes da reserva) tem margem; a
+    // segunda (recalculada após a preparação) não tem mais - simula
+    // exatamente o cenário do achado #1: a preparação consumiu a
+    // margem que existia no início.
+    let chamada = 0;
+    calcularLimiteEfetivoMs.mockImplementation(() => {
+      chamada += 1;
+      return chamada === 1 ? 240_000 : null;
+    });
+
+    const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
+
+    expect(resultado).toEqual({ ok: false, motivo: "sem_margem_segura_para_executar" });
+    expect(executarCalculoSupervisionado).not.toHaveBeenCalled();
+    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
   });
 });

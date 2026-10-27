@@ -13,7 +13,7 @@ import type { Worker } from "node:worker_threads";
 
 export type ResultadoSupervisaoMotorPcp<TResultado> =
   | { situacao: "concluido"; resultado: TResultado; tempoTotalMs: number }
-  | { situacao: "interrompido_por_limite"; tempoTotalMs: number; via: "evento_exit" | "promise_terminate" }
+  | { situacao: "interrompido_por_limite"; tempoTotalMs: number; via: "evento_exit" | "evento_error" | "promise_terminate" }
   | { situacao: "erro_na_worker"; mensagem: string; tempoTotalMs: number }
   | { situacao: "saida_inesperada"; exitCode: number; tempoTotalMs: number };
 
@@ -57,7 +57,11 @@ export function executarComSupervisao<TResultado>(
 
     worker.on("error", (erro: Error) => {
       if (encerramentoSolicitadoPorLimite) {
-        concluirComo({ situacao: "interrompido_por_limite", tempoTotalMs: Date.now() - inicio, via: "evento_exit" });
+        // Achado da auditoria do PR #1: este handler reage ao evento
+        // 'error', nunca 'exit' - rótulo distinto do handler de exit,
+        // duas linhas abaixo, para nunca confundir qual evento do Node
+        // realmente disparou numa investigação futura (DEC-009 §3).
+        concluirComo({ situacao: "interrompido_por_limite", tempoTotalMs: Date.now() - inicio, via: "evento_error" });
         return;
       }
       concluirComo({ situacao: "erro_na_worker", mensagem: erro.message, tempoTotalMs: Date.now() - inicio });

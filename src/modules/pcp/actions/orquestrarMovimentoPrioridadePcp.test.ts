@@ -295,6 +295,29 @@ describe("orquestrarMovimentoPrioridadePcp - sucesso, validação automática e 
     expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
   });
 
+  // Achado #1 da auditoria do PR #1: sem margem segura para o recálculo
+  // (ex.: a preparação dos dados consumiu o orçamento de tempo) - a
+  // movimentação de prioridade JÁ persistida (posição + Histórico)
+  // nunca pode ser desfeita por isso; só o recálculo consultivo falha,
+  // de forma explícita, nunca disfarçado como sucesso.
+  it("sem margem segura para o recálculo: prioridade e justificativa preservadas, recálculo informado como falho, reserva finalizada como falhou", async () => {
+    const { deps, finalizarReserva, reordenarFila } = criarDependenciasFalsas({
+      recalculo: { ok: false, motivo: "sem_margem_segura_para_executar" },
+    });
+
+    const resultado = await orquestrarMovimentoPrioridadePcp(PAYLOAD_PADRAO, deps);
+
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    expect(resultado.posicaoNova).toBe(500);
+    expect(resultado.eventoHistoricoId).toBe("evento-1");
+    expect(resultado.recalculo).toEqual({ ok: false, motivo: "sem_margem_segura_para_executar" });
+    expect(reordenarFila).toHaveBeenCalledWith(
+      expect.objectContaining({ motivo: PAYLOAD_PADRAO.motivo, projetoId: PAYLOAD_PADRAO.projetoId }),
+    );
+    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+  });
+
   it("sucesso mas executarRecalculoConsultivo lança exceção inesperada: situação final 'falhou' (nunca 'concluida' só por engano)", async () => {
     const { deps, finalizarReserva } = criarDependenciasFalsas({ erroRecalculo: new Error("falha inesperada no passo de recálculo") });
 
