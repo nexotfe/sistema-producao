@@ -48,7 +48,27 @@ export async function consultarFilaPrioridadesPcpAction(): Promise<ResultadoCons
     p_chave: PERMISSAO_VISUALIZAR_PROGRAMACAO,
   });
 
-  if (erroAutorizacao || autorizado !== true) {
+  // Diagnostico temporario (NEXOTFE - investigacao do erro "nao_autorizado"
+  // em /pcp/prioridades, 2026-10-27): distingue falha TECNICA na chamada da
+  // RPC de uma resposta valida igual a false - nunca a mesma causa. Loga
+  // só campos diagnosticos do erro do PostgREST (code/message/details/hint
+  // - nunca token, cookie, header ou dado pessoal); a resposta enviada ao
+  // navegador continua idêntica nos dois casos.
+  if (erroAutorizacao) {
+    console.error("consultarFilaPrioridadesPcpAction: falha tecnica na RPC usuario_tem_permissao", {
+      code: erroAutorizacao.code,
+      message: erroAutorizacao.message,
+      details: erroAutorizacao.details,
+      hint: erroAutorizacao.hint,
+    });
+    return { ok: false, motivo: "nao_autorizado" };
+  }
+
+  if (autorizado !== true) {
+    console.error(
+      "consultarFilaPrioridadesPcpAction: RPC usuario_tem_permissao respondeu false para",
+      PERMISSAO_VISUALIZAR_PROGRAMACAO,
+    );
     return { ok: false, motivo: "nao_autorizado" };
   }
 
