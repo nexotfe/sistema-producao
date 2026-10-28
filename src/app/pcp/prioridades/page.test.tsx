@@ -20,6 +20,14 @@ vi.mock("@/modules/pcp/actions/moverPrioridadeProjetoPcpAction", () => ({
   moverPrioridadeProjetoPcpAction: (...args: unknown[]) => moverPrioridadeProjetoPcpActionMock(...args),
 }));
 
+// ETAPA 2O.8B-I6H: mesmo padrão de mock acima - evita que o módulo real
+// (que importa createSupabaseServiceClient, "server-only") seja
+// carregado neste ambiente jsdom.
+const solicitarCalculoProgramacaoPcpActionMock = vi.fn();
+vi.mock("@/modules/pcp/actions/solicitarCalculoProgramacaoPcpAction", () => ({
+  solicitarCalculoProgramacaoPcpAction: (...args: unknown[]) => solicitarCalculoProgramacaoPcpActionMock(...args),
+}));
+
 import PrioridadesPcpPage, { calcularVizinhosParaMovimento } from "./page";
 import type { ItemFilaPrioridadesPcp } from "@/modules/pcp/lib/buscarFilaPrioridadesPcp";
 
@@ -351,5 +359,134 @@ describe("PrioridadesPcpPage - componente", () => {
       recalculo: { ok: true, versaoCapacidadeUtilizada: "7", operacoes: [], excluidas: [] },
     });
     await waitFor(() => expect(screen.getByText(/Prioridade atualizada/)).toBeTruthy());
+  });
+});
+
+// ETAPA 2O.8B-I6H: botão "Solicitar Cálculo" - ação independente, NUNCA
+// move prioridade, NUNCA grava no Histórico de Prioridades. Não pode
+// apresentar sucesso antes da confirmação da publicação oficial
+// (conclusaoExecucao), mesmo quando o Motor concluiu tecnicamente.
+describe("PrioridadesPcpPage - Solicitar Cálculo (I6H)", () => {
+  it("clique chama a Server Action com dataInicial/dataFinal, nunca com projetoId/motivo", async () => {
+    consultarFilaPrioridadesPcpActionMock.mockResolvedValue({ ok: true, fila: filaDeCinco() });
+    solicitarCalculoProgramacaoPcpActionMock.mockResolvedValue({
+      ok: true,
+      versaoCapacidadeUtilizada: "7",
+      janela: { dataInicial: "2026-10-28", dataFinal: "2026-11-03" },
+      operacoes: [],
+      excluidas: [],
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", viaRecuperacaoPosFalhaDeComunicacao: false },
+    });
+    render(<PrioridadesPcpPage />);
+
+    await waitFor(() => expect(screen.getByText("260005")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Cálculo" }));
+
+    await waitFor(() => expect(solicitarCalculoProgramacaoPcpActionMock).toHaveBeenCalledTimes(1));
+    const payload = solicitarCalculoProgramacaoPcpActionMock.mock.calls[0][0];
+    expect(Object.keys(payload).sort()).toEqual(["dataFinal", "dataInicial"]);
+  });
+
+  it("Motor concluído E publicação oficial concluída: mensagem de sucesso só aparece com conclusaoExecucao confirmada", async () => {
+    consultarFilaPrioridadesPcpActionMock.mockResolvedValue({ ok: true, fila: filaDeCinco() });
+    solicitarCalculoProgramacaoPcpActionMock.mockResolvedValue({
+      ok: true,
+      versaoCapacidadeUtilizada: "9",
+      janela: { dataInicial: "2026-10-28", dataFinal: "2026-11-03" },
+      operacoes: [
+        { opId: "op-1", status: "concluida", dataInicioReal: "2026-10-28", dataFimReal: "2026-10-28", alocacoes: [], deficitResidualHorasPadrao: 0 },
+      ],
+      excluidas: [],
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-9", viaRecuperacaoPosFalhaDeComunicacao: false },
+    });
+    const { container } = render(<PrioridadesPcpPage />);
+
+    await waitFor(() => expect(screen.getByText("260005")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Cálculo" }));
+
+    await waitFor(() => expect(screen.getByText(/Programação oficial publicada com sucesso/)).toBeTruthy());
+    expect(container.textContent).toMatch(/1 operação\(ões\) programada\(s\)/);
+  });
+
+  it("Motor concluído mas versão ficou obsoleta: NUNCA mostra sucesso, explica a obsolescência", async () => {
+    consultarFilaPrioridadesPcpActionMock.mockResolvedValue({ ok: true, fila: filaDeCinco() });
+    solicitarCalculoProgramacaoPcpActionMock.mockResolvedValue({
+      ok: true,
+      versaoCapacidadeUtilizada: "9",
+      janela: { dataInicial: "2026-10-28", dataFinal: "2026-11-03" },
+      operacoes: [],
+      excluidas: [],
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "obsoleto", programacaoId: null, viaRecuperacaoPosFalhaDeComunicacao: false },
+    });
+    render(<PrioridadesPcpPage />);
+
+    await waitFor(() => expect(screen.getByText("260005")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Cálculo" }));
+
+    await waitFor(() => expect(screen.getByText(/rejeitado por obsolescência/)).toBeTruthy());
+    expect(screen.queryByText(/publicada com sucesso/)).toBeNull();
+  });
+
+  it("estado desconhecido após falha: NUNCA presume sucesso nem falha confirmada, avisa bloqueio até recuperação", async () => {
+    consultarFilaPrioridadesPcpActionMock.mockResolvedValue({ ok: true, fila: filaDeCinco() });
+    solicitarCalculoProgramacaoPcpActionMock.mockResolvedValue({ ok: false, motivo: "estado_desconhecido_apos_falha" });
+    render(<PrioridadesPcpPage />);
+
+    await waitFor(() => expect(screen.getByText("260005")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Cálculo" }));
+
+    await waitFor(() => expect(screen.getByText(/estado da execução não pôde ser confirmado/)).toBeTruthy());
+  });
+
+  it("reserva ocupada por uma movimentação de prioridade em andamento: mensagem específica", async () => {
+    consultarFilaPrioridadesPcpActionMock.mockResolvedValue({ ok: true, fila: filaDeCinco() });
+    solicitarCalculoProgramacaoPcpActionMock.mockResolvedValue({
+      ok: false,
+      motivo: "reserva_ocupada",
+      detalhe: { responsavelAtualNome: "Outro Usuário", situacao: "ocupada" },
+    });
+    render(<PrioridadesPcpPage />);
+
+    await waitFor(() => expect(screen.getByText("260005")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Cálculo" }));
+
+    await waitFor(() => expect(screen.getByText(/Outro Usuário está com uma movimentação/)).toBeTruthy());
+  });
+
+  it("sem permissão: botão é desativado após a resposta, igual ao fluxo de movimentação", async () => {
+    consultarFilaPrioridadesPcpActionMock.mockResolvedValue({ ok: true, fila: filaDeCinco() });
+    solicitarCalculoProgramacaoPcpActionMock.mockResolvedValue({ ok: false, motivo: "nao_autorizado" });
+    render(<PrioridadesPcpPage />);
+
+    await waitFor(() => expect(screen.getByText("260005")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Cálculo" }));
+
+    await waitFor(() => expect(screen.getByText(/pcp.solicitar_calculo/)).toBeTruthy());
+    expect((screen.getByRole("button", { name: "Solicitar Cálculo" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("clique repetido enquanto a solicitação está em andamento: só 1 chamada ao servidor", async () => {
+    consultarFilaPrioridadesPcpActionMock.mockResolvedValue({ ok: true, fila: filaDeCinco() });
+    let resolverChamada!: (valor: unknown) => void;
+    solicitarCalculoProgramacaoPcpActionMock.mockImplementationOnce(
+      () => new Promise((resolve) => (resolverChamada = resolve)),
+    );
+    render(<PrioridadesPcpPage />);
+
+    await waitFor(() => expect(screen.getByText("260005")).toBeTruthy());
+    const botao = screen.getByRole("button", { name: "Solicitar Cálculo" });
+    fireEvent.click(botao);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Calculando..." })).toBeTruthy());
+    expect(solicitarCalculoProgramacaoPcpActionMock).toHaveBeenCalledTimes(1);
+
+    resolverChamada({
+      ok: true,
+      versaoCapacidadeUtilizada: "7",
+      janela: { dataInicial: "2026-10-28", dataFinal: "2026-11-03" },
+      operacoes: [],
+      excluidas: [],
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", viaRecuperacaoPosFalhaDeComunicacao: false },
+    });
+    await waitFor(() => expect(screen.getByText(/publicada com sucesso/)).toBeTruthy());
   });
 });

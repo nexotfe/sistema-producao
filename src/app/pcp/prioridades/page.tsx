@@ -9,11 +9,16 @@ import { EntityLink } from "@/modules/shared/navigation/EntityLink";
 import { Button } from "@/modules/shared/ui/Button";
 import { consultarFilaPrioridadesPcpAction } from "@/modules/pcp/actions/consultarFilaPrioridadesPcpAction";
 import { moverPrioridadeProjetoPcpAction } from "@/modules/pcp/actions/moverPrioridadeProjetoPcpAction";
+import { solicitarCalculoProgramacaoPcpAction } from "@/modules/pcp/actions/solicitarCalculoProgramacaoPcpAction";
 import type { ItemFilaPrioridadesPcp } from "@/modules/pcp/lib/buscarFilaPrioridadesPcp";
 import type {
   ResultadoMoverPrioridadePcp,
   ResultadoRecalculoConsultivoPosMovimento,
 } from "@/modules/pcp/actions/orquestrarMovimentoPrioridadePcp";
+import type {
+  ResultadoSolicitacaoCalculoPcp,
+  ResultadoConclusaoExecucaoMotorPcp,
+} from "@/modules/pcp/actions/orquestrarSolicitacaoCalculoPcp";
 
 const currentUser = "Flavio Evangelista";
 
@@ -28,6 +33,13 @@ type EstadoMovimento =
   | { tipo: "ocioso" }
   | { tipo: "movendo"; projetoId: string }
   | { tipo: "resultado"; projetoId: string; resultado: ResultadoMoverPrioridadePcp };
+
+// ETAPA 2O.8B-I6H: solicitação independente de cálculo - nunca move
+// prioridade, nunca grava no Histórico de Prioridades (orquestrarSolicitacaoCalculoPcp.ts).
+type EstadoSolicitacaoCalculo =
+  | { tipo: "ocioso" }
+  | { tipo: "solicitando" }
+  | { tipo: "resultado"; resultado: ResultadoSolicitacaoCalculoPcp };
 
 function dataIsoComOffset(offsetDias: number): string {
   const data = new Date();
@@ -128,11 +140,68 @@ function ResumoRecalculo({ recalculo }: { recalculo: ResultadoRecalculoConsultiv
   );
 }
 
+/**
+ * ETAPA 2O.8B-I6H: nunca apresenta sucesso antes da confirmação da
+ * publicação oficial - "Motor concluiu o cálculo" (resultado.ok) e
+ * "programação oficial publicada" (conclusao.resultadoEfetivo===
+ * 'concluido') são informações distintas, igual ao mesmo princípio já
+ * aplicado ao recálculo decorrente de mover prioridade.
+ */
+function TextoConclusaoExecucao({ conclusao }: { conclusao: ResultadoConclusaoExecucaoMotorPcp | null }) {
+  if (conclusao === null) {
+    return (
+      <p className="text-sm text-status-warning-text">
+        O estado da execução do cálculo não pôde ser confirmado. Novas solicitações desta empresa ficam bloqueadas
+        até a recuperação segura da reserva.
+      </p>
+    );
+  }
+  if (!conclusao.aceito) {
+    return (
+      <p className="text-sm text-status-warning-text">
+        A conclusão do cálculo foi rejeitada ({conclusao.motivoRejeicao}) - nenhuma programação foi publicada.
+      </p>
+    );
+  }
+  if (conclusao.resultadoEfetivo === "obsoleto") {
+    return (
+      <p className="text-sm text-status-warning-text">
+        Cálculo rejeitado por obsolescência: a capacidade da fábrica mudou durante o processamento. Nenhuma
+        programação foi publicada - solicite o cálculo novamente.
+      </p>
+    );
+  }
+  if (conclusao.resultadoEfetivo === "falhou_recuperavel") {
+    return (
+      <p className="text-sm text-status-warning-text">
+        O cálculo foi interrompido por falha confirmada. Nenhuma programação foi publicada.
+      </p>
+    );
+  }
+  return (
+    <p className="text-sm font-semibold text-status-success-text">
+      Programação oficial publicada com sucesso
+      {conclusao.viaRecuperacaoPosFalhaDeComunicacao
+        ? " (confirmado via histórico técnico, após perda de resposta da chamada)"
+        : ""}
+      .
+    </p>
+  );
+}
+
+const MENSAGENS_FALHA_SOLICITACAO: Record<string, string> = {
+  nao_autenticado: "Sessão não autenticada.",
+  nao_autorizado: "Você não tem a permissão pcp.solicitar_calculo necessária.",
+  empresa_nao_resolvida: "Não foi possível resolver sua empresa.",
+  ...MENSAGENS_FALHA_RECALCULO,
+};
+
 export default function PrioridadesPcpPage() {
   const [estado, setEstado] = useState<EstadoCarregamento>({ tipo: "carregando" });
   const [busca, setBusca] = useState("");
   const [somenteLeitura, setSomenteLeitura] = useState(false);
   const [movimento, setMovimento] = useState<EstadoMovimento>({ tipo: "ocioso" });
+  const [solicitacaoCalculo, setSolicitacaoCalculo] = useState<EstadoSolicitacaoCalculo>({ tipo: "ocioso" });
   const [destinoPorProjeto, setDestinoPorProjeto] = useState<Record<string, string>>({});
   const [dataInicial, setDataInicial] = useState(() => dataIsoComOffset(0));
   const [dataFinal, setDataFinal] = useState(() => dataIsoComOffset(6));
@@ -225,6 +294,40 @@ export default function PrioridadesPcpPage() {
     // real, sucesso ou falha, para nunca mostrar um resultado antigo
     // como se fosse o mais atual (mudança própria ou de outro usuário).
     await carregarFila();
+  }
+
+  /**
+   * ETAPA 2O.8B-I6H: ação independente - nunca move prioridade, nunca
+   * exige justificativa (motivo é exclusivo de moverProjeto acima).
+   * Bloqueada enquanto houver qualquer movimentação em andamento, pois
+   * as duas disputam a MESMA reserva exclusiva por empresa.
+   */
+  async function solicitarCalculo() {
+    if (somenteLeitura) return;
+    if (solicitacaoCalculo.tipo === "solicitando" || movimento.tipo === "movendo") return;
+
+    setSolicitacaoCalculo({ tipo: "solicitando" });
+
+    let resultado: ResultadoSolicitacaoCalculoPcp;
+    try {
+      resultado = await solicitarCalculoProgramacaoPcpAction({ dataInicial, dataFinal });
+    } catch (erro) {
+      setSolicitacaoCalculo({
+        tipo: "resultado",
+        resultado: {
+          ok: false,
+          motivo: "falha_interna",
+          detalhe: erro instanceof Error ? erro.message : "Falha desconhecida ao solicitar o cálculo.",
+        },
+      });
+      return;
+    }
+
+    if (!resultado.ok && resultado.motivo === "nao_autorizado") {
+      setSomenteLeitura(true);
+    }
+
+    setSolicitacaoCalculo({ tipo: "resultado", resultado });
   }
 
   const filaVisivel =
@@ -347,6 +450,71 @@ export default function PrioridadesPcpPage() {
                 />
               </div>
             </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button
+                variant="secondary"
+                disabled={somenteLeitura || solicitacaoCalculo.tipo === "solicitando" || movimento.tipo === "movendo"}
+                onClick={solicitarCalculo}
+              >
+                {solicitacaoCalculo.tipo === "solicitando" ? "Calculando..." : "Solicitar Cálculo"}
+              </Button>
+              <p className="text-xs text-text-secondary">
+                Calcula a programação da empresa inteira no período acima, sem alterar a ordem de prioridades.
+              </p>
+            </div>
+
+            {solicitacaoCalculo.tipo === "resultado" ? (
+              <div className="mt-3 rounded-md border border-border-subtle bg-border-subtle px-3 py-3">
+                {!solicitacaoCalculo.resultado.ok ? (
+                  <p className="text-sm text-status-warning-text">
+                    {solicitacaoCalculo.resultado.motivo === "reserva_ocupada"
+                      ? solicitacaoCalculo.resultado.detalhe.situacao === "recuperacao_pendente"
+                        ? "Não foi possível calcular: o recálculo anterior desta empresa ficou com situação não confirmada e aguarda recuperação segura."
+                        : `Não foi possível calcular agora: ${solicitacaoCalculo.resultado.detalhe.responsavelAtualNome} está com uma movimentação/recálculo em andamento nesta empresa.`
+                      : solicitacaoCalculo.resultado.motivo === "falha_ao_iniciar_reserva"
+                        ? `Não foi possível iniciar o cálculo: ${solicitacaoCalculo.resultado.detalhe}`
+                        : solicitacaoCalculo.resultado.motivo === "janela_invalida"
+                          ? `Período inválido: ${solicitacaoCalculo.resultado.detalhe}`
+                          : solicitacaoCalculo.resultado.motivo === "inconsistencia_ao_montar_persistencia"
+                            ? "O Motor concluiu o cálculo, mas o resultado não pôde ser montado para publicação (inconsistência interna de dados)."
+                            : solicitacaoCalculo.resultado.motivo === "estado_desconhecido_apos_falha"
+                              ? "O estado da execução não pôde ser confirmado. Novas solicitações desta empresa ficam bloqueadas até a recuperação segura."
+                              : (MENSAGENS_FALHA_SOLICITACAO[solicitacaoCalculo.resultado.motivo] ?? "Não foi possível concluir o cálculo.")}
+                  </p>
+                ) : (
+                  <>
+                    <TextoConclusaoExecucao conclusao={solicitacaoCalculo.resultado.conclusaoExecucao} />
+                    <p className="mt-1 text-sm text-text-secondary">
+                      Motor concluído (versão de capacidade {solicitacaoCalculo.resultado.versaoCapacidadeUtilizada}):{" "}
+                      <strong className="text-text-primary">
+                        {solicitacaoCalculo.resultado.operacoes.filter((o) => o.status === "concluida").length}
+                      </strong>{" "}
+                      operação(ões) programada(s),{" "}
+                      <strong className="text-text-primary">
+                        {solicitacaoCalculo.resultado.operacoes.filter((o) => o.status === "bloqueada_por_deficit").length}
+                      </strong>{" "}
+                      com déficit,{" "}
+                      <strong className="text-text-primary">
+                        {
+                          solicitacaoCalculo.resultado.operacoes.filter((o) => o.status === "bloqueada_por_predecessora")
+                            .length
+                        }
+                      </strong>{" "}
+                      bloqueada(s) por predecessora
+                      {solicitacaoCalculo.resultado.excluidas.length > 0 ? (
+                        <>
+                          {" "}
+                          e <strong className="text-text-primary">{solicitacaoCalculo.resultado.excluidas.length}</strong>{" "}
+                          excluída(s) por dados insuficientes
+                        </>
+                      ) : null}
+                      .
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : null}
 
             {somenteLeitura ? (
               <p className="mt-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-text">
