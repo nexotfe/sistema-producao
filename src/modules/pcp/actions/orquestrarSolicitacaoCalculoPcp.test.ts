@@ -1,8 +1,10 @@
-// PCP-Etapa2N / Etapa 2O.8B-I6-B: testes do orquestrador de solicitação
-// de recálculo independente, agora protegido por reserva exclusiva
-// (contexto='solicitar_calculo') e executado via supervisor+Worker
-// (dependências 100% falsas - a RPC real e o spawn real da Worker só
-// são validados em sandbox/integração, ver relatório da I6-B).
+// PCP-Etapa2N / Etapa 2O.8B-I6-B / ETAPA 2O.8B-I6H: testes do
+// orquestrador de solicitação de recálculo independente, protegido por
+// reserva exclusiva (contexto='solicitar_calculo'), executado via
+// supervisor+Worker, e agora integrado à persistência oficial
+// (concluir_execucao_motor_pcp) - dependências 100% falsas (a RPC real,
+// o spawn real da Worker e a transação de persistência só são
+// validados em sandbox/integração, ver relatórios da I6-B e da I6H).
 import { describe, expect, it, vi } from "vitest";
 import {
   orquestrarSolicitacaoCalculoPcp,
@@ -43,6 +45,7 @@ function entradaSerializavelNormal(): EntradaMotorPcpSerializavel {
     diasProdutivos: ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06"],
     posicaoPorProjeto: { "projeto-1": 1 },
     excluidas: [],
+    ofIdPorOpId: { "op-1": "of-1" },
   };
 }
 
@@ -62,6 +65,8 @@ function resultadoMotorNormal(): ResultadoMotorMap {
   ]);
 }
 
+const CONCLUSAO_SUCESSO_PADRAO = { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", motivoRejeicao: null };
+
 function criarDependenciasFalsas(
   overrides: Partial<{
     userId: string | null;
@@ -75,6 +80,9 @@ function criarDependenciasFalsas(
     supervisao: ResultadoSupervisaoMotorPcp<ResultadoMotorMap>;
     finalizarRetorno: boolean;
     erroFinalizar: Error;
+    concluirExecucaoRetorno: { aceito: boolean; resultadoEfetivo: string | null; programacaoId: string | null; motivoRejeicao: string | null };
+    erroConcluirExecucao: Error;
+    historicoRetorno: { resultado: "concluido" | "obsoleto" | "falhou_recuperavel"; programacaoId: string | null } | null;
   }> = {},
 ) {
   const userId: string | null = "userId" in overrides ? (overrides.userId as string | null) : "usuario-1";
@@ -87,6 +95,8 @@ function criarDependenciasFalsas(
   const supervisao: ResultadoSupervisaoMotorPcp<ResultadoMotorMap> =
     overrides.supervisao ?? { situacao: "concluido", resultado: resultadoMotorNormal(), tempoTotalMs: 10 };
   const finalizarRetorno = overrides.finalizarRetorno ?? true;
+  const concluirExecucaoRetorno = overrides.concluirExecucaoRetorno ?? CONCLUSAO_SUCESSO_PADRAO;
+  const historicoRetorno = overrides.historicoRetorno ?? null;
 
   let chamadaVersao = 0;
 
@@ -112,6 +122,11 @@ function criarDependenciasFalsas(
     return entrada;
   });
   const executarCalculoSupervisionado = vi.fn(async (_entrada: EntradaMotorPcpSerializavel, _limiteEfetivoMs: number) => supervisao);
+  const concluirExecucao = vi.fn(async (_params: unknown) => {
+    if (overrides.erroConcluirExecucao) throw overrides.erroConcluirExecucao;
+    return concluirExecucaoRetorno;
+  });
+  const consultarHistoricoExecucao = vi.fn(async (_execucaoId: string) => historicoRetorno);
 
   const deps: DependenciasSolicitacaoCalculoPcp = {
     autenticar,
@@ -123,6 +138,8 @@ function criarDependenciasFalsas(
     lerVersaoCapacidade,
     montarEntradaSerializavel,
     executarCalculoSupervisionado,
+    concluirExecucao,
+    consultarHistoricoExecucao,
   };
   return {
     deps,
@@ -135,6 +152,8 @@ function criarDependenciasFalsas(
     lerVersaoCapacidade,
     montarEntradaSerializavel,
     executarCalculoSupervisionado,
+    concluirExecucao,
+    consultarHistoricoExecucao,
   };
 }
 
@@ -227,22 +246,25 @@ describe("orquestrarSolicitacaoCalculoPcp - reserva exclusiva (I6-B)", () => {
 });
 
 describe("orquestrarSolicitacaoCalculoPcp - versão de capacidade (consistência)", () => {
-  it("versão indisponível ANTES do cálculo: versao_capacidade_indisponivel, libera a reserva como falhou", async () => {
-    const { deps, finalizarReserva } = criarDependenciasFalsas({ versoes: [] });
+  it("versão indisponível ANTES do cálculo: versao_capacidade_indisponivel, conclui a execução como falhou_recuperavel", async () => {
+    const { deps, concluirExecucao } = criarDependenciasFalsas({ versoes: [] });
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
-    expect(resultado).toEqual({ ok: false, motivo: "versao_capacidade_indisponivel" });
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(resultado).toMatchObject({ ok: false, motivo: "versao_capacidade_indisponivel" });
+    expect(concluirExecucao).toHaveBeenCalledWith(
+      expect.objectContaining({ empresaId: "empresa-1", execucaoId: RESERVA_ADQUIRIDA_PADRAO.execucaoId, resultado: "falhou_recuperavel" }),
+    );
   });
 
-  it("versão mudou DURANTE a montagem da entrada: capacidade_mudou_durante_calculo, nunca executa o Motor", async () => {
-    const { deps, executarCalculoSupervisionado } = criarDependenciasFalsas({ versoes: [5, 6, 6] });
+  it("versão mudou DURANTE a montagem da entrada: capacidade_mudou_durante_calculo, nunca executa o Motor, conclui como falhou_recuperavel", async () => {
+    const { deps, executarCalculoSupervisionado, concluirExecucao } = criarDependenciasFalsas({ versoes: [5, 6, 6] });
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
-    expect(resultado).toEqual({ ok: false, motivo: "capacidade_mudou_durante_calculo" });
+    expect(resultado).toMatchObject({ ok: false, motivo: "capacidade_mudou_durante_calculo" });
     expect(executarCalculoSupervisionado).not.toHaveBeenCalled();
+    expect(concluirExecucao).toHaveBeenCalledWith(expect.objectContaining({ resultado: "falhou_recuperavel", motivo: "capacidade_mudou_durante_calculo" }));
   });
 
   it("versão mudou DURANTE a execução do Motor (depois de 'concluido'): capacidade_mudou_durante_calculo, resultado descartado", async () => {
@@ -250,13 +272,13 @@ describe("orquestrarSolicitacaoCalculoPcp - versão de capacidade (consistência
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
-    expect(resultado).toEqual({ ok: false, motivo: "capacidade_mudou_durante_calculo" });
+    expect(resultado).toMatchObject({ ok: false, motivo: "capacidade_mudou_durante_calculo" });
   });
 });
 
-describe("orquestrarSolicitacaoCalculoPcp - execução supervisionada (I6-B)", () => {
-  it("conclusão normal: ok=true com operações convertidas, liberacaoReserva.liberada=true, reserva finalizada como concluida", async () => {
-    const { deps, finalizarReserva } = criarDependenciasFalsas();
+describe("orquestrarSolicitacaoCalculoPcp - execução supervisionada e persistência oficial (I6-B/I6H)", () => {
+  it("conclusão normal: ok=true com operações convertidas, conclusaoExecucao via concluirExecucao com resultado 'concluido'", async () => {
+    const { deps, concluirExecucao } = criarDependenciasFalsas();
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
@@ -264,19 +286,37 @@ describe("orquestrarSolicitacaoCalculoPcp - execução supervisionada (I6-B)", (
     if (!resultado.ok) return;
     expect(resultado.operacoes).toHaveLength(1);
     expect(resultado.operacoes[0]).toMatchObject({ opId: "op-1", status: "concluida", deficitResidualHorasPadrao: 0 });
-    expect(resultado.liberacaoReserva).toEqual({ liberada: true });
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "concluida");
+    expect(resultado.conclusaoExecucao).toEqual({ aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", viaRecuperacaoPosFalhaDeComunicacao: false });
+    expect(concluirExecucao).toHaveBeenCalledWith(
+      expect.objectContaining({
+        empresaId: "empresa-1",
+        execucaoId: RESERVA_ADQUIRIDA_PADRAO.execucaoId,
+        resultado: "concluido",
+        empresaCapacidadeVersaoOrigem: 5,
+        janelaInicio: "2026-11-02",
+        janelaFim: "2026-11-06",
+        ocorrencias: [
+          expect.objectContaining({
+            op_id: "op-1",
+            of_id: "of-1",
+            projeto_id: "projeto-1",
+            prioridade_usada: 1,
+            status_calculo_motor: "concluida",
+          }),
+        ],
+      }),
+    );
   });
 
-  it("interrompido pelo supervisor (limite de tempo): NUNCA reportado como sucesso, reserva finalizada como falhou", async () => {
-    const { deps, finalizarReserva } = criarDependenciasFalsas({
+  it("interrompido pelo supervisor (limite de tempo): NUNCA reportado como sucesso, conclui a execução como falhou_recuperavel", async () => {
+    const { deps, concluirExecucao } = criarDependenciasFalsas({
       supervisao: { situacao: "interrompido_por_limite", tempoTotalMs: 240_000, via: "promise_terminate" },
     });
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
-    expect(resultado).toEqual({ ok: false, motivo: "interrompido_por_limite_de_tempo" });
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(resultado).toMatchObject({ ok: false, motivo: "interrompido_por_limite_de_tempo" });
+    expect(concluirExecucao).toHaveBeenCalledWith(expect.objectContaining({ resultado: "falhou_recuperavel", motivo: "interrompido_por_limite_de_tempo" }));
   });
 
   it("erro real na Worker: falha_na_worker com a mensagem real, nunca confundido com interrupção por limite", async () => {
@@ -286,7 +326,7 @@ describe("orquestrarSolicitacaoCalculoPcp - execução supervisionada (I6-B)", (
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
-    expect(resultado).toEqual({ ok: false, motivo: "falha_na_worker", detalhe: "Dependência referencia ocorrência inexistente." });
+    expect(resultado).toMatchObject({ ok: false, motivo: "falha_na_worker", detalhe: "Dependência referencia ocorrência inexistente." });
   });
 
   it("saída inesperada da Worker: falha_na_worker com o exitCode, nunca reportado como sucesso", async () => {
@@ -301,49 +341,106 @@ describe("orquestrarSolicitacaoCalculoPcp - execução supervisionada (I6-B)", (
     expect(resultado.motivo).toBe("falha_na_worker");
   });
 
-  it("falha ao montar a entrada serializável: falha_interna, reserva liberada como falhou", async () => {
-    const { deps, finalizarReserva } = criarDependenciasFalsas({ entrada: new Error("falha simulada ao montar entrada") });
+  it("falha ao montar a entrada serializável: falha_interna, conclui a execução como falhou_recuperavel", async () => {
+    const { deps, concluirExecucao } = criarDependenciasFalsas({ entrada: new Error("falha simulada ao montar entrada") });
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
-    expect(resultado).toEqual({ ok: false, motivo: "falha_interna", detalhe: "falha simulada ao montar entrada" });
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(resultado).toMatchObject({ ok: false, motivo: "falha_interna", detalhe: "falha simulada ao montar entrada" });
+    expect(concluirExecucao).toHaveBeenCalledWith(expect.objectContaining({ resultado: "falhou_recuperavel" }));
+  });
+
+  // ETAPA 2O.8B-I6H: único caso de incerteza GENUÍNA sobre o
+  // Motor/Worker - o supervisor não conseguiu confirmar o encerramento
+  // dentro da margem de segurança (supervisorMotorPcp.ts). NUNCA toca a
+  // reserva - nem o antigo finalizarReserva, nem o novo concluirExecucao.
+  it("supervisor não confirma encerramento (estado_desconhecido): estado_desconhecido_apos_falha, NUNCA chama concluirExecucao nem finalizarReserva", async () => {
+    const { deps, concluirExecucao, finalizarReserva } = criarDependenciasFalsas({
+      supervisao: { situacao: "estado_desconhecido", tempoTotalMs: 5_000, origem: "margem_confirmacao_terminate_esgotada" },
+    });
+
+    const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
+
+    expect(resultado).toEqual({ ok: false, motivo: "estado_desconhecido_apos_falha" });
+    expect(concluirExecucao).not.toHaveBeenCalled();
+    expect(finalizarReserva).not.toHaveBeenCalled();
   });
 });
 
-describe("orquestrarSolicitacaoCalculoPcp - finalização da reserva com tratamento explícito (I6-B)", () => {
-  it("sucesso do cálculo mas finalizarReserva devolve false: ok:true preservado, liberacaoReserva.liberada=false com detalhe", async () => {
-    const { deps } = criarDependenciasFalsas({ finalizarRetorno: false });
+describe("orquestrarSolicitacaoCalculoPcp - montagem do payload de persistência (ETAPA 2O.8B-I6H)", () => {
+  it("operação calculada sem ofId resolvível contra a entrada: inconsistencia_ao_montar_persistencia, nunca usa identificador fictício, conclui como falhou_recuperavel", async () => {
+    const entradaSemOfId: EntradaMotorPcpSerializavel = { ...entradaSerializavelNormal(), ofIdPorOpId: {} };
+    const { deps, concluirExecucao } = criarDependenciasFalsas({ entrada: entradaSemOfId });
+
+    const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
+
+    expect(resultado).toMatchObject({ ok: false, motivo: "inconsistencia_ao_montar_persistencia" });
+    expect(concluirExecucao).toHaveBeenCalledWith(expect.objectContaining({ resultado: "falhou_recuperavel" }));
+  });
+});
+
+describe("orquestrarSolicitacaoCalculoPcp - conclusão da execução com tratamento explícito (ETAPA 2O.8B-I6H)", () => {
+  it("concluirExecucao rejeita (aceito:false): conclusaoExecucao reporta o motivo de rejeição, nunca aparenta sucesso", async () => {
+    const { deps } = criarDependenciasFalsas({
+      concluirExecucaoRetorno: { aceito: false, resultadoEfetivo: null, programacaoId: null, motivoRejeicao: "execucao_nao_corresponde_a_reserva_vigente" },
+    });
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
     expect(resultado.ok).toBe(true);
     if (!resultado.ok) return;
-    expect(resultado.operacoes).toHaveLength(1);
-    expect(resultado.liberacaoReserva.liberada).toBe(false);
-    if (resultado.liberacaoReserva.liberada) return;
-    expect(resultado.liberacaoReserva.detalhe).toContain("finalizar_recalculo_pcp retornou false");
+    expect(resultado.conclusaoExecucao).toEqual({ aceito: false, motivoRejeicao: "execucao_nao_corresponde_a_reserva_vigente" });
   });
 
-  it("sucesso do cálculo mas finalizarReserva lança exceção: ok:true preservado, liberacaoReserva.liberada=false com o erro real", async () => {
-    const { deps } = criarDependenciasFalsas({ erroFinalizar: new Error("finalizar_recalculo_pcp: timeout de rede") });
+  // Condição 3 do desenho aprovado: concluirExecucao lança (falha de
+  // comunicação genuína), mas o histórico confirma que a execução já
+  // havia concluído com sucesso - resultado reportado como sucesso
+  // recuperado via histórico, NUNCA repetido nem reportado como falha.
+  it("concluirExecucao lança exceção, mas o histórico confirma que a execução já havia concluído com sucesso: resultado reportado como sucesso recuperado via histórico, nunca repetido nem reportado como falha", async () => {
+    const { deps, consultarHistoricoExecucao } = criarDependenciasFalsas({
+      erroConcluirExecucao: new Error("timeout de rede ao chamar concluir_execucao_motor_pcp"),
+      historicoRetorno: { resultado: "concluido", programacaoId: "prog-recuperado" },
+    });
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
     expect(resultado.ok).toBe(true);
     if (!resultado.ok) return;
-    expect(resultado.liberacaoReserva).toEqual({ liberada: false, detalhe: "finalizar_recalculo_pcp: timeout de rede" });
+    expect(resultado.conclusaoExecucao).toEqual({
+      aceito: true,
+      resultadoEfetivo: "concluido",
+      programacaoId: "prog-recuperado",
+      viaRecuperacaoPosFalhaDeComunicacao: true,
+    });
+    expect(consultarHistoricoExecucao).toHaveBeenCalledWith(RESERVA_ADQUIRIDA_PADRAO.execucaoId);
+  });
+
+  it("concluirExecucao lança exceção e o histórico não confirma nada: reportado como falha desconhecida, SEM liberar a reserva por suposição", async () => {
+    const { deps } = criarDependenciasFalsas({
+      erroConcluirExecucao: new Error("timeout de rede ao chamar concluir_execucao_motor_pcp"),
+      historicoRetorno: null,
+    });
+
+    const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
+
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    expect(resultado.conclusaoExecucao).toMatchObject({ aceito: false });
+    if (!resultado.conclusaoExecucao || resultado.conclusaoExecucao.aceito) return;
+    expect(resultado.conclusaoExecucao.motivoRejeicao).toContain("falha_de_comunicacao_sem_confirmacao_no_historico");
   });
 });
 
-describe("orquestrarSolicitacaoCalculoPcp - ausência estrutural de escrita de programação oficial", () => {
-  it("DependenciasSolicitacaoCalculoPcp não expõe nenhum método de persistência de programação oficial, nem de movimentação de prioridade", () => {
+describe("orquestrarSolicitacaoCalculoPcp - persistência oficial é a única via exposta (ETAPA 2O.8B-I6H)", () => {
+  it("DependenciasSolicitacaoCalculoPcp expõe concluirExecucao/consultarHistoricoExecucao, que são a única via de persistência oficial - nunca chama persistir_programacao_pcp/finalizar_recalculo_pcp diretamente para uma execução do Motor concluída", () => {
     const { deps } = criarDependenciasFalsas();
     const chaves = Object.keys(deps).sort();
     expect(chaves).toEqual([
       "autenticar",
       "autorizar",
       "calcularLimiteEfetivoMs",
+      "concluirExecucao",
+      "consultarHistoricoExecucao",
       "executarCalculoSupervisionado",
       "finalizarReserva",
       "iniciarReserva",
@@ -419,8 +516,8 @@ describe("orquestrarSolicitacaoCalculoPcp - orçamento de tempo recalculado apó
     expect(tempoPassadoNaUltimaChamada).toBeGreaterThanOrEqual(ATRASO_PREPARACAO_MS);
   });
 
-  it("preparação consome a margem toda: sem_margem_segura_para_executar, Worker NUNCA chamada, reserva finalizada como falhou", async () => {
-    const { deps, executarCalculoSupervisionado, finalizarReserva, calcularLimiteEfetivoMs } = criarDependenciasFalsas();
+  it("preparação consome a margem toda: sem_margem_segura_para_executar, Worker NUNCA chamada, conclui a execução como falhou_recuperavel", async () => {
+    const { deps, executarCalculoSupervisionado, concluirExecucao, calcularLimiteEfetivoMs } = criarDependenciasFalsas();
     // Primeira chamada (pré-checagem, antes da reserva) tem margem; a
     // segunda (recalculada após a preparação) não tem mais - simula
     // exatamente o cenário do achado #1: a preparação consumiu a
@@ -433,8 +530,8 @@ describe("orquestrarSolicitacaoCalculoPcp - orçamento de tempo recalculado apó
 
     const resultado = await orquestrarSolicitacaoCalculoPcp(JANELA_PADRAO, deps);
 
-    expect(resultado).toEqual({ ok: false, motivo: "sem_margem_segura_para_executar" });
+    expect(resultado).toMatchObject({ ok: false, motivo: "sem_margem_segura_para_executar" });
     expect(executarCalculoSupervisionado).not.toHaveBeenCalled();
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(concluirExecucao).toHaveBeenCalledWith(expect.objectContaining({ resultado: "falhou_recuperavel", motivo: "sem_margem_segura_para_executar" }));
   });
 });

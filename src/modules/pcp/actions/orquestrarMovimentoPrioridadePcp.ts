@@ -77,15 +77,19 @@
 // prioridade NUNCA é desfeita - falha de análise não reverte uma
 // decisão de negócio já registrada (decisão do proprietário, Etapa
 // 2O.3, preservada sem alteração na Parte 3).
-import type { ResultadoCalculoMotorSupervisionado } from "./orquestrarSolicitacaoCalculoPcp";
+import type { ResultadoCalculoMotorSupervisionado, ResultadoMontagemOcorrenciasPersistenciaPcp } from "./orquestrarSolicitacaoCalculoPcp";
+import { montarOcorrenciasParaPersistenciaPcp } from "./orquestrarSolicitacaoCalculoPcp";
 import {
   liberarReservaComTratamentoExplicito,
+  concluirExecucaoComTratamentoExplicito,
   type DependenciasReservaRecalculoPcp,
   type ResultadoIniciarReservaPcp,
   type ResultadoLiberacaoReservaPcp,
+  type DependenciasConclusaoExecucaoMotorPcp,
+  type ResultadoConclusaoExecucaoMotorPcp,
 } from "./reservaExclusivaRecalculoPcp";
 
-export type { ResultadoIniciarReservaPcp, ResultadoLiberacaoReservaPcp };
+export type { ResultadoIniciarReservaPcp, ResultadoLiberacaoReservaPcp, ResultadoConclusaoExecucaoMotorPcp };
 
 export interface PayloadMoverPrioridadePcp {
   projetoId: string;
@@ -107,7 +111,7 @@ export type ResultadoRecalculoConsultivoPosMovimento =
   | ResultadoCalculoMotorSupervisionado
   | { ok: false; motivo: "falha_inesperada"; detalhe: string };
 
-export interface DependenciasMoverPrioridadePcp extends DependenciasReservaRecalculoPcp {
+export interface DependenciasMoverPrioridadePcp extends DependenciasReservaRecalculoPcp, DependenciasConclusaoExecucaoMotorPcp {
   /** auth.getUser() no client de sessão - null se não autenticado. */
   autenticar: () => Promise<string | null>;
   /** usuario_tem_permissao(userId, 'pcp.alterar_prioridade') no client service_role. */
@@ -169,7 +173,16 @@ export type ResultadoMoverPrioridadePcp =
       posicaoNova: number;
       eventoHistoricoId: string;
       recalculo: ResultadoRecalculoConsultivoPosMovimento;
-      liberacaoReserva: ResultadoLiberacaoReservaPcp;
+      /**
+       * ETAPA 2O.8B-I6H: null especificamente quando `recalculo` for
+       * "falha_inesperada" ou "estado_desconhecido_apos_falha" - os
+       * ÚNICOS casos de incerteza genuína sobre o Motor/Worker, em que
+       * NADA é feito com a reserva (ver corpo da função). Em qualquer
+       * outro caso (sucesso ou falha CONFIRMADA do cálculo), é sempre o
+       * resultado real de concluirExecucaoComTratamentoExplicito - nunca
+       * omitido (mesmo princípio de transparência da antiga liberacaoReserva).
+       */
+      conclusaoExecucao: ResultadoConclusaoExecucaoMotorPcp | null;
     };
 
 const REGEX_DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -272,9 +285,58 @@ export async function orquestrarMovimentoPrioridadePcp(
   // "Motor concluiu o cálculo" (ok:true) nunca significa "exceção não
   // foi lançada" - uma Worker interrompida ou com erro real devolve um
   // valor normal (ok:false), por desenho (ver cabeçalho do arquivo).
-  const situacaoFinal: "concluida" | "falhou" = recalculo.ok ? "concluida" : "falhou";
 
-  const liberacaoReserva = await liberarReservaComTratamentoExplicito(deps, empresaId, reserva.execucaoId, situacaoFinal);
+  // ETAPA 2O.8B-I6H, MUDANÇA DE COMPORTAMENTO DELIBERADA: "falha_inesperada"
+  // e "estado_desconhecido_apos_falha" são os ÚNICOS casos de incerteza
+  // GENUÍNA sobre o Motor/Worker - o primeiro porque executarRecalculoConsultivo
+  // lançou algo fora do seu próprio contrato ("nunca lança por desenho");
+  // o segundo porque o supervisor não conseguiu confirmar o encerramento
+  // da Worker dentro da margem de segurança (supervisorMotorPcp.ts).
+  // Diferente de QUALQUER outro motivo de ResultadoCalculoMotorSupervisionado
+  // (sempre uma falha CONFIRMADA, pela garantia do supervisor), aqui
+  // genuinamente não sabemos o que aconteceu - NUNCA presumir, NUNCA
+  // tocar a reserva por conta própria (nem concluirExecucao, nem o
+  // antigo finalizarReserva) - deixa seguir seu curso normal
+  // (expira_em/recuperacao_pendente, DEC-009). A prioridade e o
+  // Histórico de Prioridades, já persistidos antes deste ponto, nunca
+  // são afetados por essa incerteza.
+  if (!recalculo.ok && (recalculo.motivo === "falha_inesperada" || recalculo.motivo === "estado_desconhecido_apos_falha")) {
+    return { ok: true, posicaoNova, eventoHistoricoId, recalculo, conclusaoExecucao: null };
+  }
 
-  return { ok: true, posicaoNova, eventoHistoricoId, recalculo, liberacaoReserva };
+  if (!recalculo.ok) {
+    const conclusaoExecucao = await concluirExecucaoComTratamentoExplicito(deps, {
+      empresaId,
+      execucaoId: reserva.execucaoId,
+      resultado: "falhou_recuperavel",
+      motivo: recalculo.motivo,
+    });
+    return { ok: true, posicaoNova, eventoHistoricoId, recalculo, conclusaoExecucao };
+  }
+
+  // ETAPA 2O.8B-I6H: monta o payload de persistência a partir da MESMA
+  // entrada usada no cálculo (recalculo.entrada) - nunca uma segunda
+  // consulta ao banco (condição 2 do desenho aprovado).
+  const montagem: ResultadoMontagemOcorrenciasPersistenciaPcp = montarOcorrenciasParaPersistenciaPcp(recalculo.operacoes, recalculo.entrada);
+  if (!montagem.ok) {
+    const conclusaoExecucao = await concluirExecucaoComTratamentoExplicito(deps, {
+      empresaId,
+      execucaoId: reserva.execucaoId,
+      resultado: "falhou_recuperavel",
+      motivo: `inconsistencia_ao_montar_persistencia: ${montagem.motivo} (opId=${montagem.opId})`,
+    });
+    return { ok: true, posicaoNova, eventoHistoricoId, recalculo, conclusaoExecucao };
+  }
+
+  const conclusaoExecucao = await concluirExecucaoComTratamentoExplicito(deps, {
+    empresaId,
+    execucaoId: reserva.execucaoId,
+    resultado: "concluido",
+    empresaCapacidadeVersaoOrigem: Number(recalculo.versaoCapacidadeUtilizada),
+    janelaInicio: payload.dataInicial,
+    janelaFim: payload.dataFinal,
+    ocorrencias: montagem.ocorrencias,
+  });
+
+  return { ok: true, posicaoNova, eventoHistoricoId, recalculo, conclusaoExecucao };
 }

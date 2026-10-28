@@ -1,10 +1,11 @@
-// PCP-Etapa2O.8B-I5 Parte 3: testes do orquestrador de movimento de
-// prioridade, agora protegido por reserva exclusiva. Dependências
-// 100% falsas - a RPC real (iniciar_recalculo_pcp/reordenar_fila_pcp/
-// finalizar_recalculo_pcp) só é validada em sandbox (ver relatório da
-// Parte 3). executarRecalculoConsultivo é sempre simulado aqui também,
-// coerente com a ligação real (moverPrioridadeProjetoPcpAction.ts) -
-// nenhum teste deste arquivo exercita o Motor real.
+// PCP-Etapa2O.8B-I5 Parte 3 / ETAPA 2O.8B-I6H: testes do orquestrador de
+// movimento de prioridade, agora protegido por reserva exclusiva E
+// integrado à persistência oficial (concluir_execucao_motor_pcp).
+// Dependências 100% falsas - a RPC real só é validada em sandbox (ver
+// relatórios da Parte 3 e da I6H). executarRecalculoConsultivo é sempre
+// simulado aqui também, coerente com a ligação real
+// (moverPrioridadeProjetoPcpAction.ts) - nenhum teste deste arquivo
+// exercita o Motor real.
 import { describe, expect, it, vi } from "vitest";
 import {
   orquestrarMovimentoPrioridadePcp,
@@ -13,6 +14,7 @@ import {
   type ResultadoIniciarReservaPcp,
   type ResultadoRecalculoConsultivoPosMovimento,
 } from "./orquestrarMovimentoPrioridadePcp";
+import type { EntradaMotorPcpSerializavel } from "../lib/motor/montarEntradaMotorPcp";
 
 const PAYLOAD_PADRAO: PayloadMoverPrioridadePcp = {
   projetoId: "projeto-e",
@@ -30,12 +32,26 @@ const RESERVA_ADQUIRIDA_PADRAO: ResultadoIniciarReservaPcp = {
   responsavelAtualNome: "Usuário Um",
 };
 
+const ENTRADA_FALSA_PADRAO: EntradaMotorPcpSerializavel = {
+  ocorrencias: [],
+  dependencias: [],
+  candidatos: [],
+  datasGradeCompartilhada: ["2026-11-02"],
+  diasProdutivos: ["2026-11-02"],
+  posicaoPorProjeto: {},
+  excluidas: [],
+  ofIdPorOpId: {},
+};
+
 const RECALCULO_REAL_PADRAO: ResultadoRecalculoConsultivoPosMovimento = {
   ok: true,
   versaoCapacidadeUtilizada: "7",
   operacoes: [],
   excluidas: [],
+  entrada: ENTRADA_FALSA_PADRAO,
 };
+
+const CONCLUSAO_SUCESSO_PADRAO = { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", motivoRejeicao: null };
 
 function criarDependenciasFalsas(
   overrides: Partial<{
@@ -51,6 +67,9 @@ function criarDependenciasFalsas(
     erroRecalculo: Error;
     finalizarRetorno: boolean;
     erroFinalizar: Error;
+    concluirExecucaoRetorno: { aceito: boolean; resultadoEfetivo: string | null; programacaoId: string | null; motivoRejeicao: string | null };
+    erroConcluirExecucao: Error;
+    historicoRetorno: { resultado: "concluido" | "obsoleto" | "falhou_recuperavel"; programacaoId: string | null } | null;
   }> = {},
 ) {
   const userId: string | null = "userId" in overrides ? (overrides.userId as string | null) : "usuario-1";
@@ -61,6 +80,8 @@ function criarDependenciasFalsas(
   const eventoHistoricoId = overrides.eventoHistoricoId ?? "evento-1";
   const recalculo = overrides.recalculo ?? RECALCULO_REAL_PADRAO;
   const finalizarRetorno = overrides.finalizarRetorno ?? true;
+  const concluirExecucaoRetorno = overrides.concluirExecucaoRetorno ?? CONCLUSAO_SUCESSO_PADRAO;
+  const historicoRetorno = overrides.historicoRetorno ?? null;
 
   const autenticar = vi.fn(async () => userId);
   const autorizar = vi.fn(async (_uid: string) => autorizado);
@@ -83,6 +104,11 @@ function criarDependenciasFalsas(
       return recalculo;
     },
   );
+  const concluirExecucao = vi.fn(async (_params: unknown) => {
+    if (overrides.erroConcluirExecucao) throw overrides.erroConcluirExecucao;
+    return concluirExecucaoRetorno;
+  });
+  const consultarHistoricoExecucao = vi.fn(async (_execucaoId: string) => historicoRetorno);
 
   const deps: DependenciasMoverPrioridadePcp = {
     autenticar,
@@ -92,8 +118,21 @@ function criarDependenciasFalsas(
     reordenarFila,
     finalizarReserva,
     executarRecalculoConsultivo,
+    concluirExecucao,
+    consultarHistoricoExecucao,
   };
-  return { deps, autenticar, autorizar, resolverEmpresa, iniciarReserva, reordenarFila, finalizarReserva, executarRecalculoConsultivo };
+  return {
+    deps,
+    autenticar,
+    autorizar,
+    resolverEmpresa,
+    iniciarReserva,
+    reordenarFila,
+    finalizarReserva,
+    executarRecalculoConsultivo,
+    concluirExecucao,
+    consultarHistoricoExecucao,
+  };
 }
 
 describe("orquestrarMovimentoPrioridadePcp - autenticação e autorização (curto-circuito)", () => {
@@ -229,8 +268,8 @@ describe("orquestrarMovimentoPrioridadePcp - identidade em toda a cadeia (ressal
 });
 
 describe("orquestrarMovimentoPrioridadePcp - falha na reordenação (prioridade nunca muda)", () => {
-  it("falha da RPC real: falha_reordenacao, libera a reserva como 'falhou', NUNCA chama executarRecalculoConsultivo", async () => {
-    const { deps, finalizarReserva, executarRecalculoConsultivo } = criarDependenciasFalsas({
+  it("falha da RPC real: falha_reordenacao, libera a reserva como 'falhou' pelo caminho ANTIGO (Motor nunca rodou - nunca concluirExecucao), NUNCA chama executarRecalculoConsultivo", async () => {
+    const { deps, finalizarReserva, concluirExecucao, executarRecalculoConsultivo } = criarDependenciasFalsas({
       erroReordenacao: new Error("reordenar_fila_pcp: vizinho anterior não está na fila da empresa."),
     });
 
@@ -242,6 +281,7 @@ describe("orquestrarMovimentoPrioridadePcp - falha na reordenação (prioridade 
       detalhe: "reordenar_fila_pcp: vizinho anterior não está na fila da empresa.",
     });
     expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(concluirExecucao).not.toHaveBeenCalled();
     expect(executarRecalculoConsultivo).not.toHaveBeenCalled();
   });
 
@@ -260,9 +300,9 @@ describe("orquestrarMovimentoPrioridadePcp - falha na reordenação (prioridade 
   });
 });
 
-describe("orquestrarMovimentoPrioridadePcp - sucesso, validação automática e liberação (ressalvas 2 e 3)", () => {
-  it("sucesso com recálculo real concluído (ok:true): situação final 'concluida', reserva liberada normalmente", async () => {
-    const { deps, finalizarReserva, executarRecalculoConsultivo } = criarDependenciasFalsas();
+describe("orquestrarMovimentoPrioridadePcp - sucesso e conclusão oficial da execução (ETAPA 2O.8B-I6H)", () => {
+  it("sucesso com recálculo real concluído (ok:true): conclusaoExecucao via concluirExecucao com resultado 'concluido', NUNCA o antigo finalizarReserva", async () => {
+    const { deps, finalizarReserva, concluirExecucao, executarRecalculoConsultivo } = criarDependenciasFalsas();
 
     const resultado = await orquestrarMovimentoPrioridadePcp(PAYLOAD_PADRAO, deps);
 
@@ -271,17 +311,20 @@ describe("orquestrarMovimentoPrioridadePcp - sucesso, validação automática e 
       posicaoNova: 500,
       eventoHistoricoId: "evento-1",
       recalculo: RECALCULO_REAL_PADRAO,
-      liberacaoReserva: { liberada: true },
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", viaRecuperacaoPosFalhaDeComunicacao: false },
     });
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "concluida");
+    expect(finalizarReserva).not.toHaveBeenCalled();
+    expect(concluirExecucao).toHaveBeenCalledWith(
+      expect.objectContaining({ empresaId: "empresa-1", execucaoId: RESERVA_ADQUIRIDA_PADRAO.execucaoId, resultado: "concluido" }),
+    );
     // Orçamento de tempo do recálculo inclui o tempo gasto desde o
     // início desta operação (auditoria I6-C, condição 3) - nunca
     // reiniciado no momento do recálculo.
     expect(executarRecalculoConsultivo.mock.calls[0]?.[4]).toBeTypeOf("number");
   });
 
-  it("recálculo real devolve ok:false (ex.: interrompido pelo supervisor): situação final 'falhou', prioridade e histórico preservados", async () => {
-    const { deps, finalizarReserva } = criarDependenciasFalsas({
+  it("recálculo real devolve ok:false CONFIRMADO (ex.: interrompido pelo supervisor): conclusaoExecucao via concluirExecucao com resultado 'falhou_recuperavel', prioridade e histórico preservados", async () => {
+    const { deps, finalizarReserva, concluirExecucao } = criarDependenciasFalsas({
       recalculo: { ok: false, motivo: "interrompido_por_limite_de_tempo" },
     });
 
@@ -292,7 +335,10 @@ describe("orquestrarMovimentoPrioridadePcp - sucesso, validação automática e 
     expect(resultado.posicaoNova).toBe(500); // prioridade JÁ persistida, nunca desfeita por falha/interrupção do recálculo.
     expect(resultado.eventoHistoricoId).toBe("evento-1");
     expect(resultado.recalculo).toEqual({ ok: false, motivo: "interrompido_por_limite_de_tempo" });
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(finalizarReserva).not.toHaveBeenCalled();
+    expect(concluirExecucao).toHaveBeenCalledWith(
+      expect.objectContaining({ execucaoId: RESERVA_ADQUIRIDA_PADRAO.execucaoId, resultado: "falhou_recuperavel", motivo: "interrompido_por_limite_de_tempo" }),
+    );
   });
 
   // Achado #1 da auditoria do PR #1: sem margem segura para o recálculo
@@ -300,8 +346,8 @@ describe("orquestrarMovimentoPrioridadePcp - sucesso, validação automática e 
   // movimentação de prioridade JÁ persistida (posição + Histórico)
   // nunca pode ser desfeita por isso; só o recálculo consultivo falha,
   // de forma explícita, nunca disfarçado como sucesso.
-  it("sem margem segura para o recálculo: prioridade e justificativa preservadas, recálculo informado como falho, reserva finalizada como falhou", async () => {
-    const { deps, finalizarReserva, reordenarFila } = criarDependenciasFalsas({
+  it("sem margem segura para o recálculo: prioridade e justificativa preservadas, recálculo informado como falho, execução concluída como falhou_recuperavel", async () => {
+    const { deps, concluirExecucao, reordenarFila } = criarDependenciasFalsas({
       recalculo: { ok: false, motivo: "sem_margem_segura_para_executar" },
     });
 
@@ -315,53 +361,105 @@ describe("orquestrarMovimentoPrioridadePcp - sucesso, validação automática e 
     expect(reordenarFila).toHaveBeenCalledWith(
       expect.objectContaining({ motivo: PAYLOAD_PADRAO.motivo, projetoId: PAYLOAD_PADRAO.projetoId }),
     );
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(concluirExecucao).toHaveBeenCalledWith(expect.objectContaining({ resultado: "falhou_recuperavel", motivo: "sem_margem_segura_para_executar" }));
   });
 
-  it("sucesso mas executarRecalculoConsultivo lança exceção inesperada: situação final 'falhou' (nunca 'concluida' só por engano)", async () => {
-    const { deps, finalizarReserva } = criarDependenciasFalsas({ erroRecalculo: new Error("falha inesperada no passo de recálculo") });
+  // ETAPA 2O.8B-I6H, MUDANÇA DE COMPORTAMENTO DELIBERADA (ver cabeçalho
+  // de orquestrarMovimentoPrioridadePcp.ts): diferente do comportamento
+  // anterior (que SEMPRE finalizava a reserva como 'falhou'), uma
+  // exceção genuinamente inesperada agora NÃO toca a reserva de forma
+  // alguma - nem o antigo finalizarReserva, nem o novo concluirExecucao.
+  // É o único caso de incerteza real sobre o Motor/Worker.
+  it("sucesso na reordenação mas executarRecalculoConsultivo lança exceção inesperada (falha_inesperada): NUNCA chama concluirExecucao nem finalizarReserva - reserva não é tocada", async () => {
+    const { deps, finalizarReserva, concluirExecucao } = criarDependenciasFalsas({
+      erroRecalculo: new Error("falha inesperada no passo de recálculo"),
+    });
 
     const resultado = await orquestrarMovimentoPrioridadePcp(PAYLOAD_PADRAO, deps);
 
     expect(resultado.ok).toBe(true);
     if (!resultado.ok) return;
-    expect(resultado.posicaoNova).toBe(500); // prioridade JÁ persistida, nunca desfeita por falha do recálculo.
+    expect(resultado.posicaoNova).toBe(500); // prioridade JÁ persistida, nunca desfeita.
     expect(resultado.recalculo).toEqual({ ok: false, motivo: "falha_inesperada", detalhe: "falha inesperada no passo de recálculo" });
-    expect(finalizarReserva).toHaveBeenCalledWith("empresa-1", RESERVA_ADQUIRIDA_PADRAO.execucaoId, "falhou");
+    expect(resultado.conclusaoExecucao).toBeNull();
+    expect(finalizarReserva).not.toHaveBeenCalled();
+    expect(concluirExecucao).not.toHaveBeenCalled();
   });
 
-  it("sucesso mas finalizarReserva devolve false: ok:true preservado, liberacaoReserva.liberada é false com detalhe (nunca aparenta término normal)", async () => {
-    const { deps } = criarDependenciasFalsas({ finalizarRetorno: false });
+  it("estado_desconhecido_apos_falha (supervisor não confirmou encerramento): mesma garantia - reserva não é tocada", async () => {
+    const { deps, finalizarReserva, concluirExecucao } = criarDependenciasFalsas({
+      recalculo: { ok: false, motivo: "estado_desconhecido_apos_falha" },
+    });
 
     const resultado = await orquestrarMovimentoPrioridadePcp(PAYLOAD_PADRAO, deps);
 
     expect(resultado.ok).toBe(true);
     if (!resultado.ok) return;
-    expect(resultado.posicaoNova).toBe(500);
-    expect(resultado.eventoHistoricoId).toBe("evento-1");
-    expect(resultado.liberacaoReserva.liberada).toBe(false);
-    if (resultado.liberacaoReserva.liberada) return;
-    expect(resultado.liberacaoReserva.detalhe).toContain("finalizar_recalculo_pcp retornou false");
+    expect(resultado.conclusaoExecucao).toBeNull();
+    expect(finalizarReserva).not.toHaveBeenCalled();
+    expect(concluirExecucao).not.toHaveBeenCalled();
   });
 
-  it("sucesso mas finalizarReserva lança exceção: ok:true preservado, liberacaoReserva.liberada é false com o erro real", async () => {
-    const { deps } = criarDependenciasFalsas({ erroFinalizar: new Error("finalizar_recalculo_pcp: timeout de rede") });
+  it("concluirExecucao rejeita (aceito:false): conclusaoExecucao reporta o motivo de rejeição, nunca aparenta sucesso", async () => {
+    const { deps } = criarDependenciasFalsas({
+      concluirExecucaoRetorno: { aceito: false, resultadoEfetivo: null, programacaoId: null, motivoRejeicao: "execucao_nao_corresponde_a_reserva_vigente" },
+    });
 
     const resultado = await orquestrarMovimentoPrioridadePcp(PAYLOAD_PADRAO, deps);
 
     expect(resultado.ok).toBe(true);
     if (!resultado.ok) return;
-    expect(resultado.liberacaoReserva).toEqual({ liberada: false, detalhe: "finalizar_recalculo_pcp: timeout de rede" });
+    expect(resultado.conclusaoExecucao).toEqual({ aceito: false, motivoRejeicao: "execucao_nao_corresponde_a_reserva_vigente" });
+  });
+
+  // Condição 3 do desenho aprovado: concluirExecucao lança (falha de
+  // comunicação genuína), mas o histórico confirma que a execução já
+  // havia concluído com sucesso - resultado reportado como sucesso
+  // recuperado via histórico, NUNCA repetido nem reportado como falha.
+  it("concluirExecucao lança exceção, mas o histórico confirma que a execução já havia concluído com sucesso: resultado reportado como sucesso recuperado via histórico", async () => {
+    const { deps, consultarHistoricoExecucao } = criarDependenciasFalsas({
+      erroConcluirExecucao: new Error("timeout de rede ao chamar concluir_execucao_motor_pcp"),
+      historicoRetorno: { resultado: "concluido", programacaoId: "prog-recuperado" },
+    });
+
+    const resultado = await orquestrarMovimentoPrioridadePcp(PAYLOAD_PADRAO, deps);
+
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    expect(resultado.conclusaoExecucao).toEqual({
+      aceito: true,
+      resultadoEfetivo: "concluido",
+      programacaoId: "prog-recuperado",
+      viaRecuperacaoPosFalhaDeComunicacao: true,
+    });
+    expect(consultarHistoricoExecucao).toHaveBeenCalledWith(RESERVA_ADQUIRIDA_PADRAO.execucaoId);
+  });
+
+  it("concluirExecucao lança exceção e o histórico não confirma nada: reportado como falha desconhecida, SEM liberar a reserva por suposição", async () => {
+    const { deps } = criarDependenciasFalsas({
+      erroConcluirExecucao: new Error("timeout de rede ao chamar concluir_execucao_motor_pcp"),
+      historicoRetorno: null,
+    });
+
+    const resultado = await orquestrarMovimentoPrioridadePcp(PAYLOAD_PADRAO, deps);
+
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    expect(resultado.conclusaoExecucao).toMatchObject({ aceito: false });
+    if (!resultado.conclusaoExecucao || resultado.conclusaoExecucao.aceito) return;
+    expect(resultado.conclusaoExecucao.motivoRejeicao).toContain("falha_de_comunicacao_sem_confirmacao_no_historico");
   });
 });
 
-describe("orquestrarMovimentoPrioridadePcp - ausência de persistência oficial (preservado da Etapa 2O.3)", () => {
-  it("DependenciasMoverPrioridadePcp não expõe nenhum método de persistência de programação oficial", () => {
+describe("orquestrarMovimentoPrioridadePcp - persistência oficial (ETAPA 2O.8B-I6H)", () => {
+  it("DependenciasMoverPrioridadePcp expõe concluirExecucao/consultarHistoricoExecucao, que são a única via de persistência oficial - nunca chama persistir_programacao_pcp/finalizar_recalculo_pcp diretamente para uma execução do Motor concluída", () => {
     const { deps } = criarDependenciasFalsas();
     const chaves = Object.keys(deps).sort();
     expect(chaves).toEqual([
       "autenticar",
       "autorizar",
+      "concluirExecucao",
+      "consultarHistoricoExecucao",
       "executarRecalculoConsultivo",
       "finalizarReserva",
       "iniciarReserva",

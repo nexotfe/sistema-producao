@@ -161,6 +161,54 @@ export async function solicitarCalculoProgramacaoPcpAction(
       });
       return executarComSupervisao(worker, { limiteMs: limiteEfetivoMs });
     },
+
+    // ETAPA 2O.8B-I6H: concluir_execucao_motor_pcp via service_role (SECURITY
+    // DEFINER, service_role-only, mesmo client já usado por
+    // iniciarReserva/finalizarReserva acima). p_empresa_id e p_execucao_id
+    // SEMPRE vêm dos parâmetros que o próprio orquestrador já resolveu
+    // internamente (empresaId de resolverEmpresa, execucaoId da reserva
+    // que esta mesma execução acabou de adquirir) - esta função nunca lê
+    // paramsRecebidos (payload do cliente) nem resolve empresa/execução
+    // por conta própria.
+    concluirExecucao: async (params) => {
+      const { data, error } = await serviceClient.rpc("concluir_execucao_motor_pcp", {
+        p_empresa_id: params.empresaId,
+        p_execucao_id: params.execucaoId,
+        p_resultado: params.resultado,
+        p_empresa_capacidade_versao_origem: params.empresaCapacidadeVersaoOrigem ?? null,
+        p_janela_inicio: params.janelaInicio ?? null,
+        p_janela_fim: params.janelaFim ?? null,
+        p_ocorrencias: params.ocorrencias ?? null,
+        p_motivo: params.motivo ?? null,
+      });
+      if (error) throw new Error(error.message);
+      const linha = data[0];
+      return {
+        aceito: linha.aceito as boolean,
+        resultadoEfetivo: linha.resultado_efetivo as string | null,
+        programacaoId: linha.programacao_id as string | null,
+        motivoRejeicao: linha.motivo_rejeicao as string | null,
+      };
+    },
+
+    // ETAPA 2O.8B-I6H, condição 3: consulta de recuperação pós-falha de
+    // comunicação - DELIBERADAMENTE o client de SESSÃO do usuário
+    // (serverClient, RLS normal via pcp_recalculo_execucao_historico_select_tenant),
+    // NUNCA o service_role - não precisa de privilégio elevado para ler o
+    // próprio histórico, e usar o client de sessão aqui evita abrir uma
+    // rota de leitura ampla entre empresas por engano.
+    consultarHistoricoExecucao: async (execucaoId) => {
+      const { data, error } = await serverClient
+        .from("pcp_recalculo_execucao_historico")
+        .select("resultado, programacao_id")
+        .eq("execucao_id", execucaoId)
+        .maybeSingle();
+      if (error || !data) return null;
+      return {
+        resultado: data.resultado as "concluido" | "obsoleto" | "falhou_recuperavel",
+        programacaoId: data.programacao_id as string | null,
+      };
+    },
   };
 
   return orquestrarSolicitacaoCalculoPcp(params, dependenciasReais);

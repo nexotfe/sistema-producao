@@ -200,7 +200,7 @@ describe("PrioridadesPcpPage - componente", () => {
       ok: true,
       posicaoNova: 500,
       eventoHistoricoId: "evento-1",
-      liberacaoReserva: { liberada: true },
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", viaRecuperacaoPosFalhaDeComunicacao: false },
       recalculo: {
         ok: true,
         versaoCapacidadeUtilizada: "7",
@@ -231,7 +231,7 @@ describe("PrioridadesPcpPage - componente", () => {
       ok: true,
       posicaoNova: 500,
       eventoHistoricoId: "evento-1",
-      liberacaoReserva: { liberada: true },
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", viaRecuperacaoPosFalhaDeComunicacao: false },
       recalculo: { ok: false, motivo: "interrompido_por_limite_de_tempo" },
     });
     render(<PrioridadesPcpPage />);
@@ -250,7 +250,7 @@ describe("PrioridadesPcpPage - componente", () => {
       ok: true,
       posicaoNova: 500,
       eventoHistoricoId: "evento-1",
-      liberacaoReserva: { liberada: false, detalhe: "finalizar_recalculo_pcp: timeout de rede" },
+      conclusaoExecucao: { aceito: false, motivoRejeicao: "concluir_execucao_motor_pcp: timeout de rede" },
       recalculo: { ok: true, versaoCapacidadeUtilizada: "7", operacoes: [], excluidas: [] },
     });
     render(<PrioridadesPcpPage />);
@@ -347,7 +347,7 @@ describe("PrioridadesPcpPage - componente", () => {
       ok: true,
       posicaoNova: 500,
       eventoHistoricoId: "evento-1",
-      liberacaoReserva: { liberada: true },
+      conclusaoExecucao: { aceito: true, resultadoEfetivo: "concluido", programacaoId: "prog-1", viaRecuperacaoPosFalhaDeComunicacao: false },
       recalculo: { ok: true, versaoCapacidadeUtilizada: "7", operacoes: [], excluidas: [] },
     });
     await waitFor(() => expect(screen.getByText(/Prioridade atualizada/)).toBeTruthy());

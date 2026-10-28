@@ -47,12 +47,14 @@ import type { ChaveOcorrenciaPcp } from "../lib/motor/chaveOcorrenciaPcp";
 import type { EntradaMotorPcpSerializavel } from "../lib/motor/montarEntradaMotorPcp";
 import type { ResultadoSupervisaoMotorPcp } from "../lib/motor/supervisorMotorPcp";
 import {
-  liberarReservaComTratamentoExplicito,
+  concluirExecucaoComTratamentoExplicito,
   type DependenciasReservaRecalculoPcp,
   type ResultadoLiberacaoReservaPcp,
+  type DependenciasConclusaoExecucaoMotorPcp,
+  type ResultadoConclusaoExecucaoMotorPcp,
 } from "./reservaExclusivaRecalculoPcp";
 
-export type { ResultadoLiberacaoReservaPcp };
+export type { ResultadoLiberacaoReservaPcp, ResultadoConclusaoExecucaoMotorPcp };
 
 export interface PayloadSolicitacaoCalculoPcp {
   dataInicial: string;
@@ -70,7 +72,7 @@ export interface OperacaoCalculadaPcp {
 
 type ResultadoMotorMap = Map<string, ResultadoOcorrenciaEscalonada<ChaveOcorrenciaPcp>>;
 
-export interface DependenciasSolicitacaoCalculoPcp extends DependenciasReservaRecalculoPcp {
+export interface DependenciasSolicitacaoCalculoPcp extends DependenciasReservaRecalculoPcp, DependenciasConclusaoExecucaoMotorPcp {
   /** auth.getUser() no client de sessão - null se não autenticado. */
   autenticar: () => Promise<string | null>;
   /** usuario_tem_permissao(userId, 'pcp.solicitar_calculo') no client service_role. */
@@ -107,7 +109,14 @@ export interface DependenciasSolicitacaoCalculoPcp extends DependenciasReservaRe
  * sobre a programação oficial ter sido aprovada ou persistida.
  */
 export type ResultadoCalculoMotorSupervisionado =
-  | { ok: true; versaoCapacidadeUtilizada: string; operacoes: OperacaoCalculadaPcp[]; excluidas: EntradaMotorPcpSerializavel["excluidas"] }
+  | {
+      ok: true;
+      versaoCapacidadeUtilizada: string;
+      operacoes: OperacaoCalculadaPcp[];
+      excluidas: EntradaMotorPcpSerializavel["excluidas"];
+      /** ETAPA 2O.8B-I6H: a MESMA entrada usada neste cálculo - nunca remontada depois, para montar o payload de persistência oficial a partir do snapshot da própria execução (condição 2 do desenho aprovado). */
+      entrada: EntradaMotorPcpSerializavel;
+    }
   | { ok: false; motivo: "sem_margem_segura_para_executar" }
   | { ok: false; motivo: "versao_capacidade_indisponivel" }
   | { ok: false; motivo: "capacidade_mudou_durante_calculo" }
@@ -115,7 +124,19 @@ export type ResultadoCalculoMotorSupervisionado =
   | { ok: false; motivo: "interrompido_por_limite_de_tempo" }
   /** A Worker reportou erro real ou encerrou inesperadamente - nunca confundido com interrupção deliberada por limite. */
   | { ok: false; motivo: "falha_na_worker"; detalhe: string }
-  | { ok: false; motivo: "falha_interna"; detalhe: string };
+  | { ok: false; motivo: "falha_interna"; detalhe: string }
+  /**
+   * ETAPA 2O.8B-I6H: o supervisor não conseguiu confirmar o encerramento
+   * da Worker dentro da margem de segurança (ver supervisorMotorPcp.ts,
+   * situacao "estado_desconhecido") - NUNCA uma falha confirmada, é o
+   * mesmo "estado desconhecido" que o DEC-009 só resolve via
+   * recuperacao_pendente/confirmação humana. O chamador NUNCA deve
+   * concluir a execução a partir deste motivo - precisa deixar a
+   * reserva seguir seu curso normal (expira_em/recuperacao_pendente),
+   * exatamente como o caso "falha_inesperada" de
+   * orquestrarMovimentoPrioridadePcp.ts.
+   */
+  | { ok: false; motivo: "estado_desconhecido_apos_falha" };
 
 export interface DependenciasExecutarCalculoMotorSupervisionado {
   lerVersaoCapacidade: (empresaId: string) => Promise<number | null>;
@@ -134,8 +155,8 @@ export type ResultadoSolicitacaoCalculoPcp =
       janela: { dataInicial: string; dataFinal: string };
       operacoes: OperacaoCalculadaPcp[];
       excluidas: EntradaMotorPcpSerializavel["excluidas"];
-      /** NUNCA omitido - "Motor concluiu" e "reserva liberada" são informações distintas (auditoria I6-B). */
-      liberacaoReserva: ResultadoLiberacaoReservaPcp;
+      /** NUNCA omitido - "Motor concluiu o cálculo" e "programação oficial concluída/encerrada" são informações distintas (ETAPA 2O.8B-I6H, mesmo princípio da antiga liberacaoReserva). */
+      conclusaoExecucao: ResultadoConclusaoExecucaoMotorPcp;
     }
   | { ok: false; motivo: "nao_autenticado" }
   | { ok: false; motivo: "nao_autorizado" }
@@ -143,7 +164,21 @@ export type ResultadoSolicitacaoCalculoPcp =
   | { ok: false; motivo: "janela_invalida"; detalhe: string }
   | { ok: false; motivo: "reserva_ocupada"; detalhe: { responsavelAtualNome: string; situacao: string } }
   | { ok: false; motivo: "falha_ao_iniciar_reserva"; detalhe: string }
-  | Exclude<ResultadoCalculoMotorSupervisionado, { ok: true }>;
+  /** ETAPA 2O.8B-I6H: o Motor concluiu normalmente, mas o resultado não pôde ser montado para persistência (ex.: operação sem ofId/prioridade resolvível contra a própria entrada) - a reserva ainda é concluída via concluirExecucao com resultado falhou_recuperavel (o cálculo em si terminou, só a publicação não pôde ocorrer). */
+  | { ok: false; motivo: "inconsistencia_ao_montar_persistencia"; detalhe: ResultadoMontagemOcorrenciasPersistenciaPcp; conclusaoExecucao: ResultadoConclusaoExecucaoMotorPcp }
+  /** ETAPA 2O.8B-I6H: nunca toca a reserva neste caso específico - ver comentário do motivo em ResultadoCalculoMotorSupervisionado. */
+  | { ok: false; motivo: "estado_desconhecido_apos_falha" }
+  /**
+   * ETAPA 2O.8B-I6H: qualquer outro motivo de falha típico do cálculo
+   * supervisionado - NUNCA omite conclusaoExecucao, mesmo em falha
+   * (mesmo princípio de transparência de liberacaoReserva preservado) -
+   * EXCETO "estado_desconhecido_apos_falha", que nunca toca a reserva
+   * (campo ausente nesse caso específico, nunca por omissão acidental).
+   */
+  | (Exclude<ResultadoCalculoMotorSupervisionado, { ok: true } | { motivo: "estado_desconhecido_apos_falha" }> & {
+      /** Opcional: "sem_margem_segura_para_executar" também é devolvido pela pré-checagem ANTES da reserva existir - nesse caso específico não há execução para concluir. */
+      conclusaoExecucao?: ResultadoConclusaoExecucaoMotorPcp;
+    });
 
 const REGEX_DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -242,6 +277,10 @@ export async function executarCalculoMotorSupervisionado(
   if (supervisao.situacao === "saida_inesperada") {
     return { ok: false, motivo: "falha_na_worker", detalhe: `a Worker encerrou inesperadamente (exitCode=${supervisao.exitCode}).` };
   }
+  if (supervisao.situacao === "estado_desconhecido") {
+    // NUNCA presumido como falha recuperável comprovada - ver comentário do motivo.
+    return { ok: false, motivo: "estado_desconhecido_apos_falha" };
+  }
 
   // supervisao.situacao === "concluido" a partir daqui.
   const versaoDepoisCalculo = await deps.lerVersaoCapacidade(empresaId);
@@ -257,7 +296,60 @@ export async function executarCalculoMotorSupervisionado(
     versaoCapacidadeUtilizada: String(versaoAntes),
     operacoes: converterResultadoMotor(supervisao.resultado),
     excluidas: entrada.excluidas,
+    entrada,
   };
+}
+
+/**
+ * ETAPA 2O.8B-I6H: monta o payload de ocorrências para
+ * concluir_execucao_motor_pcp a partir do resultado JÁ calculado + a
+ * MESMA entrada usada no cálculo (nunca uma consulta nova - condição 2
+ * do desenho aprovado: a associação opId->ofId vem do snapshot da mesma
+ * execução, nunca de uma leitura posterior que poderia encontrar dados
+ * alterados durante o processamento). Falha de forma controlada (nunca
+ * usa identificador fictício - condição 3) se qualquer operação não
+ * tiver ofId ou prioridade resolvíveis contra essa mesma entrada.
+ */
+export type ResultadoMontagemOcorrenciasPersistenciaPcp =
+  | { ok: true; ocorrencias: unknown[] }
+  | { ok: false; motivo: "operacao_sem_ofId_valido" | "operacao_sem_prioridade_valida"; opId: string };
+
+export function montarOcorrenciasParaPersistenciaPcp(
+  operacoes: OperacaoCalculadaPcp[],
+  entrada: EntradaMotorPcpSerializavel,
+): ResultadoMontagemOcorrenciasPersistenciaPcp {
+  const projetoIdPorOpId = new Map(entrada.ocorrencias.map((oc) => [oc.chave.opId, oc.projetoId]));
+
+  const ocorrencias: unknown[] = [];
+  for (const op of operacoes) {
+    const ofId = entrada.ofIdPorOpId[op.opId];
+    const projetoId = projetoIdPorOpId.get(op.opId);
+    if (!ofId || !projetoId) {
+      return { ok: false, motivo: "operacao_sem_ofId_valido", opId: op.opId };
+    }
+    const prioridadeUsada = entrada.posicaoPorProjeto[projetoId];
+    if (prioridadeUsada === undefined) {
+      return { ok: false, motivo: "operacao_sem_prioridade_valida", opId: op.opId };
+    }
+    ocorrencias.push({
+      op_id: op.opId,
+      of_id: ofId,
+      projeto_id: projetoId,
+      prioridade_usada: prioridadeUsada,
+      status_calculo_motor: op.status,
+      data_inicio_prevista: op.dataInicioReal,
+      data_fim_prevista: op.dataFimReal,
+      deficit_residual_horas_padrao: op.deficitResidualHorasPadrao,
+      alocacoes: op.alocacoes.map((a) => ({
+        data: a.data,
+        recurso_id: a.recursoId,
+        natureza: a.natureza,
+        horas_maquina: a.horasMaquina,
+        horas_padrao: a.horasPadrao,
+      })),
+    });
+  }
+  return { ok: true, ocorrencias };
 }
 
 export async function orquestrarSolicitacaoCalculoPcp(
@@ -311,15 +403,58 @@ export async function orquestrarSolicitacaoCalculoPcp(
 
   const resultadoCalculo = await executarCalculoMotorSupervisionado(userId, empresaId, datasGradeCompartilhada, inicioExecucao, deps);
 
-  const situacaoFinal = resultadoCalculo.ok ? "concluida" : "falhou";
-  const liberacaoReserva = await liberarReservaComTratamentoExplicito(deps, empresaId, reserva.execucaoId, situacaoFinal);
-
   if (!resultadoCalculo.ok) {
-    if (!liberacaoReserva.liberada) {
-      console.error("orquestrarSolicitacaoCalculoPcp: falha ao liberar reserva após falha do cálculo:", liberacaoReserva.detalhe);
+    if (resultadoCalculo.motivo === "estado_desconhecido_apos_falha") {
+      // ÚNICO caso de incerteza genuína: o supervisor não conseguiu
+      // confirmar o encerramento da Worker. NUNCA presumir, NUNCA
+      // concluir a execução por conta própria - deixa a reserva seguir
+      // seu curso normal (expira_em/recuperacao_pendente, DEC-009).
+      return resultadoCalculo;
     }
-    return resultadoCalculo;
+    // Todo outro motivo já é uma falha CONFIRMADA - pela nova garantia
+    // do supervisor (todo caminho de falha real da Worker só resolve
+    // depois de encerramento comprovado, ver supervisorMotorPcp.ts) ou
+    // porque o Motor nunca chegou a rodar. Por isso sempre pode concluir
+    // a execução como falhou_recuperavel, nunca deixando a reserva órfã
+    // nem usando o antigo finalizarReserva (que nunca valida identidade
+    // sob o mesmo lock desta conclusão).
+    const conclusaoExecucao = await concluirExecucaoComTratamentoExplicito(deps, {
+      empresaId,
+      execucaoId: reserva.execucaoId,
+      resultado: "falhou_recuperavel",
+      motivo: resultadoCalculo.motivo,
+    });
+    return { ...resultadoCalculo, conclusaoExecucao };
   }
+
+  // ETAPA 2O.8B-I6H: monta o payload de persistência a partir da MESMA
+  // entrada usada no cálculo (resultadoCalculo.entrada) - nunca uma
+  // segunda consulta ao banco (condição 2 do desenho aprovado).
+  const montagem = montarOcorrenciasParaPersistenciaPcp(resultadoCalculo.operacoes, resultadoCalculo.entrada);
+  if (!montagem.ok) {
+    // O Motor terminou normalmente, mas o resultado não pôde ser
+    // montado para persistência - falha CONFIRMADA de montagem de
+    // payload, nunca um estado desconhecido de Worker (o Motor já
+    // respondeu com sucesso). Conclui a execução mesmo assim, para
+    // nunca deixar a reserva órfã.
+    const conclusaoExecucao = await concluirExecucaoComTratamentoExplicito(deps, {
+      empresaId,
+      execucaoId: reserva.execucaoId,
+      resultado: "falhou_recuperavel",
+      motivo: `inconsistencia_ao_montar_persistencia: ${montagem.motivo} (opId=${montagem.opId})`,
+    });
+    return { ok: false, motivo: "inconsistencia_ao_montar_persistencia", detalhe: montagem, conclusaoExecucao };
+  }
+
+  const conclusaoExecucao = await concluirExecucaoComTratamentoExplicito(deps, {
+    empresaId,
+    execucaoId: reserva.execucaoId,
+    resultado: "concluido",
+    empresaCapacidadeVersaoOrigem: Number(resultadoCalculo.versaoCapacidadeUtilizada),
+    janelaInicio: paramsRecebidos.dataInicial,
+    janelaFim: paramsRecebidos.dataFinal,
+    ocorrencias: montagem.ocorrencias,
+  });
 
   return {
     ok: true,
@@ -327,6 +462,6 @@ export async function orquestrarSolicitacaoCalculoPcp(
     janela: { dataInicial: paramsRecebidos.dataInicial, dataFinal: paramsRecebidos.dataFinal },
     operacoes: resultadoCalculo.operacoes,
     excluidas: resultadoCalculo.excluidas,
-    liberacaoReserva,
+    conclusaoExecucao,
   };
 }

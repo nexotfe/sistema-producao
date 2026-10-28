@@ -69,6 +69,7 @@ function construirSerializavelPequeno(): EntradaMotorPcpSerializavel {
     diasProdutivos: DATAS,
     posicaoPorProjeto: { "proj-1": 1, "proj-2": 2 },
     excluidas: [],
+    ofIdPorOpId: { "op-1": "of-1", "op-2": "of-2" },
   };
 }
 
@@ -131,6 +132,7 @@ describe("I6-A - motorWorker.ts real, spawnado de verdade como Worker Thread", (
       diasProdutivos: DATAS,
       posicaoPorProjeto: { "proj-1": 1, "proj-2": 2 },
       excluidas: [],
+      ofIdPorOpId: Object.fromEntries(muitasOcorrencias.map((o, i) => [o.chave.opId, i % 2 === 0 ? "of-1" : "of-2"])),
     };
 
     const worker = new Worker(workerBundlePath, { workerData: serializavel });
@@ -152,14 +154,64 @@ describe("I6-A - motorWorker.ts real, spawnado de verdade como Worker Thread", (
       diasProdutivos: DATAS,
       posicaoPorProjeto: { "proj-1": 1 },
       excluidas: [],
+      ofIdPorOpId: { "op-1": "of-1" },
     };
 
     const worker = new Worker(workerBundlePath, { workerData: serializavel });
-    const supervisao = await executarComSupervisao(worker, { limiteMs: 15_000 });
+    const supervisao = await executarComSupervisao(worker, { limiteMs: 15_000, margemConfirmacaoTerminateMs: 5_000 });
 
     expect(supervisao.situacao).toBe("erro_na_worker");
     if (supervisao.situacao === "erro_na_worker") {
       expect(supervisao.mensagem).toContain("inexistente");
+    }
+  }, 20_000);
+});
+
+// ETAPA 2O.8B-I6H: Worker Thread REAL (não simulada) para comprovar a
+// exigência do usuário - um `error` isolado só é reportado DEPOIS de
+// `worker.terminate()` ser chamado e confirmado (Promise resolvida ou
+// `exit` chegando), nunca presumido pelo simples disparo do evento.
+// Fixture sem dependência de alias "@/" - spawnada direto, sem bundling.
+describe("I6H - supervisor real: confirmação de encerramento após 'error' isolado", () => {
+  const FIXTURE_URL = new URL("./testHelpers/workerFicticioSupervisorTeste.mjs", import.meta.url);
+
+  it("erro isolado com encerramento confirmado dentro da margem: situação final é erro_na_worker, mensagem original preservada", async () => {
+    const worker = new Worker(FIXTURE_URL, { workerData: { modo: "erro_rapido" } });
+
+    const supervisao = await executarComSupervisao(worker, { limiteMs: 15_000, margemConfirmacaoTerminateMs: 5_000 });
+
+    expect(supervisao.situacao).toBe("erro_na_worker");
+    if (supervisao.situacao === "erro_na_worker") {
+      expect(supervisao.mensagem).toContain("erro ficticio deliberado");
+    }
+  }, 20_000);
+
+  it("margem de confirmação artificialmente mínima: resultado NUNCA presume sucesso, seja qual for o lado que vencer a corrida margem-vs-terminate()", async () => {
+    const worker = new Worker(FIXTURE_URL, { workerData: { modo: "erro_rapido" } });
+
+    // Margem artificialmente zerada - o mesmo recurso já usado no
+    // sandbox descartável desta sessão para forçar uma corrida real
+    // entre o teto de margem (timeoutMargemConfirmacao) e a confirmação
+    // real de encerramento (terminate() resolvido, ou 'exit' chegando
+    // com uma confirmação de erro pendente). QUAL lado vence essa
+    // corrida com margem=0 NÃO é determinístico (ambos são, na prática,
+    // "imediatos") - por isso o teste não afirma qual dos dois ramos
+    // ocorre, só o INVARIANTE que importa de verdade: nenhum dos dois
+    // ramos possíveis presume sucesso. Isso elimina o flakiness sem
+    // mudar o que está sendo testado (achado da auditoria pós-rodada
+    // anterior: o teste anterior afirmava só o ramo "margem esgotada",
+    // que de fato pode perder a corrida para "erro_na_worker" com
+    // encerramento genuinamente confirmado - os dois são corretos).
+    const supervisao = await executarComSupervisao(worker, { limiteMs: 15_000, margemConfirmacaoTerminateMs: 0 });
+
+    expect(["erro_na_worker", "estado_desconhecido"]).toContain(supervisao.situacao);
+    if (supervisao.situacao === "erro_na_worker") {
+      // Mesmo vencendo a corrida por terminate()/exit, a mensagem
+      // original nunca pode ser substituída por um resultado genérico.
+      expect(supervisao.mensagem).toContain("erro ficticio deliberado");
+    }
+    if (supervisao.situacao === "estado_desconhecido") {
+      expect(supervisao.origem).toBe("margem_confirmacao_terminate_esgotada");
     }
   }, 20_000);
 });

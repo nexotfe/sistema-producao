@@ -378,13 +378,26 @@ export default function PrioridadesPcpPage() {
                     <p className="text-sm font-semibold text-status-success-text">
                       Prioridade atualizada (nova posição interna: {movimento.resultado.posicaoNova}).
                     </p>
-                    {!movimento.resultado.liberacaoReserva.liberada ? (
-                      <p className="mt-1 text-sm text-status-warning-text">
-                        A alteração de prioridade foi registrada normalmente, mas a execução do recálculo ficou com
-                        situação não confirmada ({movimento.resultado.liberacaoReserva.detalhe}). Novas movimentações
-                        desta empresa ficam bloqueadas até a recuperação segura da reserva.
-                      </p>
-                    ) : null}
+                    {(() => {
+                      // ETAPA 2O.8B-I6H: conclusaoExecucao substitui liberacaoReserva -
+                      // null (estado desconhecido, nunca tocado) ou aceito:false
+                      // (rejeitado) são os dois casos equivalentes a "situação não
+                      // confirmada" que a mensagem abaixo já cobria.
+                      const conclusao = movimento.resultado.conclusaoExecucao;
+                      const detalheNaoConfirmado =
+                        conclusao === null
+                          ? "o estado da execução do recálculo não pôde ser confirmado"
+                          : !conclusao.aceito
+                            ? conclusao.motivoRejeicao
+                            : null;
+                      return detalheNaoConfirmado ? (
+                        <p className="mt-1 text-sm text-status-warning-text">
+                          A alteração de prioridade foi registrada normalmente, mas a execução do recálculo ficou com
+                          situação não confirmada ({detalheNaoConfirmado}). Novas movimentações
+                          desta empresa ficam bloqueadas até a recuperação segura da reserva.
+                        </p>
+                      ) : null;
+                    })()}
                     <div className="mt-1">
                       <ResumoRecalculo recalculo={movimento.resultado.recalculo} />
                     </div>

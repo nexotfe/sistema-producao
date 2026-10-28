@@ -174,6 +174,46 @@ export async function moverPrioridadeProjetoPcpAction(
         },
       });
     },
+
+    // ETAPA 2O.8B-I6H: mesma ligação real de solicitarCalculoProgramacaoPcpAction.ts
+    // - p_empresa_id/p_execucao_id sempre vêm dos parâmetros já resolvidos
+    // pelo orquestrador (nunca de paramsRecebidos/payload do cliente).
+    concluirExecucao: async (params) => {
+      const { data, error } = await serviceClient.rpc("concluir_execucao_motor_pcp", {
+        p_empresa_id: params.empresaId,
+        p_execucao_id: params.execucaoId,
+        p_resultado: params.resultado,
+        p_empresa_capacidade_versao_origem: params.empresaCapacidadeVersaoOrigem ?? null,
+        p_janela_inicio: params.janelaInicio ?? null,
+        p_janela_fim: params.janelaFim ?? null,
+        p_ocorrencias: params.ocorrencias ?? null,
+        p_motivo: params.motivo ?? null,
+      });
+      if (error) throw new Error(error.message);
+      const linha = data[0];
+      return {
+        aceito: linha.aceito as boolean,
+        resultadoEfetivo: linha.resultado_efetivo as string | null,
+        programacaoId: linha.programacao_id as string | null,
+        motivoRejeicao: linha.motivo_rejeicao as string | null,
+      };
+    },
+
+    // ETAPA 2O.8B-I6H, condição 3: client de SESSÃO (serverClient, RLS
+    // normal) - NUNCA service_role, mesmo princípio de
+    // solicitarCalculoProgramacaoPcpAction.ts.
+    consultarHistoricoExecucao: async (execucaoId) => {
+      const { data, error } = await serverClient
+        .from("pcp_recalculo_execucao_historico")
+        .select("resultado, programacao_id")
+        .eq("execucao_id", execucaoId)
+        .maybeSingle();
+      if (error || !data) return null;
+      return {
+        resultado: data.resultado as "concluido" | "obsoleto" | "falhou_recuperavel",
+        programacaoId: data.programacao_id as string | null,
+      };
+    },
   };
 
   return orquestrarMovimentoPrioridadePcp(payload, dependenciasReais);
