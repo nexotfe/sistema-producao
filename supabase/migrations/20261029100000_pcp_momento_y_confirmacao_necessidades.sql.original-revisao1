@@ -1,0 +1,704 @@
+-- NEXOTFE — Momento Y: confirmação oficial de matéria-prima por OF
+--
+-- *** MIGRATION CANDIDATA — ARTEFATO DE DESENVOLVIMENTO ***
+-- Autorizada exclusivamente para auditoria e testes em sandbox Docker
+-- descartável (CLAUDE.md Regra 2/9). NÃO EXECUTAR contra o banco
+-- remoto/produção (`supabase db push` ou equivalente) sem autorização
+-- expressa, separada, por escrita específica, após revisão desta
+-- candidata e dos testes de sandbox listados no relatório que a
+-- acompanha. Nenhuma linha deste arquivo foi aplicada a nenhum
+-- ambiente até o momento em que este comentário foi escrito.
+--
+-- Decisões de negócio implementadas aqui — todas já aprovadas em
+-- rodadas anteriores de auditoria/planejamento (nenhuma decidida nesta
+-- migration):
+--
+--   1. Roteiro/BOM original (boms/bom_itens) nunca é escrito por
+--      nenhuma função abaixo — só lido, via expandir_bom_recursivo
+--      (já existente, intocada).
+--   2/3. A proposta de materiais (expansão do BOM) é só leitura
+--      (sugerir_proposta_momento_y) e nunca é persistida antes da
+--      confirmação — nenhuma tabela de rascunho foi criada.
+--   4. A necessidade oficial só nasce dentro de
+--      confirmar_necessidades_momento_y.
+--   5. A confirmação é atômica — necessidades + decisão CI/CE +
+--      reserva + requisição + marcador de conclusão, tudo numa única
+--      função/transação, sem savepoints internos (mesmo padrão já
+--      usado por aprovar_of/decidir_ci_ce_de_of).
+--   6. A confirmação única é garantida pelo UPDATE condicional sobre
+--      ordens_fabricacao.necessidades_confirmadas_em (WHERE ... IS
+--      NULL + checagem de ROW_COUNT=1) — garantia independente do
+--      advisory lock, que serve para evitar trabalho duplicado e
+--      serializar contra cancelar_of, não para a unicidade em si.
+--   7. liberar_of passa a exigir "Momento Y confirmado OU necessidade
+--      legada existente" — uma condição só, válida para os dois
+--      regimes, sem precisar saber qual se aplica à OF.
+--   8. O fluxo legado (aprovar_of chamando gerar_necessidades_de_of +
+--      decidir_ci_ce_de_of automaticamente) permanece bit-a-bit
+--      idêntico quando o interruptor por empresa estiver
+--      ausente/false — nenhuma OF existente é reclassificada.
+--
+-- Condição adicional resolvida nesta migration (sem coluna de "regime"
+-- nova): o regime de uma OF é determinado EXCLUSIVAMENTE por
+-- ordens_fabricacao.necessidades_confirmadas_em — nunca pela
+-- existência de linhas em necessidades_of_material. Justificativa:
+-- gerar_necessidades_de_of (caminho legado) já tem invariante própria
+-- que IMPEDE uma OF aprovada terminar sem nenhuma necessidade (RAISE
+-- EXCEPTION "arvore de BOM vazia ou so subconjuntos sem folha") — sob
+-- o caminho legado, necessidades_confirmadas_em=NULL só pode
+-- coexistir com "existe necessidade", nunca com lista vazia. Sob o
+-- caminho novo, necessidades_confirmadas_em é gravado na MESMA
+-- transação atômica que as (eventualmente zero) linhas de
+-- necessidade — as duas nunca nascem em momentos diferentes. As
+-- quatro combinações reais (legado-com-necessidade /
+-- novo-não-confirmado / novo-confirmado-vazio /
+-- novo-confirmado-com-necessidade) já são distinguíveis sem
+-- ambiguidade só com o marcador.
+--
+-- Interruptor por empresa: reaproveita configuracoes_empresa (já
+-- existente, 202607070001), sem nenhuma tabela/coluna nova. Convenção
+-- de chave: 'pcp.momento_y_ativo', valor jsonb `true`/`false`.
+-- Ausência de linha = false (comportamento legado, padrão seguro).
+--
+-- Referência da proposta usada na comparação de concorrência do BOM
+-- (Investigação A): nenhum histórico operacional novo foi criado. A
+-- "referência" é a correlação, já disponível sem nenhuma coluna nova,
+-- entre ordens_fabricacao.necessidades_confirmadas_em (quando a
+-- confirmação aconteceu) e bom_itens.updated_at/boms.updated_at (já
+-- existentes) — se alguém precisar auditar depois se o BOM mudou
+-- desde uma confirmação específica, basta comparar esses timestamps
+-- já existentes, sem necessidade de snapshot dedicado.
+--
+-- Risco residual documentado (Investigação A): a recomputação da
+-- proposta original acontece o mais tarde possível, imediatamente
+-- antes da gravação das necessidades — mas uma edição de BOM no
+-- instante exato entre essa última leitura e o COMMIT não seria
+-- detectada. Mesmo risco residual, estrutural, já aceito pelo Motor
+-- PCP na comparação de versão de capacidade (capacidade_mudou_durante_calculo)
+-- — não é uma lacuna nova desta solução, é a mesma filosofia otimista
+-- já em produção.
+--
+-- Arquivo inteiro é uma transação.
+
+begin;
+
+-- =====================================================================
+-- 1. Marcador de conclusão do Momento Y em ordens_fabricacao — único
+--    sinal persistente e inequívoco do regime (ver justificativa no
+--    cabeçalho). Nullable: NULL = ainda não confirmado pelo novo fluxo
+--    (ou OF do fluxo legado, distinguível só em combinação com a
+--    existência de necessidade — nunca o contrário).
+-- =====================================================================
+alter table public.ordens_fabricacao
+  add column necessidades_confirmadas_em timestamptz null,
+  add column necessidades_confirmadas_por uuid null references auth.users(id);
+
+comment on column public.ordens_fabricacao.necessidades_confirmadas_em is
+  'Momento Y: preenchido exclusivamente por confirmar_necessidades_momento_y, na mesma transação que grava as necessidades oficiais (mesmo quando a lista é vazia). NULL + necessidade existente = OF do fluxo legado (gerar_necessidades_de_of nunca deixa uma OF aprovada sem nenhuma necessidade — ver invariante da própria função). NULL + nenhuma necessidade = Momento Y ainda não confirmado. Nunca usar existência de linha em necessidades_of_material como prova de regime — usar sempre esta coluna, em combinação com a regra acima.';
+
+comment on column public.ordens_fabricacao.necessidades_confirmadas_por is
+  'auth.uid() do usuário que confirmou o Momento Y, validado por confirmar_necessidades_momento_y contra usuarios.empresa_id — nunca aceito diretamente do payload do cliente.';
+
+-- =====================================================================
+-- 2. observacao_tecnica em necessidades_of_material — único campo novo
+--    de texto livre para a revisão técnica Y (sobremetal, fixação,
+--    motivo de substituição/adição) — nenhuma coluna estruturada por
+--    tipo de ajuste industrial (decisão já aprovada, para não
+--    transformar o cadastro/necessidade em formulário complexo).
+-- =====================================================================
+alter table public.necessidades_of_material
+  add column observacao_tecnica text null;
+
+comment on column public.necessidades_of_material.observacao_tecnica is
+  'Momento Y: nota técnica livre do PCP (sobremetal, fixação, motivo de substituição/adição) — nunca estruturada por tipo de ajuste. Protegida por impedir_alteracao_necessidade_imutavel como os demais campos de identidade/conteúdo: uma correção sempre nasce como nova versão, nunca sobrescreve a anterior.';
+
+-- Inclui observacao_tecnica na lista de campos imutáveis pós-INSERT —
+-- sem isto, um papel com UPDATE amplo sobre a tabela (ex.: service_role,
+-- que ignora RLS mas não ignora trigger) poderia reescrever uma nota
+-- histórica sem violar o trigger (achado da investigação de leitura
+-- anterior a esta migration).
+create or replace function public.impedir_alteracao_necessidade_imutavel()
+returns trigger
+language plpgsql
+security invoker
+set search_path = 'public'
+as $$
+begin
+  if new.empresa_id is distinct from old.empresa_id
+     or new.of_id is distinct from old.of_id
+     or new.materia_prima_id is distinct from old.materia_prima_id
+     or new.origem_logica is distinct from old.origem_logica
+     or new.versao is distinct from old.versao
+     or new.versao_anterior_id is distinct from old.versao_anterior_id
+     or new.quantidade_necessaria is distinct from old.quantidade_necessaria
+     or new.observacao_tecnica is distinct from old.observacao_tecnica
+     or new.created_at is distinct from old.created_at
+     or new.created_by is distinct from old.created_by
+  then
+    raise exception 'necessidades_of_material: campos de identidade/cadeia/quantidade/observacao (empresa_id, of_id, materia_prima_id, origem_logica, versao, versao_anterior_id, quantidade_necessaria, observacao_tecnica, created_at, created_by) são imutáveis após o INSERT (id=%)', old.id;
+  end if;
+  return new;
+end;
+$$;
+
+comment on function public.impedir_alteracao_necessidade_imutavel() is
+  'Momento Y: observacao_tecnica incluída na lista de campos imutáveis pós-INSERT — mesma proteção de defesa em profundidade dos demais campos de identidade/conteúdo (4D0 original).';
+
+-- =====================================================================
+-- 3. Interruptor por empresa — função helper centralizando a leitura
+--    de configuracoes_empresa, sem tabela/coluna nova. SECURITY
+--    INVOKER (default): a RLS já existente de configuracoes_empresa
+--    (mesma empresa) é suficiente e mais segura que elevar privilégio
+--    aqui.
+-- =====================================================================
+create or replace function public.momento_y_ativo_para_empresa(p_empresa_id uuid)
+returns boolean
+language sql
+stable
+set search_path = 'public'
+as $$
+  select coalesce(
+    (
+      select (valor #>> '{}')::boolean
+      from public.configuracoes_empresa
+      where empresa_id = p_empresa_id
+        and chave = 'pcp.momento_y_ativo'
+        and ativo = true
+      limit 1
+    ),
+    false
+  );
+$$;
+
+comment on function public.momento_y_ativo_para_empresa(uuid) is
+  'Momento Y: interruptor por empresa, lido de configuracoes_empresa (chave pcp.momento_y_ativo, valor jsonb true/false). Ausência de linha = false (comportamento legado, padrão seguro). STABLE, SECURITY INVOKER — a RLS de configuracoes_empresa já restringe a leitura à própria empresa.';
+
+revoke all on function public.momento_y_ativo_para_empresa(uuid) from public, anon;
+grant execute on function public.momento_y_ativo_para_empresa(uuid) to authenticated, service_role;
+
+-- =====================================================================
+-- 4. sugerir_proposta_momento_y — só leitura, nunca persiste. Mesma
+--    fórmula de gerar_necessidades_de_of (sum(expandir_bom_recursivo)),
+--    reaproveitada sem duplicar lógica de negócio. Chamada tanto para
+--    exibir a proposta inicial ao PCP quanto, de novo, dentro de
+--    confirmar_necessidades_momento_y, para detectar mudança de BOM
+--    durante a revisão (Investigação A).
+-- =====================================================================
+create or replace function public.sugerir_proposta_momento_y(p_of_id uuid)
+returns table(
+  materia_prima_id uuid,
+  quantidade_sugerida numeric,
+  unidade text,
+  descricao text,
+  especificacao text
+)
+language plpgsql
+security definer
+set search_path = 'public'
+as $function$
+declare
+  v_empresa_id uuid := public.empresa_atual_id();
+  v_of record;
+begin
+  if v_empresa_id is null then
+    raise exception 'sugerir_proposta_momento_y: empresa atual nao encontrada.';
+  end if;
+
+  if not (public.usuario_e_admin() or public.usuario_tem_papel_funcional('pcp')) then
+    raise exception 'sugerir_proposta_momento_y: exige papel funcional pcp ou administrador.';
+  end if;
+
+  select produto_id, quantidade_planejada, bom_id, estado_aprovacao
+    into v_of
+  from public.ordens_fabricacao
+  where id = p_of_id and empresa_id = v_empresa_id;
+
+  if not found then
+    raise exception 'sugerir_proposta_momento_y: OF % nao encontrada na empresa %.', p_of_id, v_empresa_id;
+  end if;
+
+  if v_of.estado_aprovacao is distinct from 'aprovada' then
+    raise exception 'sugerir_proposta_momento_y: OF % nao esta aprovada.', p_of_id;
+  end if;
+
+  if v_of.bom_id is null then
+    raise exception 'sugerir_proposta_momento_y: OF % nao tem BOM resolvido.', p_of_id;
+  end if;
+
+  return query
+    select
+      expandido.materia_prima_id,
+      sum(expandido.quantidade) as quantidade_sugerida,
+      mp.unidade,
+      mp.descricao,
+      mp.especificacao
+    from public.expandir_bom_recursivo(v_of.bom_id, v_empresa_id, v_of.quantidade_planejada, 0) as expandido
+    join public.materias_primas mp
+      on mp.id = expandido.materia_prima_id and mp.empresa_id = v_empresa_id
+    group by expandido.materia_prima_id, mp.unidade, mp.descricao, mp.especificacao
+    order by mp.descricao;
+end;
+$function$;
+
+comment on function public.sugerir_proposta_momento_y(uuid) is
+  'Momento Y: recalcula a proposta de materiais a partir do BOM atual da OF, só leitura, nunca persiste. Mesma fórmula de gerar_necessidades_de_of. Chamada pela tela (proposta inicial) e por confirmar_necessidades_momento_y (recomputação de verificação, Investigação A).';
+
+revoke all on function public.sugerir_proposta_momento_y(uuid) from public, anon;
+grant execute on function public.sugerir_proposta_momento_y(uuid) to authenticated;
+
+-- =====================================================================
+-- 5. confirmar_necessidades_momento_y — função central. service_role-
+--    only (mesmo padrão de reservar_material_of/registrar_retirada_
+--    material_of): autorização e identidade do chamador são
+--    responsabilidade da Server Action que a invoca (ainda não
+--    construída), que deve validar usuario_tem_papel_funcional('pcp')
+--    ou usuario_e_admin() ANTES de chamar esta RPC, e passar o
+--    auth.uid() validado como p_confirmado_por — mesmo padrão já usado
+--    por reservar_material_of (p_criado_por) e demais funções da
+--    Etapa 1 de estoque.
+--
+--    p_proposta_original: array jsonb [{materia_prima_id, quantidade_sugerida}, ...]
+--      exatamente como devolvido por sugerir_proposta_momento_y no
+--      momento em que a tela foi aberta — nunca editado pelo cliente.
+--      Usado SÓ para a comparação de concorrência do BOM (Investigação
+--      A); nunca para decidir o que persistir.
+--    p_itens_confirmados: array jsonb [{materia_prima_id, quantidade_confirmada,
+--      quantidade_ci, observacao_tecnica}, ...] — a decisão final do
+--      PCP, já podendo diferir da proposta (corrigida/substituída/
+--      adicionada). Pode ser um array vazio ([]) — OF confirmada sem
+--      necessidade de material (Investigação D).
+-- =====================================================================
+create or replace function public.confirmar_necessidades_momento_y(
+  p_of_id uuid,
+  p_confirmado_por uuid,
+  p_proposta_original jsonb,
+  p_itens_confirmados jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = 'public'
+as $function$
+declare
+  v_empresa_id uuid;
+  v_confirmado_por_empresa_id uuid;
+  v_of record;
+  v_rows integer;
+  v_fresco record;
+  v_qtd_original numeric;
+  v_qtd_count_original integer;
+  v_qtd_count_fresco integer;
+  v_item record;
+  v_unidade_mp text;
+  v_necessidade_id uuid;
+  v_saldo_livre numeric;
+  v_quantidade_ce numeric;
+  v_requisicao_id uuid;
+  v_total_itens integer := 0;
+  v_total_ci integer := 0;
+  v_total_ce integer := 0;
+begin
+  select empresa_id into v_empresa_id
+  from public.ordens_fabricacao
+  where id = p_of_id;
+
+  if v_empresa_id is null then
+    raise exception 'confirmar_necessidades_momento_y: OF % nao encontrada.', p_of_id;
+  end if;
+
+  select empresa_id into v_confirmado_por_empresa_id
+  from public.usuarios
+  where id = p_confirmado_por;
+
+  if v_confirmado_por_empresa_id is null or v_confirmado_por_empresa_id is distinct from v_empresa_id then
+    raise exception 'confirmar_necessidades_momento_y: confirmado_por % nao e um usuario valido da empresa % da OF %.', p_confirmado_por, v_empresa_id, p_of_id;
+  end if;
+
+  -- Mesma família de advisory lock de aprovar_of/cancelar_of/liberar_of/
+  -- registrar_retirada_material_of — serializa contra qualquer
+  -- transição concorrente desta mesma OF, inclusive cancelamento.
+  perform pg_advisory_xact_lock(hashtextextended('of-transicao:' || p_of_id::text, 0));
+
+  -- Relê a OF sob o lock — nunca confia na primeira leitura, mesmo
+  -- padrão de toda função de transição de OF já existente.
+  select * into v_of
+  from public.ordens_fabricacao
+  where id = p_of_id and empresa_id = v_empresa_id;
+
+  if not found then
+    raise exception 'confirmar_necessidades_momento_y: OF % nao encontrada na empresa %.', p_of_id, v_empresa_id;
+  end if;
+
+  if v_of.estado_execucao = 'cancelada' then
+    raise exception 'confirmar_necessidades_momento_y: OF % esta cancelada - nao e possivel confirmar necessidades.', p_of_id;
+  end if;
+
+  if v_of.estado_aprovacao is distinct from 'aprovada' then
+    raise exception 'confirmar_necessidades_momento_y: OF % nao esta aprovada.', p_of_id;
+  end if;
+
+  if v_of.necessidades_confirmadas_em is not null then
+    raise exception 'confirmar_necessidades_momento_y: OF % ja teve o Momento Y confirmado em % por %.', p_of_id, v_of.necessidades_confirmadas_em, v_of.necessidades_confirmadas_por;
+  end if;
+
+  -- =====================================================================
+  -- Investigação A — recomputa a proposta ORIGINAL (nunca a lista
+  -- editada pelo PCP) o mais tarde possível antes de gravar qualquer
+  -- coisa, e compara contra o que o cliente capturou na abertura da
+  -- tela. Divergência (material novo/removido ou quantidade sugerida
+  -- diferente) = o BOM mudou durante a revisão - recusa, preserva os
+  -- dados editados (devolvidos pela exceção) para nova conferência.
+  -- =====================================================================
+  select count(*) into v_qtd_count_original from jsonb_array_elements(p_proposta_original);
+
+  v_qtd_count_fresco := 0;
+  for v_fresco in select * from public.sugerir_proposta_momento_y(p_of_id)
+  loop
+    v_qtd_count_fresco := v_qtd_count_fresco + 1;
+
+    select (item->>'quantidade_sugerida')::numeric into v_qtd_original
+    from jsonb_array_elements(p_proposta_original) as item
+    where (item->>'materia_prima_id')::uuid = v_fresco.materia_prima_id;
+
+    if v_qtd_original is null or v_qtd_original is distinct from v_fresco.quantidade_sugerida then
+      raise exception 'confirmar_necessidades_momento_y: a proposta de materiais mudou desde a abertura da tela (material %, sugestao atual %) - releia a proposta antes de confirmar.', v_fresco.materia_prima_id, v_fresco.quantidade_sugerida;
+    end if;
+  end loop;
+
+  if v_qtd_count_original <> v_qtd_count_fresco then
+    raise exception 'confirmar_necessidades_momento_y: a proposta de materiais mudou desde a abertura da tela (quantidade de itens difere: original=%, atual=%) - releia a proposta antes de confirmar.', v_qtd_count_original, v_qtd_count_fresco;
+  end if;
+
+  -- =====================================================================
+  -- Gravação das necessidades oficiais + decisão CI/CE do PCP, por
+  -- material consolidado. Agrupa defensivamente por materia_prima_id -
+  -- nunca confia que o cliente já consolidou materiais iguais
+  -- (consolidação é regra de negócio aprovada, aplicada aqui, não só
+  -- na interface).
+  -- =====================================================================
+  for v_item in
+    select
+      x.materia_prima_id,
+      sum(x.quantidade_confirmada) as quantidade_confirmada,
+      sum(coalesce(x.quantidade_ci, 0)) as quantidade_ci,
+      string_agg(distinct x.observacao_tecnica, ' | ') as observacao_tecnica
+    from jsonb_to_recordset(p_itens_confirmados) as x(
+      materia_prima_id uuid,
+      quantidade_confirmada numeric,
+      quantidade_ci numeric,
+      observacao_tecnica text
+    )
+    group by x.materia_prima_id
+  loop
+    if v_item.quantidade_confirmada is null or v_item.quantidade_confirmada <= 0 then
+      raise exception 'confirmar_necessidades_momento_y: quantidade confirmada invalida para o material %.', v_item.materia_prima_id;
+    end if;
+
+    if v_item.quantidade_ci < 0 or v_item.quantidade_ci > v_item.quantidade_confirmada then
+      raise exception 'confirmar_necessidades_momento_y: quantidade CI invalida para o material % (CI=%, confirmado=%) - CI nao pode exceder a quantidade confirmada.', v_item.materia_prima_id, v_item.quantidade_ci, v_item.quantidade_confirmada;
+    end if;
+
+    select unidade into v_unidade_mp
+    from public.materias_primas
+    where id = v_item.materia_prima_id and empresa_id = v_empresa_id;
+
+    if v_unidade_mp is null then
+      raise exception 'confirmar_necessidades_momento_y: materia-prima % nao encontrada na empresa %.', v_item.materia_prima_id, v_empresa_id;
+    end if;
+
+    insert into public.necessidades_of_material (
+      empresa_id, of_id, materia_prima_id, origem_logica, versao,
+      versao_anterior_id, quantidade_necessaria, observacao_tecnica, created_by
+    ) values (
+      v_empresa_id, p_of_id, v_item.materia_prima_id, 'momento_y', 1,
+      null, v_item.quantidade_confirmada, v_item.observacao_tecnica, p_confirmado_por
+    )
+    returning id into v_necessidade_id;
+
+    v_total_itens := v_total_itens + 1;
+
+    if v_item.quantidade_ci > 0 then
+      select saldo_livre into v_saldo_livre
+      from public.estoque_saldos
+      where empresa_id = v_empresa_id and materia_prima_id = v_item.materia_prima_id and local_estoque = 'principal'
+      for update;
+
+      v_saldo_livre := coalesce(v_saldo_livre, 0);
+
+      -- Saldo insuficiente na confirmação: recusa explicitamente, nunca
+      -- reduz CI/aumenta CE silenciosamente (regra explícita aprovada).
+      if v_saldo_livre < v_item.quantidade_ci then
+        raise exception 'confirmar_necessidades_momento_y: saldo livre insuficiente para a reserva CI do material % (livre=%, confirmado=%).', v_item.materia_prima_id, v_saldo_livre, v_item.quantidade_ci;
+      end if;
+
+      update public.estoque_saldos
+        set saldo_reservado = saldo_reservado + v_item.quantidade_ci
+        where empresa_id = v_empresa_id and materia_prima_id = v_item.materia_prima_id and local_estoque = 'principal';
+
+      insert into public.estoque_movimentacoes (
+        empresa_id, materia_prima_id, local_estoque, tipo_movimento, quantidade,
+        projeto_id, of_numero, of_id, necessidade_id, observacoes, created_by
+      ) values (
+        v_empresa_id, v_item.materia_prima_id, 'principal', 'reserva', v_item.quantidade_ci,
+        v_of.projeto_id, v_of.numero_of, p_of_id, v_necessidade_id,
+        'Reserva confirmada pelo PCP no Momento Y.', p_confirmado_por
+      );
+
+      v_total_ci := v_total_ci + 1;
+    end if;
+
+    v_quantidade_ce := v_item.quantidade_confirmada - v_item.quantidade_ci;
+
+    if v_quantidade_ce > 0 then
+      if v_requisicao_id is null then
+        insert into public.requisicoes_compra (
+          empresa_id, projeto_id, of_numero, of_id, data_necessidade_material, status, observacoes, created_by
+        ) values (
+          v_empresa_id, v_of.projeto_id, v_of.numero_of, p_of_id, current_date, 'aberta',
+          'Requisicao gerada pela confirmacao do Momento Y.', p_confirmado_por
+        )
+        returning id into v_requisicao_id;
+      end if;
+
+      insert into public.requisicao_compra_itens (
+        empresa_id, requisicao_compra_id, necessidade_id, materia_prima_id,
+        quantidade_necessaria, unidade, observacoes, created_by
+      ) values (
+        v_empresa_id, v_requisicao_id, v_necessidade_id, v_item.materia_prima_id,
+        v_quantidade_ce, v_unidade_mp,
+        'Compra externa gerada pela confirmacao do Momento Y.', p_confirmado_por
+      );
+
+      v_total_ce := v_total_ce + 1;
+    end if;
+  end loop;
+
+  -- =====================================================================
+  -- Investigação B — confirmação única: UPDATE condicional (WHERE ...
+  -- IS NULL) + checagem de ROW_COUNT=1 é a garantia real, independente
+  -- do advisory lock acima (que só evita trabalho duplicado). Mesma
+  -- instrução/transação de tudo o que foi gravado acima — uma falha
+  -- aqui desfaz também as necessidades/reservas/requisições já
+  -- inseridas nesta mesma chamada.
+  -- =====================================================================
+  update public.ordens_fabricacao
+    set necessidades_confirmadas_em = now(),
+        necessidades_confirmadas_por = p_confirmado_por
+    where id = p_of_id
+      and empresa_id = v_empresa_id
+      and necessidades_confirmadas_em is null;
+
+  get diagnostics v_rows = row_count;
+  if v_rows <> 1 then
+    raise exception 'confirmar_necessidades_momento_y: falha ao confirmar OF % - o Momento Y foi confirmado por outra operacao durante esta chamada.', p_of_id;
+  end if;
+
+  return jsonb_build_object(
+    'resultado', 'confirmado',
+    'of_id', p_of_id,
+    'total_materiais', v_total_itens,
+    'total_reservas_ci', v_total_ci,
+    'total_itens_requisicao_ce', v_total_ce,
+    'requisicao_compra_id', v_requisicao_id
+  );
+end;
+$function$;
+
+comment on function public.confirmar_necessidades_momento_y(uuid, uuid, jsonb, jsonb) is
+  'Momento Y: confirmação oficial de matérias-primas de uma OF, atômica (necessidades + decisão CI/CE + reserva + requisição CE + marcador, uma única transação). Recusa se a proposta original divergir do BOM recomputado agora (Investigação A), se a OF já estiver confirmada ou cancelada, ou se o saldo livre for insuficiente para o CI confirmado (nunca ajusta silenciosamente). Aceita lista vazia (OF sem necessidade de material, Investigação D). service_role-only: autorização (papel pcp/admin) e identidade (p_confirmado_por) são responsabilidade da Server Action chamadora, nunca confiadas ao payload.';
+
+revoke all on function public.confirmar_necessidades_momento_y(uuid, uuid, jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.confirmar_necessidades_momento_y(uuid, uuid, jsonb, jsonb) to service_role;
+
+-- =====================================================================
+-- 6. liberar_of — adiciona a exigência "Momento Y confirmado OU
+--    necessidade legada existente" (Investigação D/liberação), sem
+--    nenhuma outra mudança de corpo. Condição única, válida para os
+--    dois regimes (ver justificativa no cabeçalho) — nunca verifica o
+--    interruptor por empresa aqui, porque não precisa saber qual
+--    regime se aplica.
+-- =====================================================================
+create or replace function public.liberar_of(
+  p_of_id uuid,
+  p_liberado_por uuid,
+  p_motivo text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare
+  v_of record;
+  v_empresa_id uuid;
+  v_liberado_por_empresa_id uuid;
+  v_tem_necessidade_legada boolean;
+begin
+  select empresa_id into v_empresa_id from public.ordens_fabricacao where id = p_of_id;
+  if v_empresa_id is null then
+    raise exception 'liberar_of: OF % nao encontrada.', p_of_id;
+  end if;
+
+  select empresa_id into v_liberado_por_empresa_id from public.usuarios where id = p_liberado_por;
+  if v_liberado_por_empresa_id is null or v_liberado_por_empresa_id is distinct from v_empresa_id then
+    raise exception 'liberar_of: liberado_por % nao e um usuario valido da empresa % da OF %.', p_liberado_por, v_empresa_id, p_of_id;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('of-transicao:' || p_of_id::text, 0));
+
+  select * into v_of from public.ordens_fabricacao where id = p_of_id;
+
+  if v_of.estado_aprovacao = 'aprovada' and v_of.estado_execucao = 'liberada' then
+    return jsonb_build_object('resultado', 'ja_liberada', 'of_id', v_of.id, 'numero_of', v_of.numero_of);
+  end if;
+
+  if v_of.estado_aprovacao is distinct from 'aprovada' or v_of.estado_execucao is distinct from 'planejada' then
+    raise exception 'liberar_of: OF % em %/% nao pode ser liberada - precisa estar aprovada+planejada.', p_of_id, v_of.estado_aprovacao, v_of.estado_execucao;
+  end if;
+
+  -- Momento Y: exige confirmação oficial OU necessidade legada
+  -- existente (ver justificativa no cabeçalho desta migration) - nunca
+  -- bloqueia uma OF aprovada pelo fluxo legado, que sempre tem ao
+  -- menos uma necessidade por invariante própria de gerar_necessidades_de_of.
+  if v_of.necessidades_confirmadas_em is null then
+    select exists(
+      select 1 from public.necessidades_of_material
+      where of_id = p_of_id and empresa_id = v_empresa_id and ativo = true
+    ) into v_tem_necessidade_legada;
+
+    if not v_tem_necessidade_legada then
+      raise exception 'liberar_of: OF % ainda nao teve as materias-primas conferidas (Momento Y nao confirmado e nenhuma necessidade encontrada).', p_of_id;
+    end if;
+  end if;
+
+  update public.ordens_fabricacao
+    set estado_execucao = 'liberada',
+        estado_execucao_observacao = p_motivo
+    where id = p_of_id
+      and estado_aprovacao = 'aprovada'
+      and estado_execucao = 'planejada';
+
+  if not found then
+    raise exception 'liberar_of: falha ao liberar OF % - estado mudou durante a operacao.', p_of_id;
+  end if;
+
+  return jsonb_build_object('resultado', 'liberada', 'of_id', p_of_id, 'numero_of', v_of.numero_of);
+end;
+$function$;
+
+comment on function public.liberar_of(uuid, uuid, text) is
+  'PCP-P7C + Momento Y: decisao do PCP, por OF, autorizando producao (aprovada+planejada -> aprovada+liberada). Exige necessidades_confirmadas_em preenchido OU necessidade legada existente - condicao unica, valida para os dois regimes, sem precisar saber qual se aplica. Distinta de aprovar_of (gate estrutural + necessidade de material) - nunca fundidas. Idempotente (ja_liberada sem efeito colateral). Motivo opcional, gravado em estado_execucao_observacao. Autorizacao por Grupo de Acesso/Permissao fica para gate futuro - ACL tecnica aqui e service_role-only.';
+
+revoke all on function public.liberar_of(uuid, uuid, text) from public, anon, authenticated;
+grant execute on function public.liberar_of(uuid, uuid, text) to service_role;
+
+-- =====================================================================
+-- 7. aprovar_of — único ponto do fluxo legado que muda. Quando o
+--    interruptor por empresa está desligado (padrão), o corpo é
+--    byte-a-byte idêntico ao vigente hoje (gera necessidades + decide
+--    CI/CE automaticamente). Quando ligado, para novas OFs, nao gera
+--    nem decide nada - a necessidade oficial só nasce depois, em
+--    confirmar_necessidades_momento_y.
+-- =====================================================================
+create or replace function public.aprovar_of(p_of_id uuid, p_observacao text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = 'public'
+as $$
+declare
+  v_uid uuid;
+  v_empresa_id uuid;
+  v_of record;
+  v_rows integer;
+  v_necessidades jsonb;
+  v_ci_ce jsonb;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'aprovar_of: sessao invalida.';
+  end if;
+
+  v_empresa_id := public.empresa_atual_id();
+  if v_empresa_id is null then
+    raise exception 'aprovar_of: empresa atual nao encontrada.';
+  end if;
+
+  if not (coalesce(public.usuario_e_admin(), false) or coalesce(public.usuario_tem_papel_funcional('pcp'), false)) then
+    raise exception 'aprovar_of: usuario sem permissao para aprovar OF.';
+  end if;
+
+  perform 1 from public.ordens_fabricacao where id = p_of_id and empresa_id = v_empresa_id;
+  if not found then
+    raise exception 'aprovar_of: OF nao encontrada.';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('of-transicao:' || p_of_id::text, 0));
+
+  select * into v_of from public.ordens_fabricacao where id = p_of_id and empresa_id = v_empresa_id;
+  if not found then
+    raise exception 'aprovar_of: OF nao encontrada.';
+  end if;
+
+  if v_of.estado_aprovacao is not distinct from 'aprovada'
+     and v_of.estado_execucao is not distinct from 'planejada' then
+    return jsonb_build_object('resultado', 'ja_aprovada', 'of_id', v_of.id, 'numero_of', v_of.numero_of);
+  end if;
+
+  if v_of.estado_aprovacao is distinct from 'aguardando_auditoria'
+     or v_of.estado_execucao is distinct from 'planejada' then
+    raise exception 'aprovar_of: transicao invalida - OF % em %/%.', v_of.numero_of, v_of.estado_aprovacao, v_of.estado_execucao;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('subconjunto-grafo:' || v_empresa_id::text, 0));
+
+  update public.ordens_fabricacao
+    set estado_aprovacao = 'aprovada',
+        estado_execucao = 'planejada',
+        estado_aprovacao_em = now(),
+        estado_aprovacao_por = v_uid,
+        estado_aprovacao_observacao = p_observacao
+    where id = p_of_id
+      and empresa_id = v_empresa_id
+      and estado_aprovacao = 'aguardando_auditoria'
+      and estado_execucao = 'planejada';
+  get diagnostics v_rows = row_count;
+  if v_rows <> 1 then
+    raise exception 'aprovar_of: falha ao aprovar OF % - estado mudou durante a operacao.', p_of_id;
+  end if;
+
+  -- Momento Y: quando o interruptor desta empresa esta ligado, a
+  -- necessidade oficial e a decisao CI/CE deixam de nascer aqui -
+  -- ficam pendentes de confirmar_necessidades_momento_y. Nenhuma
+  -- mudanca de comportamento para empresas sem o interruptor ligado.
+  if public.momento_y_ativo_para_empresa(v_empresa_id) then
+    return jsonb_build_object(
+      'resultado', 'aprovada', 'of_id', p_of_id, 'numero_of', v_of.numero_of,
+      'momento_y_pendente', true
+    );
+  end if;
+
+  v_necessidades := public.gerar_necessidades_de_of(p_of_id, v_empresa_id);
+
+  -- Incremento 6 (fluxo legado, inalterado): decisao automatica CI/CE,
+  -- mesma transacao, sem handler - falha aqui desfaz TUDO (aprovacao +
+  -- necessidades geradas), mesma propagacao natural ja usada entre
+  -- aprovar_of/gerar_necessidades_de_of.
+  v_ci_ce := public.decidir_ci_ce_de_of(p_of_id, v_empresa_id);
+
+  return jsonb_build_object(
+    'resultado', 'aprovada', 'of_id', p_of_id, 'numero_of', v_of.numero_of,
+    'necessidades', v_necessidades,
+    'decisao_ci_ce', v_ci_ce
+  );
+end;
+$$;
+
+comment on function public.aprovar_of(uuid, text) is
+  '4D0, Incremento 5+6 + Momento Y: aprova uma OF em aguardando_auditoria+planejada (gate PCP/admin). Quando momento_y_ativo_para_empresa(empresa) e false (padrao, fluxo legado): gera necessidades de materia-prima E decide CI/CE automaticamente, atomicamente, exatamente como antes desta migration. Quando true: nao gera necessidades nem decide CI/CE - isso passa a ser responsabilidade exclusiva de confirmar_necessidades_momento_y, chamada depois pelo PCP. Idempotente SOMENTE para aprovada+planejada (retorna ja_aprovada, sem efeito colateral). Advisory lock of-transicao:<id> compartilhado com reprovar_of/resubmeter_of_para_auditoria/cancelar_of/liberar_of/confirmar_necessidades_momento_y; lock subconjunto-grafo:<empresa> antes do UPDATE. UPDATE inclui o estado esperado no WHERE e valida ROW_COUNT=1.';
+
+revoke all on function public.aprovar_of(uuid, text)
+  from public, anon, authenticated, service_role;
+grant execute on function public.aprovar_of(uuid, text) to authenticated;
+
+commit;
