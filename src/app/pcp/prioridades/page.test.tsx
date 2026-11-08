@@ -28,7 +28,8 @@ vi.mock("@/modules/pcp/actions/solicitarCalculoProgramacaoPcpAction", () => ({
   solicitarCalculoProgramacaoPcpAction: (...args: unknown[]) => solicitarCalculoProgramacaoPcpActionMock(...args),
 }));
 
-import PrioridadesPcpPage, { calcularVizinhosParaMovimento } from "./page";
+import PrioridadesPcpPage from "./page";
+import { calcularVizinhosParaMovimento } from "@/modules/pcp/lib/interpretacao/calcularVizinhosParaMovimentoPcp";
 import type { ItemFilaPrioridadesPcp } from "@/modules/pcp/lib/buscarFilaPrioridadesPcp";
 
 function item(overrides: Partial<ItemFilaPrioridadesPcp> = {}): ItemFilaPrioridadesPcp {
