@@ -53,6 +53,7 @@ import { removerOperacaoOfPcpAction } from "@/modules/pcp/actions/removerOperaca
 import { adicionarDependenciaOperacaoOfPcpAction } from "@/modules/pcp/actions/adicionarDependenciaOperacaoOfPcpAction";
 import { removerDependenciaOperacaoOfPcpAction } from "@/modules/pcp/actions/removerDependenciaOperacaoOfPcpAction";
 import { consultarPermissoesDependenciasOperacoesOfPcpAction } from "@/modules/pcp/actions/consultarPermissoesDependenciasOperacoesOfPcpAction";
+import { liberarOfCombinadoPcpAction } from "@/modules/pcp/actions/liberarOfCombinadoPcpAction";
 import type { RecursoProdutivoOpcaoPcp } from "@/modules/pcp/lib/buscarRecursosProdutivosPcp";
 import { rotuloSimplificadoOf, detalheTecnicoStatusOf } from "@/modules/pcp/lib/buscarOfsPcp";
 import type { OperacaoOfPcp } from "@/modules/pcp/lib/buscarOperacoesOfPcp";
@@ -248,6 +249,7 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
     const resposta = await consultarOfsPcpAction({ ofId }, 1, 1);
     setResultadoOf(resposta);
     setCarregandoOf(false);
+    return resposta;
   }
 
   async function recarregarDependencias(opIdsForcados?: readonly string[]) {
@@ -547,6 +549,78 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
     ) {
       setPropostaPodeEstarDesatualizada(true);
     }
+  }
+
+  // Liberação de OF — botão único "Liberar OF" (liberarOfCombinadoPcpAction).
+  // Decisão de negócio: o PCP vê um único botão, mesmo quando a OF
+  // ainda depende de aprovação - a RPC candidata aprovar_e_liberar_of
+  // orquestra as duas transições internamente, na mesma transação.
+  // Nunca reimplementa as checagens de estado/permissão/concorrência:
+  // só chama a Action e nomeia o motivo que a RPC já decidiu. Portão
+  // de implantação reaproveitado de Liberação de OF (decisão explícita
+  // do usuário) - ainda desligado neste ambiente.
+  const [modalLiberacaoAberto, setModalLiberacaoAberto] = useState(false);
+  const [enviandoLiberacao, setEnviandoLiberacao] = useState(false);
+  const [erroLiberacao, setErroLiberacao] = useState<string | null>(null);
+  const [notaLiberacao, setNotaLiberacao] = useState<string | null>(null);
+
+  const MOTIVO_REJEICAO_LIBERACAO: Record<string, string> = {
+    nao_autenticado: "Sessão expirada — faça login novamente.",
+    empresa_nao_encontrada: "Não foi possível resolver a empresa da sessão atual.",
+    of_nao_encontrada: "Esta OF não foi encontrada.",
+    implantacao_bloqueada: "Esta funcionalidade ainda não foi liberada neste ambiente.",
+    nao_autorizado_aprovar: "Seu usuário não tem a permissão necessária para aprovar esta OF.",
+    nao_autorizado_liberar: "Seu usuário não tem a permissão necessária para liberar esta OF.",
+    liberado_por_invalido: "Não foi possível validar seu usuário para esta liberação.",
+    estado_incompativel: "Esta OF não está em um estado que permita a liberação.",
+    momento_y_pendente: "Esta OF ainda não teve as matérias-primas conferidas — confirme a conferência antes de liberar.",
+    conflito_concorrencia: "O estado desta OF mudou durante a operação — releia a OF e tente novamente.",
+    erro_desconhecido: "Falha técnica inesperada ao liberar. Tente novamente mais tarde.",
+  };
+
+  async function confirmarLiberacaoOf() {
+    setEnviandoLiberacao(true);
+    setErroLiberacao(null);
+    setNotaLiberacao(null);
+
+    const resposta = await liberarOfCombinadoPcpAction(ofId);
+    setEnviandoLiberacao(false);
+
+    if (resposta.ok) {
+      setModalLiberacaoAberto(false);
+      setNotaLiberacao(
+        resposta.jaLiberada
+          ? "Esta OF já estava liberada."
+          : resposta.aprovacaoRealizada
+            ? "OF aprovada e liberada para produção com sucesso."
+            : "OF liberada para produção com sucesso.",
+      );
+      await recarregarDadosOf();
+      return;
+    }
+
+    // Gravação incerta: a chamada de rede em si falhou - nunca sabemos
+    // se a RPC chegou a gravar antes da conexão cair. Nunca decide
+    // sozinho: reconsulta o estado oficial da OF antes de dizer
+    // qualquer coisa ao usuário (mesmo princípio de
+    // confirmarConferenciaMateriaisPendente/confirmarRemocaoOperacao).
+    if (resposta.motivo === "gravacao_incerta") {
+      setErroLiberacao("Não foi possível confirmar se a gravação foi concluída. Verificando o estado atual…");
+      const verificacao = await recarregarDadosOf();
+      const linhaAtual = verificacao.ok ? verificacao.resultado.linhas[0] ?? null : null;
+      if (linhaAtual?.estadoExecucao === "liberada") {
+        setErroLiberacao(null);
+        setModalLiberacaoAberto(false);
+        setNotaLiberacao("A OF FOI liberada (verificado agora, após uma falha de conexão).");
+      } else {
+        setErroLiberacao(
+          "A conexão caiu antes de confirmar a gravação. Verificamos e a OF NÃO foi liberada — pode tentar novamente com segurança.",
+        );
+      }
+      return;
+    }
+
+    setErroLiberacao(MOTIVO_REJEICAO_LIBERACAO[resposta.motivo] ?? "Falha ao liberar a OF.");
   }
 
   // Etapa 64E — dados da OF, materiais e o detalhe condicional ao
@@ -1075,8 +1149,24 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
 
         {!carregandoOf && linha ? (
           <>
-            {/* Seção 1 — Dados da OF */}
-            <Card title="Dados da OF">
+            {/* Seção 1 — Dados da OF (sem título; cabeçalho hospeda só a ação de liberação) */}
+            <Card>
+              {/* Liberação de OF — decisão do PCP, nunca automática. Sempre
+                  chama a RPC real (via liberarOfPcpAction); as checagens de
+                  estado/Momento Y/concorrência pertencem a ela, nunca são
+                  refeitas aqui. Botão compacto no cabeçalho do cartão
+                  (mesmo padrão de tamanho de src/app/design/pcp-prioridades-preview/page.tsx). */}
+              <div className="mb-4 flex items-center justify-end gap-2 border-b border-border-subtle pb-4">
+                <Button
+                  variant="primary"
+                  className="h-8 px-3 text-[12px]"
+                  onClick={() => setModalLiberacaoAberto(true)}
+                  disabled={ofEmEstadoFinal}
+                >
+                  Liberar OF
+                </Button>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <DadoOf
                   rotulo="Projeto"
@@ -1109,6 +1199,12 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
                   <DadoOf rotulo="Versão do BOM" valor={resultadoLegado.resumo.bomVersao} />
                 ) : null}
               </div>
+
+              {notaLiberacao ? (
+                <div className="mt-4 rounded-[10px] border border-status-success-border bg-status-success-bg px-4 py-2.5 text-[12.5px] text-status-success-text">
+                  {notaLiberacao}
+                </div>
+              ) : null}
             </Card>
 
             {/* Seção 2 — Matérias-primas (nome interno "Momento Y", nunca exibido). */}
@@ -1608,6 +1704,35 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
           {notaFormOperacao ? (
             <div className="rounded-[10px] border border-status-info-border bg-status-info-bg px-4 py-2.5 text-[12.5px] text-status-info-text">
               {notaFormOperacao}
+            </div>
+          ) : null}
+        </div>
+      </Modal>
+
+      <Modal
+        open={modalLiberacaoAberto}
+        onClose={() => (enviandoLiberacao ? null : setModalLiberacaoAberto(false))}
+        title="Liberar para Produção"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModalLiberacaoAberto(false)} disabled={enviandoLiberacao}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={confirmarLiberacaoOf} disabled={enviandoLiberacao}>
+              {enviandoLiberacao ? "Liberando…" : "Confirmar liberação"}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p>
+            A OF <strong>{linha?.numeroOf}</strong> será liberada para produção. Esta decisão é sua — confirme só depois de avaliar as
+            condições reais (matéria-prima disponível, documentação, ferramentas) fora desta tela.
+          </p>
+
+          {erroLiberacao ? (
+            <div className="rounded-[10px] border border-status-danger-border bg-status-danger-bg px-4 py-2.5 text-[12.5px] text-status-danger-text">
+              {erroLiberacao}
             </div>
           ) : null}
         </div>

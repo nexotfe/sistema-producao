@@ -84,6 +84,10 @@ vi.mock("@/modules/pcp/actions/removerDependenciaOperacaoOfPcpAction", () => ({
 vi.mock("@/modules/pcp/actions/consultarPermissoesDependenciasOperacoesOfPcpAction", () => ({
   consultarPermissoesDependenciasOperacoesOfPcpAction: () => consultarPermissoesDependenciasOperacoesOfPcpActionMock(),
 }));
+vi.mock("@/modules/pcp/actions/liberarOfCombinadoPcpAction", () => ({
+  liberarOfCombinadoPcpAction: (ofId: string, observacao?: string, motivo?: string) =>
+    liberarOfCombinadoPcpActionMock(ofId, observacao, motivo),
+}));
 
 const consultarCargaInicialOfPcpActionMock = vi.fn();
 const consultarOfsPcpActionMock = vi.fn();
@@ -100,6 +104,7 @@ const removerOperacaoOfPcpActionMock = vi.fn();
 const adicionarDependenciaOperacaoOfPcpActionMock = vi.fn();
 const removerDependenciaOperacaoOfPcpActionMock = vi.fn();
 const consultarPermissoesDependenciasOperacoesOfPcpActionMock = vi.fn();
+const liberarOfCombinadoPcpActionMock = vi.fn();
 
 import { OrdemFabricacaoDetalhePageContent } from "./OrdemFabricacaoDetalhePageContent";
 import type { LinhaOfPcp } from "../lib/buscarOfsPcp";
@@ -120,6 +125,7 @@ function linhaFicticia(sobrescritas: Partial<LinhaOfPcp> = {}): LinhaOfPcp {
     unidade: "un",
     dataObjetivo: "2026-12-10",
     prazoComercialVigente: null,
+    observacaoPcp: null,
     ...sobrescritas,
   };
 }
@@ -211,7 +217,7 @@ describe("OrdemFabricacaoDetalhePageContent — carga inicial consolidada (Etapa
   it("1. Chama a carga inicial consolidada exatamente uma vez, com o ofId da página", async () => {
     render(<OrdemFabricacaoDetalhePageContent ofId="of-xyz" />);
 
-    await waitFor(() => screen.getByText("Dados da OF"));
+    await waitFor(() => screen.getByText("Projeto"));
     expect(consultarCargaInicialOfPcpActionMock).toHaveBeenCalledTimes(1);
     expect(consultarCargaInicialOfPcpActionMock).toHaveBeenCalledWith("of-xyz");
   });
@@ -617,7 +623,7 @@ describe("OrdemFabricacaoDetalhePageContent — Etapa 65C: seletor real de recur
   it("1. Carregamento sob demanda: não consulta recursos no mount da página, só ao abrir Adicionar/Editar", async () => {
     render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
 
-    await waitFor(() => screen.getByText("Dados da OF"));
+    await waitFor(() => screen.getByText("Projeto"));
     expect(consultarRecursosProdutivosPcpActionMock).not.toHaveBeenCalled();
   });
 
@@ -1123,7 +1129,7 @@ describe("OrdemFabricacaoDetalhePageContent — Dados da OF: falha e releitura",
     fireEvent.click(botaoTentar);
 
     await waitFor(() => expect(consultarOfsPcpActionMock).toHaveBeenCalledWith({ ofId: "of-1" }, 1, 1));
-    await waitFor(() => screen.getByText("Dados da OF"));
+    await waitFor(() => screen.getByText("Projeto"));
   });
 
   it("2. Sessão não autenticada: não mostra 'Tentar novamente' (releitura não resolveria a sessão expirada)", async () => {
@@ -1545,5 +1551,176 @@ describe("OrdemFabricacaoDetalhePageContent — controle Dependências (Etapa 66
 
     fireEvent.click(screen.getByText("Verificar estado atual"));
     await waitFor(() => screen.getByText(/JÁ FOI REMOVIDA/));
+  });
+});
+
+describe("OrdemFabricacaoDetalhePageContent — Liberação de OF (botão único combinado 'Liberar OF')", () => {
+  beforeEach(() => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: true, jaLiberada: false, aprovacaoRealizada: false, numeroOf: "260015-0002" });
+  });
+
+  it("1. Botão sempre visível na OF carregada, abre o modal de confirmação ao clicar", async () => {
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+
+    await waitFor(() => screen.getByRole("dialog"));
+    expect(within(screen.getByRole("dialog")).getByText("260015-0002", { exact: false })).toBeDefined();
+  });
+
+  it("2. Nunca mostra um segundo botão 'Aprovar OF' no cabeçalho, mesmo com a OF aguardando auditoria", async () => {
+    prepararCargaPadrao({
+      resultadoOf: {
+        ok: true,
+        resultado: {
+          linhas: [linhaFicticia({ estadoAprovacao: "aguardando_auditoria", estadoExecucao: "planejada" })],
+          totalRegistros: 1,
+          pagina: 1,
+          tamanhoPagina: 1,
+        },
+      },
+    });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    expect(screen.queryByText("Aprovar OF")).toBeNull();
+    expect(screen.getByText("Liberar OF")).toBeDefined();
+  });
+
+  it("3. Confirmar (OF já aprovada): chama liberarOfCombinadoPcpAction com o ofId da página, fecha o modal e mostra a nota de sucesso sem mencionar aprovação", async () => {
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() => screen.getByText("OF liberada para produção com sucesso."));
+    expect(liberarOfCombinadoPcpActionMock).toHaveBeenCalledWith("of-1", undefined, undefined);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("4. Confirmar (OF aguardando auditoria, aprovação realizada internamente): mostra nota combinada distinta", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: true, jaLiberada: false, aprovacaoRealizada: true, numeroOf: "260015-0002" });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() => screen.getByText("OF aprovada e liberada para produção com sucesso."));
+  });
+
+  it("5. Tentativa duplicada (RPC já liberada, idempotente): mostra nota distinta, nunca como erro", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: true, jaLiberada: true, aprovacaoRealizada: false, numeroOf: "260015-0002" });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() => screen.getByText("Esta OF já estava liberada."));
+  });
+
+  it("6. Estado incompatível: mostra a mensagem mapeada, mantém o modal aberto para nova tentativa", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: false, motivo: "estado_incompativel" });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() => screen.getByText("Esta OF não está em um estado que permita a liberação."));
+    expect(screen.getByRole("dialog")).toBeDefined();
+  });
+
+  it("7. Sem permissão para aprovar (OF aguardando auditoria): mostra mensagem distinta de 'sem permissão para liberar'", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: false, motivo: "nao_autorizado_aprovar" });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() => screen.getByText("Seu usuário não tem a permissão necessária para aprovar esta OF."));
+  });
+
+  it("8. Sem permissão para liberar: mostra mensagem distinta de 'sem permissão para aprovar'", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: false, motivo: "nao_autorizado_liberar" });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() => screen.getByText("Seu usuário não tem a permissão necessária para liberar esta OF."));
+  });
+
+  it("9. Matérias-primas pendentes (Momento Y): mostra mensagem compreensível, nunca ativa o Momento Y sozinho", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: false, motivo: "momento_y_pendente" });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() =>
+      screen.getByText("Esta OF ainda não teve as matérias-primas conferidas — confirme a conferência antes de liberar."),
+    );
+  });
+
+  it("10. Gravação incerta: reconsulta a OF; se o estado real já mudou para 'liberada', reporta sucesso em vez de repetir a chamada", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: false, motivo: "gravacao_incerta" });
+    consultarOfsPcpActionMock.mockResolvedValue({
+      ok: true,
+      resultado: { linhas: [linhaFicticia({ estadoExecucao: "liberada" })], totalRegistros: 1, pagina: 1, tamanhoPagina: 1 },
+    });
+
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() => screen.getByText("A OF FOI liberada (verificado agora, após uma falha de conexão)."));
+    expect(liberarOfCombinadoPcpActionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("11. Gravação incerta: se o estado real continua 'planejada', reporta que nada foi gravado e permite tentar de novo", async () => {
+    liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: false, motivo: "gravacao_incerta" });
+    consultarOfsPcpActionMock.mockResolvedValue({
+      ok: true,
+      resultado: { linhas: [linhaFicticia({ estadoExecucao: "planejada" })], totalRegistros: 1, pagina: 1, tamanhoPagina: 1 },
+    });
+
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByText("Confirmar liberação"));
+
+    await waitFor(() =>
+      screen.getByText("A conexão caiu antes de confirmar a gravação. Verificamos e a OF NÃO foi liberada — pode tentar novamente com segurança."),
+    );
+    expect(screen.getByRole("dialog")).toBeDefined();
+  });
+
+  it("12. Cancelar: fecha o modal sem chamar a action", async () => {
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    fireEvent.click(screen.getByText("Liberar OF"));
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(within(screen.getByRole("dialog")).getByText("Cancelar"));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(liberarOfCombinadoPcpActionMock).not.toHaveBeenCalled();
   });
 });

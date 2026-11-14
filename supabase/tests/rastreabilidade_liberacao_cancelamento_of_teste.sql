@@ -46,6 +46,7 @@ declare
   v_empresa_a uuid := gen_random_uuid();
   v_empresa_b uuid := gen_random_uuid();
   v_admin uuid := gen_random_uuid();
+  v_grupo_adm uuid;
   v_liberador uuid := gen_random_uuid();
   v_cancelador uuid := gen_random_uuid();
   v_usuario_b uuid := gen_random_uuid();
@@ -66,8 +67,22 @@ begin
     (v_empresa_a, 'Empresa Teste A (rastreabilidade OF, local)', 'empresa-teste-rastreabilidade-of-a', 900101, v_admin),
     (v_empresa_b, 'Empresa Teste B (rastreabilidade OF, local)', 'empresa-teste-rastreabilidade-of-b', 900102, v_admin);
 
-  insert into public.profiles (id, empresa_id, nome, nivel_acesso, ativo) values
-    (v_admin, v_empresa_a, 'Admin PCP (teste rastreabilidade)', 'admin', true);
+  -- Correção de fixture: v_admin precisa pertencer ao Grupo de Acesso
+  -- ADM (auto-criado pela empresa) para passar usuario_tem_permissao -
+  -- a chave pcp.aprovar_of (migration 20261112160000, aplicada DEPOIS
+  -- que este teste foi originalmente escrito) exige isso. Nunca uma
+  -- permissão mais ampla concedida - reaproveita a autoridade ADM já
+  -- existente, nada criado/concedido novo.
+  select id into v_grupo_adm from public.grupos_acesso where empresa_id = v_empresa_a and e_grupo_adm = true;
+  if v_grupo_adm is null then
+    raise exception 'PRÉ-CHECAGEM FALHOU: nenhum grupo ADM automático foi criado para a empresa sintética.';
+  end if;
+
+  insert into public.profiles (id, empresa_id, nome, nivel_acesso, ativo, grupo_id) values
+    (v_admin, v_empresa_a, 'Admin PCP (teste rastreabilidade)', 'admin', true, v_grupo_adm);
+
+  insert into public.usuarios (id, empresa_id, nome, email, nivel_acesso) values
+    (v_admin, v_empresa_a, 'Admin PCP (teste rastreabilidade)', 'admin.teste@rastreabilidade.local', 'admin');
 
   insert into public.usuarios (id, empresa_id, nome, email) values
     (v_liberador, v_empresa_a, 'Liberador PCP (teste)', 'liberador.teste@rastreabilidade.local'),
