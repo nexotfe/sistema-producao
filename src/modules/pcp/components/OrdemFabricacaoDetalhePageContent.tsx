@@ -596,6 +596,11 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
             : "OF liberada para produção com sucesso.",
       );
       await recarregarDadosOf();
+      // A liberação pode ter aprovado a OF também (ação combinada) - a
+      // seção de Matérias-primas tem sua própria leitura, nunca
+      // atualizada por recarregarDadosOf(); sem isto, ela continuaria
+      // mostrando o motivo antigo "OF ainda não aprovada".
+      await recarregarPropostaMomentoY();
       return;
     }
 
@@ -612,6 +617,7 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
         setErroLiberacao(null);
         setModalLiberacaoAberto(false);
         setNotaLiberacao("A OF FOI liberada (verificado agora, após uma falha de conexão).");
+        await recarregarPropostaMomentoY();
       } else {
         setErroLiberacao(
           "A conexão caiu antes de confirmar a gravação. Verificamos e a OF NÃO foi liberada — pode tentar novamente com segurança.",
@@ -1157,14 +1163,16 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
                   refeitas aqui. Botão compacto no cabeçalho do cartão
                   (mesmo padrão de tamanho de src/app/design/pcp-prioridades-preview/page.tsx). */}
               <div className="mb-4 flex items-center justify-end gap-2 border-b border-border-subtle pb-4">
-                <Button
-                  variant="primary"
-                  className="h-8 px-3 text-[12px]"
-                  onClick={() => setModalLiberacaoAberto(true)}
-                  disabled={ofEmEstadoFinal}
-                >
-                  Liberar OF
-                </Button>
+                {linha.estadoExecucao !== "liberada" ? (
+                  <Button
+                    variant="primary"
+                    className="h-8 px-3 text-[12px]"
+                    onClick={() => setModalLiberacaoAberto(true)}
+                    disabled={ofEmEstadoFinal}
+                  >
+                    Liberar OF
+                  </Button>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

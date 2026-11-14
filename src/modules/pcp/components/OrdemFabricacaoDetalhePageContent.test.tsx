@@ -1557,6 +1557,12 @@ describe("OrdemFabricacaoDetalhePageContent — controle Dependências (Etapa 66
 describe("OrdemFabricacaoDetalhePageContent — Liberação de OF (botão único combinado 'Liberar OF')", () => {
   beforeEach(() => {
     liberarOfCombinadoPcpActionMock.mockResolvedValue({ ok: true, jaLiberada: false, aprovacaoRealizada: false, numeroOf: "260015-0002" });
+    // Padrão seguro para todos os testes deste bloco - o sucesso da
+    // liberação agora sempre recarrega esta seção (ver TESTE 3); sem um
+    // valor próprio aqui, o mock herdaria o último valor configurado por
+    // um bloco de teste anterior não relacionado (clearAllMocks nunca
+    // remove mockResolvedValue, só o histórico de chamadas).
+    consultarPropostaMomentoYActionMock.mockResolvedValue({ ok: true, leitura: { regime: "legado", interruptorAtivo: false, propostaOriginal: [] } });
   });
 
   it("1. Botão sempre visível na OF carregada, abre o modal de confirmação ao clicar", async () => {
@@ -1588,7 +1594,26 @@ describe("OrdemFabricacaoDetalhePageContent — Liberação de OF (botão único
     expect(screen.getByText("Liberar OF")).toBeDefined();
   });
 
-  it("3. Confirmar (OF já aprovada): chama liberarOfCombinadoPcpAction com o ofId da página, fecha o modal e mostra a nota de sucesso sem mencionar aprovação", async () => {
+  it("2b. Botão desaparece quando a OF já está liberada - nenhum motivo para oferecer a ação de novo", async () => {
+    prepararCargaPadrao({
+      resultadoOf: {
+        ok: true,
+        resultado: {
+          linhas: [linhaFicticia({ estadoAprovacao: "aprovada", estadoExecucao: "liberada" })],
+          totalRegistros: 1,
+          pagina: 1,
+          tamanhoPagina: 1,
+        },
+      },
+    });
+    render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
+
+    await waitFor(() => screen.getByText("Projeto"));
+    expect(screen.queryByText("Liberar OF")).toBeNull();
+  });
+
+  it("3. Confirmar (OF já aprovada): chama liberarOfCombinadoPcpAction com o ofId da página, fecha o modal, mostra a nota de sucesso sem mencionar aprovação e recarrega a seção de Matérias-primas", async () => {
+    consultarPropostaMomentoYActionMock.mockResolvedValue({ ok: true, leitura: { regime: "legado", interruptorAtivo: false, propostaOriginal: [] } });
     render(<OrdemFabricacaoDetalhePageContent ofId="of-1" />);
 
     await waitFor(() => screen.getByText("Projeto"));
@@ -1599,6 +1624,11 @@ describe("OrdemFabricacaoDetalhePageContent — Liberação de OF (botão único
     await waitFor(() => screen.getByText("OF liberada para produção com sucesso."));
     expect(liberarOfCombinadoPcpActionMock).toHaveBeenCalledWith("of-1", undefined, undefined);
     expect(screen.queryByRole("dialog")).toBeNull();
+    // Núcleo da correção: a seção de Matérias-primas tinha leitura
+    // própria, nunca atualizada por recarregarDadosOf() - sem isto,
+    // continuava mostrando "OF ainda não aprovada" mesmo após a
+    // aprovação+liberação combinada ter mudado o estado real.
+    await waitFor(() => expect(consultarPropostaMomentoYActionMock).toHaveBeenCalledWith("of-1"));
   });
 
   it("4. Confirmar (OF aguardando auditoria, aprovação realizada internamente): mostra nota combinada distinta", async () => {
