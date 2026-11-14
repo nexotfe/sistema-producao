@@ -1158,7 +1158,7 @@ export function OrdemFabricacaoDetalhePageContent({ ofId }: { ofId: string }) {
             {/* Seção 1 — Dados da OF (sem título; cabeçalho hospeda só a ação de liberação) */}
             <Card>
               {/* Liberação de OF — decisão do PCP, nunca automática. Sempre
-                  chama a RPC real (via liberarOfPcpAction); as checagens de
+                  chama a RPC real (via liberarOfCombinadoPcpAction); as checagens de
                   estado/Momento Y/concorrência pertencem a ela, nunca são
                   refeitas aqui. Botão compacto no cabeçalho do cartão
                   (mesmo padrão de tamanho de src/app/design/pcp-prioridades-preview/page.tsx). */}
