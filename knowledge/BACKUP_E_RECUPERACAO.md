@@ -261,7 +261,42 @@ si vive fora do banco. Restaurar os dois juntos causa conflito:
    que referencia arquivos por bucket+caminho (`logo_path` etc.), nunca
    por esse UUID interno.
 
-### 5.6 Checklist de validação pós-restauração
+### 5.6 Replay de `supabase/migrations/` (reconstrução via migration, não via dump) — achado real, 2026-11-07
+
+Caminho diferente do dump lógico (§5.1-§5.5): reconstrução do schema
+`public` aplicando os arquivos `.sql` de `supabase/migrations/` em
+ordem (`supabase db reset`/`db push`), não restaurando um dump
+pré-gerado. Achado real (Etapa 63E): um arquivo de migration candidata
+nunca aplicada em nenhum ambiente
+(`20261029100000_pcp_momento_y_confirmacao_necessidades.sql`, superada
+por `20261104120000_..._revisao4.sql`) ainda estava presente na pasta
+ativa com extensão `.sql` — `supabase db push`/`db reset` tentam
+aplicá-lo mesmo assim (não existe conceito de "rascunho" para a CLI,
+só "arquivo `.sql` com timestamp" = migration executável), e ele falha
+(`column "necessidades_confirmadas_em" already exists`) porque a
+Revisão 4 já cria a mesma coluna. Confirmado por `supabase db reset`
+real num sandbox descartável.
+
+**Correção aplicada**: renomear para
+`20261029100000_pcp_momento_y_confirmacao_necessidades.sql.historico`
+— o Supabase CLI só varre arquivos cujo nome bate exatamente com
+`<timestamp>_nome.sql` (confirmado por `db push --dry-run`: arquivos
+com qualquer outra extensão são pulados com a mensagem *"file name
+must match pattern"* — mesmo padrão já usado antes neste projeto em
+`...sql.original-revisao1`). Conteúdo e histórico git preservados
+integralmente, só retirado do fluxo executável. Revalidado com `supabase
+db reset` completo após o rename: todas as migrations ativas aplicam
+sem erro, incluindo a Revisão 4 e a migration corretiva do interruptor
+(`20261107140000`).
+
+**Regra para o futuro**: antes de confiar num replay completo de
+`supabase/migrations/` (reconstrução de desastre, onboarding de
+máquina nova, CI), rodar `supabase db reset` num sandbox descartável
+primeiro — um arquivo `.sql` órfão na pasta ativa quebra o replay
+inteiro silenciosamente até esse ponto, mesmo que nunca tenha sido
+aplicado em produção.
+
+### 5.7 Checklist de validação pós-restauração
 
 - Contagem de linhas nas tabelas-chave comparada com produção **no
   momento da verificação**, não só com o snapshot do backup.
