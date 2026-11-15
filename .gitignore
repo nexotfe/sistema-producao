@@ -143,3 +143,8 @@ dist
 
 # Claude Code - configuração/skills locais, nunca versionadas
 .claude/
+.vercel
+
+# Supabase CLI - estado local de branch de sandbox (nunca versionado;
+# migrations/config.toml/seed.sql continuam rastreados normalmente)
+supabase/.branches/
