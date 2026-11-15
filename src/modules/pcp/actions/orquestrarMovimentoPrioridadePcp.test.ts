@@ -21,8 +21,6 @@ const PAYLOAD_PADRAO: PayloadMoverPrioridadePcp = {
   vizinhoAnteriorProjetoId: null,
   vizinhoSeguinteProjetoId: "projeto-a",
   motivo: "antecipação solicitada pela diretoria",
-  dataInicial: "2026-11-02",
-  dataFinal: "2026-11-06",
 };
 
 const RESERVA_ADQUIRIDA_PADRAO: ResultadoIniciarReservaPcp = {
@@ -98,12 +96,10 @@ function criarDependenciasFalsas(
     if (overrides.erroFinalizar) throw overrides.erroFinalizar;
     return finalizarRetorno;
   });
-  const executarRecalculoConsultivo = vi.fn(
-    async (_uid: string, _empresaId: string, _dataInicial: string, _dataFinal: string, _inicioOrcamentoMs: number) => {
-      if (overrides.erroRecalculo) throw overrides.erroRecalculo;
-      return recalculo;
-    },
-  );
+  const executarRecalculoConsultivo = vi.fn(async (_uid: string, _empresaId: string, _inicioOrcamentoMs: number) => {
+    if (overrides.erroRecalculo) throw overrides.erroRecalculo;
+    return recalculo;
+  });
   const concluirExecucao = vi.fn(async (_params: unknown) => {
     if (overrides.erroConcluirExecucao) throw overrides.erroConcluirExecucao;
     return concluirExecucaoRetorno;
@@ -197,17 +193,6 @@ describe("orquestrarMovimentoPrioridadePcp - validação de payload (nunca chega
 
     expect(resultado).toMatchObject({ ok: false, motivo: "payload_invalido" });
     expect(iniciarReserva).not.toHaveBeenCalled();
-  });
-
-  it("janela inválida (dataInicial > dataFinal): payload_invalido", async () => {
-    const { deps } = criarDependenciasFalsas();
-
-    const resultado = await orquestrarMovimentoPrioridadePcp(
-      { ...PAYLOAD_PADRAO, dataInicial: "2026-12-01", dataFinal: "2026-11-01" },
-      deps,
-    );
-
-    expect(resultado).toMatchObject({ ok: false, motivo: "payload_invalido" });
   });
 });
 
@@ -320,7 +305,7 @@ describe("orquestrarMovimentoPrioridadePcp - sucesso e conclusão oficial da exe
     // Orçamento de tempo do recálculo inclui o tempo gasto desde o
     // início desta operação (auditoria I6-C, condição 3) - nunca
     // reiniciado no momento do recálculo.
-    expect(executarRecalculoConsultivo.mock.calls[0]?.[4]).toBeTypeOf("number");
+    expect(executarRecalculoConsultivo.mock.calls[0]?.[2]).toBeTypeOf("number");
   });
 
   it("recálculo real devolve ok:false CONFIRMADO (ex.: interrompido pelo supervisor): conclusaoExecucao via concluirExecucao com resultado 'falhou_recuperavel', prioridade e histórico preservados", async () => {

@@ -238,7 +238,7 @@ function sucessorasTransitivas(opIds: ReadonlySet<string>, dependencias: Depende
  * atravessar workerData) chamam ESTA MESMA função internamente, nunca
  * duas implementações da mesma busca.
  */
-interface IngredientesMotorPcp {
+export interface IngredientesMotorPcp {
   ocorrencias: OcorrenciaEscalonavel<ChaveOcorrenciaPcp>[];
   dependencias: DependenciaOcorrencia<ChaveOcorrenciaPcp>[];
   excluidas: OpExcluidaPcp[];
@@ -250,7 +250,18 @@ interface IngredientesMotorPcp {
   ofIdPorOpId: Map<string, string>;
 }
 
-async function montarIngredientesMotorPcp(
+/**
+ * ETAPA PCP-B1-HORIZONTE: exportada (além do uso interno já existente)
+ * para estimarHorizonteNecessarioPcp.ts poder calcular gargalo de
+ * recurso/caminho crítico a partir dos MESMOS ingredientes reais (nunca
+ * uma segunda consulta ao banco) - ocorrências/dependências/candidatos
+ * (passos 0-10) não dependem de `datasGradeCompartilhada`, só o passo
+ * 11 (calendário/diasProdutivos) depende; quem só precisa da estimativa
+ * pode chamar com uma grade-placeholder de 1 dia e ignorar
+ * diasProdutivos. Nenhuma mudança de comportamento para os chamadores
+ * existentes (montarEntradaMotorPcp/montarEntradaMotorPcpSerializavel).
+ */
+export async function montarIngredientesMotorPcp(
   client: SupabaseClient,
   pSolicitadoPor: string,
   datasGradeCompartilhada: string[],

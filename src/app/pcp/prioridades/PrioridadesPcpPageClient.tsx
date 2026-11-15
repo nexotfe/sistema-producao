@@ -1,0 +1,456 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ModuleBackButton } from "@/modules/shared/navigation/ModuleBackButton";
+import { EntityLink } from "@/modules/shared/navigation/EntityLink";
+import { Button } from "@/modules/shared/ui/Button";
+import { Table, TableHead, TableHeaderCell, TableBody, TableRow, TableCell } from "@/modules/shared/ui/Table";
+import { consultarFilaPrioridadesPcpAction } from "@/modules/pcp/actions/consultarFilaPrioridadesPcpAction";
+import { moverPrioridadeProjetoPcpAction } from "@/modules/pcp/actions/moverPrioridadeProjetoPcpAction";
+import type { ItemFilaPrioridadesPcp } from "@/modules/pcp/lib/buscarFilaPrioridadesPcp";
+import type {
+  ResultadoMoverPrioridadePcp,
+  ResultadoRecalculoConsultivoPosMovimento,
+} from "@/modules/pcp/actions/orquestrarMovimentoPrioridadePcp";
+import { calcularVizinhosParaMovimento } from "@/modules/pcp/lib/interpretacao/calcularVizinhosParaMovimentoPcp";
+
+type EstadoCarregamento =
+  | { tipo: "carregando" }
+  | { tipo: "nao_autenticado" }
+  | { tipo: "nao_autorizado" }
+  | { tipo: "falha_tecnica"; mensagem: string }
+  | { tipo: "ok"; fila: readonly ItemFilaPrioridadesPcp[] };
+
+type EstadoMovimento =
+  | { tipo: "ocioso" }
+  | { tipo: "movendo"; projetoId: string }
+  | { tipo: "resultado"; projetoId: string; resultado: ResultadoMoverPrioridadePcp };
+
+function formatarDataBr(dataIso: string | null): string {
+  if (!dataIso) return "—";
+  const [ano, mes, dia] = dataIso.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+const MENSAGENS_FALHA_RECALCULO: Record<string, string> = {
+  sem_margem_segura_para_executar: "não havia tempo restante seguro para rodar o Motor depois da movimentação - a prioridade e a justificativa já foram registradas normalmente.",
+  versao_capacidade_indisponivel: "não foi possível confirmar a versão atual de capacidade.",
+  capacidade_mudou_durante_calculo: "a capacidade mudou durante o cálculo - resultado descartado, tente novamente.",
+  interrompido_por_limite_de_tempo: "o cálculo foi interrompido por exceder o tempo limite - a prioridade e a justificativa já foram registradas normalmente.",
+  falha_na_worker: "falha na execução do Motor - a prioridade e a justificativa já foram registradas normalmente.",
+  falha_interna: "falha interna ao calcular - tente novamente.",
+  falha_inesperada: "o passo de recálculo não terminou normalmente - a prioridade e a justificativa já foram registradas normalmente, sem relação com esta falha.",
+};
+
+/**
+ * Etapa 2O.8B-I6-C: `recalculo` já é o resultado REAL do Motor rodando
+ * numa Worker supervisionada (nunca mais simulado) - "Motor concluiu o
+ * cálculo" (ok:true) é uma afirmação sobre o cálculo consultivo, nunca
+ * sobre a programação oficial ter sido aprovada ou persistida.
+ */
+function ResumoRecalculo({ recalculo }: { recalculo: ResultadoRecalculoConsultivoPosMovimento }) {
+  if (!recalculo.ok) {
+    const detalhe = "detalhe" in recalculo ? recalculo.detalhe : undefined;
+    return (
+      <p className="text-sm text-status-warning-text">
+        Recálculo não concluído: {MENSAGENS_FALHA_RECALCULO[recalculo.motivo] ?? recalculo.motivo}
+        {detalhe ? ` (${detalhe})` : ""}
+      </p>
+    );
+  }
+
+  const programadas = recalculo.operacoes.filter((o) => o.status === "concluida").length;
+  const comDeficit = recalculo.operacoes.filter((o) => o.status === "bloqueada_por_deficit").length;
+  const bloqueadasPorPredecessora = recalculo.operacoes.filter((o) => o.status === "bloqueada_por_predecessora").length;
+  const excluidas = recalculo.excluidas.length;
+
+  if (recalculo.operacoes.length === 0 && excluidas === 0) {
+    return <p className="text-sm text-text-secondary">Recálculo concluído: nenhuma operação programável encontrada para esta empresa no período informado.</p>;
+  }
+
+  return (
+    <p className="text-sm text-text-secondary">
+      Recálculo concluído (versão de capacidade {recalculo.versaoCapacidadeUtilizada}):{" "}
+      <strong className="text-text-primary">{programadas}</strong> operação(ões) programada(s),{" "}
+      <strong className="text-text-primary">{comDeficit}</strong> com déficit de capacidade,{" "}
+      <strong className="text-text-primary">{bloqueadasPorPredecessora}</strong> bloqueada(s) por predecessora
+      {excluidas > 0 ? (
+        <>
+          {" "}e <strong className="text-text-primary">{excluidas}</strong> excluída(s) por dados insuficientes
+        </>
+      ) : null}
+      . Resultado consultivo - identificação individual de OPs não está disponível neste resumo; consulte a Programação
+      Diária para o detalhamento por recurso e data.
+    </p>
+  );
+}
+
+export default function PrioridadesPcpPageClient() {
+  const [estado, setEstado] = useState<EstadoCarregamento>({ tipo: "carregando" });
+  const [busca, setBusca] = useState("");
+  const [somenteLeitura, setSomenteLeitura] = useState(false);
+  const [movimento, setMovimento] = useState<EstadoMovimento>({ tipo: "ocioso" });
+  const [destinoPorProjeto, setDestinoPorProjeto] = useState<Record<string, string>>({});
+  const [motivo, setMotivo] = useState("");
+
+  // Sequenciador de pedidos - garante que uma resposta de movimentação
+  // atrasada (fora de ordem) nunca sobrescreva o resultado de um pedido
+  // mais recente já concluído.
+  const ultimoPedidoRef = useRef(0);
+
+  const carregarFila = useCallback(async () => {
+    let resultado: Awaited<ReturnType<typeof consultarFilaPrioridadesPcpAction>>;
+    try {
+      resultado = await consultarFilaPrioridadesPcpAction();
+    } catch (erro) {
+      setEstado({
+        tipo: "falha_tecnica",
+        mensagem: erro instanceof Error ? erro.message : "Falha desconhecida ao consultar a fila de prioridades.",
+      });
+      return;
+    }
+
+    if (!resultado.ok) {
+      setEstado({ tipo: resultado.motivo === "nao_autenticado" ? "nao_autenticado" : "nao_autorizado" });
+      return;
+    }
+
+    setEstado({ tipo: "ok", fila: resultado.fila });
+  }, []);
+
+  useEffect(() => {
+    carregarFila();
+  }, [carregarFila]);
+
+  async function moverProjeto(projetoId: string, posicaoDestino: number) {
+    if (estado.tipo !== "ok" || somenteLeitura) return;
+    if (movimento.tipo === "movendo") return; // nunca duas movimentações simultâneas.
+
+    const vizinhos = calcularVizinhosParaMovimento(estado.fila, projetoId, posicaoDestino);
+    if (!vizinhos) return; // sem mudança real, ou impossível (fila com 0/1 projeto) - nunca chama o servidor.
+
+    if (!motivo.trim()) {
+      // Validação local, NUNCA chama o servidor sem justificativa - a
+      // fila real não muda (nenhuma requisição foi feita), consistente
+      // com "conservar a prioridade anterior" mesmo neste caso.
+      setMovimento({
+        tipo: "resultado",
+        projetoId,
+        resultado: { ok: false, motivo: "payload_invalido", detalhe: "Informe o motivo da movimentação antes de confirmar." },
+      });
+      return;
+    }
+
+    const meuPedido = ++ultimoPedidoRef.current;
+    setMovimento({ tipo: "movendo", projetoId });
+
+    let resultado: ResultadoMoverPrioridadePcp;
+    try {
+      resultado = await moverPrioridadeProjetoPcpAction({
+        projetoId,
+        vizinhoAnteriorProjetoId: vizinhos.vizinhoAnteriorProjetoId,
+        vizinhoSeguinteProjetoId: vizinhos.vizinhoSeguinteProjetoId,
+        motivo,
+      });
+    } catch (erro) {
+      if (ultimoPedidoRef.current !== meuPedido) return; // resposta obsoleta - descartada.
+      setMovimento({
+        tipo: "resultado",
+        projetoId,
+        resultado: {
+          ok: false,
+          motivo: "falha_reordenacao",
+          detalhe: erro instanceof Error ? erro.message : "Falha desconhecida ao mover prioridade.",
+        },
+      });
+      await carregarFila();
+      return;
+    }
+
+    if (ultimoPedidoRef.current !== meuPedido) return; // outra movimentação mais recente já respondeu - descarta esta.
+
+    if (!resultado.ok && resultado.motivo === "nao_autorizado") {
+      setSomenteLeitura(true);
+    }
+
+    setMovimento({ tipo: "resultado", projetoId, resultado });
+    // Nunca reordena a fila localmente - sempre busca de novo a ordem
+    // real, sucesso ou falha, para nunca mostrar um resultado antigo
+    // como se fosse o mais atual (mudança própria ou de outro usuário).
+    await carregarFila();
+  }
+
+  const filaVisivel =
+    estado.tipo === "ok"
+      ? estado.fila.filter((item) => {
+          const termo = busca.trim().toLowerCase();
+          if (!termo) return true;
+          return (
+            item.numeroProjeto.toLowerCase().includes(termo) ||
+            item.nomeProjeto.toLowerCase().includes(termo) ||
+            (item.nomeCliente ?? "").toLowerCase().includes(termo)
+          );
+        })
+      : [];
+
+  return (
+    <main className="min-h-screen bg-background px-5 py-6 text-text-primary sm:px-8 lg:px-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <header className="flex flex-col gap-4">
+          <ModuleBackButton label="Planejamento" fallbackHref="/pcp/planejamento" />
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-disabled">PCP</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">Prioridades</h1>
+            </div>
+
+            <Link
+              href="/pcp/planejamento-diario"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] bg-action-primary px-[18px] text-[13.5px] font-semibold text-action-primary-text transition hover:bg-action-primary-hover"
+            >
+              Planejamento Diário
+            </Link>
+          </div>
+        </header>
+
+        <section className="rounded-lg border border-border bg-surface">
+          <div className="border-b border-border-subtle px-5 py-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="busca-prioridades" className="mb-1 block text-xs font-semibold text-text-secondary">
+                  Buscar projeto
+                </label>
+                <input
+                  id="busca-prioridades"
+                  type="search"
+                  value={busca}
+                  onChange={(event) => setBusca(event.target.value)}
+                  placeholder="Buscar projeto, descrição ou cliente"
+                  className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-disabled focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+              <div>
+                <label htmlFor="motivo-movimentacao" className="mb-1 block text-xs font-semibold text-text-secondary">
+                  Justificativa da movimentação (obrigatória antes de mover qualquer projeto)
+                </label>
+                <input
+                  id="motivo-movimentacao"
+                  type="text"
+                  value={motivo}
+                  onChange={(event) => setMotivo(event.target.value)}
+                  placeholder="Ex.: antecipação solicitada pela diretoria"
+                  className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none placeholder:text-text-disabled focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+            </div>
+
+            {somenteLeitura ? (
+              <p className="mt-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-text">
+                Você tem permissão apenas para visualizar as prioridades - os controles de movimentação foram
+                desativados nesta sessão.
+              </p>
+            ) : null}
+
+            {estado.tipo === "nao_autenticado" ? (
+              <p className="mt-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-text">
+                Sessão não autenticada - faça login novamente para ver as prioridades.
+              </p>
+            ) : null}
+            {estado.tipo === "nao_autorizado" ? (
+              <p className="mt-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-text">
+                Você não tem a permissão pcp.visualizar_programacao necessária para ver esta tela.
+              </p>
+            ) : null}
+            {estado.tipo === "falha_tecnica" ? (
+              <p className="mt-3 rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-text">
+                Falha técnica ao consultar as prioridades: {estado.mensagem}
+              </p>
+            ) : null}
+
+            {movimento.tipo === "resultado" ? (
+              <div className="mt-3 rounded-md border border-border-subtle bg-border-subtle px-3 py-3">
+                {movimento.resultado.ok ? (
+                  <>
+                    <p className="text-sm font-semibold text-status-success-text">
+                      Prioridade atualizada (nova posição interna: {movimento.resultado.posicaoNova}).
+                    </p>
+                    {(() => {
+                      // ETAPA 2O.8B-I6H: conclusaoExecucao substitui liberacaoReserva -
+                      // null (estado desconhecido, nunca tocado) ou aceito:false
+                      // (rejeitado) são os dois casos equivalentes a "situação não
+                      // confirmada" que a mensagem abaixo já cobria.
+                      const conclusao = movimento.resultado.conclusaoExecucao;
+                      const detalheNaoConfirmado =
+                        conclusao === null
+                          ? "o estado da execução do recálculo não pôde ser confirmado"
+                          : !conclusao.aceito
+                            ? conclusao.motivoRejeicao
+                            : null;
+                      return detalheNaoConfirmado ? (
+                        <p className="mt-1 text-sm text-status-warning-text">
+                          A alteração de prioridade foi registrada normalmente, mas a execução do recálculo ficou com
+                          situação não confirmada ({detalheNaoConfirmado}). Novas movimentações
+                          desta empresa ficam bloqueadas até a recuperação segura da reserva.
+                        </p>
+                      ) : null;
+                    })()}
+                    <div className="mt-1">
+                      <ResumoRecalculo recalculo={movimento.resultado.recalculo} />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-status-warning-text">
+                    {movimento.resultado.motivo === "reserva_ocupada"
+                      ? movimento.resultado.detalhe.situacao === "recuperacao_pendente"
+                        ? "Não foi possível mover: o recálculo anterior desta empresa ficou com situação não confirmada e aguarda recuperação segura antes de uma nova tentativa."
+                        : `Não foi possível mover agora: ${movimento.resultado.detalhe.responsavelAtualNome} está com uma movimentação/recálculo em andamento nesta empresa. Tente novamente em alguns instantes.`
+                      : movimento.resultado.motivo === "falha_ao_iniciar_reserva"
+                        ? `Não foi possível iniciar a movimentação: ${movimento.resultado.detalhe}`
+                        : movimento.resultado.motivo === "falha_reordenacao"
+                          ? `Não foi possível alterar a prioridade: ${movimento.resultado.detalhe}`
+                          : movimento.resultado.motivo === "payload_invalido"
+                            ? `Movimentação inválida: ${movimento.resultado.detalhe}`
+                            : movimento.resultado.motivo === "nao_autorizado"
+                              ? "Você não tem permissão para alterar prioridades."
+                              : movimento.resultado.motivo === "nao_autenticado"
+                                ? "Sessão não autenticada."
+                                : "Não foi possível concluir a movimentação."}
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <Table>
+            <TableHead>
+              <TableHeaderCell>Prioridade</TableHeaderCell>
+              <TableHeaderCell>Projeto</TableHeaderCell>
+              <TableHeaderCell>Cliente</TableHeaderCell>
+              <TableHeaderCell>Descrição</TableHeaderCell>
+              <TableHeaderCell>Entrega</TableHeaderCell>
+            </TableHead>
+            <TableBody>
+              {estado.tipo === "carregando" ? (
+                <TableRow>
+                  <TableCell>
+                    <span className="text-sm text-text-secondary">Carregando prioridades...</span>
+                  </TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                </TableRow>
+              ) : null}
+
+              {estado.tipo === "ok" && estado.fila.length === 0 ? (
+                <TableRow>
+                  <TableCell>
+                    <span className="text-sm text-text-secondary">Nenhum projeto na fila de prioridades desta empresa ainda.</span>
+                  </TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                </TableRow>
+              ) : null}
+
+              {estado.tipo === "ok" && estado.fila.length > 0 && filaVisivel.length === 0 ? (
+                <TableRow>
+                  <TableCell>
+                    <span className="text-sm text-text-secondary">Nenhum projeto encontrado para &quot;{busca}&quot;.</span>
+                  </TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                  <TableCell>{""}</TableCell>
+                </TableRow>
+              ) : null}
+
+              {estado.tipo === "ok"
+                ? filaVisivel.map((item) => {
+                    const estaMovendoEsteProjeto = movimento.tipo === "movendo" && movimento.projetoId === item.projetoId;
+                    const algumMovimentoEmAndamento = movimento.tipo === "movendo";
+                    const controlesDesabilitados = somenteLeitura || algumMovimentoEmAndamento || estado.fila.length <= 1;
+
+                    return (
+                      <TableRow key={item.projetoId}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-action-primary text-[13px] font-bold text-action-primary-text">
+                              {item.posicaoSequencial}
+                            </span>
+                            <div className="flex flex-col">
+                              <button
+                                type="button"
+                                onClick={() => moverProjeto(item.projetoId, item.posicaoSequencial - 1)}
+                                disabled={controlesDesabilitados || item.posicaoSequencial === 1}
+                                aria-label={`Subir prioridade do projeto ${item.numeroProjeto}`}
+                                title="Subir uma posição"
+                                className="leading-none text-text-secondary transition hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moverProjeto(item.projetoId, item.posicaoSequencial + 1)}
+                                disabled={controlesDesabilitados || item.posicaoSequencial === estado.fila.length}
+                                aria-label={`Descer prioridade do projeto ${item.numeroProjeto}`}
+                                title="Descer uma posição"
+                                className="leading-none text-text-secondary transition hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                              >
+                                ▼
+                              </button>
+                            </div>
+                            <label className="sr-only" htmlFor={`mover-para-${item.projetoId}`}>
+                              Mover projeto {item.numeroProjeto} para a posição
+                            </label>
+                            <input
+                              id={`mover-para-${item.projetoId}`}
+                              type="number"
+                              min={1}
+                              max={estado.fila.length}
+                              value={destinoPorProjeto[item.projetoId] ?? String(item.posicaoSequencial)}
+                              disabled={controlesDesabilitados}
+                              onChange={(event) =>
+                                setDestinoPorProjeto((atual) => ({ ...atual, [item.projetoId]: event.target.value }))
+                              }
+                              className="h-8 w-14 shrink-0 rounded-md border border-border bg-surface-elevated px-2 text-[12.5px] tabular-nums text-text-primary outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:opacity-50"
+                            />
+                            <Button
+                              variant="secondary"
+                              disabled={controlesDesabilitados}
+                              onClick={() => {
+                                const destino = Number(destinoPorProjeto[item.projetoId] ?? item.posicaoSequencial);
+                                if (!Number.isFinite(destino)) return;
+                                moverProjeto(item.projetoId, destino);
+                              }}
+                            >
+                              {estaMovendoEsteProjeto ? "Movendo..." : "Mover"}
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          <EntityLink
+                            type="projeto"
+                            id={item.projetoId}
+                            className="text-text-primary outline-none transition hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
+                          >
+                            {item.numeroProjeto}
+                          </EntityLink>
+                        </TableCell>
+                        <TableCell>{item.nomeCliente ?? "—"}</TableCell>
+                        <TableCell>{item.nomeProjeto}</TableCell>
+                        <TableCell className="tabular-nums">{formatarDataBr(item.dataObjetivo)}</TableCell>
+                      </TableRow>
+                    );
+                  })
+                : null}
+            </TableBody>
+          </Table>
+        </section>
+      </div>
+    </main>
+  );
+}

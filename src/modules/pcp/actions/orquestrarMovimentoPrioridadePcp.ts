@@ -96,8 +96,6 @@ export interface PayloadMoverPrioridadePcp {
   vizinhoAnteriorProjetoId: string | null;
   vizinhoSeguinteProjetoId: string | null;
   motivo: string;
-  dataInicial: string;
-  dataFinal: string;
 }
 
 /**
@@ -109,7 +107,19 @@ export interface PayloadMoverPrioridadePcp {
  */
 export type ResultadoRecalculoConsultivoPosMovimento =
   | ResultadoCalculoMotorSupervisionado
-  | { ok: false; motivo: "falha_inesperada"; detalhe: string };
+  | { ok: false; motivo: "falha_inesperada"; detalhe: string }
+  /**
+   * PCP-B1-HORIZONTE: o Motor rodou (uma ou mais vezes, ampliando a
+   * grade a partir do backlog real) e cada execução terminou de forma
+   * CONFIRMADA (nunca um "estado_desconhecido"/Worker incerta) - mas
+   * não foi possível confirmar, dentro do orçamento de tempo
+   * disponível, que a grade usada era grande o suficiente para cobrir
+   * todo o backlog elegível. Diferente de "falha_inesperada" (nunca uma
+   * incerteza genuína sobre o Motor/Worker) - por isso segue o mesmo
+   * caminho de qualquer outra falha CONFIRMADA (`falhou_recuperavel`,
+   * nunca o caminho de "nunca tocar a reserva").
+   */
+  | { ok: false; motivo: "horizonte_nao_confirmado_dentro_do_orcamento"; detalhe: string };
 
 export interface DependenciasMoverPrioridadePcp extends DependenciasReservaRecalculoPcp, DependenciasConclusaoExecucaoMotorPcp {
   /** auth.getUser() no client de sessão - null se não autenticado. */
@@ -139,12 +149,19 @@ export interface DependenciasMoverPrioridadePcp extends DependenciasReservaRecal
    * Nunca lança por desenho (erros são absorvidos no próprio resultado
    * tipado); se lançar ainda assim, o orquestrador trata como falha
    * inesperada, nunca como sucesso.
+   *
+   * PCP-B1-HORIZONTE: deixou de receber dataInicial/dataFinal do
+   * chamador - a janela de cálculo agora é decidida INTERNAMENTE pela
+   * implementação real (moverPrioridadeProjetoPcpAction.ts), a partir
+   * do backlog elegível real da empresa, nunca de um valor fixo vindo
+   * da UI. A Action independente de cálculo manual
+   * (solicitarCalculoProgramacaoPcpAction.ts) continua aceitando
+   * dataInicial/dataFinal explícitos - este contrato é exclusivo do
+   * recálculo decorrente de mover prioridade.
    */
   executarRecalculoConsultivo: (
     userId: string,
     empresaId: string,
-    dataInicial: string,
-    dataFinal: string,
     inicioOrcamentoMs: number,
   ) => Promise<ResultadoRecalculoConsultivoPosMovimento>;
 }
@@ -185,8 +202,6 @@ export type ResultadoMoverPrioridadePcp =
       conclusaoExecucao: ResultadoConclusaoExecucaoMotorPcp | null;
     };
 
-const REGEX_DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
-
 function validarPayload(payload: PayloadMoverPrioridadePcp): string | null {
   if (!payload.projetoId) return "projetoId é obrigatório.";
   if (payload.vizinhoAnteriorProjetoId === null && payload.vizinhoSeguinteProjetoId === null) {
@@ -197,12 +212,6 @@ function validarPayload(payload: PayloadMoverPrioridadePcp): string | null {
   }
   if (!payload.motivo || payload.motivo.trim().length === 0) {
     return "motivo (justificativa) é obrigatório.";
-  }
-  if (!REGEX_DATA_ISO.test(payload.dataInicial) || !REGEX_DATA_ISO.test(payload.dataFinal)) {
-    return "dataInicial/dataFinal devem estar no formato YYYY-MM-DD.";
-  }
-  if (payload.dataInicial > payload.dataFinal) {
-    return "dataInicial não pode ser posterior a dataFinal.";
   }
   return null;
 }
@@ -278,7 +287,7 @@ export async function orquestrarMovimentoPrioridadePcp(
 
   let recalculo: ResultadoRecalculoConsultivoPosMovimento;
   try {
-    recalculo = await deps.executarRecalculoConsultivo(userId, empresaId, payload.dataInicial, payload.dataFinal, inicioExecucao);
+    recalculo = await deps.executarRecalculoConsultivo(userId, empresaId, inicioExecucao);
   } catch (erro) {
     recalculo = { ok: false, motivo: "falha_inesperada", detalhe: erro instanceof Error ? erro.message : String(erro) };
   }
@@ -328,13 +337,18 @@ export async function orquestrarMovimentoPrioridadePcp(
     return { ok: true, posicaoNova, eventoHistoricoId, recalculo, conclusaoExecucao };
   }
 
+  // PCP-B1-HORIZONTE: janela não vem mais do payload (removida) - a
+  // grade REAL usada no cálculo (já possivelmente ampliada a partir do
+  // backlog, ver moverPrioridadeProjetoPcpAction.ts) é extraída da
+  // própria entrada que o Motor usou, nunca de um valor fixo da UI.
+  const datasGradeUsada = recalculo.entrada.datasGradeCompartilhada;
   const conclusaoExecucao = await concluirExecucaoComTratamentoExplicito(deps, {
     empresaId,
     execucaoId: reserva.execucaoId,
     resultado: "concluido",
     empresaCapacidadeVersaoOrigem: Number(recalculo.versaoCapacidadeUtilizada),
-    janelaInicio: payload.dataInicial,
-    janelaFim: payload.dataFinal,
+    janelaInicio: datasGradeUsada[0],
+    janelaFim: datasGradeUsada[datasGradeUsada.length - 1],
     ocorrencias: montagem.ocorrencias,
   });
 

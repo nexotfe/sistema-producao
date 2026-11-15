@@ -26,7 +26,11 @@
 import { Worker } from "node:worker_threads";
 import { createSupabaseServerClient } from "@/lib/supabaseServerClient";
 import { createSupabaseServiceClient } from "@/lib/supabaseServiceClient";
-import { montarEntradaMotorPcpSerializavel, type EntradaMotorPcpSerializavel } from "../lib/motor/montarEntradaMotorPcp";
+import {
+  montarEntradaMotorPcpSerializavel,
+  montarIngredientesMotorPcp,
+  type EntradaMotorPcpSerializavel,
+} from "../lib/motor/montarEntradaMotorPcp";
 import { executarComSupervisao, calcularLimiteEfetivoMs } from "../lib/motor/supervisorMotorPcp";
 import {
   LIMITE_MOTOR_MS,
@@ -35,34 +39,32 @@ import {
   LIMITE_MINIMO_VIAVEL_MS,
   TTL_RESERVA_SEGUNDOS,
 } from "../lib/motor/orcamentoTempoMotorPcp";
-import { executarCalculoMotorSupervisionado } from "./orquestrarSolicitacaoCalculoPcp";
+import { executarCalculoMotorSupervisionado, type DependenciasExecutarCalculoMotorSupervisionado } from "./orquestrarSolicitacaoCalculoPcp";
 import {
   orquestrarMovimentoPrioridadePcp,
   type DependenciasMoverPrioridadePcp,
   type PayloadMoverPrioridadePcp,
   type ResultadoMoverPrioridadePcp,
 } from "./orquestrarMovimentoPrioridadePcp";
-import { construirGradeDeDiasCorridos } from "./orquestrarSolicitacaoCalculoPcp";
+import { resolverGradeProdutivaNecessariaPcp } from "../lib/motor/ampliarGradeProdutivaPcp";
+import { executarRecalculoHorizonteDinamicoPcp } from "./executarRecalculoHorizonteDinamicoPcp";
 
 const PERMISSAO_ALTERAR_PRIORIDADE = "pcp.alterar_prioridade";
 const CONTEXTO_RESERVA = "alterar_prioridade";
 
 function validarPayload(paramsRecebidos: unknown): PayloadMoverPrioridadePcp | null {
   if (typeof paramsRecebidos !== "object" || paramsRecebidos === null) return null;
-  const { projetoId, vizinhoAnteriorProjetoId, vizinhoSeguinteProjetoId, motivo, dataInicial, dataFinal } =
+  const { projetoId, vizinhoAnteriorProjetoId, vizinhoSeguinteProjetoId, motivo } =
     paramsRecebidos as Record<string, unknown>;
   if (typeof projetoId !== "string" || !projetoId) return null;
   if (vizinhoAnteriorProjetoId !== null && typeof vizinhoAnteriorProjetoId !== "string") return null;
   if (vizinhoSeguinteProjetoId !== null && typeof vizinhoSeguinteProjetoId !== "string") return null;
   if (typeof motivo !== "string") return null;
-  if (typeof dataInicial !== "string" || typeof dataFinal !== "string") return null;
   return {
     projetoId,
     vizinhoAnteriorProjetoId: (vizinhoAnteriorProjetoId as string | null) ?? null,
     vizinhoSeguinteProjetoId: (vizinhoSeguinteProjetoId as string | null) ?? null,
     motivo,
-    dataInicial,
-    dataFinal,
   };
 }
 
@@ -71,7 +73,7 @@ export async function moverPrioridadeProjetoPcpAction(
 ): Promise<ResultadoMoverPrioridadePcp> {
   const payload = validarPayload(paramsRecebidos);
   if (!payload) {
-    return { ok: false, motivo: "payload_invalido", detalhe: "payload malformado - projetoId/motivo/datas ausentes ou com tipo inválido." };
+    return { ok: false, motivo: "payload_invalido", detalhe: "payload malformado - projetoId/motivo ausentes ou com tipo inválido." };
   }
 
   const serverClient = await createSupabaseServerClient();
@@ -143,10 +145,34 @@ export async function moverPrioridadeProjetoPcpAction(
       return data as boolean;
     },
 
-    executarRecalculoConsultivo: async (userId, empresaId, dataInicial, dataFinal, inicioOrcamentoMs) => {
-      const datasGradeCompartilhada = construirGradeDeDiasCorridos(dataInicial, dataFinal);
-      return executarCalculoMotorSupervisionado(userId, empresaId, datasGradeCompartilhada, inicioOrcamentoMs, {
-        lerVersaoCapacidade: async (empresaIdLeitura) => {
+    // PCP-B1-HORIZONTE: substitui a antiga janela fixa (dataInicial/
+    // dataFinal vindos do payload da UI, hoje..+6 dias) por um horizonte
+    // DINÂMICO, calculado a partir do backlog elegível real da empresa -
+    // nunca um número de dias fixo (7/90/365/400). Duas fases:
+    //
+    // Fase 1 (estimativa, barata): monta os ingredientes reais do Motor
+    // (mesma função que montarEntradaMotorPcpSerializavel usa por
+    // dentro - nenhuma segunda implementação de busca/regra de negócio)
+    // com uma grade-placeholder de 1 dia (ocorrências/dependências/
+    // candidatos não dependem da grade, só o calendário depende) e
+    // calcula um PONTO DE PARTIDA (gargalo de recurso + caminho
+    // crítico, estimarHorizonteNecessarioPcp.ts) - nunca uma garantia.
+    //
+    // Fase 2 (execução real + verificação + ampliação sob orçamento):
+    // roda o Motor de verdade com essa grade; se algum item tiver
+    // déficit residual E sua última alocação cair no último dia
+    // PRODUTIVO da grade (nunca o último dia corrido - dias sem
+    // expediente no fim da janela não podem mascarar esse sinal), isso
+    // é tratado como possível horizonte insuficiente - a grade é
+    // ampliada e o Motor roda de novo, DENTRO do mesmo orçamento de
+    // tempo já existente (nunca um novo teto de dias). Se uma ampliação
+    // não mudar NENHUM resultado (nem déficit, nem data), ou se o
+    // orçamento se esgotar, a função retorna falha explícita
+    // ("horizonte_nao_confirmado_dentro_do_orcamento") - NUNCA finge que
+    // o backlog inteiro foi programado.
+    executarRecalculoConsultivo: async (userId, empresaId, inicioOrcamentoMs) => {
+      const depsExecucaoMotor: DependenciasExecutarCalculoMotorSupervisionado = {
+        lerVersaoCapacidade: async (empresaIdLeitura: string) => {
           const { data, error } = await serviceClient
             .from("empresa_capacidade_versoes")
             .select("versao")
@@ -155,7 +181,7 @@ export async function moverPrioridadeProjetoPcpAction(
           if (error || !data) return null;
           return data.versao as number;
         },
-        calcularLimiteEfetivoMs: (tempoJaConsumidoMs) =>
+        calcularLimiteEfetivoMs: (tempoJaConsumidoMs: number) =>
           calcularLimiteEfetivoMs({
             limiteMotorMs: LIMITE_MOTOR_MS,
             maxDurationFuncaoMs: MAX_DURATION_FUNCAO_MS,
@@ -163,15 +189,48 @@ export async function moverPrioridadeProjetoPcpAction(
             margemFinalizacaoMs: MARGEM_FINALIZACAO_MS,
             limiteMinimoViavelMs: LIMITE_MINIMO_VIAVEL_MS,
           }),
-        montarEntradaSerializavel: (userIdEntrada, datas) => montarEntradaMotorPcpSerializavel(serviceClient, userIdEntrada, datas),
+        montarEntradaSerializavel: (userIdEntrada: string, datas: string[]) =>
+          montarEntradaMotorPcpSerializavel(serviceClient, userIdEntrada, datas),
         // new Worker(new URL(...)) INLINE aqui dentro, exigência de
         // rastreamento de asset do Turbopack (comprovada na I6-A) -
-        // mesmo módulo supervisorMotorPcp.ts reutilizado pelos dois
-        // caminhos (I6-B e este), nunca um segundo supervisor.
+        // mesmo módulo supervisorMotorPcp.ts reutilizado por todos os
+        // caminhos, nunca um segundo supervisor.
         executarCalculoSupervisionado: async (entrada: EntradaMotorPcpSerializavel, limiteEfetivoMs: number) => {
           const worker = new Worker(new URL("../lib/motor/motorWorker.ts", import.meta.url), { workerData: entrada });
           return executarComSupervisao(worker, { limiteMs: limiteEfetivoMs });
         },
+      };
+
+      const hoje = new Date().toISOString().slice(0, 10);
+
+      // A lógica de estimativa/ampliação/verificação em si é 100%
+      // testável sem I/O real (executarRecalculoHorizonteDinamicoPcp.ts)
+      // - este bloco só monta as dependências REAIS (service client,
+      // Worker, relógio), mesmo princípio de todo o resto do arquivo.
+      return executarRecalculoHorizonteDinamicoPcp({
+        dataInicio: hoje,
+        agoraMs: () => Date.now(),
+        margemRestanteMs: () => MAX_DURATION_FUNCAO_MS - (Date.now() - inicioOrcamentoMs) - MARGEM_FINALIZACAO_MS,
+        limiteMinimoViavelMs: LIMITE_MINIMO_VIAVEL_MS,
+        montarIngredientesEstimativa: async () => {
+          const ingredientes = await montarIngredientesMotorPcp(serviceClient, userId, [hoje]);
+          return {
+            ocorrencias: ingredientes.ocorrencias,
+            dependencias: ingredientes.dependencias,
+            candidatos: ingredientes.candidatosIngredientes,
+          };
+        },
+        resolverGradeProdutiva: (params) =>
+          resolverGradeProdutivaNecessariaPcp({
+            client: serviceClient,
+            empresaId,
+            dataInicio: params.dataInicio,
+            diasProdutivosNecessarios: params.diasProdutivosNecessarios,
+            agoraMs: () => Date.now(),
+            prazoFinalMs: params.prazoFinalMs,
+          }),
+        executarCalculoMotor: (datasGradeCompartilhada) =>
+          executarCalculoMotorSupervisionado(userId, empresaId, datasGradeCompartilhada, inicioOrcamentoMs, depsExecucaoMotor),
       });
     },
 
