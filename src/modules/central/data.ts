@@ -101,6 +101,13 @@ export const areas: Area[] = [
         ],
       },
       {
+        id: "controle-ofs",
+        titulo: "Controle de OFs",
+        icon: "file-text",
+        futuro: true,
+        acoes: [{ label: "Lista de OFs", tipo: "consultar", href: "/pcp/controle-ofs" }],
+      },
+      {
         id: "apontamentos",
         titulo: "Apontamentos",
         icon: "clipboard-check",

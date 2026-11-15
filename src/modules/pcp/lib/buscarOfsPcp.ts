@@ -190,6 +190,8 @@ export interface LinhaOfPcp {
    * parcial cenarios_comerciais_aprovados_vigente_unico).
    */
   readonly prazoComercialVigente: string | null;
+  /** Lembrete interno do PCP (Controle de OFs) — editável só via atualizar_observacao_pcp_of, enquanto a OF estiver no grupo "Aguardando". Preservado no banco após a liberação, mesmo sem ser mais exibido. */
+  readonly observacaoPcp: string | null;
 }
 
 export interface ResultadoBuscaOfsPcp {
@@ -320,7 +322,7 @@ export async function buscarOfsPcp(
   // Passo 3: consulta principal, paginada, com contagem exata do total filtrado.
   let consultaOf = client
     .from("ordens_fabricacao")
-    .select("id, numero_of, projeto_id, produto_id, estado_aprovacao, estado_execucao, quantidade_planejada, unidade", {
+    .select("id, numero_of, projeto_id, produto_id, estado_aprovacao, estado_execucao, quantidade_planejada, unidade, observacao_pcp", {
       count: "exact",
     });
 
@@ -437,6 +439,7 @@ export async function buscarOfsPcp(
       unidade: of.unidade as string,
       dataObjetivo: projeto ? ((projeto.data_objetivo as string | null) ?? null) : null,
       prazoComercialVigente: prazoVigentePorProjetoId.get(of.projeto_id as string) ?? null,
+      observacaoPcp: (of.observacao_pcp as string | null) ?? null,
     };
   });
 

@@ -16,7 +16,7 @@ import { buscarOfsPcp } from "./buscarOfsPcp";
 type Linha = Record<string, unknown>;
 type Fixtures = Record<string, Linha[]>;
 
-function criarClienteFalso(fixturesIniciais: Fixtures): SupabaseClient {
+function criarClienteFalso(fixturesIniciais: Fixtures, capturarSelect?: (tabela: string, colunas: string) => void): SupabaseClient {
   function builder(tabela: string) {
     let linhas = (fixturesIniciais[tabela] ?? []).slice();
     let contarExato = false;
@@ -37,7 +37,8 @@ function criarClienteFalso(fixturesIniciais: Fixtures): SupabaseClient {
     }
 
     const api = {
-      select(_cols: string, opts?: { count?: string }) {
+      select(cols: string, opts?: { count?: string }) {
+        capturarSelect?.(tabela, cols);
         if (opts?.count === "exact") contarExato = true;
         return api;
       },
@@ -457,6 +458,65 @@ describe("buscarOfsPcp", () => {
       const linha1 = resultado.resultado.linhas.find((l) => l.numeroOf === "260015-0001");
       expect(linha1?.prazoComercialVigente).toBe("2026-12-05");
       expect(linha1?.dataObjetivo).toBe("2026-12-10");
+    }
+  });
+
+  it("13b. observacao_pcp entra no select de ordens_fabricacao (Controle de OFs, migration 20261110090000)", async () => {
+    const colunasPorTabela: Record<string, string> = {};
+    const client = criarClienteFalso(FIXTURES_BASE, (tabela, colunas) => {
+      colunasPorTabela[tabela] = colunas;
+    });
+    await buscarOfsPcp(client, {}, 1);
+    expect(colunasPorTabela.ordens_fabricacao).toContain("observacao_pcp");
+  });
+
+  it("13c. observacao_pcp preenchida é mapeada para observacaoPcp na linha", async () => {
+    const fixtures: Fixtures = {
+      ...FIXTURES_BASE,
+      ordens_fabricacao: [{ ...FIXTURES_BASE.ordens_fabricacao[0], observacao_pcp: "Revisar torque antes de liberar" }],
+    };
+    const client = criarClienteFalso(fixtures);
+    const resultado = await buscarOfsPcp(client, { ofId: "of-1" }, 1);
+    expect(resultado.ok).toBe(true);
+    if (resultado.ok) {
+      expect(resultado.resultado.linhas[0].observacaoPcp).toBe("Revisar torque antes de liberar");
+    }
+  });
+
+  it("13d. observacao_pcp nula é mapeada para null, nunca undefined", async () => {
+    const fixtures: Fixtures = {
+      ...FIXTURES_BASE,
+      ordens_fabricacao: [{ ...FIXTURES_BASE.ordens_fabricacao[0], observacao_pcp: null }],
+    };
+    const client = criarClienteFalso(fixtures);
+    const resultado = await buscarOfsPcp(client, { ofId: "of-1" }, 1);
+    expect(resultado.ok).toBe(true);
+    if (resultado.ok) {
+      expect(resultado.resultado.linhas[0].observacaoPcp).toBeNull();
+    }
+  });
+
+  it("13e. observacao_pcp ausente na linha (coluna nunca gravada) também é mapeada para null", async () => {
+    // FIXTURES_BASE nunca define observacao_pcp - cobre o caso real de
+    // qualquer OF criada antes da migration 20261110090000.
+    const client = criarClienteFalso(FIXTURES_BASE);
+    const resultado = await buscarOfsPcp(client, { ofId: "of-1" }, 1);
+    expect(resultado.ok).toBe(true);
+    if (resultado.ok) {
+      expect(resultado.resultado.linhas[0].observacaoPcp).toBeNull();
+    }
+  });
+
+  it("13f. observacao_pcp vazia (string) é preservada como string vazia, sem normalização aqui - normalização é responsabilidade da RPC atualizar_observacao_pcp_of", async () => {
+    const fixtures: Fixtures = {
+      ...FIXTURES_BASE,
+      ordens_fabricacao: [{ ...FIXTURES_BASE.ordens_fabricacao[0], observacao_pcp: "" }],
+    };
+    const client = criarClienteFalso(fixtures);
+    const resultado = await buscarOfsPcp(client, { ofId: "of-1" }, 1);
+    expect(resultado.ok).toBe(true);
+    if (resultado.ok) {
+      expect(resultado.resultado.linhas[0].observacaoPcp).toBe("");
     }
   });
 
